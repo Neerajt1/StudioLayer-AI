@@ -173,7 +173,7 @@ export default function StudioPage() {
   const handleDownload = () => {
     if (activeRender?.outputImageUrl) {
       const link = document.createElement('a');
-      link.href = activeRender.outputImageUrl;
+      link.href = resolvedOutputUrl!;
       link.download = `studiolayer-render-${activeRender.id}.jpg`;
       document.body.appendChild(link);
       link.click();
@@ -187,8 +187,27 @@ export default function StudioPage() {
   const canRender = hasImage && !createRender.isPending && !limitConfirmedBlocked;
   const isProcessing =
     activeRender?.status === 'processing' || activeRender?.status === 'pending';
-  const hasOutput =
-    activeRender?.status === 'completed' && activeRender?.outputImageUrl;
+  // Safely resolve the output image URL from any common payload key shape
+  const resolvedOutputUrl: string | null = (() => {
+    if (!activeRender) return null;
+    const r = activeRender as Record<string, unknown>;
+    const candidates = [
+      r['outputImageUrl'],
+      r['outputUrl'],
+      r['url'],
+      r['image_url'],
+      // activeRender.images?.url  (array or object with .url)
+      Array.isArray(r['images'])
+        ? (r['images'] as Array<Record<string, unknown>>)[0]?.['url']
+        : (r['images'] as Record<string, unknown> | undefined)?.['url'],
+    ];
+    for (const c of candidates) {
+      if (typeof c === 'string' && c.startsWith('http')) return c;
+    }
+    return null;
+  })();
+
+  const hasOutput = activeRender?.status === 'completed' && !!resolvedOutputUrl;
 
   return (
     <div className="flex h-screen bg-background">
@@ -533,7 +552,7 @@ export default function StudioPage() {
                   {hasOutput && (
                     <div className="relative w-full h-full">
                       <img
-                        src={activeRender.outputImageUrl!}
+                        src={resolvedOutputUrl!}
                         alt="Rendered output"
                         className="w-full h-full object-cover"
                         data-testid="img-render-output"
@@ -617,7 +636,7 @@ export default function StudioPage() {
                 <div className="aspect-video border border-border rounded bg-card flex items-center justify-center overflow-hidden">
                   {hasOutput ? (
                     <img
-                      src={activeRender.outputImageUrl!}
+                      src={resolvedOutputUrl!}
                       alt="Output preview"
                       className="w-full h-full object-cover"
                     />
