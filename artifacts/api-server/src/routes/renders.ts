@@ -153,6 +153,37 @@ router.post("/renders", async (req, res): Promise<void> => {
   res.status(201).json({ ...render, status: "processing" });
 });
 
+router.delete("/renders/:id", async (req, res): Promise<void> => {
+  const userId = req.session?.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(rawId, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid render ID" });
+    return;
+  }
+
+  const [render] = await db
+    .select()
+    .from(rendersTable)
+    .where(and(eq(rendersTable.id, id), eq(rendersTable.userId, userId)));
+
+  if (!render) {
+    res.status(404).json({ error: "Render not found" });
+    return;
+  }
+
+  await db
+    .delete(rendersTable)
+    .where(and(eq(rendersTable.id, id), eq(rendersTable.userId, userId)));
+
+  res.status(204).send();
+});
+
 router.get("/renders/:id", async (req, res): Promise<void> => {
   const userId = req.session?.userId;
   if (!userId) {

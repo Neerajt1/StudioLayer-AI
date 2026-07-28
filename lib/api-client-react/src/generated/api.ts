@@ -800,6 +800,56 @@ export function useGetRender<TData = Awaited<ReturnType<typeof getRender>>, TErr
 
 
 
+export const getDeleteRenderUrl = (id: number) => {
+  return `/api/renders/${id}`
+}
+
+/**
+ * @summary Delete a render job by ID
+ */
+export const deleteRender = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+  return customFetch<void>(getDeleteRenderUrl(id), {
+    ...options,
+    method: 'DELETE',
+  });
+}
+
+export const getDeleteRenderMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteRender>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof customFetch> }
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRender>>, TError, { id: number }, TContext> => {
+
+const mutationKey = ['deleteRender'];
+const { mutation: mutationOptions, request: requestOptions } = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+      : { mutation: { mutationKey }, request: undefined };
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRender>>, { id: number }> = (props) => {
+          const { id } = props ?? {};
+          return deleteRender(id, requestOptions);
+        }
+
+  return { mutationFn, ...mutationOptions };
+}
+
+export type DeleteRenderMutationResult = Awaited<ReturnType<typeof deleteRender>>
+export type DeleteRenderMutationError = ErrorType<ErrorResponse>
+
+/**
+ * @summary Delete a render job by ID
+ */
+export const useDeleteRender = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteRender>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof customFetch> }
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRender>>,
+        TError,
+        { id: number },
+        TContext
+      > => {
+      return useMutation(getDeleteRenderMutationOptions(options));
+    }
+
 export const getCreateSupportTicketUrl = () => {
 
 

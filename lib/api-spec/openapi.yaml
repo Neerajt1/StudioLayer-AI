@@ -210,6 +210,31 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   /renders/{id}:
+    delete:
+      operationId: deleteRender
+      tags: [renders]
+      summary: Delete a render job by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Render deleted
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     get:
       operationId: getRender
       tags: [renders]

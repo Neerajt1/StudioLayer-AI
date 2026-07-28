@@ -1,10 +1,20 @@
 import { Sidebar } from '@/components/layout/sidebar';
-import { useListRenders } from '@workspace/api-client-react';
+import {
+  useListRenders,
+  useDeleteRender,
+  getListRendersQueryKey,
+} from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function GalleryPage() {
   const { data: renders, isLoading } = useListRenders();
+  const deleteRender = useDeleteRender();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -18,6 +28,28 @@ export default function GalleryPage() {
       default:
         return 'bg-secondary text-secondary-foreground';
     }
+  };
+
+  const handleDelete = (id: number) => {
+    deleteRender.mutate(
+      { id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListRendersQueryKey() });
+          toast({
+            title: 'Asset deleted',
+            description: 'The render has been removed from your gallery.',
+          });
+        },
+        onError: () => {
+          toast({
+            title: 'Delete failed',
+            description: 'Could not delete this render. Please try again.',
+            variant: 'destructive',
+          });
+        },
+      }
+    );
   };
 
   return (
@@ -59,10 +91,22 @@ export default function GalleryPage() {
               {renders.map((render) => (
                 <div
                   key={render.id}
-                  className="border border-border rounded bg-card overflow-hidden hover:border-accent/50 transition-colors"
+                  className="relative border border-border rounded bg-card overflow-hidden hover:border-foreground/20 transition-colors group"
                   data-testid={`card-render-${render.id}`}
                 >
+                  {/* ── Trash delete overlay ── */}
+                  <button
+                    onClick={() => handleDelete(render.id)}
+                    disabled={deleteRender.isPending}
+                    aria-label="Delete render"
+                    className="absolute top-2 right-2 z-10 w-7 h-7 rounded flex items-center justify-center bg-white/90 border border-border text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-white hover:border-destructive transition-all"
+                    data-testid={`btn-delete-render-${render.id}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+
                   <div className="grid grid-cols-2 gap-0">
+                    {/* Source image */}
                     <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden border-r border-border">
                       {render.sourceImageUrl ? (
                         <img
@@ -76,6 +120,8 @@ export default function GalleryPage() {
                         </p>
                       )}
                     </div>
+
+                    {/* Output image */}
                     <div className="aspect-square bg-muted flex items-center justify-center overflow-hidden">
                       {render.status === 'completed' && render.outputImageUrl ? (
                         <img
@@ -111,12 +157,8 @@ export default function GalleryPage() {
                       </span>
                     </div>
                     <div className="text-xs text-muted-foreground font-mono space-y-1">
-                      <p>
-                        Model: {render.modelPersona.replace('_', ' ')}
-                      </p>
-                      <p>
-                        Location: {render.locationEnvironment.replace('_', ' ')}
-                      </p>
+                      <p>Model: {render.modelPersona.replace('_', ' ')}</p>
+                      <p>Location: {render.locationEnvironment.replace('_', ' ')}</p>
                     </div>
                   </div>
                 </div>
