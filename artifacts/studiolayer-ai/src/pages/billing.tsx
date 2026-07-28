@@ -1,53 +1,7 @@
 import { Sidebar } from '@/components/layout/sidebar';
+import { Footer } from '@/components/layout/footer';
 import { useGetMe, useGetRenderUsage } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
-import { Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
-
-const tiers = [
-  {
-    name: 'Free',
-    tier: 'free',
-    price: '$0',
-    renderLimit: 3,
-    features: [
-      '3 renders per month',
-      'Standard quality output',
-      'Basic model personas',
-      'Community support',
-    ],
-  },
-  {
-    name: 'Pro',
-    tier: 'pro',
-    price: '$49',
-    renderLimit: 100,
-    features: [
-      '100 renders per month',
-      'High-resolution output',
-      'All model personas',
-      'All location environments',
-      'Priority processing',
-      'Email support',
-    ],
-    popular: true,
-  },
-  {
-    name: 'Enterprise',
-    tier: 'enterprise',
-    price: '$249',
-    renderLimit: null,
-    features: [
-      'Unlimited renders',
-      'Ultra high-res output (8K)',
-      'Custom model training',
-      'Batch processing',
-      'API access',
-      'Dedicated account manager',
-      '24/7 priority support',
-    ],
-  },
-];
 
 export default function BillingPage() {
   const { data: user, isLoading: userLoading } = useGetMe();
@@ -57,43 +11,46 @@ export default function BillingPage() {
     <div className="flex h-screen bg-background">
       <Sidebar />
 
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
+      <main className="flex-1 flex flex-col overflow-auto">
+        <div className="flex-1 p-8">
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2">
-              Subscription & Billing
+            <h2
+              className="text-foreground mb-2"
+              style={{
+                fontFamily: "'EB Garamond', Georgia, serif",
+                fontSize: '28px',
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+              }}
+            >
+              Subscription &amp; Billing
             </h2>
             <p className="text-sm text-muted-foreground font-mono">
-              Manage your plan and usage
+              Transparent pricing for professional fashion studios
             </p>
           </div>
 
+          {/* Usage summary */}
           {!userLoading && !usageLoading && user && usage && (
-            <div className="mb-8 p-6 border border-border rounded bg-card">
+            <div className="mb-10 p-5 border border-border rounded bg-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground mb-1">
-                    Current Plan: {user.subscriptionTier.toUpperCase()}
-                  </h3>
-                  <p className="text-sm text-muted-foreground font-mono">
+                  <p className="text-sm font-medium text-foreground">
+                    Current Plan:{' '}
+                    <span className="text-accent uppercase tracking-wider">
+                      {user.subscriptionTier}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground font-mono mt-1">
                     {usage.limit === null
-                      ? `${usage.used} renders used this month • Unlimited`
-                      : `${usage.used} of ${usage.limit} renders used this month`}
+                      ? `${usage.used} renders used today · Unlimited`
+                      : `${usage.used} of ${usage.limit} renders used · resets daily`}
                   </p>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-foreground">
-                    {tiers.find((t) => t.tier === user.subscriptionTier)?.price || '$0'}
-                  </div>
-                  <div className="text-xs text-muted-foreground font-mono">
-                    per month
-                  </div>
-                </div>
               </div>
-
               {usage.limit !== null && (
-                <div className="mt-4">
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="mt-3">
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-accent transition-all"
                       style={{
@@ -106,96 +63,136 @@ export default function BillingPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {tiers.map((tier) => {
-              const isCurrent = user?.subscriptionTier === tier.tier;
-
-              return (
-                <div
-                  key={tier.tier}
-                  className={cn(
-                    'border rounded bg-card p-6 relative',
-                    tier.popular && 'border-accent',
-                    isCurrent && 'ring-2 ring-accent'
-                  )}
-                  data-testid={`card-tier-${tier.tier}`}
-                >
-                  {tier.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <div className="bg-accent text-accent-foreground text-xs font-bold px-3 py-1 rounded-full font-mono">
-                        POPULAR
-                      </div>
-                    </div>
-                  )}
-
-                  {isCurrent && (
-                    <div className="absolute -top-3 right-4">
-                      <div className="bg-accent text-accent-foreground text-xs font-bold px-3 py-1 rounded-full font-mono">
-                        CURRENT
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mb-6">
-                    <h3 className="text-xl font-bold text-foreground mb-2">
-                      {tier.name}
-                    </h3>
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <span className="text-3xl font-bold text-foreground">
-                        {tier.price}
-                      </span>
-                      <span className="text-sm text-muted-foreground font-mono">
-                        /month
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground font-mono">
-                      {tier.renderLimit === null
-                        ? 'Unlimited renders'
-                        : `${tier.renderLimit} renders/month`}
-                    </p>
-                  </div>
-
-                  <ul className="space-y-3 mb-6">
-                    {tier.features.map((feature, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <Check className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-foreground">
-                          {feature}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <Button
-                    className="w-full"
-                    variant={tier.popular ? 'default' : 'outline'}
-                    disabled={isCurrent}
-                    data-testid={`button-upgrade-${tier.tier}`}
-                  >
-                    {isCurrent ? 'Current Plan' : `Upgrade to ${tier.name}`}
-                  </Button>
+          {/* Two-tier pricing grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-3xl">
+            {/* Starter */}
+            <div className="border border-border rounded-lg bg-card p-7 relative flex flex-col">
+              <h3
+                className="text-foreground mb-1"
+                style={{
+                  fontFamily: "'EB Garamond', Georgia, serif",
+                  fontSize: '22px',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Starter Studio Plan
+              </h3>
+              <div className="mb-5">
+                <span className="text-sm text-muted-foreground line-through font-mono mr-2">
+                  $199 / mo
+                </span>
+                <span className="text-2xl font-bold text-foreground">$99</span>
+                <span className="text-sm text-muted-foreground font-mono ml-1">
+                  / month
+                </span>
+                <div className="mt-1">
+                  <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded font-mono">
+                    LAUNCH OFFER
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+              </div>
 
-          <div className="mt-8 p-6 border border-border rounded bg-card">
-            <h3 className="text-lg font-semibold text-foreground mb-2">
-              Billing Information
-            </h3>
-            <p className="text-sm text-muted-foreground font-mono mb-4">
-              Contact sales@studiolayer.ai to update your subscription or discuss custom plans.
-            </p>
-            <div className="flex gap-4">
-              <Button variant="outline" data-testid="button-contact-sales">
-                Contact Sales
+              <ul className="space-y-2.5 flex-1 mb-7">
+                {[
+                  '✔ 50 High-Res AI Studio Renders Per Day (Resets Daily)',
+                  '✔ Single-Image Upload Interface Canvas',
+                  '✔ Full Aspect Ratio Control (4:5, 9:16, 1:1, 16:9)',
+                  '✔ Multi-Ethnic Model Customization Engine',
+                  '✔ Standard Ambient Studio Lighting Matcher',
+                ].map((f) => (
+                  <li key={f} className="text-sm text-foreground flex items-start gap-2">
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                className="w-full"
+                variant={user?.subscriptionTier === 'pro' ? 'outline' : 'default'}
+                disabled={user?.subscriptionTier === 'pro'}
+                data-testid="button-upgrade-starter"
+              >
+                {user?.subscriptionTier === 'pro' ? 'Current Plan' : 'Upgrade to Starter'}
               </Button>
-              <Button variant="outline" data-testid="button-manage-payment">
-                Manage Payment Method
+            </div>
+
+            {/* Enterprise */}
+            <div
+              className="rounded-lg bg-card p-7 relative flex flex-col"
+              style={{
+                border: '1px solid rgba(99, 179, 237, 0.5)',
+                boxShadow: '0 0 20px rgba(99, 179, 237, 0.08)',
+              }}
+            >
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <span className="bg-accent text-accent-foreground text-xs font-bold px-3 py-1 rounded-full font-mono">
+                  MOST POWERFUL
+                </span>
+              </div>
+
+              <h3
+                className="text-foreground mb-1 mt-2"
+                style={{
+                  fontFamily: "'EB Garamond', Georgia, serif",
+                  fontSize: '22px',
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                Enterprise Bulk Plan
+              </h3>
+              <div className="mb-5">
+                <span className="text-sm text-muted-foreground line-through font-mono mr-2">
+                  $299 / mo
+                </span>
+                <span className="text-2xl font-bold text-foreground">$149</span>
+                <span className="text-sm text-muted-foreground font-mono ml-1">
+                  / month
+                </span>
+                <div className="mt-1">
+                  <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded font-mono">
+                    LAUNCH OFFER
+                  </span>
+                </div>
+              </div>
+
+              <ul className="space-y-2.5 flex-1 mb-7">
+                {[
+                  '✔ 300 Priority Bulk Renders Per Day (Resets Daily)',
+                  '✔ ⚡ Bulk Studio Mode (Upload up to 10 concurrent images)',
+                  '✔ Priority Graphics Rendering Queue (Zero waiting lines)',
+                  '✔ Full Aspect, Multi-Ethnic, and Watermark Toggle Controls',
+                  '✔ Dedicated Asset Gallery Folder Management',
+                ].map((f) => (
+                  <li key={f} className="text-sm text-foreground flex items-start gap-2">
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+                disabled={user?.subscriptionTier === 'enterprise'}
+                data-testid="button-upgrade-enterprise"
+              >
+                {user?.subscriptionTier === 'enterprise'
+                  ? 'Current Plan'
+                  : 'Upgrade to Enterprise'}
               </Button>
             </div>
           </div>
+
+          <div className="mt-10 p-5 border border-border rounded bg-card max-w-3xl">
+            <p className="text-sm text-muted-foreground font-mono">
+              Contact{' '}
+              <span className="text-foreground">sales@studiolayer.ai</span> to
+              discuss custom volume plans or annual billing discounts.
+            </p>
+          </div>
         </div>
+
+        <Footer />
       </main>
     </div>
   );

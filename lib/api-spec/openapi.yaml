@@ -14,6 +14,8 @@ tags:
     description: Authentication operations
   - name: renders
     description: Render job operations
+  - name: support
+    description: Support ticket operations
 paths:
   /healthz:
     get:
@@ -102,6 +104,25 @@ paths:
       responses:
         "200":
           description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/complete-onboarding:
+    patch:
+      operationId: completeOnboarding
+      tags: [auth]
+      summary: Mark onboarding as complete for the current user
+      responses:
+        "200":
+          description: Onboarding marked complete
           content:
             application/json:
               schema:
@@ -219,6 +240,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /support-tickets:
+    post:
+      operationId: createSupportTicket
+      tags: [support]
+      summary: Submit a support ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportTicketInput"
+      responses:
+        "201":
+          description: Ticket submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTicket"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -249,6 +301,8 @@ components:
         subscriptionTier:
           type: string
           enum: [free, pro, enterprise]
+        hasCompletedOnboarding:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -257,6 +311,7 @@ components:
         - email
         - name
         - subscriptionTier
+        - hasCompletedOnboarding
         - createdAt
 
     RegisterInput:
@@ -334,6 +389,14 @@ components:
         locationEnvironment:
           type: string
           enum: [photo_studio, urban_street, luxury_interior, nature]
+        modelDemographics:
+          type: string
+          enum: [caucasian, east_asian, south_asian, afro_american, hispanic]
+        imageDimensions:
+          type: string
+          enum: [portrait_45, portrait_916, square_11, landscape_169]
+        smartLighting:
+          type: boolean
       required:
         - sourceImageUrl
         - modelPersona
@@ -356,3 +419,33 @@ components:
         - limit
         - tier
         - canRender
+
+    SupportTicketInput:
+      type: object
+      properties:
+        message:
+          type: string
+          minLength: 10
+      required:
+        - message
+
+    SupportTicket:
+      type: object
+      properties:
+        id:
+          type: number
+        userId:
+          type: number
+        userEmail:
+          type: string
+        message:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - userEmail
+        - message
+        - createdAt

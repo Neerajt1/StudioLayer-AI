@@ -3,6 +3,8 @@ import { eq, and, desc, count } from "drizzle-orm";
 import { db, rendersTable, usersTable } from "@workspace/db";
 import { CreateRenderBody, GetRenderParams } from "@workspace/api-zod";
 import { FREE_TIER_LIMIT } from "./auth";
+import { runAIPipeline } from "../services/ai-pipeline";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -98,7 +100,14 @@ router.post("/renders", async (req, res): Promise<void> => {
     }
   }
 
-  const { sourceImageUrl, modelPersona, locationEnvironment } = parsed.data;
+  const {
+    sourceImageUrl,
+    modelPersona,
+    locationEnvironment,
+    modelDemographics,
+    imageDimensions,
+    smartLighting,
+  } = parsed.data;
 
   const [render] = await db
     .insert(rendersTable)
@@ -111,17 +120,37 @@ router.post("/renders", async (req, res): Promise<void> => {
     })
     .returning();
 
-  // Simulate async processing: mark as processing
-  // In production, this triggers a diffusion API call (Replicate, Fal.ai, etc.)
-  // and the outputImageUrl is populated via webhook/polling when the job completes.
-  setTimeout(async () => {
-    await db
-      .update(rendersTable)
-      .set({ status: "processing" })
-      .where(eq(rendersTable.id, render.id));
-  }, 500);
+  // Mark as processing immediately so the UI shows the spinner
+  await db
+    .update(rendersTable)
+    .set({ status: "processing" })
+    .where(eq(rendersTable.id, render.id));
 
-  res.status(201).json(render);
+  // Fire-and-forget: run the AI pipeline in the background
+  runAIPipeline({
+    renderId: render.id,
+    sourceImageUrl,
+    modelPersona,
+    locationEnvironment,
+    modelDemographics,
+    imageDimensions,
+    smartLighting,
+    onComplete: async (outputImageUrl) => {
+      await db
+        .update(rendersTable)
+        .set({ status: "completed", outputImageUrl })
+        .where(eq(rendersTable.id, render.id));
+    },
+    onError: async (error) => {
+      logger.error({ renderId: render.id, error }, "Render pipeline failed");
+      await db
+        .update(rendersTable)
+        .set({ status: "failed" })
+        .where(eq(rendersTable.id, render.id));
+    },
+  });
+
+  res.status(201).json({ ...render, status: "processing" });
 });
 
 router.get("/renders/:id", async (req, res): Promise<void> => {

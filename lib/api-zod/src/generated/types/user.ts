@@ -12,5 +12,6 @@ export interface User {
   email: string;
   name: string;
   subscriptionTier: UserSubscriptionTier;
+  hasCompletedOnboarding: boolean;
   createdAt: Date;
 }

@@ -27,6 +27,8 @@ import type {
   Render,
   RenderInput,
   RenderUsage,
+  SupportTicket,
+  SupportTicketInput,
   User
 } from './api.schemas';
 
@@ -425,6 +427,77 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
 
 
 
+export const getCompleteOnboardingUrl = () => {
+
+
+
+
+  return `/api/auth/complete-onboarding`
+}
+
+/**
+ * @summary Mark onboarding as complete for the current user
+ */
+export const completeOnboarding = async ( options?: Parameters<typeof customFetch>[1]): Promise<User> => {
+
+  return customFetch<User>(getCompleteOnboardingUrl(),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getCompleteOnboardingMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeOnboarding>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeOnboarding>>, TError,void, TContext> => {
+
+const mutationKey = ['completeOnboarding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeOnboarding>>, void> = () => {
+
+
+          return  completeOnboarding(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteOnboardingMutationResult = NonNullable<Awaited<ReturnType<typeof completeOnboarding>>>
+
+    export type CompleteOnboardingMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Mark onboarding as complete for the current user
+ */
+export const useCompleteOnboarding = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeOnboarding>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeOnboarding>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCompleteOnboardingMutationOptions(options));
+    }
+
 export const getListRendersUrl = () => {
 
 
@@ -726,4 +799,75 @@ export function useGetRender<TData = Awaited<ReturnType<typeof getRender>>, TErr
 
 
 
+
+export const getCreateSupportTicketUrl = () => {
+
+
+
+
+  return `/api/support-tickets`
+}
+
+/**
+ * @summary Submit a support ticket
+ */
+export const createSupportTicket = async (supportTicketInput: SupportTicketInput, options?: Parameters<typeof customFetch>[1]): Promise<SupportTicket> => {
+
+  return customFetch<SupportTicket>(getCreateSupportTicketUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(supportTicketInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSupportTicketMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSupportTicket>>, TError,{data: BodyType<SupportTicketInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSupportTicket>>, TError,{data: BodyType<SupportTicketInput>}, TContext> => {
+
+const mutationKey = ['createSupportTicket'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSupportTicket>>, {data: BodyType<SupportTicketInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSupportTicket(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSupportTicketMutationResult = NonNullable<Awaited<ReturnType<typeof createSupportTicket>>>
+    export type CreateSupportTicketMutationBody = BodyType<SupportTicketInput>
+    export type CreateSupportTicketMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Submit a support ticket
+ */
+export const useCreateSupportTicket = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSupportTicket>>, TError,{data: BodyType<SupportTicketInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSupportTicket>>,
+        TError,
+        {data: BodyType<SupportTicketInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSupportTicketMutationOptions(options));
+    }
 

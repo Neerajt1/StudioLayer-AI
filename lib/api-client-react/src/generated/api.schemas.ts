@@ -27,6 +27,7 @@ export interface User {
   email: string;
   name: string;
   subscriptionTier: UserSubscriptionTier;
+  hasCompletedOnboarding: boolean;
   createdAt: string;
 }
 
@@ -107,10 +108,34 @@ export const RenderInputLocationEnvironment = {
   nature: 'nature',
 } as const;
 
+export type RenderInputModelDemographics = typeof RenderInputModelDemographics[keyof typeof RenderInputModelDemographics];
+
+
+export const RenderInputModelDemographics = {
+  caucasian: 'caucasian',
+  east_asian: 'east_asian',
+  south_asian: 'south_asian',
+  afro_american: 'afro_american',
+  hispanic: 'hispanic',
+} as const;
+
+export type RenderInputImageDimensions = typeof RenderInputImageDimensions[keyof typeof RenderInputImageDimensions];
+
+
+export const RenderInputImageDimensions = {
+  portrait_45: 'portrait_45',
+  portrait_916: 'portrait_916',
+  square_11: 'square_11',
+  landscape_169: 'landscape_169',
+} as const;
+
 export interface RenderInput {
   sourceImageUrl: string;
   modelPersona: RenderInputModelPersona;
   locationEnvironment: RenderInputLocationEnvironment;
+  modelDemographics?: RenderInputModelDemographics;
+  imageDimensions?: RenderInputImageDimensions;
+  smartLighting?: boolean;
 }
 
 export type RenderUsageTier = typeof RenderUsageTier[keyof typeof RenderUsageTier];
@@ -128,5 +153,18 @@ export interface RenderUsage {
   limit: number | null;
   tier: RenderUsageTier;
   canRender: boolean;
+}
+
+export interface SupportTicketInput {
+  /** @minLength 10 */
+  message: string;
+}
+
+export interface SupportTicket {
+  id: number;
+  userId: number;
+  userEmail: string;
+  message: string;
+  createdAt: string;
 }
 

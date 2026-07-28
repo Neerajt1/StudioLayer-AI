@@ -36,6 +36,7 @@ export const RegisterResponse = zod.object({
   "email": zod.string(),
   "name": zod.string(),
   "subscriptionTier": zod.enum(['free', 'pro', 'enterprise']),
+  "hasCompletedOnboarding": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -53,6 +54,7 @@ export const LoginResponse = zod.object({
   "email": zod.string(),
   "name": zod.string(),
   "subscriptionTier": zod.enum(['free', 'pro', 'enterprise']),
+  "hasCompletedOnboarding": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -71,6 +73,20 @@ export const GetMeResponse = zod.object({
   "email": zod.string(),
   "name": zod.string(),
   "subscriptionTier": zod.enum(['free', 'pro', 'enterprise']),
+  "hasCompletedOnboarding": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Mark onboarding as complete for the current user
+ */
+export const CompleteOnboardingResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "subscriptionTier": zod.enum(['free', 'pro', 'enterprise']),
+  "hasCompletedOnboarding": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -98,7 +114,10 @@ export const ListRendersResponse = zod.array(ListRendersResponseItem)
 export const CreateRenderBody = zod.object({
   "sourceImageUrl": zod.string(),
   "modelPersona": zod.enum(['casual', 'high_fashion', 'athletic', 'minimalist']),
-  "locationEnvironment": zod.enum(['photo_studio', 'urban_street', 'luxury_interior', 'nature'])
+  "locationEnvironment": zod.enum(['photo_studio', 'urban_street', 'luxury_interior', 'nature']),
+  "modelDemographics": zod.enum(['caucasian', 'east_asian', 'south_asian', 'afro_american', 'hispanic']).optional(),
+  "imageDimensions": zod.enum(['portrait_45', 'portrait_916', 'square_11', 'landscape_169']).optional(),
+  "smartLighting": zod.boolean().optional()
 })
 
 export const CreateRenderResponse = zod.object({
@@ -142,6 +161,26 @@ export const GetRenderResponse = zod.object({
   "status": zod.enum(['pending', 'processing', 'completed', 'failed']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Submit a support ticket
+ */
+export const createSupportTicketBodyMessageMin = 10;
+
+
+
+export const CreateSupportTicketBody = zod.object({
+  "message": zod.string().min(createSupportTicketBodyMessageMin)
+})
+
+export const CreateSupportTicketResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "userEmail": zod.string(),
+  "message": zod.string(),
+  "createdAt": zod.coerce.date()
 })
 
 

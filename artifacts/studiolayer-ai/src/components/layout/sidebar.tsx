@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
+import { SupportModal } from '@/components/ui/support-modal';
 
 interface SidebarProps {
   className?: string;
@@ -13,49 +15,73 @@ const navItems = [
 
 export function Sidebar({ className }: SidebarProps) {
   const [location] = useLocation();
+  const [supportOpen, setSupportOpen] = useState(false);
 
   return (
-    <aside
-      className={cn(
-        'w-64 border-r border-border bg-sidebar flex flex-col',
-        className
-      )}
-    >
-      <div className="p-6 border-b border-border">
-        <h1 className="text-xl font-bold tracking-tight text-foreground">
-          StudioLayer AI
-        </h1>
-        <p className="text-xs text-muted-foreground mt-1 font-mono">
-          Editorial Render Engine
-        </p>
-      </div>
-
-      <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
-          const isActive = location === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center px-3 py-2.5 text-sm font-medium rounded transition-colors',
-                isActive
-                  ? 'bg-accent text-accent-foreground'
-                  : 'text-sidebar-foreground hover:bg-sidebar-primary'
-              )}
-              data-testid={`nav-${item.href.replace('/', '')}`}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="p-4 border-t border-border">
-        <div className="text-xs text-muted-foreground font-mono">
-          Professional Studio v1.0
+    <>
+      <aside
+        className={cn(
+          'w-64 border-r border-border bg-sidebar flex flex-col',
+          className
+        )}
+      >
+        {/* Logo block */}
+        <div className="p-6 border-b border-border">
+          <h1
+            className="text-foreground"
+            style={{
+              fontFamily: "'EB Garamond', Georgia, serif",
+              fontSize: '24px',
+              letterSpacing: '0.15em',
+              fontWeight: 500,
+              lineHeight: 1.2,
+            }}
+          >
+            StudioLayer AI
+          </h1>
+          <p className="text-slate-400 mt-1" style={{ fontSize: '12px' }}>
+            [ Professional Editorial Render Engine ]
+          </p>
         </div>
-      </div>
-    </aside>
+
+        {/* Nav */}
+        <nav className="flex-1 p-4 space-y-1">
+          {navItems.map((item) => {
+            const isActive = location === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex items-center px-3 py-2.5 text-sm font-medium rounded transition-colors',
+                  isActive
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-sidebar-foreground hover:bg-sidebar-primary'
+                )}
+                data-testid={`nav-${item.href.replace('/', '')}`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom */}
+        <div className="p-4 border-t border-border space-y-3">
+          <button
+            onClick={() => setSupportOpen(true)}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+            style={{ fontSize: '14px' }}
+          >
+            ✉ Contact Studio Support
+          </button>
+          <p className="text-xs text-muted-foreground font-mono">
+            © 2026 StudioLayer AI
+          </p>
+        </div>
+      </aside>
+
+      <SupportModal open={supportOpen} onOpenChange={setSupportOpen} />
+    </>
   );
 }

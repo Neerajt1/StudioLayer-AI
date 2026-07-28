@@ -1,9 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useCreateRender, useGetRenderUsage, useGetRender, getGetRenderUsageQueryKey } from '@workspace/api-client-react';
+import { useState } from 'react';
+import {
+  useCreateRender,
+  useGetRenderUsage,
+  useGetRender,
+  useCompleteOnboarding,
+  useGetMe,
+  getGetRenderUsageQueryKey,
+  getGetMeQueryKey,
+} from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Sidebar } from '@/components/layout/sidebar';
+import { Footer } from '@/components/layout/footer';
 import { FileUpload } from '@/components/ui/file-upload';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -11,20 +22,55 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Label } from '@/components/ui/label';
 import { Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { OnboardingWizard } from '@/components/ui/onboarding-wizard';
+
+const FAQ_ITEMS = [
+  {
+    q: 'Who legally owns the copyright of the final rendered fashion assets?',
+    a: 'You do. Every single image layer generated inside your dashboard is 100% commercially owned by your brand, completely royalty-free.',
+  },
+  {
+    q: 'What style of garment photography yields the highest-fidelity AI rendering results?',
+    a: 'Clear smartphone photos shot under bright, even lighting against a neutral background (or a mannequin) allow our vision engine to isolate textures flawlessly.',
+  },
+  {
+    q: 'Can I cancel or alter my subscription tier at any time?',
+    a: 'Yes. You can upgrade, downgrade, or pause your active studio access instantly inside your billing command tab with zero exit contracts.',
+  },
+];
 
 export default function StudioPage() {
-  const [sourceImage, setSourceImage] = useState<string | null>(null);
-  const [modelPersona, setModelPersona] = useState<string>('');
-  const [locationEnvironment, setLocationEnvironment] = useState<string>('');
+  const [sourceImages, setSourceImages] = useState<string[]>([]);
+  const [modelPersona, setModelPersona] = useState('');
+  const [locationEnvironment, setLocationEnvironment] = useState('');
+  const [modelDemographics, setModelDemographics] = useState('');
+  const [imageDimensions, setImageDimensions] = useState('');
+  const [smartLighting, setSmartLighting] = useState(false);
+  const [brandWatermark, setBrandWatermark] = useState(false);
+  const [watermarkUrl, setWatermarkUrl] = useState<string | null>(null);
+  const [bulkMode, setBulkMode] = useState(false);
   const [activeRenderId, setActiveRenderId] = useState<number | null>(null);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const { data: user } = useGetMe();
   const { data: usage, isLoading: usageLoading } = useGetRenderUsage();
   const createRender = useCreateRender();
+  const completeOnboarding = useCompleteOnboarding();
+
+  const isBulkEligible =
+    user?.subscriptionTier === 'enterprise';
+
   const { data: activeRender } = useGetRender(activeRenderId || 0, {
     query: {
       enabled: !!activeRenderId,
@@ -38,8 +84,30 @@ export default function StudioPage() {
     },
   });
 
+  const showOnboarding =
+    user !== undefined && user.hasCompletedOnboarding === false;
+
+  const handleCompleteOnboarding = () => {
+    completeOnboarding.mutate(undefined, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      },
+    });
+  };
+
+  const handleFileSelect = (url: string) => {
+    if (bulkMode) {
+      setSourceImages((prev) =>
+        prev.length < 10 ? [...prev, url] : prev
+      );
+    } else {
+      setSourceImages([url]);
+    }
+  };
+
   const handleRender = () => {
-    if (!sourceImage || !modelPersona || !locationEnvironment) {
+    const primary = sourceImages[0];
+    if (!primary || !modelPersona || !locationEnvironment) {
       toast({
         title: 'Missing information',
         description: 'Please upload an image and select both model persona and location.',
@@ -60,9 +128,12 @@ export default function StudioPage() {
     createRender.mutate(
       {
         data: {
-          sourceImageUrl: sourceImage,
+          sourceImageUrl: primary,
           modelPersona: modelPersona as any,
           locationEnvironment: locationEnvironment as any,
+          modelDemographics: (modelDemographics as any) || undefined,
+          imageDimensions: (imageDimensions as any) || undefined,
+          smartLighting: smartLighting || undefined,
         },
       },
       {
@@ -97,17 +168,31 @@ export default function StudioPage() {
   };
 
   const canRender = !createRender.isPending && usage?.canRender;
-  const isProcessing = activeRender?.status === 'processing' || activeRender?.status === 'pending';
-  const hasOutput = activeRender?.status === 'completed' && activeRender?.outputImageUrl;
+  const isProcessing =
+    activeRender?.status === 'processing' || activeRender?.status === 'pending';
+  const hasOutput =
+    activeRender?.status === 'completed' && activeRender?.outputImageUrl;
 
   return (
     <div className="flex h-screen bg-background">
+      {showOnboarding && (
+        <OnboardingWizard onComplete={handleCompleteOnboarding} />
+      )}
+
       <Sidebar />
 
-      <main className="flex-1 overflow-auto">
-        <div className="p-8">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2">
+      <main className="flex-1 flex flex-col overflow-auto">
+        <div className="flex-1 p-8">
+          <div className="mb-6">
+            <h2
+              className="text-foreground mb-1"
+              style={{
+                fontFamily: "'EB Garamond', Georgia, serif",
+                fontSize: '26px',
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+              }}
+            >
               Studio Workspace
             </h2>
             <p className="text-sm text-muted-foreground font-mono">
@@ -116,14 +201,164 @@ export default function StudioPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* ── LEFT PANEL: Controls ── */}
             <div className="space-y-4">
-              <FileUpload
-                onFileSelect={setSourceImage}
-                disabled={createRender.isPending}
-              />
+              {/* Bulk mode toggle */}
+              <div className="flex items-center justify-between p-3 border border-border rounded bg-card">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    ⚡ Switch to Bulk Studio Mode
+                  </span>
+                  {!isBulkEligible && (
+                    <span className="text-xs text-muted-foreground font-mono">
+                      (Enterprise only)
+                    </span>
+                  )}
+                </div>
+                <Switch
+                  checked={bulkMode}
+                  onCheckedChange={(v) => {
+                    if (!isBulkEligible && v) {
+                      toast({
+                        title: 'Enterprise feature',
+                        description: 'Upgrade to Enterprise to unlock Bulk Studio Mode.',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+                    setBulkMode(v);
+                    setSourceImages([]);
+                  }}
+                  disabled={createRender.isPending}
+                />
+              </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* File upload zone */}
+              {bulkMode ? (
                 <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Bulk Upload ({sourceImages.length}/10)
+                  </Label>
+                  <div
+                    className="border-2 border-dashed border-border rounded bg-card p-4 min-h-[120px] cursor-pointer"
+                    onClick={() => {
+                      const inp = document.createElement('input');
+                      inp.type = 'file';
+                      inp.accept = 'image/*';
+                      inp.multiple = true;
+                      inp.onchange = (e) => {
+                        const files = Array.from(
+                          (e.target as HTMLInputElement).files ?? []
+                        ).slice(0, 10 - sourceImages.length);
+                        files.forEach((file) => {
+                          const reader = new FileReader();
+                          reader.onloadend = () =>
+                            setSourceImages((prev) =>
+                              prev.length < 10
+                                ? [...prev, reader.result as string]
+                                : prev
+                            );
+                          reader.readAsDataURL(file);
+                        });
+                      };
+                      inp.click();
+                    }}
+                  >
+                    {sourceImages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-4 text-center">
+                        <p className="text-sm font-medium text-foreground mb-1">
+                          Bulk Upload Up to 10 Images
+                        </p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          Click to select multiple files
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-5 gap-2">
+                        {sourceImages.map((img, i) => (
+                          <div
+                            key={i}
+                            className="relative aspect-square rounded overflow-hidden border border-border"
+                          >
+                            <img
+                              src={img}
+                              alt={`Upload ${i + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              className="absolute top-0.5 right-0.5 bg-black/60 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSourceImages((prev) =>
+                                  prev.filter((_, idx) => idx !== i)
+                                );
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        {sourceImages.length < 10 && (
+                          <div className="aspect-square rounded border border-dashed border-border flex items-center justify-center text-muted-foreground text-xl">
+                            +
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <FileUpload
+                  onFileSelect={handleFileSelect}
+                  disabled={createRender.isPending}
+                />
+              )}
+
+              {/* Dropdowns grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Image Dimensions */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Select Image Dimensions</Label>
+                  <Select
+                    value={imageDimensions}
+                    onValueChange={setImageDimensions}
+                    disabled={createRender.isPending}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Aspect ratio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="portrait_45">4:5 Portrait (Shopify &amp; Amazon)</SelectItem>
+                      <SelectItem value="portrait_916">9:16 Vertical (TikTok Ads)</SelectItem>
+                      <SelectItem value="square_11">1:1 Square (Social Media)</SelectItem>
+                      <SelectItem value="landscape_169">16:9 Landscape (Banners &amp; Magazines)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Model Demographics */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Model Demographics</Label>
+                  <Select
+                    value={modelDemographics}
+                    onValueChange={setModelDemographics}
+                    disabled={createRender.isPending}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Ethnicity" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="caucasian">Caucasian</SelectItem>
+                      <SelectItem value="east_asian">East Asian</SelectItem>
+                      <SelectItem value="south_asian">South Asian / Indian</SelectItem>
+                      <SelectItem value="afro_american">Afro-American / Black</SelectItem>
+                      <SelectItem value="hispanic">Hispanic / Latino</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Model Persona */}
+                <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Model Persona</Label>
                   <Select
                     value={modelPersona}
@@ -142,7 +377,8 @@ export default function StudioPage() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                {/* Location */}
+                <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Location Environment</Label>
                   <Select
                     value={locationEnvironment}
@@ -162,6 +398,59 @@ export default function StudioPage() {
                 </div>
               </div>
 
+              {/* Smart Ambient Lighting toggle */}
+              <div className="flex items-center justify-between p-3 border border-border rounded bg-card">
+                <div>
+                  <p className="text-sm font-medium">Smart Ambient Lighting</p>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    Match Ambient Studio Lighting
+                  </p>
+                </div>
+                <Switch
+                  checked={smartLighting}
+                  onCheckedChange={setSmartLighting}
+                  disabled={createRender.isPending}
+                />
+              </div>
+
+              {/* Dynamic Brand Watermark */}
+              <div className="p-3 border border-border rounded bg-card space-y-3">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="watermark"
+                    checked={brandWatermark}
+                    onCheckedChange={(v) => setBrandWatermark(!!v)}
+                    disabled={createRender.isPending}
+                  />
+                  <Label htmlFor="watermark" className="text-sm font-medium cursor-pointer">
+                    Dynamic Brand Watermark
+                  </Label>
+                </div>
+                {brandWatermark && (
+                  <div className="ml-6">
+                    <p className="text-xs text-muted-foreground font-mono mb-2">
+                      Upload transparent logo PNG
+                    </p>
+                    <FileUpload
+                      onFileSelect={setWatermarkUrl}
+                      accept="image/png"
+                      disabled={createRender.isPending}
+                      className="min-h-0"
+                    />
+                    {watermarkUrl && (
+                      <div className="mt-2 w-16 h-16 border border-border rounded overflow-hidden">
+                        <img
+                          src={watermarkUrl}
+                          alt="Watermark"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Render button */}
               <Button
                 onClick={handleRender}
                 disabled={!canRender}
@@ -171,21 +460,26 @@ export default function StudioPage() {
                 {createRender.isPending ? 'Starting render...' : 'Render Studio Image Layer'}
               </Button>
 
+              {/* Usage */}
               {!usageLoading && usage && (
                 <div className="p-3 bg-card border border-border rounded">
                   <p className="text-xs text-muted-foreground font-mono">
                     {usage.limit === null
-                      ? `${usage.used} renders used • Unlimited plan`
-                      : `${usage.used} of ${usage.limit} renders used • ${usage.tier} tier`}
+                      ? `${usage.used} renders used · Unlimited plan`
+                      : `${usage.used} of ${usage.limit} renders used · ${usage.tier} tier`}
                   </p>
                 </div>
               )}
             </div>
 
+            {/* ── RIGHT PANEL: Output ── */}
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-sm font-medium">AI Studio Output</Label>
-                <div className="aspect-square border-2 border-dashed border-border rounded bg-card flex items-center justify-center overflow-hidden">
+                <div
+                  className="border-2 border-dashed border-border rounded bg-card flex items-center justify-center overflow-hidden"
+                  style={{ aspectRatio: '1 / 1' }}
+                >
                   {isProcessing && (
                     <div className="text-center p-8">
                       <div className="w-16 h-16 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4 animate-pulse-shimmer" />
@@ -198,12 +492,21 @@ export default function StudioPage() {
                     </div>
                   )}
                   {hasOutput && (
-                    <img
-                      src={activeRender.outputImageUrl!}
-                      alt="Rendered output"
-                      className="w-full h-full object-cover"
-                      data-testid="img-render-output"
-                    />
+                    <div className="relative w-full h-full">
+                      <img
+                        src={activeRender.outputImageUrl!}
+                        alt="Rendered output"
+                        className="w-full h-full object-cover"
+                        data-testid="img-render-output"
+                      />
+                      {brandWatermark && watermarkUrl && (
+                        <img
+                          src={watermarkUrl}
+                          alt="Watermark"
+                          className="absolute bottom-3 right-3 w-16 h-16 object-contain opacity-80"
+                        />
+                      )}
+                    </div>
                   )}
                   {!isProcessing && !hasOutput && (
                     <div className="text-center p-8">
@@ -228,14 +531,15 @@ export default function StudioPage() {
             </div>
           </div>
 
-          <div className="border-t border-border pt-6">
+          {/* Source / output preview strip */}
+          <div className="border-t border-border pt-6 mb-8">
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <Label className="text-sm font-medium mb-2 block">Source Layer</Label>
                 <div className="aspect-video border border-border rounded bg-card flex items-center justify-center overflow-hidden">
-                  {sourceImage ? (
+                  {sourceImages[0] ? (
                     <img
-                      src={sourceImage}
+                      src={sourceImages[0]}
                       alt="Source"
                       className="w-full h-full object-cover"
                       data-testid="img-source"
@@ -247,7 +551,6 @@ export default function StudioPage() {
                   )}
                 </div>
               </div>
-
               <div>
                 <Label className="text-sm font-medium mb-2 block">AI Studio Output</Label>
                 <div className="aspect-video border border-border rounded bg-card flex items-center justify-center overflow-hidden">
@@ -266,7 +569,32 @@ export default function StudioPage() {
               </div>
             </div>
           </div>
+
+          {/* FAQ accordion */}
+          <div className="border-t border-border pt-6">
+            <h3 className="text-sm font-medium text-muted-foreground font-mono mb-4 uppercase tracking-wider">
+              Studio FAQ
+            </h3>
+            <Accordion type="single" collapsible className="space-y-2">
+              {FAQ_ITEMS.map((item, i) => (
+                <AccordionItem
+                  key={i}
+                  value={`faq-${i}`}
+                  className="border border-border rounded bg-card px-4"
+                >
+                  <AccordionTrigger className="text-sm font-medium text-foreground hover:no-underline py-4">
+                    {item.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground pb-4">
+                    {item.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
         </div>
+
+        <Footer />
       </main>
     </div>
   );

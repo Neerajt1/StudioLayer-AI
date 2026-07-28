@@ -1,0 +1,59 @@
+Please execute a comprehensive system upgrade on the StudioLayer AI application codebase. Maintain all active user authentication states, Replit database models, and the premium absolute-black minimalist dark mode theme while integrating the following typographic layers, visual controls, and engagement structures:
+
+1. PREMIUM TWO-FONT TYPOGRAPHY & TEXT LOGO SYSTEM:
+- Import the 'EB Garamond' font family from Google Fonts and configure it as the primary serif typeface in the Tailwind layout system.
+- Build the main top-left header logo as a PURE TEXT LOGO reading exactly 'StudioLayer AI'. Do not use image placeholders or graphic icons. 
+- Style this text logo using the EB Garamond font layer, size 24px, pristine crisp white color, with wide letter-spacing tracking (letter-spacing: 0.15em).
+- Directly beneath the text logo, add a muted tagline reading '[ Professional Editorial Render Engine ]' styled in a crisp 12px sans-serif font (Inter or Geist) colored in subtle slate-gray (text-slate-400) to establish a premium creative software hierarchy.
+- Apply the serif font (EB Garamond) to all primary section headlines and the pricing tier titles ('Starter Studio Plan' and 'Enterprise Bulk Plan').
+- For all operational interface text layers—such as input dropdown items, form labels, data table rows, metric numbers, and primary action buttons—preserve a crisp, high-readability sans-serif font structure (like Inter or system-ui).
+
+2. WORKSPACE CONTROL PANEL EXPANSION:
+Update the main dashboard left sidebar control grid to feature these specific user input modules:
+- Dropdown A: 'Select Image Dimensions' -> Options: '4:5 Portrait (Shopify & Amazon)', '9:16 Vertical (TikTok Ads)', '1:1 Square (Social Media)', '16:9 Landscape (Banners & Magazines)'.
+- Dropdown B: 'Model Demographics' -> Options: 'Caucasian', 'East Asian', 'South Asian / Indian', 'Afro-American / Black', 'Hispanic / Latino'.
+- Toggle Switch C: 'Smart Ambient Lighting' -> (A minimalist toggle labeled 'Match Ambient Studio Lighting' to control shadow-fabric rendering properties).
+- Checkbox D: 'Dynamic Brand Watermark' -> (A toggle switch that reveals a secondary file-uploader for a transparent logo PNG file, allowing users to choose whether to overlay a corner branding watermark on a project basis).
+
+3. BULK ENGINE ACCELERATION TIER:
+- Add a highly visible toggle at the top of the uploader module labeled '⚡ Switch to Bulk Studio Mode'. 
+- Clicking this toggle must visually transform the single file-drop zone into a multi-file container capable of accepting up to 10 image uploads simultaneously (locked dynamically on the backend to the premium subscription database flag).
+
+4. AUTOMATED USER WELCOME ONBOARDING WIZARD:
+- Program an elegant modal overlay component that triggers automatically ONLY upon a user's very first post-registration login.
+- It must guide them through a clean 3-step visual sequence:
+  * Step 1 Title: '📷 1. Upload Fabric Asset' -> Text: 'Drop a high-resolution flat-lay or mannequin photo of your apparel item.'
+  * Step 2 Title: '🌍 2. Configure Persona & Studio' -> Text: 'Select your target model ethnicity, body type, and premium location environment background.'
+  * Step 3 Title: '✨ 3. Render High-End Catalog Asset' -> Text: 'Click Render and watch your fabric layer seamlessly morph onto a living human model.'
+- Include a 'Get Started ➔' primary button to dismiss the overlay and save the completed state to the user's database profile.
+
+5. USER COMFORT FAQ ACCORDION COMPONENT:
+Positioned clean at the absolute bottom of the main dashboard viewport, add a collapsible minimalist accordion component containing these 3 high-converting support logs:
+- Tab 1 Label: 'Who legally owns the copyright of the final rendered fashion assets?' -> Text: 'You do. Every single image layer generated inside your dashboard is 100% commercially owned by your brand, completely royalty-free.'
+- Tab 2 Label: 'What style of garment photography yields the highest-fidelity AI rendering results?' -> Text: 'Clear smartphone photos shot under bright, even lighting against a neutral background (or a mannequin) allow our vision engine to isolate textures flawlessly.'
+- Tab 3 Label: 'Can I cancel or alter my subscription tier at any time?' -> Text: 'Yes. You can upgrade, downgrade, or pause your active studio access instantly inside your billing command tab with zero exit contracts.'
+
+6. TWO-TIERED TRANSPARENT VALUE CHECKOUT MATRIX:
+On the 'Subscription & Billing' tab view, clear out old layouts and draw two side-by-side slate-gray containers with explicitly stated fair usage limits:
+- Left Plan Container: 'Starter Studio Plan' -> Text: '~~Original Price $199 / mo~~' -> Highlight: 'Launch Offer $99 / month'. Add feature bullets:
+  * ✔ 50 High-Res AI Studio Renders Per Day (Resets Daily)
+  * ✔ Single-Image Upload Interface Canvas
+  * ✔ Full Aspect Ratio Control (4:5, 9:16, 1:1, 16:9)
+  * ✔ Multi-Ethnic Model Customization Engine
+  * ✔ Standard Ambient Studio Lighting Matcher
+- Right Plan Container (Add a subtle glowing cobalt border): 'Enterprise Bulk Plan' -> Text: '~~Original Price $299 / mo~~' -> Highlight: 'Launch Offer $149 / month'. Add feature bullets:
+  * ✔ 300 Priority Bulk Renders Per Day (Resets Daily)
+  * ✔ ⚡ Bulk Studio Mode (Upload up to 10 concurrent images)
+  * ✔ Priority Graphics Rendering Queue (Zero waiting lines)
+  * ✔ Full Aspect, Multi-Ethnic, and Watermark Toggle Controls
+  * ✔ Dedicated Asset Gallery Folder Management
+
+7. AUTOMATED REPLIT-POWERED CUSTOMER SUPPORT PIPELINE:
+- Position a minimalist, elegant link at the bottom right corner of the dashboard viewport labeled '✉ Contact Studio Support' styled in a clean 14px sans-serif font.
+- Clicking this link must trigger a sleek slide-out modal panel containing a text area labeled 'Describe your workspace issue or feature request' and an emerald-green action button labeled 'Submit Ticket'.
+- Hook this form directly to a new 'SupportTickets' table inside the Replit database. When a user submits a ticket, the backend must automatically log: User Email, Timestamp, and Message Content.
+- Route a copy of this submitted text payload to automatically generate a notification email directed straight to the administrator's corporate email address so the founder can respond instantly.
+
+8. CORPORATE LEGAL COPYRIGHT FOOTER:
+At the absolute bottom footer line of every single viewport across the entire web application platform, print this exact copyright text layer in a muted, elegant 12px slate-gray font:
+'© 2026 StudioLayer AI. All rights reserved. A product of 29Copper Media Works.'

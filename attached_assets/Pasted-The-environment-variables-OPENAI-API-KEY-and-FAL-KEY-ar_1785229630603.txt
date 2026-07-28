@@ -1,0 +1,20 @@
+The environment variables 'OPENAI_API_KEY' and 'FAL_KEY' are now successfully injected into the application secrets vault.
+
+Please update the backend codebase files to fully execute the multi-stage image processing loop when a user triggers the 'Render Studio Image Layer' action button:
+
+1. CLOTHING PROCESSING WITH OPENAI VISION:
+- Capture the uploaded flat-lay or mannequin garment image from the frontend canvas.
+- Route the image byte asset to the OpenAI GPT-4o Vision API endpoint. Feed it this explicit system prompt: 'Analyze the garment present in this uploaded photo. Isolate and describe its specific clothing item type, exact color palette tone, and fabric texture material. Output a single descriptive string containing only these data properties.'
+
+2. MODEL MORPHING VIA FAL.AI GRAPHICS API:
+- Retrieve the structured descriptor string from the OpenAI response.
+- Read the user's active choices from the 'Select Model Persona' and 'Select Location Environment' dashboard dropdown menus.
+- Synthesize these inputs into a pristine, high-end fashion diffusion generation prompt string. (Format Template: 'A premium, ultra-realistic editorial studio fashion photograph of a [Model Persona] model professionally posing and wearing a [OpenAI extracted text description], naturally positioned inside a [Location Environment]. Flawless clothing wrinkles, natural skin lighting shadows, 8k resolution, high-end commercial look').
+- Execute an image-to-image or virtual try-on workflow request to the Fal.ai framework using this generated prompt.
+
+3. DYNAMIC WORKSPACE REFRESH:
+- Secure the final high-resolution image asset URL delivered by the Fal.ai server response.
+- Instantly refresh the right-hand 'AI Studio Output' container block to render and showcase this new generated model image.
+- Map the 'Download High-Res Studio Asset' button to this new image file string so fashion brand owners can instantly save the asset to their computer.
+
+Please maintain all pre-existing user interface layers, Tailwind styles, and user database profiles completely intact during this system wiring.

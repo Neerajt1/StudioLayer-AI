@@ -5,11 +5,16 @@
  * StudioLayer AI API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { RenderInputImageDimensions } from './renderInputImageDimensions';
 import type { RenderInputLocationEnvironment } from './renderInputLocationEnvironment';
+import type { RenderInputModelDemographics } from './renderInputModelDemographics';
 import type { RenderInputModelPersona } from './renderInputModelPersona';
 
 export interface RenderInput {
   sourceImageUrl: string;
   modelPersona: RenderInputModelPersona;
   locationEnvironment: RenderInputLocationEnvironment;
+  modelDemographics?: RenderInputModelDemographics;
+  imageDimensions?: RenderInputImageDimensions;
+  smartLighting?: boolean;
 }

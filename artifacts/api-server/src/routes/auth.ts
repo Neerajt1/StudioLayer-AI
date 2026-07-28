@@ -6,7 +6,7 @@ import { RegisterBody, LoginBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-const FREE_TIER_LIMIT = 3;
+export const FREE_TIER_LIMIT = 3;
 
 function mapUser(user: typeof usersTable.$inferSelect) {
   return {
@@ -14,6 +14,7 @@ function mapUser(user: typeof usersTable.$inferSelect) {
     email: user.email,
     name: user.name,
     subscriptionTier: user.subscriptionTier,
+    hasCompletedOnboarding: user.hasCompletedOnboarding,
     createdAt: user.createdAt,
   };
 }
@@ -104,5 +105,25 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   res.json(mapUser(user));
 });
 
-export { FREE_TIER_LIMIT };
+router.patch("/auth/complete-onboarding", async (req, res): Promise<void> => {
+  const userId = req.session?.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const [user] = await db
+    .update(usersTable)
+    .set({ hasCompletedOnboarding: true })
+    .where(eq(usersTable.id, userId))
+    .returning();
+
+  if (!user) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  res.json(mapUser(user));
+});
+
 export default router;

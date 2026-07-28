@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
@@ -122,9 +122,9 @@
   --chart-4: 0 0% 30%;
   --chart-5: 0 0% 20%;
 
-  --app-font-sans: 'Syne', sans-serif;
-  --app-font-serif: 'Syne', serif;
-  --app-font-mono: 'Space Mono', monospace;
+  --app-font-sans: 'Inter', system-ui, sans-serif;
+  --app-font-serif: 'EB Garamond', Georgia, serif;
+  --app-font-mono: 'Courier New', monospace;
   --radius: 0.25rem;
   --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0);
   --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0);
