@@ -1,0 +1,23 @@
+Build a production-ready Python web application using FastAPI or Flask, utilizing Replit's built-in database storage for user account management and project tracking. The UI theme must be a highly premium, ultra-minimalist luxury dark mode using Tailwind CSS with an absolute-black background, crisp white text, and subtle slate-gray structural borders (resembling a high-end creative canvas like Photoshop).
+
+The application is an AI Fashion Studio platform called 'StudioLayer AI'. It must contain the following core screens and logic structures:
+
+1. AUTHENTICATION CONTROLS:
+- Secure login and registration flows storing corporate users in the Replit database.
+
+2. CREATIVE STUDIO INTERFACE (THE CANVAS):
+- A sidebar navigation containing: '🎨 Studio Workspace', '📦 Asset Gallery', and '💳 Subscription & Billing'.
+- A main content area featuring a large, dashed-border file uploader element labeled 'Upload Clothing Photo (Flat-lay or Mannequin)'.
+- Beside the uploader, place two input dropdown menus: 
+  * Dropdown 1: 'Select Model Persona' (Options: Casual, High-Fashion, Athletic, Minimalist).
+  * Dropdown 2: 'Select Location Environment' (Options: Photo Studio, Urban Street, Luxury Interior, Nature).
+- A prominent primary action button labeled 'Render Studio Image Layer'.
+
+3. STAGING RESULT COMPONENT:
+Below the controls, create a dual-panel visual grid layout:
+- Left Panel: 'Source Layer' (Displays the user's original uploaded image).
+- Right Panel: 'AI Studio Output' (Features an image placeholder box with an active loading animation overlay that triggers upon button click, simulating the background rendering process).
+- Below the output panel, place a large emerald-green button labeled 'Download High-Res Studio Asset'.
+
+4. API ARCHITECTURE READY FOR INTEGRATION:
+- Set up modular backend Python routes designed to handle secure environment secrets for an advanced image diffusion API (like Replicate or Fal.ai) to process image-to-image try-on workflows, alongside basic tracking variables in the Replit database to limit free users to 3 project renders before requiring a payment tier trigger.
