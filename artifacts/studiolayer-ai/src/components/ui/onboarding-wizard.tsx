@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 
 interface OnboardingWizardProps {
   onComplete: () => void;
+  onSkip?: () => void;
 }
 
 const steps = [
@@ -26,7 +27,7 @@ const steps = [
   },
 ];
 
-export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
+export function OnboardingWizard({ onComplete, onSkip }: OnboardingWizardProps) {
   const [step, setStep] = useState(0);
   const current = steps[step];
 
@@ -63,7 +64,7 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
 
         {/* Actions */}
         <div className="flex gap-3">
-          {step > 0 && (
+          {step > 0 ? (
             <Button
               variant="outline"
               className="flex-1"
@@ -71,6 +72,16 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             >
               Back
             </Button>
+          ) : (
+            onSkip && (
+              <Button
+                variant="ghost"
+                className="flex-1 text-muted-foreground"
+                onClick={onSkip}
+              >
+                Skip
+              </Button>
+            )
           )}
           {step < steps.length - 1 ? (
             <Button

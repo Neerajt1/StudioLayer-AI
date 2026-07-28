@@ -85,10 +85,15 @@ export default function StudioPage() {
     } as any,
   });
 
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const showOnboarding =
-    user !== undefined && user.hasCompletedOnboarding === false;
+    !onboardingDismissed &&
+    user !== undefined &&
+    user.hasCompletedOnboarding === false;
 
   const handleCompleteOnboarding = () => {
+    // Close immediately — don't wait for the mutation or a refetch
+    setOnboardingDismissed(true);
     completeOnboarding.mutate(undefined, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
@@ -182,7 +187,10 @@ export default function StudioPage() {
   return (
     <div className="flex h-screen bg-background">
       {showOnboarding && (
-        <OnboardingWizard onComplete={handleCompleteOnboarding} />
+        <OnboardingWizard
+          onComplete={handleCompleteOnboarding}
+          onSkip={() => setOnboardingDismissed(true)}
+        />
       )}
 
       <Sidebar />
