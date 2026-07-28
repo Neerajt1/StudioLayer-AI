@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { SupportModal } from '@/components/ui/support-modal';
+import { useLogout } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface SidebarProps {
   className?: string;
@@ -14,8 +16,19 @@ const navItems = [
 ];
 
 export function Sidebar({ className }: SidebarProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [supportOpen, setSupportOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const logoutMutation = useLogout();
+
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        queryClient.clear();
+        setLocation('/login');
+      },
+    });
+  };
 
   return (
     <>
@@ -64,6 +77,16 @@ export function Sidebar({ className }: SidebarProps) {
               </Link>
             );
           })}
+
+          {/* Logout — directly below nav links */}
+          <button
+            onClick={handleLogout}
+            disabled={logoutMutation.isPending}
+            className="flex items-center w-full px-3 py-2.5 text-sm font-medium rounded transition-colors text-sidebar-foreground hover:bg-sidebar-primary disabled:opacity-50"
+            data-testid="nav-logout"
+          >
+            🚪 Log Out
+          </button>
         </nav>
 
         {/* Bottom */}

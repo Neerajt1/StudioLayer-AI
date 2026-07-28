@@ -154,8 +154,9 @@ router.post("/renders", async (req, res): Promise<void> => {
 });
 
 router.delete("/renders/:id", async (req, res): Promise<void> => {
-  const userId = req.session?.userId;
-  if (!userId) {
+  // Cast to Number — session deserialisation can return the value as a string
+  const userId = Number(req.session?.userId);
+  if (!userId || isNaN(userId)) {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
@@ -167,19 +168,17 @@ router.delete("/renders/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [render] = await db
-    .select()
-    .from(rendersTable)
-    .where(and(eq(rendersTable.id, id), eq(rendersTable.userId, userId)));
+  // Single DELETE … RETURNING avoids a redundant SELECT round-trip and
+  // returns an empty array when no row matched, giving us 404 cleanly.
+  const deleted = await db
+    .delete(rendersTable)
+    .where(and(eq(rendersTable.id, id), eq(rendersTable.userId, userId)))
+    .returning({ id: rendersTable.id });
 
-  if (!render) {
+  if (deleted.length === 0) {
     res.status(404).json({ error: "Render not found" });
     return;
   }
-
-  await db
-    .delete(rendersTable)
-    .where(and(eq(rendersTable.id, id), eq(rendersTable.userId, userId)));
 
   res.status(204).send();
 });

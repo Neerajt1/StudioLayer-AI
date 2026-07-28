@@ -501,13 +501,11 @@ export default function StudioPage() {
                 {createRender.isPending ? 'Starting render...' : 'Render Studio Image Layer'}
               </Button>
 
-              {/* Usage */}
-              {!usageLoading && usage && (
+              {/* Trial tier notice */}
+              {!usageLoading && usage && usage.tier === 'free' && (
                 <div className="p-3 bg-card border border-border rounded">
                   <p className="text-xs text-muted-foreground font-mono">
-                    {usage.limit === null
-                      ? `${usage.used} renders used · Unlimited plan`
-                      : `${usage.used} of ${usage.limit} renders used · ${usage.tier} tier`}
+                    Free Trial — {usage.used} of {usage.limit} evaluation renders used · Outputs include watermark
                   </p>
                 </div>
               )}
@@ -540,6 +538,28 @@ export default function StudioPage() {
                         className="w-full h-full object-cover"
                         data-testid="img-render-output"
                       />
+                      {/* Evaluation watermark — free trial users only */}
+                      {user?.subscriptionTier === 'free' && (
+                        <div
+                          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                          style={{ transform: 'rotate(-30deg)' }}
+                        >
+                          <p
+                            style={{
+                              fontFamily: "'Inter', sans-serif",
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              letterSpacing: '0.12em',
+                              color: 'rgba(9,9,11,0.28)',
+                              textAlign: 'center',
+                              userSelect: 'none',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            StudioLayer AI Evaluation Asset
+                          </p>
+                        </div>
+                      )}
                       {brandWatermark && watermarkUrl && (
                         <img
                           src={watermarkUrl}

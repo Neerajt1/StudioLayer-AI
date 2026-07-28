@@ -1,0 +1,22 @@
+Let's immediately fix the critical functionality failures across the codebase. Stop making incremental updates and cleanly rewrite or override the core script files (main.py and templates/index.html) to enforce these strict, unnegotiable directives:
+
+1. FORCE SECURE LOGIN REDIRECTION BLOCK:
+- The app is critically bypassing security. Ensure that the very first function in the backend script checks if a user session cookie or token is active. If the user is NOT logged in, block access to ALL pages ('/', '/studio', '/gallery') and immediately redirect them to a dedicated, clean '/login' page. 
+
+2. ADD THE LOGOUT INTERFACE OVERLAY:
+- In the left sidebar navigation column, directly underneath the 'Subscription & Billing' button link, add a prominent, clean link labeled '🚪 Log Out'. 
+- Hook this link to a backend route that instantly clears the user session memory and throws them back out to the main secure login page.
+
+3. REMOVE THE UNAUTHORIZED FREE TIER LIMIT:
+- Completely delete the '3 of 3 renders used - free tier' limit block from the database models and the layout page. We never authorized this. 
+- Implement our official product logic layout: Give unpaying or trial users a 'Free Trial' mode where they can test up to 3 image generations, but HARDCODE a bold transparent text watermark reading 'StudioLayer AI Evaluation Asset' across the entire center of the final generated output image frame. The pure, clean un-watermarked high-res asset will only unlock for active Stripe/Razorpay subscribers.
+
+4. OVERHAUL THE FILE UPLOAD & RE-ACTIVATE THE RENDER BUTTON:
+- The frontend file uploader is completely dead. Clear the broken listener code and rewrite it using standard HTML file forms. 
+- The second a user clicks the area or drops a valid photo asset, the JavaScript container must immediately capture the file, display a miniature picture preview of their uploaded clothing item inside the dropzone area, and instantly switch the 'Render Studio Image Layer' action button state to ACTIVE (Solid Pitch Black font/fill background #09090B with pure white text, completely clickable).
+
+5. REPAIR THE DATABASE DELETE OPERATION LOGIC:
+- The gallery delete function is crashing because the backend route is missing the correct element ID mapping or throwing a database constraint error.
+- Ensure the trash can click captures the exact item index UUID, executes a clean SQL/database row delete statement, and triggers a clean frontend window.location.reload() callback to remove the failed cards instantly. 
+
+Please recompile the entire server architecture now. Output any code line tracking syntax errors directly into the Console tray for the developer.
