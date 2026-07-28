@@ -102,6 +102,11 @@ export default function StudioPage() {
   };
 
   const handleFileSelect = (url: string) => {
+    if (!url) {
+      // Clear button pressed in file upload
+      if (!bulkMode) setSourceImages([]);
+      return;
+    }
     if (bulkMode) {
       setSourceImages((prev) =>
         prev.length < 10 ? [...prev, url] : prev
@@ -176,9 +181,10 @@ export default function StudioPage() {
     }
   };
 
-  // Only block the button if we've confirmed the limit is hit — never block on loading state
+  // Button goes active the moment a valid image is detected in the upload state
+  const hasImage = sourceImages.length > 0 && !!sourceImages[0];
   const limitConfirmedBlocked = usage !== undefined && !usage.canRender;
-  const canRender = !createRender.isPending && !limitConfirmedBlocked;
+  const canRender = hasImage && !createRender.isPending && !limitConfirmedBlocked;
   const isProcessing =
     activeRender?.status === 'processing' || activeRender?.status === 'pending';
   const hasOutput =

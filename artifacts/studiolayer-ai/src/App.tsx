@@ -49,7 +49,8 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    document.documentElement.classList.add('dark');
+    // White gallery theme — ensure dark class is not applied
+    document.documentElement.classList.remove('dark');
   }, []);
 
   return (

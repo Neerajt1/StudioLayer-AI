@@ -39,7 +39,7 @@ export function Sidebar({ className }: SidebarProps) {
           >
             StudioLayer AI
           </h1>
-          <p className="text-slate-400 mt-1" style={{ fontSize: '12px' }}>
+          <p className="text-muted-foreground mt-1" style={{ fontSize: '11px', fontFamily: "'Inter', sans-serif", letterSpacing: '0.02em' }}>
             [ Professional Editorial Render Engine ]
           </p>
         </div>

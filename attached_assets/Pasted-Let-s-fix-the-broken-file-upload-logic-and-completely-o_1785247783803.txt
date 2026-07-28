@@ -1,0 +1,23 @@
+Let's fix the broken file upload logic and completely overhaul the visual interface design to a premium, ultra-luxury white gallery aesthetic in a single deployment:
+
+1. RECTIFY BROKEN FILE UPLOAD & INACTIVE BUTTON LOGIC:
+- Locate the file uploader drop-zone element in the JavaScript/HTML frontend. 
+- Ensure that when a user selects or drags a file into the drop-zone, a change event instantly fires to capture the file data.
+- Update the interface dynamically upon upload: display a crisp image thumbnail preview along with the file's raw name inside the dash-bordered uploader area so the user has immediate visual confirmation that the asset is loaded.
+- Fix the 'Render Studio Image Layer' action button logic: ensure it automatically changes state from 'disabled' to 'active' the exact second a valid clothing image asset is detected in the upload state.
+
+2. COMPLETE VISUAL RE-DESIGN (STUDIO WHITE REALM):
+Transform the design language from cheap dark-mode to an elite, minimalist white gallery workspace:
+- Change the background of the ENTIRE web application viewports, sidebars, dashboard grids, modals, and input cards to a solid, pure Studio White (#FFFFFF).
+- Set all inner secondary panels, dropdowns, and block backgrounds to a clean, smooth off-white porcelain accent tone (#F9F9FB or #F4F4F5).
+- Turn all primary typography headers, text logo characters, navigation items, and data titles to solid Pitch Black / Charcoal (#18181B) to ensure pixel-perfect readability and executive design authority. Secondary helper text descriptions must use soft slate-gray (#71717A).
+- Remove all neon glows and heavy shadows. All layout elements and panels must be completely flat or utilize a razor-thin 1px border layer colored in soft pearl-gray (#E4E4E7).
+
+3. LOGO, TYPOGRAPHY, BUTTONS, & FOOTER ALIGNMENT:
+- Main Header Logo text: Render 'StudioLayer AI' in solid pitch black, styled in a spacious EB Garamond font layer (size 24px) with tracking expansion (letter-spacing: 0.15em).
+- Set the logo tagline text underneath to a clean 11px sans-serif layout colored in soft slate-gray, reading exactly: '[ Professional Editorial Render Engine ]'.
+- Change the primary 'Render Studio Image Layer' button and the pricing checkout triggers to a solid Pitch Black (#09090B) background with pure white text. On mouse hover, smoothly dim the container background fill to dark-gray (#27272A).
+- Corporate Footer Label: Keep it locked at the base layout center, styled in crisp 11px slate-gray sans-serif typography:
+'© 2026 StudioLayer AI. All rights reserved. A product of 29Copper Media Works.'
+
+Please verify that all authentication rules and Fal.ai tryon v1.6 background API variables function seamlessly under this pristine structure.
