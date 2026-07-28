@@ -59,6 +59,7 @@ export default function StudioPage() {
   const [watermarkUrl, setWatermarkUrl] = useState<string | null>(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [activeRenderId, setActiveRenderId] = useState<number | null>(null);
+  const [showValidation, setShowValidation] = useState(false);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -74,14 +75,14 @@ export default function StudioPage() {
   const { data: activeRender } = useGetRender(activeRenderId || 0, {
     query: {
       enabled: !!activeRenderId,
-      refetchInterval: (query) => {
+      refetchInterval: (query: any) => {
         const render = query.state.data;
         if (render && (render.status === 'processing' || render.status === 'pending')) {
           return 2000;
         }
         return false;
       },
-    },
+    } as any,
   });
 
   const showOnboarding =
@@ -107,16 +108,19 @@ export default function StudioPage() {
 
   const handleRender = () => {
     const primary = sourceImages[0];
+
+    // Show inline validation errors on the fields
     if (!primary || !modelPersona || !locationEnvironment) {
+      setShowValidation(true);
       toast({
-        title: 'Missing information',
-        description: 'Please upload an image and select both model persona and location.',
+        title: 'Missing required fields',
+        description: 'Please upload a garment image, select a Model Persona, and select a Location.',
         variant: 'destructive',
       });
       return;
     }
 
-    if (!usage?.canRender) {
+    if (usage && !usage.canRender) {
       toast({
         title: 'Render limit reached',
         description: 'Upgrade your plan to render more images.',
@@ -167,7 +171,9 @@ export default function StudioPage() {
     }
   };
 
-  const canRender = !createRender.isPending && usage?.canRender;
+  // Only block the button if we've confirmed the limit is hit — never block on loading state
+  const limitConfirmedBlocked = usage !== undefined && !usage.canRender;
+  const canRender = !createRender.isPending && !limitConfirmedBlocked;
   const isProcessing =
     activeRender?.status === 'processing' || activeRender?.status === 'pending';
   const hasOutput =
@@ -308,10 +314,15 @@ export default function StudioPage() {
                   </div>
                 </div>
               ) : (
-                <FileUpload
-                  onFileSelect={handleFileSelect}
-                  disabled={createRender.isPending}
-                />
+                <div className={showValidation && sourceImages.length === 0 ? 'rounded ring-2 ring-destructive' : ''}>
+                  <FileUpload
+                    onFileSelect={(url) => { handleFileSelect(url); setShowValidation(false); }}
+                    disabled={createRender.isPending}
+                  />
+                  {showValidation && sourceImages.length === 0 && (
+                    <p className="text-xs text-destructive mt-1 font-mono">Garment image is required</p>
+                  )}
+                </div>
               )}
 
               {/* Dropdowns grid */}
@@ -359,13 +370,18 @@ export default function StudioPage() {
 
                 {/* Model Persona */}
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">Model Persona</Label>
+                  <Label className="text-sm font-medium">
+                    Model Persona <span className="text-destructive">*</span>
+                  </Label>
                   <Select
                     value={modelPersona}
-                    onValueChange={setModelPersona}
+                    onValueChange={(v) => { setModelPersona(v); setShowValidation(false); }}
                     disabled={createRender.isPending}
                   >
-                    <SelectTrigger data-testid="select-model-persona">
+                    <SelectTrigger
+                      data-testid="select-model-persona"
+                      className={showValidation && !modelPersona ? 'ring-2 ring-destructive border-destructive' : ''}
+                    >
                       <SelectValue placeholder="Select model" />
                     </SelectTrigger>
                     <SelectContent>
@@ -375,17 +391,25 @@ export default function StudioPage() {
                       <SelectItem value="minimalist">Minimalist</SelectItem>
                     </SelectContent>
                   </Select>
+                  {showValidation && !modelPersona && (
+                    <p className="text-xs text-destructive font-mono">Required</p>
+                  )}
                 </div>
 
                 {/* Location */}
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">Location Environment</Label>
+                  <Label className="text-sm font-medium">
+                    Location Environment <span className="text-destructive">*</span>
+                  </Label>
                   <Select
                     value={locationEnvironment}
-                    onValueChange={setLocationEnvironment}
+                    onValueChange={(v) => { setLocationEnvironment(v); setShowValidation(false); }}
                     disabled={createRender.isPending}
                   >
-                    <SelectTrigger data-testid="select-location">
+                    <SelectTrigger
+                      data-testid="select-location"
+                      className={showValidation && !locationEnvironment ? 'ring-2 ring-destructive border-destructive' : ''}
+                    >
                       <SelectValue placeholder="Select location" />
                     </SelectTrigger>
                     <SelectContent>
@@ -395,6 +419,9 @@ export default function StudioPage() {
                       <SelectItem value="nature">Nature</SelectItem>
                     </SelectContent>
                   </Select>
+                  {showValidation && !locationEnvironment && (
+                    <p className="text-xs text-destructive font-mono">Required</p>
+                  )}
                 </div>
               </div>
 
