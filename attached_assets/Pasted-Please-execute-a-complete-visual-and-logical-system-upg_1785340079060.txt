@@ -1,0 +1,18 @@
+Please execute a complete visual and logical system upgrade on the StudioLayer AI background engine. Completely bypass all restrictive, low-fidelity try-on category endpoints and migrate the backend rendering loop to a premium, hyper-realistic Flux Image-to-Image Diffusion Pipeline to achieve flawless commercial standards:
+
+1. MIGRATE TO ADVANCED FLUX DIFFUSION CORE:
+- Open the backend file handling the image request pipeline (main.py or server routers).
+- Completely delete the 'fal-ai/fashn/tryon' endpoint. In its place, connect the application to the enterprise-grade endpoint: 'fal-ai/flux/schnell/image-to-image' (or fallback to 'fal-ai/flux-general').
+- Configure the request payload dictionary with these exact premium parameters to protect anatomy and texture data flawlessly:
+  * 'image_url': [USER_UPLOADED_HANGER_ASSET]
+  * 'strength': 0.45 (This is the critical quality gate: it forces the AI to permanently preserve the exact real-world colors, patterns, and stitching of the designer's clothes, while allowing the diffusion network to cleanly render a realistic human around it).
+
+2. MASTER DYNAMIC PROMPT COMPOSITION:
+- Program the backend script to automatically construct a highly detailed, professional lookbook prompt by combining the user's active UI dropdown selector tokens:
+  * Formulate the string template: 'A high-resolution, sharp, professional commercial e-commerce studio catalog lookbook photograph of a real human [TARGET_GENDER] model aged [AGE_RANGE], cleanly wearing the uploaded clothing item in a [FRAMING_STYLE], standing in a straight front-facing pose directly looking at the camera lens with perfectly natural hands and open-palm fingers, photorealistic skin texture, situated inside a beautifully blurred [LOCATION_ENVIRONMENT] scene.'
+- Implement a robust negative prompt mask overlay array inside the core processing loop: 'deformed hands, abnormal fingers, extra digits, broken anatomy, distorted face, plastic skin texture, blurry, low resolution, floating artifacts'.
+
+3. FIX INTERFACE COMPLIANCE ELEMENTS:
+- Ensure the 'Download High-Res Studio Asset' button directly fires a local data blob attachment download straight to their machine without opening any new browser windows or tab displacements.
+- Isolate the profile fields cleanly: Account Owner display 'Neeraj Tripathi' and Brand name display '29Copper Media Works' inside the profile dashboard grids.
+- Ensure all pricing container bullet points use 'items-start flex text-left' to distribute text cleanly on the right side of checkmark graphics on the Subscription page, completely purging the 'Most Powerful' text badge from the header line.

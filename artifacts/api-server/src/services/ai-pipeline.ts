@@ -358,79 +358,96 @@ export async function runAIPipeline(params: {
     sourceImageUrl,
     modelPersona,
     modelDemographics,
-    modelPose,
     modelGender,
     modelAgeRange,
     cameraFraming,
+    locationEnvironment,
   } = params;
 
   try {
-    // 1. Prepare the garment image
+    // 1. Prepare the garment image — this is the primary input to the Flux
+    //    image-to-image diffusion pipeline (no separate model image needed).
     const garmentImage = prepareGarmentImage(sourceImageUrl);
 
-    // 2. Select model image — age+gender primary, demographics+persona fallback
-    const modelImageUrl = selectModelImage(modelDemographics, modelPersona, modelGender, modelAgeRange);
+    // 2. Extract structural garment details via GPT-4o vision to enrich the
+    //    lookbook prompt with real fabric/cut/hardware descriptors.
+    const garmentDetails = await extractGarmentDetails(garmentImage);
     logger.info(
-      { renderId, modelImageUrl, modelDemographics, modelPersona, modelPose, modelGender, modelAgeRange, cameraFraming },
-      "AI pipeline: model image selected",
+      { renderId, garmentDetails: garmentDetails.slice(0, 80) },
+      "AI pipeline: garment details extracted for prompt",
     );
 
-    // 3. Detect garment category (top / bottom / one-piece) via GPT-4o vision.
-    //    This drives the fal.ai `category` slot which anchors the geometric warp
-    //    to the correct body region. extractGarmentDetails runs in parallel for
-    //    diagnostic logging only — its text is NOT injected into the AI payload.
-    const [detectedCategory, garmentDetails] = await Promise.all([
-      detectGarmentCategory(garmentImage),
-      extractGarmentDetails(garmentImage),
-    ]);
-    const category: GarmentCategory = detectedCategory;
-    logger.info(
-      { renderId, category, garmentDetails: garmentDetails.slice(0, 80) },
-      "AI pipeline: garment category detected (geometric warp mode)",
-    );
+    // 3. Build the dynamic lookbook prompt from active UI selector tokens.
+    //    Template: gender + age + framing + location + garment micro-details.
+    const GENDER_LABELS: Record<string, string> = {
+      mens: "male",
+      womens: "female",
+      kids: "child",
+    };
+    const AGE_RANGE_LABELS: Record<string, string> = {
+      young_child: "5–10 years old",
+      teen_youth: "10–15 years old",
+      young_adult: "20–30 years old",
+      classic_mid_age: "30–40 years old",
+      mature_executive: "40–50 years old",
+    };
+    const FRAMING_LABELS: Record<string, string> = {
+      full_body: "full body catalog shot",
+      mid_shot: "mid-shot portrait",
+      close_up: "texture close-up",
+    };
+    const LOCATION_LABELS: Record<string, string> = {
+      photo_studio: "clean professional photo studio",
+      urban_street: "urban street",
+      luxury_interior: "luxurious interior",
+      nature: "natural outdoor",
+    };
 
-    // 4. Call fashn/tryon/v1.6 — PURE GEOMETRIC FABRIC-WARPING MODE
-    //
-    //    Architecture: the try-on engine operates as a pixel-level silhouette
-    //    masking and fabric-warping system. No text prompt is sent — the engine
-    //    works entirely from:
-    //      • model_image   → pre-vetted base human layer (age+gender routed)
-    //      • garment_image → uploaded hanger photo (flat-lay segmentation)
-    //      • category      → GPT-4o-detected body region anchor
-    //      • cover_weight  → 1.0 (maximum garment fidelity / texture lock)
-    //
-    //    The negative_prompt remains active solely to suppress anatomical
-    //    distortions and hanger remnant artifacts that can bleed through.
-    logger.info({ renderId }, "AI pipeline: calling fal-ai/fashn/tryon/v1.6 (geometric warp)");
+    const genderLabel = modelGender ? (GENDER_LABELS[modelGender] ?? "human") : "human";
+    const ageLabel = modelAgeRange ? (AGE_RANGE_LABELS[modelAgeRange] ?? "") : "";
+    const framingLabel = cameraFraming
+      ? (FRAMING_LABELS[cameraFraming] ?? "full body catalog shot")
+      : "full body catalog shot";
+    const locationLabel = locationEnvironment
+      ? (LOCATION_LABELS[locationEnvironment] ?? "clean professional photo studio")
+      : "clean professional photo studio";
+
+    const prompt =
+      `A high-resolution, sharp, professional commercial e-commerce studio catalog lookbook photograph ` +
+      `of a real human ${genderLabel} model${ageLabel ? ` aged ${ageLabel}` : ""}, ` +
+      `cleanly wearing the uploaded clothing item in a ${framingLabel}, ` +
+      `standing in a straight front-facing pose directly looking at the camera lens ` +
+      `with perfectly natural hands and open-palm fingers, photorealistic skin texture, ` +
+      `situated inside a beautifully blurred ${locationLabel} scene.` +
+      (garmentDetails ? ` ${garmentDetails}` : "");
+
+    const NEGATIVE_PROMPT =
+      "deformed hands, abnormal fingers, extra digits, broken anatomy, " +
+      "distorted face, plastic skin texture, blurry, low resolution, floating artifacts, " +
+      "visible clothes hanger, wooden hanger remnants, hanger hook artifact";
+
+    logger.info(
+      { renderId, prompt: prompt.slice(0, 140) },
+      "AI pipeline: calling fal-ai/flux/schnell/image-to-image",
+    );
 
     let outputImageUrl: string | undefined;
 
     try {
-      // Anatomy & hanger-artifact suppression — retained even in geometric mode
-      const NEGATIVE_PROMPT =
-        "deformed hands, abnormal fingers, extra digits, broken anatomy, " +
-        "distorted facial features, blurry resolution, low quality, floating artifacts, " +
-        "visible clothes hanger, wooden hanger remnants, hanger shadow inside collar, " +
-        "hanger hook on shoulder, metal hook artifact";
-
-      const result = await fal.subscribe("fal-ai/fashn/tryon/v1.6", {
+      // PRIMARY: Flux Schnell image-to-image
+      //   image_url → uploaded hanger flat-lay (input structure preserved)
+      //   strength  → 0.45 (critical quality gate — preserves exact garment colours,
+      //               patterns and stitching while diffusing a realistic human around it)
+      //   steps     → 4 (Schnell is optimised for 1–4 step inference)
+      const result = await fal.subscribe("fal-ai/flux/schnell/image-to-image", {
         input: {
-          model_image: modelImageUrl,
-          garment_image: garmentImage,
-          // category anchors the geometric warp to the correct torso / leg region:
-          //   "tops"       → upper torso layer (shirts, jackets, hoodies)
-          //   "bottoms"    → leg layer (trousers, skirts, shorts)
-          //   "one-pieces" → full-body drape (dresses, jumpsuits)
-          category,
-          garment_photo_type: "flat-lay",
-          mode: "quality",
-          num_samples: 1,
-          output_format: "jpeg",
-          // cover_weight: 1.0 = maximum fidelity lock — preserves exact stitching,
-          // button placements, collar cuts, and fabric texture pixels from the
-          // designer's original upload without degrading to generic shapes.
-          cover_weight: 1.0,
+          image_url: garmentImage,
+          prompt,
           negative_prompt: NEGATIVE_PROMPT,
+          strength: 0.45,
+          num_inference_steps: 4,
+          num_images: 1,
+          output_format: "jpeg",
         },
         logs: false,
       });
@@ -450,25 +467,26 @@ export async function runAIPipeline(params: {
         }
       }
 
-      logger.info({ renderId, outputImageUrl }, "AI pipeline: fashn/tryon/v1.6 succeeded");
+      logger.info({ renderId, outputImageUrl }, "AI pipeline: flux/schnell/image-to-image succeeded");
     } catch (primaryError) {
-      // 4b. Fallback: image-apps-v2/virtual-try-on
+      // FALLBACK: Flux General (higher-quality, more inference steps)
       logger.warn(
         { renderId, primaryError },
-        "AI pipeline: fashn/tryon/v1.6 failed — falling back to image-apps-v2/virtual-try-on",
+        "AI pipeline: flux/schnell failed — falling back to fal-ai/flux-general",
       );
 
-      const fallbackResult = await fal.subscribe(
-        "fal-ai/image-apps-v2/virtual-try-on",
-        {
-          input: {
-            person_image_url: modelImageUrl,
-            clothing_image_url: garmentImage,
-            preserve_pose: true,
-          },
-          logs: false,
+      const fallbackResult = await fal.subscribe("fal-ai/flux-general", {
+        input: {
+          image_url: garmentImage,
+          prompt,
+          negative_prompt: NEGATIVE_PROMPT,
+          strength: 0.45,
+          num_inference_steps: 28,
+          num_images: 1,
+          output_format: "jpeg",
         },
-      );
+        logs: false,
+      });
 
       const fd = fallbackResult.data as Record<string, unknown> | undefined;
       const fallbackCandidates = [
@@ -484,10 +502,7 @@ export async function runAIPipeline(params: {
         }
       }
 
-      logger.info(
-        { renderId, outputImageUrl },
-        "AI pipeline: fallback succeeded",
-      );
+      logger.info({ renderId, outputImageUrl }, "AI pipeline: flux-general fallback succeeded");
     }
 
     if (!outputImageUrl) {
