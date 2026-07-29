@@ -6,8 +6,53 @@ const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
 fal.config({ credentials: process.env.FAL_KEY });
 
 // ---------------------------------------------------------------------------
-// Model image dictionaries — female (default), male, and kids
+// PRIMARY model image dictionary — keyed by gender → ageRange
+// These are the confirmed, high-fidelity base human model URLs that are
+// checked FIRST. The legacy demographics+persona dicts below act as fallback.
+// ---------------------------------------------------------------------------
+const AGE_KEYED_MODEL_IMAGES: Record<string, Record<string, string>> = {
+  mens: {
+    // Men's Fashion — 20–30 Years: clean, front-facing, open-palm young male
+    young_adult:
+      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=768&q=85&fit=crop&crop=top",
+    // Men's Fashion — 30–40 Years: mature corporate executive male portrait
+    classic_mid_age:
+      "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=768&q=85&fit=crop&crop=top",
+    // Men's Fashion — 40–50 Years: seasoned executive, confident posture
+    mature_executive:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=768&q=85&fit=crop&crop=top",
+    // Men's Fashion — 10–15 Years: teen/youth male
+    teen_youth:
+      "https://images.unsplash.com/photo-1534367610401-9f5ed68180aa?w=768&q=85&fit=crop&crop=top",
+  },
+  womens: {
+    // Women's Fashion — 20–30 Years: elite, front-facing editorial female lookbook
+    young_adult:
+      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=768&q=85&fit=crop&crop=top",
+    // Women's Fashion — 30–40 Years: clean, professional studio-lit woman
+    classic_mid_age:
+      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=768&q=85&fit=crop&crop=top",
+    // Women's Fashion — 40–50 Years: mature, polished professional woman
+    mature_executive:
+      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=768&q=85&fit=crop&crop=top",
+    // Women's Fashion — 10–15 Years: teen/youth female
+    teen_youth:
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=768&q=85&fit=crop&crop=top",
+  },
+  kids: {
+    // Kids' Fashion — 5–10 Years: perfectly scaled front-standing child model
+    young_child:
+      "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=768&q=85&fit=crop&crop=top",
+    // Kids' Fashion — 10–15 Years: teen/youth child model
+    teen_youth:
+      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop&crop=top",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// LEGACY model image dictionaries — female (default), male, and kids
 // Key: demographics -> persona -> Unsplash CDN URL (public, free to use)
+// Used as fallback when no age-range-keyed image exists.
 // ---------------------------------------------------------------------------
 
 // Kids model images — used when modelGender === 'kids'
@@ -169,16 +214,27 @@ const EXPRESSION_TO_PERSONA: Record<string, string> = {
 
 /**
  * Returns the pre-configured model image URL.
- * modelGender drives which image dict is used:
- *   'mens'  → male model images
- *   'kids'  → child model images
- *   'womens' / unset → female model images
+ *
+ * Resolution order (first match wins):
+ *   1. AGE_KEYED_MODEL_IMAGES[gender][ageRange]  ← primary, most specific
+ *   2. Legacy demographics+persona dict           ← fallback for unmatched combos
  */
 function selectModelImage(
   demographics: string | null | undefined,
   persona: string,
   modelGender?: string | null,
+  modelAgeRange?: string | null,
 ): string {
+  // 1 — Age-keyed primary lookup
+  if (modelGender && modelAgeRange) {
+    const genderSlot = AGE_KEYED_MODEL_IMAGES[modelGender];
+    if (genderSlot) {
+      const ageUrl = genderSlot[modelAgeRange];
+      if (ageUrl) return ageUrl;
+    }
+  }
+
+  // 2 — Legacy demographics+persona fallback
   const internalKey = EXPRESSION_TO_PERSONA[persona] ?? persona;
   const key = demographics ?? "default";
   let dict: Record<string, Record<string, string>>;
@@ -312,8 +368,8 @@ export async function runAIPipeline(params: {
     // 1. Prepare the garment image
     const garmentImage = prepareGarmentImage(sourceImageUrl);
 
-    // 2. Select model image — gender-aware routing
-    const modelImageUrl = selectModelImage(modelDemographics, modelPersona, modelGender);
+    // 2. Select model image — age+gender primary, demographics+persona fallback
+    const modelImageUrl = selectModelImage(modelDemographics, modelPersona, modelGender, modelAgeRange);
     logger.info(
       { renderId, modelImageUrl, modelDemographics, modelPersona, modelPose, modelGender, modelAgeRange, cameraFraming },
       "AI pipeline: model image selected",
