@@ -1,0 +1,16 @@
+Please execute a complete visual and logical code override on the StudioLayer AI platform codebase. Disregard all prior conflicting structural layouts and cleanly rewrite the core application files (main.py and src/studio.tsx) to enforce these strict, non-negotiable architectural mandates:
+
+1. DEFENSIVE ANATOMY AND POSE PROTECTION ENGINE (FAL.AI PAYLOAD FIX):
+- Update the backend request payload configuration targeted at the 'fal-ai/fashn/tryon/v1.6' engine block.
+- You must hardcode a strict, robust 'negative_prompt' array string parameter to completely block visual distortions: 'negative_prompt': 'deformed hands, abnormal fingers, extra digits, broken anatomy, distorted facial features, blurry resolution, low quality, floating artifacts'.
+- Enforce absolute alignment with the user's frontend selectors: If the user selects 'Standing Frontal' and 'Men's Fashion', you must strip out all random backdrop text strings and send a hyper-focused instruction: 'A clear, sharp, high-resolution front-facing commercial studio catalog lookbook photograph of a professional male model standing directly facing the camera in a symmetrical frontal pose'.
+- Hanger Isolation Protocol: Implement explicit masking directives inside the image pre-processing routine. Tell the vision segmentation layer to isolate the hanger object geometry, treat the clothes hanger as transparent empty space, and capture purely the edge borders of the white fabric layer to prevent wooden hanger remnants from rendering inside the model's collar.
+
+2. IMMEDIATE VISUAL AMENDMENT REPAIRS:
+- Download Button Fix: Overhaul the download button click listener inside 'src/studio.tsx'. It is strictly forbidden to open a new browser window, use window.location, or replace the active web app tab view. Rewrite the script to parse the image data as a silent browser attachment block (using html5 download attribute or a data blob object trigger), forcing the high-res file to download straight to their computer while keeping the app workspace open.
+- Profile Data Alignment: Open the Account Profile section. Correct the database mapping tags to ensure 'User Account Owner' displays your user text 'Neeraj Tripathi' and 'Studio / Corporate Organization' displays your official token '29Copper Media Works' with zero layout crossovers.
+- Centered, Balanced Subscription Box Matrix: In the Subscription & Billing view, force the pricing cards to sit perfectly dead-center inside the screen area using a flex layout. Completely erase the text badge 'Most Powerful' from the card. Ensure every list bullet point utilizes an 'items-start flex text-left' alignment standard so that long text lines wrap cleanly down the right-hand column space without dropping beneath the checkmark graphics.
+
+3. CLEAN BRAND ASSETS AND VISUAL REFERENCE STANDARD:
+- In the Studio Workspace dropzone and the Stored Brand Assets profile tab, completely purge all generic placeholder icons. 
+- Replace them with ONE single, clean, real-world example image layer displaying a crisp jacket hanging cleanly on a standard wooden clothes hanger against a plain wall to establish a professional visual reference standard.

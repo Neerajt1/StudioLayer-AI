@@ -176,9 +176,9 @@ export default function StudioPage() {
     );
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!resolvedOutputUrl) return;
-    // Corporate asset file naming: [BrandName]_[GarmentType]_[Persona]_[Aspect_Ratio].jpg
+    // Corporate asset file naming: [BrandName]_garment_[Persona]_[Aspect_Ratio].jpg
     const brandSlug = (user?.name ?? 'studio')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '_')
@@ -192,12 +192,33 @@ export default function StudioPage() {
     };
     const aspectSlug = aspectMap[imageDimensions] ?? '1-1';
     const filename = `${brandSlug}_garment_${personaSlug}_${aspectSlug}.jpg`;
-    const link = document.createElement('a');
-    link.href = resolvedOutputUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    try {
+      // Fetch the image as a blob so the browser treats it as a local attachment.
+      // A plain <a download> on a cross-origin CDN URL (fal.media) is silently
+      // ignored by the browser and opens a new tab instead — blob URL avoids this.
+      const response = await fetch(resolvedOutputUrl);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      // Release the object URL after a short delay to allow the download to start
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+    } catch {
+      // Fallback: direct link (may open new tab on some browsers for cross-origin)
+      const link = document.createElement('a');
+      link.href = resolvedOutputUrl;
+      link.download = filename;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   // Button goes active the moment a valid image is detected in the upload state

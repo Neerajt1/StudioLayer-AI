@@ -201,6 +201,9 @@ function selectModelImage(
  * Calls GPT-4o Vision to extract microscopic garment design details
  * (zipper shapes, button materials, collar seams, fabric textures) from the
  * hanger photo. Returns a short descriptive string to enrich the Fal.ai prompt.
+ *
+ * HANGER ISOLATION: The system prompt explicitly instructs the vision model to
+ * treat the hanger as transparent void — only the fabric garment geometry matters.
  */
 async function extractGarmentDetails(imageUrl: string): Promise<string> {
   try {
@@ -210,13 +213,16 @@ async function extractGarmentDetails(imageUrl: string): Promise<string> {
         {
           role: "system",
           content:
-            "You are a precision garment analyst for a luxury fashion AI. " +
-            "Examine the clothing item in the photo — ignore any hanger or mounting apparatus. " +
-            "Extract and describe the following in 2–3 concise sentences: " +
+            "You are a precision garment analyst for a luxury fashion AI rendering engine. " +
+            "CRITICAL MASKING DIRECTIVE: The image will show a garment on a clothes hanger. " +
+            "You MUST mentally isolate and completely discard the hanger object from your analysis — " +
+            "treat the hanger, hook, rod, and any mounting hardware as transparent empty space. " +
+            "Capture ONLY the pure fabric edge borders and garment geometry itself. " +
+            "Focus exclusively on the clothing item and extract the following in 2–3 concise sentences: " +
             "(1) exact fabric texture and material weight (e.g. heavyweight wool twill, sheer chiffon), " +
             "(2) specific hardware details such as zipper type, button material, and collar seam construction, " +
             "(3) defining silhouette characteristics (e.g. structured shoulder, dropped hem, boxy cut). " +
-            "Be extremely specific. No filler phrases.",
+            "Be extremely specific. No filler phrases. Never mention hangers or hooks in your output.",
         },
         {
           role: "user",
@@ -330,7 +336,71 @@ export async function runAIPipeline(params: {
     let outputImageUrl: string | undefined;
 
     try {
-      // Build enriched prompt — compose from GPT-4o design details + camera framing + age range
+      // ── Negative prompt: anatomical distortion protection ──
+      const NEGATIVE_PROMPT =
+        "deformed hands, abnormal fingers, extra digits, broken anatomy, " +
+        "distorted facial features, blurry resolution, low quality, floating artifacts, " +
+        "visible clothes hanger, wooden hanger remnants, hanger shadow inside collar, " +
+        "hanger hook on shoulder, metal hook artifact";
+
+      // ── Gender + Pose → hyper-focused commercial studio prompt ──
+      type PoseKey = "standing_frontal" | "walking_dynamic" | "sideways_posing" | "default";
+      type GenderKey = "mens" | "womens" | "kids" | "default";
+      const GENDER_POSE_PROMPTS: Record<GenderKey, Record<PoseKey, string>> = {
+        mens: {
+          standing_frontal:
+            "A clear, sharp, high-resolution front-facing commercial studio catalog lookbook photograph of a professional male model standing directly facing the camera in a perfectly symmetrical frontal pose, clean neutral background, full body visible",
+          walking_dynamic:
+            "A high-resolution dynamic commercial studio photograph of a professional male model captured mid-stride walking confidently forward, editorial lookbook quality",
+          sideways_posing:
+            "A high-resolution commercial studio photograph of a professional male model posed elegantly sideways at a three-quarter angle, clean neutral background",
+          default:
+            "A high-resolution commercial studio catalog photograph of a professional male model, editorial lookbook quality, clean neutral background",
+        },
+        womens: {
+          standing_frontal:
+            "A clear, sharp, high-resolution front-facing commercial studio catalog lookbook photograph of a professional female model standing directly facing the camera in a perfectly symmetrical frontal pose, clean neutral background, full body visible",
+          walking_dynamic:
+            "A high-resolution dynamic commercial studio photograph of a professional female model captured mid-stride walking confidently forward, editorial lookbook quality",
+          sideways_posing:
+            "A high-resolution commercial studio photograph of a professional female model posed elegantly sideways at a three-quarter angle, clean neutral background",
+          default:
+            "A high-resolution commercial studio catalog photograph of a professional female model, editorial lookbook quality, clean neutral background",
+        },
+        kids: {
+          standing_frontal:
+            "A clear, sharp, high-resolution front-facing commercial children's fashion catalog photograph of a young model standing directly facing the camera, clean neutral background",
+          walking_dynamic:
+            "A high-resolution commercial children's fashion catalog photograph of a young model captured mid-stride walking forward, clean neutral background",
+          sideways_posing:
+            "A high-resolution commercial children's fashion catalog photograph of a young model posed sideways, clean neutral background",
+          default:
+            "A high-resolution commercial children's fashion catalog photograph, clean neutral background",
+        },
+        default: {
+          standing_frontal:
+            "A clear, sharp, high-resolution front-facing commercial studio catalog lookbook photograph of a professional model standing directly facing the camera in a symmetrical frontal pose, clean neutral background",
+          walking_dynamic:
+            "A high-resolution dynamic commercial studio photograph of a professional model captured mid-stride, editorial lookbook quality",
+          sideways_posing:
+            "A high-resolution commercial studio photograph of a professional model posed sideways at a three-quarter angle, clean neutral background",
+          default:
+            "A high-resolution commercial studio catalog fashion photograph, clean neutral background",
+        },
+      };
+      const genderKey: GenderKey =
+        modelGender === "mens" || modelGender === "womens" || modelGender === "kids"
+          ? (modelGender as GenderKey)
+          : "default";
+      const poseKey: PoseKey =
+        modelPose === "standing_frontal" ||
+        modelPose === "walking_dynamic" ||
+        modelPose === "sideways_posing"
+          ? (modelPose as PoseKey)
+          : "default";
+      const basePrompt = GENDER_POSE_PROMPTS[genderKey][poseKey];
+
+      // ── Camera framing directive appended after base pose prompt ──
       const CAMERA_FRAMING_DIRECTIVES: Record<string, string> = {
         full_body: "Full body catalog composition from head to toe, model centered, minimal negative space above frame.",
         mid_shot: "Mid-shot portrait composition, waist up, clean background.",
@@ -344,14 +414,13 @@ export async function runAIPipeline(params: {
         mature_executive: "mature executive model aged 40-50",
       };
       const framingDirective = cameraFraming ? CAMERA_FRAMING_DIRECTIVES[cameraFraming] ?? "" : "";
-      const ageLabel = modelAgeRange ? `${AGE_RANGE_LABELS[modelAgeRange] ?? ""}.` : "";
+      const ageLabel = modelAgeRange ? `Featuring a ${AGE_RANGE_LABELS[modelAgeRange] ?? ""}.` : "";
       const promptParts = [
-        "High-resolution editorial fashion photograph.",
+        basePrompt,
         ageLabel,
         framingDirective,
-        garmentDetails ? `Garment details: ${garmentDetails}` : "",
+        garmentDetails ? `Garment: ${garmentDetails}` : "",
       ].filter(Boolean).join(" ");
-      const enrichedPrompt = promptParts.length > 40 ? promptParts : undefined;
 
       const result = await fal.subscribe("fal-ai/fashn/tryon/v1.6", {
         input: {
@@ -362,7 +431,8 @@ export async function runAIPipeline(params: {
           mode: "quality",
           num_samples: 1,
           output_format: "jpeg",
-          ...(enrichedPrompt ? { prompt: enrichedPrompt } : {}),
+          prompt: promptParts,
+          negative_prompt: NEGATIVE_PROMPT,
         },
         logs: false,
       });
