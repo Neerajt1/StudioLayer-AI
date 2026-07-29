@@ -235,9 +235,7 @@ export default function BillingPage() {
                 className="text-foreground underline underline-offset-2 hover:opacity-70 transition-opacity"
               >
                 Buy 100 Extra Renders ($25)
-              </button>{' '}
-              · Contact{' '}
-              <span className="text-foreground">sales@studiolayer.ai</span> for custom volume plans.
+              </button>
             </p>
           </div>
         </div>

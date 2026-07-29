@@ -401,26 +401,30 @@ export default function StudioPage() {
               {/* ── Dropdowns grid A–F + Location ── */}
               <div className="grid grid-cols-2 gap-3">
 
-                {/* A: Target Model Gender — full width */}
+                {/* A: Target Category / Gender — full width */}
                 <div className="col-span-2 space-y-1.5">
-                  <Label className="text-sm font-medium">Target Model Gender</Label>
+                  <Label className="text-sm font-medium">Target Category / Gender</Label>
                   <Select
                     value={modelGender}
-                    onValueChange={setModelGender}
+                    onValueChange={(v) => {
+                      setModelGender(v);
+                      // Reset age when category changes to avoid invalid combinations
+                      setModelAgeRange('');
+                    }}
                     disabled={createRender.isPending}
                   >
                     <SelectTrigger data-testid="select-model-gender">
-                      <SelectValue placeholder="Select gender" />
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="mens">Men's Fashion</SelectItem>
-                      <SelectItem value="womens">Women's Fashion</SelectItem>
-                      <SelectItem value="kids">Kids' Fashion</SelectItem>
+                      <SelectItem value="mens">Men's Fashion (60 Active Models Locked)</SelectItem>
+                      <SelectItem value="womens">Women's Fashion (40 Active Models Locked)</SelectItem>
+                      <SelectItem value="kids">Kids' Fashion (Boys &amp; Girls Models Locked)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* B: Target Model Age Range */}
+                {/* B: Target Model Age Range — conditional options based on selected category */}
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Target Model Age Range</Label>
                   <Select
@@ -432,11 +436,21 @@ export default function StudioPage() {
                       <SelectValue placeholder="Select age range" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="young_child">5 – 10 Years (Young Child)</SelectItem>
-                      <SelectItem value="teen_youth">10 – 15 Years (Teen / Youth)</SelectItem>
-                      <SelectItem value="young_adult">20 – 30 Years (Young Adult)</SelectItem>
-                      <SelectItem value="classic_mid_age">30 – 40 Years (Classic Mid-Age)</SelectItem>
-                      <SelectItem value="mature_executive">40 – 50 Years (Mature Executive)</SelectItem>
+                      {/* Child age options — only shown for Kids' Fashion */}
+                      {modelGender === 'kids' && (
+                        <>
+                          <SelectItem value="young_child">5 – 10 Years (Young Child)</SelectItem>
+                          <SelectItem value="teen_youth">10 – 15 Years (Teen / Youth)</SelectItem>
+                        </>
+                      )}
+                      {/* Adult age options — shown for Men's / Women's or when unset */}
+                      {modelGender !== 'kids' && (
+                        <>
+                          <SelectItem value="young_adult">20 – 30 Years (Young Adult)</SelectItem>
+                          <SelectItem value="classic_mid_age">30 – 40 Years (Classic Mid-Age)</SelectItem>
+                          <SelectItem value="mature_executive">40 – 50 Years (Mature Executive)</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

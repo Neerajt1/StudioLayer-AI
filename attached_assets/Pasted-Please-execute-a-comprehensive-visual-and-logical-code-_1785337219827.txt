@@ -1,0 +1,28 @@
+Please execute a comprehensive visual and logical code rewrite across the StudioLayer AI system. Maintain all active user registration databases while upgrading the interface to support our exact 100 frozen model configuration rules, clean up text alignment variables, and fix structural dropdown tracking constraints:
+
+1. MAP BRAND ADMINISTRATIVE SYSTEM & SCRUB CUSTOM TIERS:
+- Update the system settings to ensure that the primary support ticket generator routes all client emails directly to your official corporate inbox: 'info@studiolayerai.com'.
+- Open the Account Profile view and map the field values precisely: User Name must display 'Neeraj Tripathi', Corporate Organization must display '29Copper Media Works', and the Account Email must default to your registered inbox data.
+- Open the 'Subscription & Billing' viewport tab. Completely strip out and delete any references, buttons, text blocks, or modules discussing or offering a 'Custom Plan' or enterprise negotiable pricing. The billing matrix must display strictly and exclusively our two fixed subscription options: The Starter Studio Plan ($99/mo for 400 credits) and the Enterprise Bulk Plan ($149/mo for 800 credits).
+
+2. OVERHAUL SIDEBAR CONTROLS TO A DYNAMIC 4-DROPDOWN MODEL GROUP:
+- Strip away the old model scrolling picker and rebuild the sidebar left workspace selector grid using exactly 4 clean, highly responsive, high-contrast dropdown fields:
+  * Dropdown 1: 'Target Category / Gender' -> Options: "Men's Fashion (60 Active Models Locked)", "Women's Fashion (40 Active Models Locked)", "Kids' Fashion (Boys & Girls Models Locked)".
+  * Dropdown 2: 'Target Model Age Range' -> Options: '5 - 10 Years (Young Child)', '10 - 15 Years (Teen / Youth)', '20 - 30 Years (Young Adult)', '30 - 40 Years (Classic Mid-Age)', '40 - 50 Years (Mature Executive)'.
+  * Dropdown 3: 'Studio Camera Framing' -> Options: 'Full Body Catalog Shot', 'Mid-Shot Portrait', 'Texture Close-Up'.
+  * Dropdown 4: 'Select Image Dimensions' -> Options: '4:5 Portrait (Shopify & Amazon)', '9:16 Vertical (TikTok Ads)', '1:1 Square (Social Media)', '16:9 Landscape (Banners & Magazines)'.
+- IMPLEMENT CONDITIONAL AGE INTERACTION: Program a strict conditional visibility rule inside the frontend script. If a user selects "Men's Fashion" or "Women's Fashion", the 'Target Model Age Range' dropdown must immediately hide or disable the child options (5-10, 10-15). If the user selects "Kids' Fashion", the dropdown must immediately hide or disable the adult options (20-30, 30-40, 40-50).
+
+3. SECURE FIXED BACKEND BASE MODEL MATCHING ARCHITECTURE:
+- Update the 'fal-ai/fashn/tryon/v1.6' background python server request pipeline to reflect our 100-model library strategy.
+- Hardcode the backend processing logic to completely ignore text-prompted faces or positions. When a user executes a render request, the app must automatically pull a matching pre-vetted, high-fidelity base human model asset (stored as a pristine transparent alpha-cutout PNG file with perfect open-palm hand anatomy, real skin pores, and static features) corresponding precisely to the user's selected category, age slab, and framing type.
+- Ensure that for the Kids' Fashion framework, the system accurately maps dedicated boy/girl childhood proportions to eliminate any anatomy distortions.
+- Preserve-Detail Directive: Lock the garment detail preservation weight parameter to '1.0' and ensure the OpenAI vision pass extracts sharp stitching, zipper details, and exact collar color paths before launching the try-on loop.
+
+4. ALIGN DOWNLOAD LOGIC & REPAIR PRICING LIST SPACING:
+- Re-verify that clicking 'Download High-Res Studio Asset' executes a clean, local file download directly into the user's device via a data blob attachment stream, completely blocking new browser windows or tab displacements.
+- In the Subscription view, ensure the twin pricing cards use absolute canvas center flex rows. Every bullet item must use class 'flex items-start gap-3 text-left'. The checkmark icon must stay fixed inside its left-aligned space, and any long text lines (such as multi-line bulk descriptions) must wrap cleanly down the right-hand column side, never drifting underneath the checkmark graphic badge.
+
+5. THEME & FOOTER STABILITY:
+- Ensure the background of the entire platform remains solid Studio White (#FFFFFF), layout lines use an ultra-thin 1px pearl-gray border (#E4E4E7), and the branding header prints 'StudioLayer AI' in EB Garamond with letter-tracking expansion (0.15em) followed by the tagline 'Professional Editorial Render Engine'.
+- Base Copyright Footer: '© 2026 StudioLayer AI. All rights reserved. A product of 29Copper Media Works.'

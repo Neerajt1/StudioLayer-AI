@@ -62,6 +62,10 @@ export function SupportModal({ open, onOpenChange }: SupportModalProps) {
           <p className="text-sm text-muted-foreground font-mono">
             Our team typically responds within 24 hours.
           </p>
+          <p className="text-xs text-muted-foreground font-mono mt-1">
+            Tickets route to{' '}
+            <span className="text-foreground">info@studiolayerai.com</span>
+          </p>
         </SheetHeader>
 
         <div className="space-y-4">
