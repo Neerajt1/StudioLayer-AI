@@ -141,13 +141,30 @@ export const RenderInputModelPose = {
   sideways_posing: 'sideways_posing',
 } as const;
 
-export type RenderInputGarmentType = typeof RenderInputGarmentType[keyof typeof RenderInputGarmentType];
+export type RenderInputModelGender = typeof RenderInputModelGender[keyof typeof RenderInputModelGender];
 
+export const RenderInputModelGender = {
+  mens: 'mens',
+  womens: 'womens',
+  kids: 'kids',
+} as const;
 
-export const RenderInputGarmentType = {
-  mens_top: 'mens_top',
-  womens_top: 'womens_top',
-  full_body_dress: 'full_body_dress',
+export type RenderInputModelAgeRange = typeof RenderInputModelAgeRange[keyof typeof RenderInputModelAgeRange];
+
+export const RenderInputModelAgeRange = {
+  young_child: 'young_child',
+  teen_youth: 'teen_youth',
+  young_adult: 'young_adult',
+  classic_mid_age: 'classic_mid_age',
+  mature_executive: 'mature_executive',
+} as const;
+
+export type RenderInputCameraFraming = typeof RenderInputCameraFraming[keyof typeof RenderInputCameraFraming];
+
+export const RenderInputCameraFraming = {
+  full_body: 'full_body',
+  mid_shot: 'mid_shot',
+  close_up: 'close_up',
 } as const;
 
 export interface RenderInput {
@@ -158,7 +175,9 @@ export interface RenderInput {
   imageDimensions?: RenderInputImageDimensions;
   smartLighting?: boolean;
   modelPose?: RenderInputModelPose;
-  garmentType?: RenderInputGarmentType;
+  modelGender?: RenderInputModelGender;
+  modelAgeRange?: RenderInputModelAgeRange;
+  cameraFraming?: RenderInputCameraFraming;
 }
 
 export type RenderUsageTier = typeof RenderUsageTier[keyof typeof RenderUsageTier];

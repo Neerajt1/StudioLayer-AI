@@ -148,13 +148,14 @@ export default function BillingPage() {
 
                 <ul className="space-y-3 flex-1 mb-8">
                   {[
-                    '✔ 400 High-Res AI Studio Renders Per Month',
-                    '✔ Single-Hanger Upload Interface',
-                    '✔ Full Aspect, Demographics, & Expression Selectors',
-                    '✔ Smart Ambient Studio Lighting Matcher',
+                    '400 High-Res AI Studio Renders Per Month',
+                    'Single-Hanger Upload Interface',
+                    'Full Aspect, Demographics, & Expression Selectors',
+                    'Smart Ambient Studio Lighting Matcher',
                   ].map((f) => (
-                    <li key={f} className="text-sm text-foreground leading-relaxed">
-                      {f}
+                    <li key={f} className="flex items-start gap-3 text-left">
+                      <span className="shrink-0 font-medium text-foreground mt-0.5">✔</span>
+                      <span className="text-sm text-foreground leading-relaxed">{f}</span>
                     </li>
                   ))}
                 </ul>
@@ -200,13 +201,14 @@ export default function BillingPage() {
 
                 <ul className="space-y-3 flex-1 mb-8">
                   {[
-                    '✔ 800 Priority Bulk Renders Per Month',
-                    '✔ ⚡ Bulk Studio Mode (Upload up to 10 concurrent images)',
-                    '✔ Parallel 2x5 Grid Rendering Queue',
-                    '✔ Stored Asset Folder Management',
+                    '800 Priority Bulk Renders Per Month',
+                    '⚡ Bulk Studio Mode (Upload up to 10 concurrent images)',
+                    'Parallel 2×5 Grid Rendering Queue',
+                    'Stored Asset Folder Management',
                   ].map((f) => (
-                    <li key={f} className="text-sm text-foreground leading-relaxed">
-                      {f}
+                    <li key={f} className="flex items-start gap-3 text-left">
+                      <span className="shrink-0 font-medium text-foreground mt-0.5">✔</span>
+                      <span className="text-sm text-foreground leading-relaxed">{f}</span>
                     </li>
                   ))}
                 </ul>

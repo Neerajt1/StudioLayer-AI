@@ -6,11 +6,25 @@ const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
 fal.config({ credentials: process.env.FAL_KEY });
 
 // ---------------------------------------------------------------------------
-// Model image dictionaries — female (default) and male
+// Model image dictionaries — female (default), male, and kids
 // Key: demographics -> persona -> Unsplash CDN URL (public, free to use)
 // ---------------------------------------------------------------------------
 
-// Male model images — used when garmentType === 'mens_top'
+// Kids model images — used when modelGender === 'kids'
+const KIDS_MODEL_IMAGE_URLS: Record<string, Record<string, string>> = {
+  default: {
+    high_fashion:
+      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop",
+    casual:
+      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop",
+    athletic:
+      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop",
+    minimalist:
+      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop",
+  },
+};
+
+// Male model images — used when modelGender === 'mens'
 const MALE_MODEL_IMAGE_URLS: Record<string, Record<string, string>> = {
   caucasian: {
     high_fashion:
@@ -155,18 +169,26 @@ const EXPRESSION_TO_PERSONA: Record<string, string> = {
 
 /**
  * Returns the pre-configured model image URL.
- * When garmentType === 'mens_top', forces a male model regardless of persona dict.
- * Otherwise uses the female dict (safe for womens_top and full_body_dress).
+ * modelGender drives which image dict is used:
+ *   'mens'  → male model images
+ *   'kids'  → child model images
+ *   'womens' / unset → female model images
  */
 function selectModelImage(
   demographics: string | null | undefined,
   persona: string,
-  garmentType?: string | null,
+  modelGender?: string | null,
 ): string {
   const internalKey = EXPRESSION_TO_PERSONA[persona] ?? persona;
   const key = demographics ?? "default";
-  const isMale = garmentType === "mens_top";
-  const dict = isMale ? MALE_MODEL_IMAGE_URLS : MODEL_IMAGE_URLS;
+  let dict: Record<string, Record<string, string>>;
+  if (modelGender === "mens") {
+    dict = MALE_MODEL_IMAGE_URLS;
+  } else if (modelGender === "kids") {
+    dict = KIDS_MODEL_IMAGE_URLS;
+  } else {
+    dict = MODEL_IMAGE_URLS;
+  }
   const group = dict[key] ?? dict["default"]!;
   return (
     group[internalKey] ??
@@ -262,7 +284,9 @@ export async function runAIPipeline(params: {
   imageDimensions?: string | null;
   smartLighting?: boolean | null;
   modelPose?: string | null;
-  garmentType?: string | null;
+  modelGender?: string | null;
+  modelAgeRange?: string | null;
+  cameraFraming?: string | null;
   onComplete: (outputImageUrl: string) => Promise<void>;
   onError: (error: Error) => Promise<void>;
 }): Promise<void> {
@@ -272,28 +296,29 @@ export async function runAIPipeline(params: {
     modelPersona,
     modelDemographics,
     modelPose,
-    garmentType,
+    modelGender,
+    modelAgeRange,
+    cameraFraming,
   } = params;
 
   try {
     // 1. Prepare the garment image
     const garmentImage = prepareGarmentImage(sourceImageUrl);
 
-    // 2. Select model image — gender-aware; mens_top forces male model URLs
-    const modelImageUrl = selectModelImage(modelDemographics, modelPersona, garmentType);
+    // 2. Select model image — gender-aware routing
+    const modelImageUrl = selectModelImage(modelDemographics, modelPersona, modelGender);
     logger.info(
-      { renderId, modelImageUrl, modelDemographics, modelPersona, modelPose, garmentType },
+      { renderId, modelImageUrl, modelDemographics, modelPersona, modelPose, modelGender, modelAgeRange, cameraFraming },
       "AI pipeline: model image selected",
     );
 
     // 3. Detect garment category + extract microscopic design details in parallel
-    // Full body dress selection overrides the AI category to one-pieces for accuracy.
+    // Kids/womens full-body selection: let AI classifier decide; mens defaults to tops.
     const [detectedCategory, garmentDetails] = await Promise.all([
       detectGarmentCategory(garmentImage),
       extractGarmentDetails(garmentImage),
     ]);
-    const category: GarmentCategory =
-      garmentType === "full_body_dress" ? "one-pieces" : detectedCategory;
+    const category: GarmentCategory = detectedCategory;
     logger.info(
       { renderId, category, garmentDetails: garmentDetails.slice(0, 80) },
       "AI pipeline: garment analysis complete",
@@ -305,10 +330,28 @@ export async function runAIPipeline(params: {
     let outputImageUrl: string | undefined;
 
     try {
-      // Build enriched prompt from GPT-4o design detail extraction
-      const enrichedPrompt = garmentDetails
-        ? `High-resolution editorial fashion photograph. Garment details: ${garmentDetails}`
-        : undefined;
+      // Build enriched prompt — compose from GPT-4o design details + camera framing + age range
+      const CAMERA_FRAMING_DIRECTIVES: Record<string, string> = {
+        full_body: "Full body catalog composition from head to toe, model centered, minimal negative space above frame.",
+        mid_shot: "Mid-shot portrait composition, waist up, clean background.",
+        close_up: "Extreme texture close-up, detailed fabric and material focus.",
+      };
+      const AGE_RANGE_LABELS: Record<string, string> = {
+        young_child: "child model aged 5-10",
+        teen_youth: "teen/youth model aged 10-15",
+        young_adult: "young adult model aged 20-30",
+        classic_mid_age: "classic mid-age model aged 30-40",
+        mature_executive: "mature executive model aged 40-50",
+      };
+      const framingDirective = cameraFraming ? CAMERA_FRAMING_DIRECTIVES[cameraFraming] ?? "" : "";
+      const ageLabel = modelAgeRange ? `${AGE_RANGE_LABELS[modelAgeRange] ?? ""}.` : "";
+      const promptParts = [
+        "High-resolution editorial fashion photograph.",
+        ageLabel,
+        framingDirective,
+        garmentDetails ? `Garment details: ${garmentDetails}` : "",
+      ].filter(Boolean).join(" ");
+      const enrichedPrompt = promptParts.length > 40 ? promptParts : undefined;
 
       const result = await fal.subscribe("fal-ai/fashn/tryon/v1.6", {
         input: {

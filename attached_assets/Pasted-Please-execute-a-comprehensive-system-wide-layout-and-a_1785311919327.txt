@@ -1,0 +1,61 @@
+Please execute a comprehensive system-wide layout and architectural upgrade on the StudioLayer AI platform. Enforce these precise visual, structural, and behavioral constraints to achieve an absolute 100% professional global software standard:
+
+1. PREMIUM TWO-FONT TYPOGRAPHY & TEXT LOGO SYSTEM:
+- Import the 'EB Garamond' font family from Google Fonts and configure it as the primary serif typeface in the Tailwind layout system.
+- Build the main top-left header logo as a PURE TEXT LOGO reading exactly 'StudioLayer AI'. Do not use image placeholders or graphic icons. Style this text logo using the EB Garamond font layer, size 24px, pristine solid Charcoal Black color, with wide letter-spacing tracking (letter-spacing: 0.15em) to give it a spacious, minimalist, ultra-luxury fashion house aesthetic.
+- Directly beneath the text logo, add a muted tagline reading 'Professional Editorial Render Engine' (completely remove any brackets) styled in a crisp 12px sans-serif font (Inter or Geist) colored in subtle slate-gray (text-slate-400) on a clean single line with zero text overflow.
+- Apply this same serif font (EB Garamond) to all primary section headlines and the pricing tier titles ('Starter Studio Plan' and 'Enterprise Bulk Plan').
+- For all operational interface text layers—such as input dropdown items, form labels, data table rows, metric numbers, and primary action buttons—preserve a crisp, high-readability sans-serif font structure (like Inter or system-ui).
+
+2. COMPLETE VISUAL RE-DESIGN (STUDIO WHITE REALM):
+- Change the background of the ENTIRE web application viewports, sidebars, dashboard grids, modals, and input cards to a solid, pure Studio White (#FFFFFF).
+- Set all inner secondary panels, dropdowns, and block backgrounds to a clean, smooth off-white porcelain accent tone (#F9F9FB or #F4F4F5).
+- Turn all primary typography headers, navigation items, and data titles to solid Pitch Black / Charcoal (#18181B). Secondary helper text descriptions must use soft slate-gray (#71717A).
+- Remove all neon glows and heavy shadows. All layout elements and panels must be completely flat or utilize a razor-thin 1px border layer colored in soft pearl-gray (#E4E4E7).
+- Change the primary 'Render Studio Image Layer' button and the pricing checkout triggers to a solid Pitch Black (#09090B) background with pure white text. On mouse hover, smoothly dim the container background fill to dark-gray (#27272A).
+
+3. HANGER VISUAL ANCHOR ZONE & DOWNLOAD PIPELINE OVERHAUL:
+- On both the 'Studio Workspace' canvas dropzone and the 'Stored Brand Assets' section in the Profile view, remove all full-model background images and split layouts. Replace them with ONE single, elegant, real-world photograph example displaying a lone premium coat hanging cleanly on a standard wooden clothes hanger against a completely plain wall.
+- Completely strip out all code logic tracking or printing the 'StudioLayer AI Evaluation Asset' text watermark overlay from the trial generation scripts. The 3 complimentary setup renders must load in 100% pristine, unblemished, print-ready commercial quality.
+- Fix the download asset button handler inside 'src/studio.tsx'. Change the event from a tab redirection to an automated browser attachment stream, ensuring that clicking 'Download High-Res Studio Asset' directly triggers a local desktop file download into the user's system without opening any new browser windows or displacing the web app environment.
+
+4. ELITE CONTROL DOCK DYNAMIC INTERACTIVE DROPDOWNS (WITH KIDS INTEGRATION):
+Overhaul the sidebar filter system to utilize these 4 high-precision corporate selectors, ensuring the 'Render' button locks into active black the moment a file path is confirmed:
+- Dropdown A: 'Target Model Gender' -> Options: 'Men's Fashion', 'Women's Fashion', 'Kids' Fashion'. (Backend: If Kids' Fashion is selected, automatically override demographic templates to route requests to child modeling frameworks).
+- Dropdown B: 'Target Model Age Range' -> Options: '5 - 10 Years (Young Child)', '10 - 15 Years (Teen / Youth)', '20 - 30 Years (Young Adult)', '30 - 40 Years (Classic Mid-Age)', '40 - 50 Years (Mature Executive)'.
+- Dropdown C: 'Studio Camera Framing' -> Options: 'Full Body Catalog Shot', 'Mid-Shot Portrait', 'Texture Close-Up'. (Backend: Map this directly to format the composition prompt layout, forcing full-body configurations to render the model cleanly from head to toe, actively minimizing empty negative space above the frame).
+- Dropdown D: 'Select Image Dimensions' -> Options: '4:5 Portrait (Shopify & Amazon)', '9:16 Vertical (TikTok Ads)', '1:1 Square (Social Media)', '16:9 Landscape (Banners & Magazines)'.
+- Dropdown E: 'Model Expression' -> Options: 'High-Fashion Editorial (Serious)', 'Natural Smile', 'Confident Commercial'.
+- Dropdown F: 'Model Action Pose' -> Options: 'Standing Frontal', 'Walking Dynamic', 'Sideways Posing'.
+- Toggle Switch G: 'Smart Ambient Lighting' -> Labeled 'Match Ambient Studio Lighting' using visible light-gray tracks (#E4E4E7) and prominent Charcoal Black active sliders (#18181B).
+- Checkbox H: 'Dynamic Brand Watermark' -> Toggles a secondary file-uploader for a transparent company logo PNG file.
+
+5. BULK ENGINE ACCELERATION TIER:
+- Add a highly visible toggle at the top of the uploader module labeled '⚡ Switch to Bulk Studio Mode'. 
+- Clicking this toggle must visually transform the single file-drop zone into a multi-file container capable of accepting up to 10 image uploads simultaneously.
+- When Bulk Mode is active, update the right-hand output canvas from a single container into a clean, parallel 2x5 Thumbnail Grid layout. Each grid block must process its respective hanger upload concurrently using its own independent loading spinner that snaps to the finished watermarked image immediately upon server delivery.
+
+6. AUTOMATED USER WELCOME ONBOARDING WIZARD:
+- Program an elegant modal overlay component that triggers automatically ONLY upon a user's very first post-registration login.
+- It must guide them through a clean 3-step visual sequence matching our hanger strategy:
+  * Step 1 Title: '📷 1. Hang and Capture Your Asset' -> Text: 'Hang your single garment neatly on any standard clothing hanger against a plain, neutral wall. Snap a clean smartphone photo from the front and drop the file directly into our studio upload canvas.'
+  * Step 2 Title: '🌍 2. Direct Your Global Studio Campaign' -> Text: 'Select your target model ethnicity, facial expression, active body posture, and luxury location backdrop environment.'
+  * Step 3 Title: '✨ 3. Render Your Digital Lookbook' -> Text: 'Click Render and watch our digital threads seamlessly morph your fabric asset onto a living human model. Your print-ready catalog files compile in 10 seconds.'
+- Include a 'Get Started ➔' primary button to dismiss the overlay and save the completed state to the user's database profile.
+
+7. PIXEL-PERFECT SYMMETRICAL PRICING GRID (FIX MULTI-LINE ALIGNMENT):
+- Open the 'Subscription & Billing' view and center the containers flawlessly inside the middle of the viewport area using absolute centering classes.
+- Completely remove the black 'Most Powerful' text badge from the Enterprise container header and expand overall card widths.
+- Critical Visual Fix: Re-arrange the list items (`<li>`) on both pricing cards to enforce strict dual-column structural alignment using a flexbox layout. Every single bullet item must use class 'flex items-start gap-3 text-left'. The checkmark icon must remain cleanly locked in its own fixed container space on the left, and any text that wraps onto a second line (such as '⚡ Bulk Studio Mode (Upload up to 10 concurrent images)') must align evenly and distribute cleanly down the right-hand column side, NEVER dropping or flowing underneath the checkmark graphic badge.
+- Cards must outline Scheme A: Starter Studio Plan ($99/mo for 400 monthly credit bucket renders) and Enterprise Bulk Plan ($149/mo for 800 monthly credit bucket renders with a 2x5 grid view) backed by our $25 on-demand top-up pack system.
+
+8. AUTOMATED REPLIT-POWERED CUSTOMER SUPPORT PIPELINE:
+- Position a minimalist, elegant link at the bottom right corner of the dashboard viewport labeled '✉ Contact Studio Support' styled in a clean 14px sans-serif font.
+- Clicking this link must trigger a sleek slide-out modal panel containing a text area labeled 'Describe your workspace issue or feature request' and an emerald-green action button labeled 'Submit Ticket'.
+- Hook this form directly to a new 'SupportTickets' table inside the Replit database. When a user submits a ticket, the backend must automatically log: User Email, Timestamp, and Message Content, and route an automated alert payload straight to the corporate administrator's inbox.
+
+9. ACCOUNT PROFILE CANVAS & AUTOMATED FILE NAMING CONVENTION:
+- Design a sleek, minimalist 'Account Profile' view page split into 3 clear blocks: Stored Identity Credentials (explicitly isolating user name Neeraj Tripathi from the corporate brand token 29Copper Media Works), Stored Brand Assets (default transparent corporate logo storage and corporate invoicing profiles containing fields for company Tax ID/GSTIN and Business Address), and an Operational Metric ring tracking current bucket usage (e.g., '142 / 400 Credits Used This Month').
+- Program an automated corporate asset file naming system. When a user clicks the 'Download High-Res Studio Asset' button, the backend script must automatically read the user's configuration parameters and output the file using this exact text template structure: [BrandName]_[GarmentType]_[Persona]_[Aspect_Ratio].jpg (e.g., 'london_apparel_co_leather_jacket_editorial_4-5.jpg').
+
+10. REPAIR LOGIC & COLOR PALETTE PROTECTION:

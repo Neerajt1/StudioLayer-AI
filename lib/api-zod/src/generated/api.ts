@@ -119,7 +119,9 @@ export const CreateRenderBody = zod.object({
   "imageDimensions": zod.enum(['portrait_45', 'portrait_916', 'square_11', 'landscape_169']).optional(),
   "smartLighting": zod.boolean().optional(),
   "modelPose": zod.enum(['standing_frontal', 'walking_dynamic', 'sideways_posing']).optional(),
-  "garmentType": zod.enum(['mens_top', 'womens_top', 'full_body_dress']).optional()
+  "modelGender": zod.enum(['mens', 'womens', 'kids']).optional(),
+  "modelAgeRange": zod.enum(['young_child', 'teen_youth', 'young_adult', 'classic_mid_age', 'mature_executive']).optional(),
+  "cameraFraming": zod.enum(['full_body', 'mid_shot', 'close_up']).optional()
 })
 
 export const CreateRenderResponse = zod.object({

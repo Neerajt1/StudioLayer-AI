@@ -50,11 +50,12 @@ const FAQ_ITEMS = [
 
 export default function StudioPage() {
   const [sourceImages, setSourceImages] = useState<string[]>([]);
-  const [garmentType, setGarmentType] = useState('');
+  const [modelGender, setModelGender] = useState('');
+  const [modelAgeRange, setModelAgeRange] = useState('');
+  const [cameraFraming, setCameraFraming] = useState('');
   const [modelPersona, setModelPersona] = useState('');
   const [modelPose, setModelPose] = useState('');
   const [locationEnvironment, setLocationEnvironment] = useState('');
-  const [modelDemographics, setModelDemographics] = useState('');
   const [imageDimensions, setImageDimensions] = useState('');
   const [smartLighting, setSmartLighting] = useState(false);
   const [brandWatermark, setBrandWatermark] = useState(false);
@@ -147,11 +148,12 @@ export default function StudioPage() {
           sourceImageUrl: primary,
           modelPersona: modelPersona as any,
           locationEnvironment: locationEnvironment as any,
-          modelDemographics: (modelDemographics as any) || undefined,
           imageDimensions: (imageDimensions as any) || undefined,
           smartLighting: smartLighting || undefined,
           modelPose: (modelPose as any) || undefined,
-                garmentType: (garmentType as any) || undefined,
+          modelGender: (modelGender as any) || undefined,
+          modelAgeRange: (modelAgeRange as any) || undefined,
+          cameraFraming: (cameraFraming as any) || undefined,
         },
       },
       {
@@ -375,30 +377,69 @@ export default function StudioPage() {
                 </div>
               )}
 
-              {/* Dropdowns grid */}
+              {/* ── Dropdowns grid A–F + Location ── */}
               <div className="grid grid-cols-2 gap-3">
-                {/* Garment Type — full-width, above all other dropdowns */}
+
+                {/* A: Target Model Gender — full width */}
                 <div className="col-span-2 space-y-1.5">
-                  <Label className="text-sm font-medium">
-                    Select Garment Type <span className="text-destructive">*</span>
-                  </Label>
+                  <Label className="text-sm font-medium">Target Model Gender</Label>
                   <Select
-                    value={garmentType}
-                    onValueChange={setGarmentType}
+                    value={modelGender}
+                    onValueChange={setModelGender}
                     disabled={createRender.isPending}
                   >
-                    <SelectTrigger data-testid="select-garment-type">
-                      <SelectValue placeholder="Choose garment category" />
+                    <SelectTrigger data-testid="select-model-gender">
+                      <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="mens_top">Men's Top / Jacket</SelectItem>
-                      <SelectItem value="womens_top">Women's Top / Jacket</SelectItem>
-                      <SelectItem value="full_body_dress">Full Body Dress / Gown</SelectItem>
+                      <SelectItem value="mens">Men's Fashion</SelectItem>
+                      <SelectItem value="womens">Women's Fashion</SelectItem>
+                      <SelectItem value="kids">Kids' Fashion</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Image Dimensions */}
+                {/* B: Target Model Age Range */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Target Model Age Range</Label>
+                  <Select
+                    value={modelAgeRange}
+                    onValueChange={setModelAgeRange}
+                    disabled={createRender.isPending}
+                  >
+                    <SelectTrigger data-testid="select-model-age">
+                      <SelectValue placeholder="Select age range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="young_child">5 – 10 Years (Young Child)</SelectItem>
+                      <SelectItem value="teen_youth">10 – 15 Years (Teen / Youth)</SelectItem>
+                      <SelectItem value="young_adult">20 – 30 Years (Young Adult)</SelectItem>
+                      <SelectItem value="classic_mid_age">30 – 40 Years (Classic Mid-Age)</SelectItem>
+                      <SelectItem value="mature_executive">40 – 50 Years (Mature Executive)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* C: Studio Camera Framing */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Studio Camera Framing</Label>
+                  <Select
+                    value={cameraFraming}
+                    onValueChange={setCameraFraming}
+                    disabled={createRender.isPending}
+                  >
+                    <SelectTrigger data-testid="select-camera-framing">
+                      <SelectValue placeholder="Select framing" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full_body">Full Body Catalog Shot</SelectItem>
+                      <SelectItem value="mid_shot">Mid-Shot Portrait</SelectItem>
+                      <SelectItem value="close_up">Texture Close-Up</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* D: Image Dimensions */}
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Select Image Dimensions</Label>
                   <Select
@@ -418,28 +459,7 @@ export default function StudioPage() {
                   </Select>
                 </div>
 
-                {/* Model Demographics */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">Model Demographics</Label>
-                  <Select
-                    value={modelDemographics}
-                    onValueChange={setModelDemographics}
-                    disabled={createRender.isPending}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Ethnicity" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="caucasian">Caucasian</SelectItem>
-                      <SelectItem value="east_asian">East Asian</SelectItem>
-                      <SelectItem value="south_asian">South Asian / Indian</SelectItem>
-                      <SelectItem value="afro_american">Afro-American / Black</SelectItem>
-                      <SelectItem value="hispanic">Hispanic / Latino</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Model Expression (C) */}
+                {/* E: Model Expression * */}
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">
                     Model Expression <span className="text-destructive">*</span>
@@ -466,7 +486,7 @@ export default function StudioPage() {
                   )}
                 </div>
 
-                {/* Model Action Pose (D) */}
+                {/* F: Model Action Pose */}
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Model Action Pose</Label>
                   <Select
@@ -485,8 +505,8 @@ export default function StudioPage() {
                   </Select>
                 </div>
 
-                {/* Location (required) */}
-                <div className="space-y-1.5">
+                {/* Location Environment * */}
+                <div className="col-span-2 space-y-1.5">
                   <Label className="text-sm font-medium">
                     Location Environment <span className="text-destructive">*</span>
                   </Label>
@@ -512,6 +532,7 @@ export default function StudioPage() {
                     <p className="text-xs text-destructive font-mono">Required</p>
                   )}
                 </div>
+
               </div>
 
               {/* Smart Ambient Lighting toggle */}
@@ -580,7 +601,7 @@ export default function StudioPage() {
               {!usageLoading && usage && usage.tier === 'free' && (
                 <div className="p-3 bg-card border border-border rounded">
                   <p className="text-xs text-muted-foreground font-mono">
-                    Free Trial — {usage.used} of {usage.limit} evaluation renders used · Outputs include watermark
+                    Free Trial — {usage.used} of {usage.limit} complimentary renders used
                   </p>
                 </div>
               )}
@@ -613,28 +634,6 @@ export default function StudioPage() {
                         className="w-full h-full object-cover"
                         data-testid="img-render-output"
                       />
-                      {/* Evaluation watermark — free trial users only */}
-                      {user?.subscriptionTier === 'free' && (
-                        <div
-                          className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                          style={{ transform: 'rotate(-30deg)' }}
-                        >
-                          <p
-                            style={{
-                              fontFamily: "'Inter', sans-serif",
-                              fontSize: '13px',
-                              fontWeight: 700,
-                              letterSpacing: '0.12em',
-                              color: 'rgba(9,9,11,0.28)',
-                              textAlign: 'center',
-                              userSelect: 'none',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            StudioLayer AI Evaluation Asset
-                          </p>
-                        </div>
-                      )}
                       {brandWatermark && watermarkUrl && (
                         <img
                           src={watermarkUrl}

@@ -425,9 +425,15 @@ components:
         modelPose:
           type: string
           enum: [standing_frontal, walking_dynamic, sideways_posing]
-        garmentType:
+        modelGender:
           type: string
-          enum: [mens_top, womens_top, full_body_dress]
+          enum: [mens, womens, kids]
+        modelAgeRange:
+          type: string
+          enum: [young_child, teen_youth, young_adult, classic_mid_age, mature_executive]
+        cameraFraming:
+          type: string
+          enum: [full_body, mid_shot, close_up]
       required:
         - sourceImageUrl
         - modelPersona
