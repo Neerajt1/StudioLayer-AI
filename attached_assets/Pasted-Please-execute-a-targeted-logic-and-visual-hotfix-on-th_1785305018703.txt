@@ -1,0 +1,21 @@
+Please execute a targeted logic and visual hotfix on the StudioLayer AI platform workspace. Treat the Fal.ai image-to-image parameter architecture as a strict validation priority to clear the current 'Render could not start' execution bottleneck:
+
+1. REPAIR BACKEND FAL.AI API PAYLOAD VALIDATION:
+- Open the backend route handling the 'Render Studio Image Layer' request loop (main.py/server routers). 
+- Ensure that the payload sent to the 'fal-ai/fashn/tryon/v1.6' model contains BOTH required image parameters: 'garment_image' and 'person_image' (or model_image depending on schema rules).
+- Hardcode a bulletproof Python dictionary lookup that automatically maps a high-quality, front-facing, neutral-background human model Unsplash URL to the 'person_image' parameter based on the user's active 'Model Demographics' and 'Model Persona' frontend selection dropdowns.
+- This ensures the application never drops an empty parameter field, allowing the Vite/Python pipeline to successfully forward requests to Fal.ai servers and clear the initialization blockade.
+
+2. STRIP ICONS & UPGRADE TO PHOTOGRAPHIC REFERENCES:
+- In the file uploader drop-zone frame inside 'src/studio.tsx', completely delete all child vector icons and placeholder sketches to restore an elite, premium appearance.
+- Replace them with a clean, text-based visual section or an elegant sub-panel reading 'Studio Reference Standards'. Inside this block, render two clean HTML image layers displaying real, minimalist photograph assets:
+  * Male Section: A high-contrast photo of a male jacket hanging cleanly on a wooden hanger against a plain background.
+  * Female Section: A high-contrast photo of an editorial dress hanging cleanly on a hanger against a plain wall.
+- Keep these as purely visual, unlinked reference guides to show fashion houses exactly how their uploaded phone snaps should be framed.
+
+3. RECTIFY PROFILE DATA FIELD COUPLING:
+- Open the Account Profile interface layout module inside 'src/studio.tsx'. 
+- Correct the user variable state bindings: Explicitly isolate 'User Account Owner' (displaying the user's full name, e.g., Neeraj Tripathi) from the 'Studio / Corporate Organization Name' slot (which must display your official company token, '29Copper Media Works').
+
+4. ENFORCE PERSISTENT BUTTON LIFECYCLE:
+- Re-verify that the React state engine locks the 'Render Studio Image Layer' button as active and fully clickable (Pitch Black fill with pure white text) the exact moment a file path is confirmed inside the file uploader array, preserving this unlocked state smoothly across all dropdown parameters.

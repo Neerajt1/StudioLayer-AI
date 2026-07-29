@@ -31,8 +31,10 @@ app.use(
   }),
 );
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Raise the JSON body limit to 20 MB — garment images are sent as base64 Data URIs
+// which can easily reach 5–15 MB before compression.
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 app.use(
   session({

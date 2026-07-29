@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Upload, X, ImageIcon } from 'lucide-react';
+import { X, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FileUploadProps {
@@ -9,17 +9,17 @@ interface FileUploadProps {
   disabled?: boolean;
 }
 
-// Hanger visual reference examples shown in the empty drop zone
-const HANGER_EXAMPLES = [
+// Photographic reference images — plain-wall hanger shots from Unsplash (free to use)
+const REFERENCE_PHOTOS = [
   {
     label: 'Male Example',
-    emoji: '🧥',
-    desc: 'Jacket on hanger',
+    sublabel: 'Jacket on hanger',
+    url: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=300&q=80&fit=crop&crop=center',
   },
   {
     label: 'Female Example',
-    emoji: '👗',
-    desc: 'Dress on hanger',
+    sublabel: 'Dress on hanger',
+    url: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=300&q=80&fit=crop&crop=center',
   },
 ];
 
@@ -98,7 +98,7 @@ export function FileUpload({
       />
 
       {preview ? (
-        /* ── Uploaded state: thumbnail + filename ── */
+        /* ── Uploaded state: thumbnail + filename strip ── */
         <div className="relative group">
           <img
             src={preview}
@@ -137,46 +137,50 @@ export function FileUpload({
           </div>
         </div>
       ) : (
-        /* ── Empty state: hanger reference anchors + drop zone ── */
-        <div className="flex flex-col items-center py-6 px-4">
-          {/* Visual reference thumbnails */}
-          <div className="flex items-start gap-3 mb-5 w-full justify-center">
-            {HANGER_EXAMPLES.map((ex) => (
-              <div
-                key={ex.label}
-                className="flex flex-col items-center gap-1.5 flex-1 max-w-[100px]"
-              >
-                <div
-                  className="w-full aspect-square rounded border border-border bg-white flex flex-col items-center justify-center gap-1"
-                  style={{ minHeight: '72px' }}
-                >
-                  <span style={{ fontSize: '28px', lineHeight: 1 }}>{ex.emoji}</span>
-                  <span
-                    className="text-muted-foreground font-mono text-center leading-tight"
-                    style={{ fontSize: '9px' }}
-                  >
-                    {ex.desc}
-                  </span>
+        /* ── Empty state: photographic reference standards + CTA ── */
+        <div className="flex flex-col items-center py-5 px-4">
+          {/* Reference header */}
+          <p
+            className="text-muted-foreground font-mono mb-3 self-start"
+            style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
+          >
+            Studio Reference Standards
+          </p>
+
+          {/* Photographic reference thumbnails */}
+          <div className="flex gap-3 mb-5 w-full justify-center">
+            {REFERENCE_PHOTOS.map((photo) => (
+              <div key={photo.label} className="flex flex-col items-center gap-1.5 flex-1 max-w-[110px]">
+                <div className="w-full overflow-hidden rounded border border-border bg-muted" style={{ aspectRatio: '3/4' }}>
+                  <img
+                    src={photo.url}
+                    alt={photo.label}
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                    onError={(e) => {
+                      // Graceful fallback: show a plain bg if image fails to load
+                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
                 </div>
-                <span
-                  className="text-muted-foreground font-mono text-center"
-                  style={{ fontSize: '9px', letterSpacing: '0.04em' }}
-                >
-                  {ex.label}
-                </span>
+                <div className="text-center">
+                  <p className="text-foreground font-medium" style={{ fontSize: '10px' }}>
+                    {photo.label}
+                  </p>
+                  <p className="text-muted-foreground font-mono" style={{ fontSize: '9px' }}>
+                    {photo.sublabel}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Upload call-to-action */}
-          <div className="flex items-center gap-2 mb-1.5">
-            <Upload className="w-4 h-4 text-muted-foreground" />
-            <p className="text-sm font-medium text-foreground">
-              📁 Drag &amp; Drop or Click to Upload Garment
-            </p>
-          </div>
+          {/* Upload CTA */}
+          <p className="text-sm font-medium text-foreground mb-1">
+            📁 Drag &amp; Drop or Click to Upload Garment
+          </p>
           <p className="text-xs text-muted-foreground font-mono">
-            Flat-lay or hanger photo · Plain background recommended
+            Flat-lay or hanger · Plain background recommended
           </p>
         </div>
       )}

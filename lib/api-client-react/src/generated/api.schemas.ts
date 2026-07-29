@@ -96,6 +96,9 @@ export const RenderInputModelPersona = {
   high_fashion: 'high_fashion',
   athletic: 'athletic',
   minimalist: 'minimalist',
+  high_fashion_editorial: 'high_fashion_editorial',
+  natural_smile: 'natural_smile',
+  confident_commercial: 'confident_commercial',
 } as const;
 
 export type RenderInputLocationEnvironment = typeof RenderInputLocationEnvironment[keyof typeof RenderInputLocationEnvironment];
@@ -129,6 +132,15 @@ export const RenderInputImageDimensions = {
   landscape_169: 'landscape_169',
 } as const;
 
+export type RenderInputModelPose = typeof RenderInputModelPose[keyof typeof RenderInputModelPose];
+
+
+export const RenderInputModelPose = {
+  standing_frontal: 'standing_frontal',
+  walking_dynamic: 'walking_dynamic',
+  sideways_posing: 'sideways_posing',
+} as const;
+
 export interface RenderInput {
   sourceImageUrl: string;
   modelPersona: RenderInputModelPersona;
@@ -136,6 +148,7 @@ export interface RenderInput {
   modelDemographics?: RenderInputModelDemographics;
   imageDimensions?: RenderInputImageDimensions;
   smartLighting?: boolean;
+  modelPose?: RenderInputModelPose;
 }
 
 export type RenderUsageTier = typeof RenderUsageTier[keyof typeof RenderUsageTier];

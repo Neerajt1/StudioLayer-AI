@@ -70,7 +70,7 @@ export default function AccountPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                      Brand / Studio Name
+                      User Account Owner
                     </Label>
                     <div className="px-3 py-2.5 border border-border rounded bg-background text-sm text-foreground">
                       {user?.name ?? '—'}
@@ -83,6 +83,15 @@ export default function AccountPage() {
                     <div className="px-3 py-2.5 border border-border rounded bg-background text-sm text-foreground font-medium">
                       {user ? planLabel(user.subscriptionTier) : '—'}
                     </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                    Studio / Corporate Organization Name
+                  </Label>
+                  <div className="px-3 py-2.5 border border-border rounded bg-background text-sm text-foreground font-medium">
+                    29Copper Media Works
                   </div>
                 </div>
 
