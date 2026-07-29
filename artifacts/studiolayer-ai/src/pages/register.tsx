@@ -11,6 +11,9 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showBillingDetails, setShowBillingDetails] = useState(false);
+  const [taxId, setTaxId] = useState('');
+  const [billingAddress, setBillingAddress] = useState('');
   const registerMutation = useRegister();
   const { toast } = useToast();
 
@@ -103,6 +106,50 @@ export default function RegisterPage() {
               <p className="text-xs text-muted-foreground font-mono">
                 Minimum 8 characters
               </p>
+            </div>
+
+            {/* Optional Corporate Billing Details */}
+            <div className="border border-border rounded bg-muted/30 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowBillingDetails((v) => !v)}
+                className="flex items-center justify-between w-full px-4 py-3 text-left"
+              >
+                <span className="text-sm font-medium text-foreground">
+                  Optional Corporate Billing Details
+                </span>
+                <span className="text-muted-foreground text-xs font-mono" style={{ transform: showBillingDetails ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.2s' }}>
+                  ▾
+                </span>
+              </button>
+
+              {showBillingDetails && (
+                <div className="px-4 pb-4 space-y-3 border-t border-border pt-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Company Tax ID / GSTIN</Label>
+                    <Input
+                      type="text"
+                      value={taxId}
+                      onChange={(e) => setTaxId(e.target.value)}
+                      placeholder="e.g. 27AAPFU0939F1ZV"
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium">Official Billing Address</Label>
+                    <Input
+                      type="text"
+                      value={billingAddress}
+                      onChange={(e) => setBillingAddress(e.target.value)}
+                      placeholder="123 Commerce St, Suite 400, City, State, ZIP"
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <p className="text-muted-foreground font-mono" style={{ fontSize: '11px', lineHeight: '1.5' }}>
+                    These details are voluntary and will be automatically appended to your downloadable monthly subscription invoices for accounting compliance.
+                  </p>
+                </div>
+              )}
             </div>
 
             <Button

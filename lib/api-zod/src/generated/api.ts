@@ -118,7 +118,8 @@ export const CreateRenderBody = zod.object({
   "modelDemographics": zod.enum(['caucasian', 'east_asian', 'south_asian', 'afro_american', 'hispanic']).optional(),
   "imageDimensions": zod.enum(['portrait_45', 'portrait_916', 'square_11', 'landscape_169']).optional(),
   "smartLighting": zod.boolean().optional(),
-  "modelPose": zod.enum(['standing_frontal', 'walking_dynamic', 'sideways_posing']).optional()
+  "modelPose": zod.enum(['standing_frontal', 'walking_dynamic', 'sideways_posing']).optional(),
+  "garmentType": zod.enum(['mens_top', 'womens_top', 'full_body_dress']).optional()
 })
 
 export const CreateRenderResponse = zod.object({

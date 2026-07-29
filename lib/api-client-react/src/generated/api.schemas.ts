@@ -141,6 +141,15 @@ export const RenderInputModelPose = {
   sideways_posing: 'sideways_posing',
 } as const;
 
+export type RenderInputGarmentType = typeof RenderInputGarmentType[keyof typeof RenderInputGarmentType];
+
+
+export const RenderInputGarmentType = {
+  mens_top: 'mens_top',
+  womens_top: 'womens_top',
+  full_body_dress: 'full_body_dress',
+} as const;
+
 export interface RenderInput {
   sourceImageUrl: string;
   modelPersona: RenderInputModelPersona;
@@ -149,6 +158,7 @@ export interface RenderInput {
   imageDimensions?: RenderInputImageDimensions;
   smartLighting?: boolean;
   modelPose?: RenderInputModelPose;
+  garmentType?: RenderInputGarmentType;
 }
 
 export type RenderUsageTier = typeof RenderUsageTier[keyof typeof RenderUsageTier];

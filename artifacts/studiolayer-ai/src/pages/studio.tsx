@@ -50,6 +50,7 @@ const FAQ_ITEMS = [
 
 export default function StudioPage() {
   const [sourceImages, setSourceImages] = useState<string[]>([]);
+  const [garmentType, setGarmentType] = useState('');
   const [modelPersona, setModelPersona] = useState('');
   const [modelPose, setModelPose] = useState('');
   const [locationEnvironment, setLocationEnvironment] = useState('');
@@ -150,6 +151,7 @@ export default function StudioPage() {
           imageDimensions: (imageDimensions as any) || undefined,
           smartLighting: smartLighting || undefined,
           modelPose: (modelPose as any) || undefined,
+                garmentType: (garmentType as any) || undefined,
         },
       },
       {
@@ -375,6 +377,27 @@ export default function StudioPage() {
 
               {/* Dropdowns grid */}
               <div className="grid grid-cols-2 gap-3">
+                {/* Garment Type — full-width, above all other dropdowns */}
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-sm font-medium">
+                    Select Garment Type <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={garmentType}
+                    onValueChange={setGarmentType}
+                    disabled={createRender.isPending}
+                  >
+                    <SelectTrigger data-testid="select-garment-type">
+                      <SelectValue placeholder="Choose garment category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mens_top">Men's Top / Jacket</SelectItem>
+                      <SelectItem value="womens_top">Women's Top / Jacket</SelectItem>
+                      <SelectItem value="full_body_dress">Full Body Dress / Gown</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Image Dimensions */}
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">Select Image Dimensions</Label>

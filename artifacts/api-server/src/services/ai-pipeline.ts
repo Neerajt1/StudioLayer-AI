@@ -6,9 +6,75 @@ const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
 fal.config({ credentials: process.env.FAL_KEY });
 
 // ---------------------------------------------------------------------------
-// Model image dictionary
+// Model image dictionaries — female (default) and male
 // Key: demographics -> persona -> Unsplash CDN URL (public, free to use)
 // ---------------------------------------------------------------------------
+
+// Male model images — used when garmentType === 'mens_top'
+const MALE_MODEL_IMAGE_URLS: Record<string, Record<string, string>> = {
+  caucasian: {
+    high_fashion:
+      "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=768&q=85&fit=crop",
+    casual:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=768&q=85&fit=crop",
+    athletic:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
+    minimalist:
+      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
+  },
+  east_asian: {
+    high_fashion:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=768&q=85&fit=crop",
+    casual:
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=768&q=85&fit=crop",
+    athletic:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
+    minimalist:
+      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
+  },
+  south_asian: {
+    high_fashion:
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=768&q=85&fit=crop",
+    casual:
+      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=768&q=85&fit=crop",
+    athletic:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
+    minimalist:
+      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
+  },
+  afro_american: {
+    high_fashion:
+      "https://images.unsplash.com/photo-1504199367641-aba8151af406?w=768&q=85&fit=crop",
+    casual:
+      "https://images.unsplash.com/photo-1504199367641-aba8151af406?w=768&q=85&fit=crop",
+    athletic:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
+    minimalist:
+      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
+  },
+  hispanic: {
+    high_fashion:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=768&q=85&fit=crop",
+    casual:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=768&q=85&fit=crop",
+    athletic:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
+    minimalist:
+      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
+  },
+  default: {
+    high_fashion:
+      "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=768&q=85&fit=crop",
+    casual:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=768&q=85&fit=crop",
+    athletic:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
+    minimalist:
+      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
+  },
+};
+
+// Female model images — used for womens_top, full_body_dress, or when garmentType is unset
 const MODEL_IMAGE_URLS: Record<string, Record<string, string>> = {
   caucasian: {
     high_fashion:
@@ -87,19 +153,60 @@ const EXPRESSION_TO_PERSONA: Record<string, string> = {
   minimalist: "minimalist",
 };
 
-/** Returns the pre-configured model image URL for the given demographics + persona/expression combo. */
+/**
+ * Returns the pre-configured model image URL.
+ * When garmentType === 'mens_top', forces a male model regardless of persona dict.
+ * Otherwise uses the female dict (safe for womens_top and full_body_dress).
+ */
 function selectModelImage(
   demographics: string | null | undefined,
   persona: string,
+  garmentType?: string | null,
 ): string {
   const internalKey = EXPRESSION_TO_PERSONA[persona] ?? persona;
   const key = demographics ?? "default";
-  const group = MODEL_IMAGE_URLS[key] ?? MODEL_IMAGE_URLS["default"]!;
+  const isMale = garmentType === "mens_top";
+  const dict = isMale ? MALE_MODEL_IMAGE_URLS : MODEL_IMAGE_URLS;
+  const group = dict[key] ?? dict["default"]!;
   return (
     group[internalKey] ??
     group["casual"] ??
-    MODEL_IMAGE_URLS["default"]!["casual"]!
+    dict["default"]!["casual"]!
   );
+}
+
+/**
+ * Calls GPT-4o Vision to extract microscopic garment design details
+ * (zipper shapes, button materials, collar seams, fabric textures) from the
+ * hanger photo. Returns a short descriptive string to enrich the Fal.ai prompt.
+ */
+async function extractGarmentDetails(imageUrl: string): Promise<string> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a precision garment analyst for a luxury fashion AI. " +
+            "Examine the clothing item in the photo — ignore any hanger or mounting apparatus. " +
+            "Extract and describe the following in 2–3 concise sentences: " +
+            "(1) exact fabric texture and material weight (e.g. heavyweight wool twill, sheer chiffon), " +
+            "(2) specific hardware details such as zipper type, button material, and collar seam construction, " +
+            "(3) defining silhouette characteristics (e.g. structured shoulder, dropped hem, boxy cut). " +
+            "Be extremely specific. No filler phrases.",
+        },
+        {
+          role: "user",
+          content: [{ type: "image_url", image_url: { url: imageUrl } }],
+        },
+      ],
+      max_tokens: 120,
+    });
+    return response.choices[0]?.message?.content?.trim() ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function prepareGarmentImage(sourceImageUrl: string): string {
@@ -155,6 +262,7 @@ export async function runAIPipeline(params: {
   imageDimensions?: string | null;
   smartLighting?: boolean | null;
   modelPose?: string | null;
+  garmentType?: string | null;
   onComplete: (outputImageUrl: string) => Promise<void>;
   onError: (error: Error) => Promise<void>;
 }): Promise<void> {
@@ -164,22 +272,32 @@ export async function runAIPipeline(params: {
     modelPersona,
     modelDemographics,
     modelPose,
+    garmentType,
   } = params;
 
   try {
     // 1. Prepare the garment image
     const garmentImage = prepareGarmentImage(sourceImageUrl);
 
-    // 2. Select model image — maps expression UI values to persona image keys
-    const modelImageUrl = selectModelImage(modelDemographics, modelPersona);
+    // 2. Select model image — gender-aware; mens_top forces male model URLs
+    const modelImageUrl = selectModelImage(modelDemographics, modelPersona, garmentType);
     logger.info(
-      { renderId, modelImageUrl, modelDemographics, modelPersona, modelPose },
+      { renderId, modelImageUrl, modelDemographics, modelPersona, modelPose, garmentType },
       "AI pipeline: model image selected",
     );
 
-    // 3. Detect garment category (hanger-aware prompt)
-    const category = await detectGarmentCategory(garmentImage);
-    logger.info({ renderId, category }, "AI pipeline: garment category detected");
+    // 3. Detect garment category + extract microscopic design details in parallel
+    // Full body dress selection overrides the AI category to one-pieces for accuracy.
+    const [detectedCategory, garmentDetails] = await Promise.all([
+      detectGarmentCategory(garmentImage),
+      extractGarmentDetails(garmentImage),
+    ]);
+    const category: GarmentCategory =
+      garmentType === "full_body_dress" ? "one-pieces" : detectedCategory;
+    logger.info(
+      { renderId, category, garmentDetails: garmentDetails.slice(0, 80) },
+      "AI pipeline: garment analysis complete",
+    );
 
     // 4. Call fashn/tryon/v1.6 — primary virtual try-on endpoint
     logger.info({ renderId }, "AI pipeline: calling fal-ai/fashn/tryon/v1.6");
@@ -187,6 +305,11 @@ export async function runAIPipeline(params: {
     let outputImageUrl: string | undefined;
 
     try {
+      // Build enriched prompt from GPT-4o design detail extraction
+      const enrichedPrompt = garmentDetails
+        ? `High-resolution editorial fashion photograph. Garment details: ${garmentDetails}`
+        : undefined;
+
       const result = await fal.subscribe("fal-ai/fashn/tryon/v1.6", {
         input: {
           model_image: modelImageUrl,
@@ -196,6 +319,7 @@ export async function runAIPipeline(params: {
           mode: "quality",
           num_samples: 1,
           output_format: "jpeg",
+          ...(enrichedPrompt ? { prompt: enrichedPrompt } : {}),
         },
         logs: false,
       });

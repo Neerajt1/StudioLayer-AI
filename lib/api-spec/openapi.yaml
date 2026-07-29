@@ -425,6 +425,9 @@ components:
         modelPose:
           type: string
           enum: [standing_frontal, walking_dynamic, sideways_posing]
+        garmentType:
+          type: string
+          enum: [mens_top, womens_top, full_body_dress]
       required:
         - sourceImageUrl
         - modelPersona

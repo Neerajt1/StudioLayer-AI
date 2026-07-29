@@ -9,19 +9,12 @@ interface FileUploadProps {
   disabled?: boolean;
 }
 
-// Photographic reference images — plain-wall hanger shots from Unsplash (free to use)
-const REFERENCE_PHOTOS = [
-  {
-    label: 'Male Example',
-    sublabel: 'Jacket on hanger',
-    url: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=300&q=80&fit=crop&crop=center',
-  },
-  {
-    label: 'Female Example',
-    sublabel: 'Dress on hanger',
-    url: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=300&q=80&fit=crop&crop=center',
-  },
-];
+// Single photographic reference — crisp jacket on wooden hanger, plain wall (Unsplash, free to use)
+const HANGER_REFERENCE = {
+  label: 'Ideal Upload Standard',
+  sublabel: 'Jacket on wooden hanger · plain background',
+  url: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80&fit=crop&crop=center',
+};
 
 export function FileUpload({
   onFileSelect,
@@ -147,32 +140,29 @@ export function FileUpload({
             Studio Reference Standards
           </p>
 
-          {/* Photographic reference thumbnails */}
-          <div className="flex gap-3 mb-5 w-full justify-center">
-            {REFERENCE_PHOTOS.map((photo) => (
-              <div key={photo.label} className="flex flex-col items-center gap-1.5 flex-1 max-w-[110px]">
-                <div className="w-full overflow-hidden rounded border border-border bg-muted" style={{ aspectRatio: '3/4' }}>
-                  <img
-                    src={photo.url}
-                    alt={photo.label}
-                    className="w-full h-full object-cover"
-                    draggable={false}
-                    onError={(e) => {
-                      // Graceful fallback: show a plain bg if image fails to load
-                      (e.currentTarget as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-                <div className="text-center">
-                  <p className="text-foreground font-medium" style={{ fontSize: '10px' }}>
-                    {photo.label}
-                  </p>
-                  <p className="text-muted-foreground font-mono" style={{ fontSize: '9px' }}>
-                    {photo.sublabel}
-                  </p>
-                </div>
+          {/* Single photographic reference — one unified standard */}
+          <div className="flex justify-center mb-5 w-full">
+            <div className="flex flex-col items-center gap-1.5 max-w-[120px]">
+              <div className="w-full overflow-hidden rounded border border-border bg-muted" style={{ aspectRatio: '3/4' }}>
+                <img
+                  src={HANGER_REFERENCE.url}
+                  alt={HANGER_REFERENCE.label}
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  }}
+                />
               </div>
-            ))}
+              <div className="text-center">
+                <p className="text-foreground font-medium" style={{ fontSize: '10px' }}>
+                  {HANGER_REFERENCE.label}
+                </p>
+                <p className="text-muted-foreground font-mono" style={{ fontSize: '9px' }}>
+                  {HANGER_REFERENCE.sublabel}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Upload CTA */}

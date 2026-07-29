@@ -119,42 +119,42 @@ export default function BillingPage() {
 
           {/* Twin pricing cards — perfectly centred */}
           <div className="flex items-center justify-center min-h-[70vh]">
-            <div className="flex flex-col lg:flex-row gap-6 w-full max-w-3xl">
+            <div className="flex flex-col lg:flex-row gap-8 w-full max-w-4xl">
               {/* Starter Studio Plan */}
-              <div className="border border-border rounded-lg bg-card p-7 flex flex-col flex-1">
+              <div className="border border-border rounded-lg bg-card py-8 px-6 flex flex-col flex-1">
                 <h3
                   className="text-foreground mb-1"
                   style={{
                     fontFamily: "'EB Garamond', Georgia, serif",
-                    fontSize: '22px',
+                    fontSize: '24px',
                     fontWeight: 600,
                     letterSpacing: '0.02em',
                   }}
                 >
                   Starter Studio Plan
                 </h3>
-                <div className="mb-5">
+                <div className="mb-6">
                   <span className="text-sm text-muted-foreground line-through font-mono mr-2">
                     $199 / mo
                   </span>
-                  <span className="text-2xl font-bold text-foreground">$99</span>
+                  <span className="text-3xl font-bold text-foreground">$99</span>
                   <span className="text-sm text-muted-foreground font-mono ml-1">/ month</span>
-                  <div className="mt-1">
+                  <div className="mt-2">
                     <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded font-mono border border-border">
                       LAUNCH OFFER
                     </span>
                   </div>
                 </div>
 
-                <ul className="space-y-2.5 flex-1 mb-7">
+                <ul className="space-y-3 flex-1 mb-8">
                   {[
                     '✔ 400 High-Res AI Studio Renders Per Month',
                     '✔ Single-Hanger Upload Interface',
                     '✔ Full Aspect, Demographics, & Expression Selectors',
                     '✔ Smart Ambient Studio Lighting Matcher',
                   ].map((f) => (
-                    <li key={f} className="text-sm text-foreground flex items-start gap-2">
-                      <span>{f}</span>
+                    <li key={f} className="text-sm text-foreground leading-relaxed">
+                      {f}
                     </li>
                   ))}
                 </ul>
@@ -171,51 +171,42 @@ export default function BillingPage() {
 
               {/* Enterprise Bulk Plan — sharp midnight-black focus border */}
               <div
-                className="rounded-lg bg-card p-7 flex flex-col flex-1 relative"
+                className="rounded-lg bg-card py-8 px-6 flex flex-col flex-1"
                 style={{ border: '1px solid #09090B' }}
               >
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span
-                    className="text-xs font-bold px-3 py-1 rounded-full font-mono"
-                    style={{ background: '#09090B', color: '#FFFFFF' }}
-                  >
-                    MOST POWERFUL
-                  </span>
-                </div>
-
                 <h3
-                  className="text-foreground mb-1 mt-2"
+                  className="text-foreground mb-1"
                   style={{
                     fontFamily: "'EB Garamond', Georgia, serif",
-                    fontSize: '22px',
+                    fontSize: '24px',
                     fontWeight: 600,
                     letterSpacing: '0.02em',
                   }}
                 >
                   Enterprise Bulk Plan
                 </h3>
-                <div className="mb-5">
+                <div className="mb-6">
                   <span className="text-sm text-muted-foreground line-through font-mono mr-2">
                     $299 / mo
                   </span>
-                  <span className="text-2xl font-bold text-foreground">$149</span>
+                  <span className="text-3xl font-bold text-foreground">$149</span>
                   <span className="text-sm text-muted-foreground font-mono ml-1">/ month</span>
-                  <div className="mt-1">
+                  <div className="mt-2">
                     <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded font-mono border border-border">
                       LAUNCH OFFER
                     </span>
                   </div>
                 </div>
 
-                <ul className="space-y-2.5 flex-1 mb-7">
+                <ul className="space-y-3 flex-1 mb-8">
                   {[
                     '✔ 800 Priority Bulk Renders Per Month',
                     '✔ ⚡ Bulk Studio Mode (Upload up to 10 concurrent images)',
                     '✔ Parallel 2x5 Grid Rendering Queue',
                     '✔ Stored Asset Folder Management',
                   ].map((f) => (
-                    <li key={f} className="text-sm text-foreground flex items-start gap-2">
-                      <span>{f}</span>
+                    <li key={f} className="text-sm text-foreground leading-relaxed">
+                      {f}
                     </li>
                   ))}
                 </ul>

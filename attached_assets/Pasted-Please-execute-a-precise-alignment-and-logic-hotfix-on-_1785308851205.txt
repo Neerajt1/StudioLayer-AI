@@ -1,0 +1,18 @@
+Please execute a precise alignment and logic hotfix on the StudioLayer AI platform based on production validation testing feedback. Treat these layout and payload modifications as the final stabilization layer:
+
+1. INTRODUCE CATEGORY SELECTION & FIDELITY PROTECTION:
+- In the left control panel, add a mandatory dropdown menu positioned above 'Model Demographics' labeled 'Select Garment Type'. Options: 'Men's Top/Jacket', 'Women's Top/Jacket', 'Full Body Dress/Gown'.
+- Update the background Python API logic: When a user selects a garment type, ensure the backend strictly maps a matching gender-specific default human model placeholder URL to Fal.ai (e.g., if 'Men's Top' is selected, it must pass a male model layer, completely preventing funny gender cross-swaps).
+- Upgrade the OpenAI GPT-4o Vision instructions: Order the vision script to extract microscopic design details from the uploaded hanger photo (e.g., specific zipper shapes, button materials, collar seams, and raw fabric textures). Feed these explicit tokens directly into the Fal.ai prompt string to preserve the original item's exact premium retail feel.
+
+2. OVERHAUL UPLOADER TO A SINGLE HANGER PHOTOGRAPH STANDARD:
+- On both the 'Studio Workspace' canvas dropzone and the 'Stored Brand Assets' section in the Profile view, remove the broken male/female full-model thumbnails. 
+- Replace them with ONE single, elegant, real-world photograph example displaying a crisp jacket hanging cleanly on a wooden hanger against a completely plain wall. Remove all references to separate male/female icon configurations in the upload block to maintain a sleek, unified standard.
+
+3. INTEGRATE VOLUNTARY CORPORATE BILLING INGESTION:
+- Update the registration 'Create Account' modal form layout and the Account Profile view block to include a distinct, collapsible inputs section titled 'Optional Corporate Billing Details'.
+- Add two input text fields: 'Company Tax ID / GSTIN' and 'Official Billing Address'. Add a muted 11px helper text layer reading: 'These details are voluntary and will be automatically appended to your downloadable monthly subscription invoices for accounting compliance.'
+
+4. FIX SUBSCRIPTION CARD CLUTTER & REMOVE BADGES:
+- Open the 'Subscription & Billing' workspace view. Completely delete the black 'Most Powerful' text badge from the container header.
+- Increase the pricing card layout bounds (expand Tailwind class elements to max-w-sm or max-w-md and add padding space py-8 px-6). Force all checklist text alignments to look balanced, spacious, and centered within their slate-gray boundary boxes.
