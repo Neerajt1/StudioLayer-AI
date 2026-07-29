@@ -410,7 +410,7 @@ components:
           type: string
         modelPersona:
           type: string
-          enum: [casual, high_fashion, athletic, minimalist]
+          enum: [casual, high_fashion, athletic, minimalist, high_fashion_editorial, natural_smile, confident_commercial]
         locationEnvironment:
           type: string
           enum: [photo_studio, urban_street, luxury_interior, nature]
@@ -422,6 +422,9 @@ components:
           enum: [portrait_45, portrait_916, square_11, landscape_169]
         smartLighting:
           type: boolean
+        modelPose:
+          type: string
+          enum: [standing_frontal, walking_dynamic, sideways_posing]
       required:
         - sourceImageUrl
         - modelPersona

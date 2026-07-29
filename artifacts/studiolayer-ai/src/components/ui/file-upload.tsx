@@ -9,6 +9,20 @@ interface FileUploadProps {
   disabled?: boolean;
 }
 
+// Hanger visual reference examples shown in the empty drop zone
+const HANGER_EXAMPLES = [
+  {
+    label: 'Male Example',
+    emoji: '🧥',
+    desc: 'Jacket on hanger',
+  },
+  {
+    label: 'Female Example',
+    emoji: '👗',
+    desc: 'Dress on hanger',
+  },
+];
+
 export function FileUpload({
   onFileSelect,
   accept = 'image/*',
@@ -42,7 +56,6 @@ export function FileUpload({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
-    // Reset input so the same file can be re-selected
     e.target.value = '';
   };
 
@@ -92,7 +105,6 @@ export function FileUpload({
             alt="Garment preview"
             className="w-full h-52 object-contain bg-white"
           />
-          {/* Filename strip */}
           <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border bg-card">
             <div className="flex items-center gap-2 min-w-0">
               <ImageIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -125,16 +137,46 @@ export function FileUpload({
           </div>
         </div>
       ) : (
-        /* ── Empty state: drop zone ── */
-        <div className="flex flex-col items-center justify-center py-12 px-6">
-          <div className="w-10 h-10 rounded border border-border bg-muted flex items-center justify-center mb-4">
-            <Upload className="w-5 h-5 text-muted-foreground" />
+        /* ── Empty state: hanger reference anchors + drop zone ── */
+        <div className="flex flex-col items-center py-6 px-4">
+          {/* Visual reference thumbnails */}
+          <div className="flex items-start gap-3 mb-5 w-full justify-center">
+            {HANGER_EXAMPLES.map((ex) => (
+              <div
+                key={ex.label}
+                className="flex flex-col items-center gap-1.5 flex-1 max-w-[100px]"
+              >
+                <div
+                  className="w-full aspect-square rounded border border-border bg-white flex flex-col items-center justify-center gap-1"
+                  style={{ minHeight: '72px' }}
+                >
+                  <span style={{ fontSize: '28px', lineHeight: 1 }}>{ex.emoji}</span>
+                  <span
+                    className="text-muted-foreground font-mono text-center leading-tight"
+                    style={{ fontSize: '9px' }}
+                  >
+                    {ex.desc}
+                  </span>
+                </div>
+                <span
+                  className="text-muted-foreground font-mono text-center"
+                  style={{ fontSize: '9px', letterSpacing: '0.04em' }}
+                >
+                  {ex.label}
+                </span>
+              </div>
+            ))}
           </div>
-          <p className="text-sm font-medium text-foreground mb-1">
-            Upload Clothing Photo
-          </p>
+
+          {/* Upload call-to-action */}
+          <div className="flex items-center gap-2 mb-1.5">
+            <Upload className="w-4 h-4 text-muted-foreground" />
+            <p className="text-sm font-medium text-foreground">
+              📁 Drag &amp; Drop or Click to Upload Garment
+            </p>
+          </div>
           <p className="text-xs text-muted-foreground font-mono">
-            Flat-lay or mannequin · Drag & drop or click
+            Flat-lay or hanger photo · Plain background recommended
           </p>
         </div>
       )}

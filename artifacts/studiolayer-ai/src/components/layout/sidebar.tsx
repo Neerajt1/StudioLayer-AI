@@ -12,6 +12,7 @@ interface SidebarProps {
 const navItems = [
   { href: '/studio', label: '🎨 Studio Workspace' },
   { href: '/gallery', label: '📦 Asset Gallery' },
+  { href: '/account', label: '👤 Account Profile' },
   { href: '/billing', label: '💳 Subscription & Billing' },
 ];
 

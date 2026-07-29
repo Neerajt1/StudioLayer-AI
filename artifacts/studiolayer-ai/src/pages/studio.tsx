@@ -51,6 +51,7 @@ const FAQ_ITEMS = [
 export default function StudioPage() {
   const [sourceImages, setSourceImages] = useState<string[]>([]);
   const [modelPersona, setModelPersona] = useState('');
+  const [modelPose, setModelPose] = useState('');
   const [locationEnvironment, setLocationEnvironment] = useState('');
   const [modelDemographics, setModelDemographics] = useState('');
   const [imageDimensions, setImageDimensions] = useState('');
@@ -148,6 +149,7 @@ export default function StudioPage() {
           modelDemographics: (modelDemographics as any) || undefined,
           imageDimensions: (imageDimensions as any) || undefined,
           smartLighting: smartLighting || undefined,
+          modelPose: (modelPose as any) || undefined,
         },
       },
       {
@@ -171,14 +173,27 @@ export default function StudioPage() {
   };
 
   const handleDownload = () => {
-    if (activeRender?.outputImageUrl) {
-      const link = document.createElement('a');
-      link.href = resolvedOutputUrl!;
-      link.download = `studiolayer-render-${activeRender.id}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    if (!resolvedOutputUrl) return;
+    // Corporate asset file naming: [BrandName]_[GarmentType]_[Persona]_[Aspect_Ratio].jpg
+    const brandSlug = (user?.name ?? 'studio')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '');
+    const personaSlug = modelPersona || 'model';
+    const aspectMap: Record<string, string> = {
+      portrait_45: '4-5',
+      portrait_916: '9-16',
+      square_11: '1-1',
+      landscape_169: '16-9',
+    };
+    const aspectSlug = aspectMap[imageDimensions] ?? '1-1';
+    const filename = `${brandSlug}_garment_${personaSlug}_${aspectSlug}.jpg`;
+    const link = document.createElement('a');
+    link.href = resolvedOutputUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Button goes active the moment a valid image is detected in the upload state
@@ -401,10 +416,10 @@ export default function StudioPage() {
                   </Select>
                 </div>
 
-                {/* Model Persona */}
+                {/* Model Expression (C) */}
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">
-                    Model Persona <span className="text-destructive">*</span>
+                    Model Expression <span className="text-destructive">*</span>
                   </Label>
                   <Select
                     value={modelPersona}
@@ -415,13 +430,12 @@ export default function StudioPage() {
                       data-testid="select-model-persona"
                       className={showValidation && !modelPersona ? 'ring-2 ring-destructive border-destructive' : ''}
                     >
-                      <SelectValue placeholder="Select model" />
+                      <SelectValue placeholder="Select expression" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="casual">Casual</SelectItem>
-                      <SelectItem value="high_fashion">High-Fashion</SelectItem>
-                      <SelectItem value="athletic">Athletic</SelectItem>
-                      <SelectItem value="minimalist">Minimalist</SelectItem>
+                      <SelectItem value="high_fashion_editorial">High-Fashion Editorial (Serious)</SelectItem>
+                      <SelectItem value="natural_smile">Natural Smile</SelectItem>
+                      <SelectItem value="confident_commercial">Confident Commercial</SelectItem>
                     </SelectContent>
                   </Select>
                   {showValidation && !modelPersona && (
@@ -429,7 +443,26 @@ export default function StudioPage() {
                   )}
                 </div>
 
-                {/* Location */}
+                {/* Model Action Pose (D) */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-medium">Model Action Pose</Label>
+                  <Select
+                    value={modelPose}
+                    onValueChange={setModelPose}
+                    disabled={createRender.isPending}
+                  >
+                    <SelectTrigger data-testid="select-model-pose">
+                      <SelectValue placeholder="Select pose" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="standing_frontal">Standing Frontal</SelectItem>
+                      <SelectItem value="walking_dynamic">Walking Dynamic</SelectItem>
+                      <SelectItem value="sideways_posing">Sideways Posing</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Location (required) */}
                 <div className="space-y-1.5">
                   <Label className="text-sm font-medium">
                     Location Environment <span className="text-destructive">*</span>

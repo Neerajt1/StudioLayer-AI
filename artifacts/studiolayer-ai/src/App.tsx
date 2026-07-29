@@ -9,6 +9,7 @@ import RegisterPage from '@/pages/register';
 import StudioPage from '@/pages/studio';
 import GalleryPage from '@/pages/gallery';
 import BillingPage from '@/pages/billing';
+import AccountPage from '@/pages/account';
 import NotFound from '@/pages/not-found';
 import { useEffect } from 'react';
 
@@ -40,6 +41,11 @@ function Router() {
       <Route path="/billing">
         <AuthGuard>
           <BillingPage />
+        </AuthGuard>
+      </Route>
+      <Route path="/account">
+        <AuthGuard>
+          <AccountPage />
         </AuthGuard>
       </Route>
       <Route component={NotFound} />

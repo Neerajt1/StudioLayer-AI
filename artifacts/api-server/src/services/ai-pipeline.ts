@@ -8,8 +8,6 @@ fal.config({ credentials: process.env.FAL_KEY });
 // ---------------------------------------------------------------------------
 // Model image dictionary
 // Key: demographics -> persona -> Unsplash CDN URL (public, free to use)
-// These are front-facing, neutral-background studio shots optimised for
-// virtual try-on. Swap any URL to update a specific demographic/persona slot.
 // ---------------------------------------------------------------------------
 const MODEL_IMAGE_URLS: Record<string, Record<string, string>> = {
   caucasian: {
@@ -62,7 +60,6 @@ const MODEL_IMAGE_URLS: Record<string, Record<string, string>> = {
     minimalist:
       "https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?w=768&q=85&fit=crop",
   },
-  // Default fallback (no demographics selected)
   default: {
     high_fashion:
       "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=768&q=85&fit=crop",
@@ -75,32 +72,43 @@ const MODEL_IMAGE_URLS: Record<string, Record<string, string>> = {
   },
 };
 
-/** Returns the pre-configured model image URL for the given demographics + persona combo. */
+// ---------------------------------------------------------------------------
+// Expression / Pose → internal persona key mapping
+// The UI now sends "Model Expression" values; map them to MODEL_IMAGE_URLS keys.
+// ---------------------------------------------------------------------------
+const EXPRESSION_TO_PERSONA: Record<string, string> = {
+  high_fashion_editorial: "high_fashion",
+  natural_smile: "casual",
+  confident_commercial: "athletic",
+  // Legacy values pass through unchanged
+  high_fashion: "high_fashion",
+  casual: "casual",
+  athletic: "athletic",
+  minimalist: "minimalist",
+};
+
+/** Returns the pre-configured model image URL for the given demographics + persona/expression combo. */
 function selectModelImage(
   demographics: string | null | undefined,
   persona: string,
 ): string {
+  const internalKey = EXPRESSION_TO_PERSONA[persona] ?? persona;
   const key = demographics ?? "default";
   const group = MODEL_IMAGE_URLS[key] ?? MODEL_IMAGE_URLS["default"]!;
   return (
-    group[persona] ??
+    group[internalKey] ??
     group["casual"] ??
     MODEL_IMAGE_URLS["default"]!["casual"]!
   );
 }
 
-// ---------------------------------------------------------------------------
-// Garment image handling
-// fashn/tryon/v1.6 accepts a raw base64 Data URI in `garment_image`,
-// so no external upload is needed. We keep the function for URL pass-through.
-// ---------------------------------------------------------------------------
 function prepareGarmentImage(sourceImageUrl: string): string {
-  // Already a data URI or remote URL — both are accepted directly by the API.
   return sourceImageUrl;
 }
 
 // ---------------------------------------------------------------------------
 // Garment category detection via OpenAI vision
+// Includes hanger masking instruction so the model ignores hanger geometry.
 // ---------------------------------------------------------------------------
 type GarmentCategory = "tops" | "bottoms" | "one-pieces" | "auto";
 
@@ -114,7 +122,7 @@ async function detectGarmentCategory(
         {
           role: "system",
           content:
-            'Classify the clothing item in this image into exactly one of these three categories: "tops" (shirts, blouses, jackets, hoodies, t-shirts, etc.), "bottoms" (pants, jeans, skirts, shorts, etc.), or "one-pieces" (dresses, jumpsuits, full-body outfits). Reply with only the category word, nothing else.',
+            'You are a garment classifier. IMPORTANT: Ignore any clothes hanger, hook, rod, or mounting apparatus visible in the image — focus ONLY on the fabric garment itself. Classify the clothing item into exactly one of these three categories: "tops" (shirts, blouses, jackets, hoodies, t-shirts, coats, etc.), "bottoms" (pants, jeans, skirts, shorts, etc.), or "one-pieces" (dresses, jumpsuits, full-body outfits, rompers). Reply with only the category word, nothing else.',
         },
         {
           role: "user",
@@ -140,37 +148,37 @@ async function detectGarmentCategory(
 // ---------------------------------------------------------------------------
 export async function runAIPipeline(params: {
   renderId: number;
-  sourceImageUrl: string; // user's clothing photo (base64 Data URI or URL)
+  sourceImageUrl: string;
   modelPersona: string;
   locationEnvironment: string;
   modelDemographics?: string | null;
   imageDimensions?: string | null;
   smartLighting?: boolean | null;
+  modelPose?: string | null;
   onComplete: (outputImageUrl: string) => Promise<void>;
   onError: (error: Error) => Promise<void>;
 }): Promise<void> {
-  const { renderId, sourceImageUrl, modelPersona, modelDemographics } = params;
+  const {
+    renderId,
+    sourceImageUrl,
+    modelPersona,
+    modelDemographics,
+    modelPose,
+  } = params;
 
   try {
-    // 1. Prepare the garment image (base64 or URL, used as-is)
+    // 1. Prepare the garment image
     const garmentImage = prepareGarmentImage(sourceImageUrl);
 
-    // 2. Auto-select the model image based on demographics + persona
+    // 2. Select model image — maps expression UI values to persona image keys
     const modelImageUrl = selectModelImage(modelDemographics, modelPersona);
     logger.info(
-      { renderId, modelImageUrl, modelDemographics, modelPersona },
+      { renderId, modelImageUrl, modelDemographics, modelPersona, modelPose },
       "AI pipeline: model image selected",
     );
 
-    // 3. Detect garment category for better try-on accuracy
-    //    Use the garment image URL (if remote) or a placeholder prompt for base64
-    let category: GarmentCategory = "auto";
-    if (!garmentImage.startsWith("data:")) {
-      category = await detectGarmentCategory(garmentImage);
-    } else {
-      // For base64, send to OpenAI directly
-      category = await detectGarmentCategory(garmentImage);
-    }
+    // 3. Detect garment category (hanger-aware prompt)
+    const category = await detectGarmentCategory(garmentImage);
     logger.info({ renderId, category }, "AI pipeline: garment category detected");
 
     // 4. Call fashn/tryon/v1.6 — primary virtual try-on endpoint
@@ -192,8 +200,21 @@ export async function runAIPipeline(params: {
         logs: false,
       });
 
-      const images = (result.data as any)?.images as Array<{ url: string }> | undefined;
-      outputImageUrl = images?.[0]?.url;
+      // Defensively check all common output URL keys
+      const data = result.data as Record<string, unknown> | undefined;
+      const candidates = [
+        data?.["image_url"],
+        data?.["url"],
+        (data?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
+        (data?.["image"] as { url: string } | undefined)?.url,
+      ];
+      for (const c of candidates) {
+        if (typeof c === "string" && c.startsWith("http")) {
+          outputImageUrl = c;
+          break;
+        }
+      }
+
       logger.info({ renderId, outputImageUrl }, "AI pipeline: fashn/tryon/v1.6 succeeded");
     } catch (primaryError) {
       // 4b. Fallback: image-apps-v2/virtual-try-on
@@ -214,14 +235,20 @@ export async function runAIPipeline(params: {
         },
       );
 
-      const fallbackImages = (fallbackResult.data as any)?.images as
-        | Array<{ url: string }>
-        | undefined;
-      const fallbackImage = (fallbackResult.data as any)?.image as
-        | { url: string }
-        | undefined;
-      outputImageUrl =
-        fallbackImages?.[0]?.url ?? fallbackImage?.url;
+      const fd = fallbackResult.data as Record<string, unknown> | undefined;
+      const fallbackCandidates = [
+        fd?.["image_url"],
+        fd?.["url"],
+        (fd?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
+        (fd?.["image"] as { url: string } | undefined)?.url,
+      ];
+      for (const c of fallbackCandidates) {
+        if (typeof c === "string" && c.startsWith("http")) {
+          outputImageUrl = c;
+          break;
+        }
+      }
+
       logger.info(
         { renderId, outputImageUrl },
         "AI pipeline: fallback succeeded",

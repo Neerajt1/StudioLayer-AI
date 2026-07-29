@@ -1,0 +1,63 @@
+Please execute a comprehensive system architecture rewrite on the StudioLayer AI application. You must implement the following 10 structural and visual design blocks cleanly. Treat the secure authentication guard and the active file-upload button state as PERMANENT SYSTEM LOCK PARAMETERS—they must be hardcoded seamlessly and are strictly forbidden from being degraded, commented out, or omitted during the build phase:
+
+1. ABSOLUTE AUTHENTICATION SECURITY LOCK (PERMANENT SYSTEM GUARD):
+- Ensure that the primary layout controller (main.py/server routers and the core React router inside src/studio.tsx) runs a strict user authentication check BEFORE rendering any workspace viewports.
+- If a user session token, cookie, or database profile state is unauthenticated or not logged in, IMMEDIATELY redirect the browser context to a dedicated, clean, secure '/login' or '/register' screen. 
+- It is structurally illegal to allow an unauthenticated user to directly land on or view the '/studio' or '/gallery' workspace canvas areas under any circumstances.
+
+2. LOGOUT LINK INTERFACE:
+- In the left sidebar navigation system column, directly beneath the 'Subscription & Billing' button link, add a prominent, clean navigation link labeled '🚪 Log Out' styled in our clean sans-serif typeface.
+- Hook this button directly to a backend API router endpoint that instantly clears the active user session token, flushes the browser memory cookies, and immediately throws the user back out to the main secure login screen interface.
+
+3. REPAIR FILE UPLOAD & LOCK BUTTON ENGAGEMENT (PERMANENT SYSTEM GUARD):
+- Overhaul the entire file-uploader drag-and-drop JavaScript state handler inside 'src/studio.tsx'. The uploader must accept ONLY single-item garment photos hung on standard hangers against a plain wall.
+- The exact millisecond a user selects or drops a valid garment photo file into the dashed container, the React framework must instantly capture the asset, render a clear visual miniature thumbnail preview of the clothing item inside the dropzone area, and AUTOMATICALLY change the 'Render Studio Image Layer' action button state from 'disabled' (grayed out) to fully ACTIVE (Solid, clickable Pitch Black font/fill background #09090B with crisp white text). 
+- Ensure this active state logic never breaks or reverts when changing dropdown menus.
+
+4. PREMIUM TWO-FONT TYPOGRAPHY & LUXURY TEXT LOGO SYSTEM:
+- Import the 'EB Garamond' font family from Google Fonts and configure it as the primary serif typeface in the Tailwind system.
+- Build the main top-left header logo as a PURE TEXT LOGO reading exactly 'StudioLayer AI'. Do not use image placeholders or graphic icons. 
+- Style this text logo using the EB Garamond font layer, size 24px, pristine solid Charcoal Black color, with wide letter-spacing tracking (letter-spacing: 0.15em) to give it a spacious, minimalist, ultra-luxury fashion house aesthetic.
+- Directly beneath the text logo, add a muted tagline reading 'Professional Editorial Render Engine' (completely remove any brackets) styled in a crisp 12px sans-serif font (Inter or Geist) colored in subtle slate-gray (text-slate-400) on a clean single line with zero text overflow.
+- Apply this same serif font (EB Garamond) to all primary section headlines and the pricing tier titles ('Starter Studio Plan' and 'Enterprise Bulk Plan').
+
+5. COMPLETE VISUAL RE-DESIGN (STUDIO WHITE REALM):
+- Change the background of the ENTIRE web application viewports, sidebars, dashboard grids, modals, and input cards to a solid, pure Studio White (#FFFFFF).
+- Set all inner secondary panels, dropdowns, and block backgrounds to a clean, smooth off-white porcelain accent tone (#F9F9FB or #F4F4F5).
+- Turn all primary typography headers, navigation items, and data titles to solid Pitch Black / Charcoal (#18181B). Secondary helper text descriptions must use soft slate-gray (#71717A).
+- Remove all neon glows and heavy shadows. All layout elements and panels must be completely flat or utilize a razor-thin 1px border layer colored in soft pearl-gray (#E4E4E7).
+
+6. HANGER VISUAL ANCHOR DROP ZONE layout:
+- Inside the dashed-border file uploader container, place two small, elegant visual reference thumbnail placeholders side-by-side: One for a 'Male Example' showing a clean jacket hanging on a standard clothes hanger against a completely plain wall, and one for a 'Female Example' showing a dress hanging neatly on a hanger against a plain wall.
+- Below these placeholders, display the primary file-drop text: '📁 Drag & Drop or Click to Upload Garment'.
+
+7. CONTROL PANEL EXPANSION & AI DIRECTING SELECTORS:
+Update the main dashboard left sidebar control grid to feature these specific user input modules styled with high visibility (inactive tracks colored in visible light-gray #E4E4E7 and active toggle handles/fills colored in solid Charcoal Black #18181B):
+- Dropdown A: 'Select Image Dimensions' -> Options: '4:5 Portrait (Shopify & Amazon)', '9:16 Vertical (TikTok Ads)', '1:1 Square (Social Media)', '16:9 Landscape (Banners & Magazines)'.
+- Dropdown B: 'Model Demographics' -> Options: 'Caucasian', 'East Asian', 'South Asian / Indian', 'Afro-American / Black', 'Hispanic / Latino'.
+- Dropdown C: 'Model Expression' -> Options: 'High-Fashion Editorial (Serious)', 'Natural Smile', 'Confident Commercial'.
+- Dropdown D: 'Model Action Pose' -> Options: 'Standing Frontal', 'Walking Dynamic', 'Sideways Posing'.
+- Toggle Switch E: 'Smart Ambient Lighting' -> (A prominent toggle labeled 'Match Ambient Studio Lighting' to automatically analyze backdrop layers and render matching shadows and highlights onto the garment fabric).
+- Checkbox F: 'Dynamic Brand Watermark' -> (A toggle switch that reveals a secondary file-uploader for a transparent logo PNG file, allowing users to choose whether to overlay a corner branding watermark on a project basis).
+
+8. TWIN PRICING MATRIX WITH PERFECT CANVAS CENTERING:
+- On the 'Subscription & Billing' tab view, clear out all old misaligned layouts.
+- Structurally align the entire pricing viewport using absolute centering containers (e.g., flex items-center justify-center min-h-[70vh] gap-8). Ensure the twin pricing cards sit perfectly dead-center inside the main content canvas area, never pushed towards the top left corner.
+- Render two side-by-side slate-gray containers detailing Scheme A (The Monthly Credit Bucket):
+  * Left Card: 'Starter Studio Plan' -> Highlight: 'Launch Offer $99 / month'. Bullets: '✔ 400 High-Res AI Studio Renders Per Month', '✔ Single-Hanger Upload Interface', '✔ Full Aspect, Demographics, & Expression Selectors', '✔ Smart Ambient Studio Lighting Matcher'.
+  * Right Card (Add a sharp, thin 1px midnight-black focus border): 'Enterprise Bulk Plan' -> Highlight: 'Launch Offer $149 / month'. Bullets: '✔ 800 Priority Bulk Renders Per Month', '✔ ⚡ Bulk Studio Mode (Upload up to 10 concurrent images)', '✔ Parallel 2x5 Grid Rendering Queue', '✔ Stored Asset Folder Management'.
+- Integrate an automatic 'Buy 100 Extra Renders ($25)' on-demand Top-up system popup trigger if a user exhausts their plan's monthly bucket allowance.
+
+9. ACCOUNT PROFILE CANVAS & AUTOMATED FILE NAMING CONVENTION:
+- Design a sleek, minimalist 'Account Profile' view page split into 3 clear blocks: Stored Identity Credentials (Name, Brand, Registered Email, and Password reset options), Stored Brand Assets (default transparent corporate logo storage and corporate invoicing profiles), and an Operational Metric ring tracking current bucket usage (e.g., '142 / 400 Credits Used This Month').
+- Program an automated corporate asset file naming system. When a user clicks the 'Download High-Res Studio Asset' button, the backend script must automatically read the user's configuration parameters and output the file using this exact text template structure: [BrandName]_[GarmentType]_[Persona]_[Aspect_Ratio].jpg (e.g., 'london_apparel_co_leather_jacket_editorial_4-5.jpg').
+
+10. DETENSIVE CORE ENGINE API INTERACTION:
+- Hardcode the backend processing script to utilize the 'fal-ai/fashn/tryon/v1.6' try-on endpoint. Update the request payload to map the user's selected dropdown parameters.
+- If a user session is detected as a free trial or evaluation tier, automatically hardcode a bold, prominent semi-transparent text layer overlay reading 'StudioLayer AI Evaluation Asset' across the center of the final generated output file canvas before enabling download privileges.
+- Configure the vision layer masking to explicitly isolate and ignore the standard wood/plastic clothes hanger object geometry, capturing purely the fabric garment edges as the primary layer token for model draping to prevent background clutter crashes.
+- Wrap the rendering handler inside a try-except error catching block. If the API returns a success response code, explicitly parse the final image URL string (checking data.get('image_url'), data.get('url'), or data.get('images', [{}]).get('url')) and update the activeRender state to 'completed' or 'success' so the React frontend displays the image cleanly on the canvas without going blank.
+
+11. CORPORATE LEGAL COPYRIGHT FOOTER:
+At the absolute bottom footer line of every single viewport across the entire web application platform, print this exact copyright text layer in a muted, elegant 12px slate-gray font:
+'© 2026 StudioLayer AI. All rights reserved. A product of 29Copper Media Works.'

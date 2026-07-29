@@ -113,11 +113,12 @@ export const ListRendersResponse = zod.array(ListRendersResponseItem)
  */
 export const CreateRenderBody = zod.object({
   "sourceImageUrl": zod.string(),
-  "modelPersona": zod.enum(['casual', 'high_fashion', 'athletic', 'minimalist']),
+  "modelPersona": zod.enum(['casual', 'high_fashion', 'athletic', 'minimalist', 'high_fashion_editorial', 'natural_smile', 'confident_commercial']),
   "locationEnvironment": zod.enum(['photo_studio', 'urban_street', 'luxury_interior', 'nature']),
   "modelDemographics": zod.enum(['caucasian', 'east_asian', 'south_asian', 'afro_american', 'hispanic']).optional(),
   "imageDimensions": zod.enum(['portrait_45', 'portrait_916', 'square_11', 'landscape_169']).optional(),
-  "smartLighting": zod.boolean().optional()
+  "smartLighting": zod.boolean().optional(),
+  "modelPose": zod.enum(['standing_frontal', 'walking_dynamic', 'sideways_posing']).optional()
 })
 
 export const CreateRenderResponse = zod.object({
