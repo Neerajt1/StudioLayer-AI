@@ -50,6 +50,45 @@ const AGE_KEYED_MODEL_IMAGES: Record<string, Record<string, string>> = {
 };
 
 // ---------------------------------------------------------------------------
+// POSE-KEYED model image dictionary — gender → pose → Unsplash CDN URL
+//
+// Supplies base human layers whose physical stance matches the requested
+// Model Action Pose, so the try-on engine wraps fabric over the correct
+// skeletal framework for each lookbook frame.
+//
+// Resolution priority (see selectModelImage):
+//   1. POSE_KEYED  [gender][pose]   ← when walking_dynamic or sideways_posing
+//   2. AGE_KEYED   [gender][age]    ← when standing_frontal or no pose set
+//   3. LEGACY demographics+persona  ← final catch-all
+// ---------------------------------------------------------------------------
+const POSE_KEYED_MODEL_IMAGES: Record<string, Record<string, string>> = {
+  womens: {
+    // Mid-stride dynamic walking — editorial female lookbook
+    walking_dynamic:
+      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=768&q=85&fit=crop&crop=top",
+    // Clean three-quarter / side-profile studio pose — female
+    sideways_posing:
+      "https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=768&q=85&fit=crop&crop=top",
+  },
+  mens: {
+    // Confident mid-stride walking — editorial male lookbook
+    walking_dynamic:
+      "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=768&q=85&fit=crop&crop=top",
+    // Three-quarter / side-profile — male fashion editorial
+    sideways_posing:
+      "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=768&q=85&fit=crop&crop=top",
+  },
+  kids: {
+    // Child captured mid-stride in a natural walking pose
+    walking_dynamic:
+      "https://images.unsplash.com/photo-1555009393-f20bdb245c4d?w=768&q=85&fit=crop&crop=top",
+    // Child in clean side / three-quarter profile — kids fashion catalog
+    sideways_posing:
+      "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=768&q=85&fit=crop&crop=top",
+  },
+};
+
+// ---------------------------------------------------------------------------
 // LEGACY model image dictionaries — female (default), male, and kids
 // Key: demographics -> persona -> Unsplash CDN URL (public, free to use)
 // Used as fallback when no age-range-keyed image exists.
@@ -216,16 +255,30 @@ const EXPRESSION_TO_PERSONA: Record<string, string> = {
  * Returns the pre-configured model image URL.
  *
  * Resolution order (first match wins):
- *   1. AGE_KEYED_MODEL_IMAGES[gender][ageRange]  ← primary, most specific
- *   2. Legacy demographics+persona dict           ← fallback for unmatched combos
+ *   1. POSE_KEYED_MODEL_IMAGES[gender][pose]      ← walking_dynamic / sideways_posing
+ *   2. AGE_KEYED_MODEL_IMAGES[gender][ageRange]   ← standing_frontal or no pose
+ *   3. Legacy demographics+persona dict            ← final catch-all
  */
 function selectModelImage(
   demographics: string | null | undefined,
   persona: string,
   modelGender?: string | null,
   modelAgeRange?: string | null,
+  modelPose?: string | null,
 ): string {
-  // 1 — Age-keyed primary lookup
+  // 1 — Pose-keyed lookup (walking_dynamic / sideways_posing only).
+  //     standing_frontal falls through to the age-keyed dict, which already
+  //     contains clean frontal model images.
+  if (
+    modelGender &&
+    modelPose &&
+    modelPose !== "standing_frontal" &&
+    POSE_KEYED_MODEL_IMAGES[modelGender]?.[modelPose]
+  ) {
+    return POSE_KEYED_MODEL_IMAGES[modelGender][modelPose]!;
+  }
+
+  // 2 — Age-keyed lookup (primary frontal images)
   if (modelGender && modelAgeRange) {
     const genderSlot = AGE_KEYED_MODEL_IMAGES[modelGender];
     if (genderSlot) {
@@ -234,7 +287,7 @@ function selectModelImage(
     }
   }
 
-  // 2 — Legacy demographics+persona fallback
+  // 3 — Legacy demographics+persona fallback
   const internalKey = EXPRESSION_TO_PERSONA[persona] ?? persona;
   const key = demographics ?? "default";
   let dict: Record<string, Record<string, string>>;
@@ -359,6 +412,7 @@ export async function runAIPipeline(params: {
     sourceImageUrl,
     modelPersona,
     modelDemographics,
+    modelPose,
     modelGender,
     modelAgeRange,
     cameraFraming,
@@ -372,9 +426,9 @@ export async function runAIPipeline(params: {
     // 2. Select model image — age+gender primary, demographics+persona fallback.
     //    For lower-body garments the model image must show full legs; the existing
     //    Unsplash fashion URLs are full-body shots so the same dict applies.
-    const modelImageUrl = selectModelImage(modelDemographics, modelPersona, modelGender, modelAgeRange);
+    const modelImageUrl = selectModelImage(modelDemographics, modelPersona, modelGender, modelAgeRange, modelPose);
     logger.info(
-      { renderId, modelImageUrl, modelDemographics, modelPersona, modelGender, modelAgeRange, cameraFraming, garmentPlacement },
+      { renderId, modelImageUrl, modelDemographics, modelPersona, modelPose, modelGender, modelAgeRange, cameraFraming, garmentPlacement },
       "AI pipeline: model image selected",
     );
 
