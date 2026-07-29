@@ -1,0 +1,24 @@
+Please execute an elite quality-control logic override on the StudioLayer AI system architecture and processing pipeline to achieve 100% premium commercial rendering standards. Treat these parameters as strict, non-negotiable system overrides:
+
+1. ENFORCE OPEN-PALM NATURAL POSING (PERMANENT HAND AND POSE FIX):
+- Modify the background prompt assembly logic for the 'fal-ai/fashn/tryon/v1.6' endpoint. 
+- Hardcode the base human model generator to utilize ONLY clean, static, open-palm commercial catalog poses where the model's hands are down loosely at their sides or resting completely flat against their thighs. 
+- Explicitly append this constraint string to the active positive prompt matrix: 'model standing in a clean symmetrical catalog posture with hands open and fingers completely separated down at their sides, showing clear natural hand anatomy'. 
+- Completely block multi-angle profiles: If the user selects 'Standing Frontal', the prompt must forcefully direct the model to look directly at the lens in a strict front-facing portrait angle.
+
+2. MAXIMUM GARMENT FIDELITY LOCK (FIXES THE BUTTONS, FABRICS & COLLARS):
+- Locate the API payload parameter block sent to Fal.ai. Set the garment detail preservation weight parameter (e.g., 'fidelity_weight', 'preserve_details', or 'cover_weight') to its absolute maximum value of '1.0'.
+- Force the OpenAI GPT-4o Vision parser script to aggressively extract structural pattern styles: if it detects elements like 'front buttons, rolling sleeves, loose bottom hems, or linen collars', it must pass those exact text tokens at the very front of the generation string to force Fal.ai to replicate the exact garment cuts rather than degrading them into generic crewneck t-shirts.
+- Hanger Isolation Protocol: Implement explicit masking directives inside the image pre-processing routine. Tell the vision segmentation layer to isolate the hanger object geometry, treat the clothes hanger as transparent empty space, and capture purely the edge borders of the fabric layer to prevent wooden hanger remnants from rendering inside the model's collar.
+
+3. REPAIR SYSTEM LOGIC COMPLIANCE & BUTTON FLAGS:
+- Fix the download asset button handler inside 'src/studio.tsx'. Change the event from a tab redirection to an automated browser attachment stream, ensuring that clicking 'Download High-Res Studio Asset' directly triggers a local desktop file download into the user's system without opening any new browser windows or displacing the web app environment.
+- Correct the database account profile variable coordinates: Ensure the 'User Account Owner' text form field successfully displays your name 'Neeraj Tripathi' and the 'Studio / Corporate Organization Name' slot displays your official token '29Copper Media Works' with zero text field crossovers.
+- Symmetrically format the checklist columns on the Subscription tab to stay evenly aligned on the right side of the checkmark graphics, expanding card widths to prevent text crowding.
+
+4. TARGET CONTROL DOCK DYNAMIC INTERACTIVE DROPDOWNS:
+Overhaul the sidebar filter system to utilize these 4 high-precision corporate selectors, ensuring the 'Render' button locks into active black the moment a file path is confirmed:
+- Dropdown A: 'Target Model Gender' -> Options: 'Men's Fashion', 'Women's Fashion', 'Kids' Fashion'. (Backend: If 'Men's Fashion' is selected, forcefully route requests to male base human layers, completely preventing funny gender cross-swaps).
+- Dropdown B: 'Target Model Age Range' -> Options: '5 - 10 Years (Young Child)', '10 - 15 Years (Teen / Youth)', '20 - 30 Years (Young Adult)', '30 - 40 Years (Classic Mid-Age)', '40 - 50 Years (Mature Executive)'.
+- Dropdown C: 'Studio Camera Framing' -> Options: 'Full Body Catalog Shot', 'Mid-Shot Portrait', 'Texture Close-Up'. (Backend: Map this directly to format the composition prompt layout, forcing full-body configurations to render the model cleanly from head to toe, actively minimizing empty negative space above the frame).
+- Dropdown D: 'Select Image Dimensions' -> Options: '4:5 Portrait (Shopify & Amazon)', '9:16 Vertical (TikTok Ads)', '1:1 Square (Social Media)', '16:9 Landscape (Banners & Magazines)'.

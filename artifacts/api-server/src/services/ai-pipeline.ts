@@ -218,10 +218,11 @@ async function extractGarmentDetails(imageUrl: string): Promise<string> {
             "You MUST mentally isolate and completely discard the hanger object from your analysis — " +
             "treat the hanger, hook, rod, and any mounting hardware as transparent empty space. " +
             "Capture ONLY the pure fabric edge borders and garment geometry itself. " +
-            "Focus exclusively on the clothing item and extract the following in 2–3 concise sentences: " +
-            "(1) exact fabric texture and material weight (e.g. heavyweight wool twill, sheer chiffon), " +
-            "(2) specific hardware details such as zipper type, button material, and collar seam construction, " +
-            "(3) defining silhouette characteristics (e.g. structured shoulder, dropped hem, boxy cut). " +
+            "STRUCTURAL TOKEN PRIORITY RULE: Lead your response with the most visually defining structural " +
+            "tokens in this order — front button plackets, collar construction (e.g. linen collar, lapel, " +
+            "band collar), sleeve style (e.g. rolled sleeves, dropped shoulder), hem line (e.g. loose bottom hem, " +
+            "curved hem), then fabric type. This ordering is mandatory — structural details FIRST. " +
+            "Format: '[structural tokens], [fabric], [silhouette]' — all in one compact paragraph. " +
             "Be extremely specific. No filler phrases. Never mention hangers or hooks in your output.",
         },
         {
@@ -336,6 +337,12 @@ export async function runAIPipeline(params: {
     let outputImageUrl: string | undefined;
 
     try {
+      // ── Open-palm hand posing constraint — appended to every positive prompt ──
+      const HAND_POSE_CONSTRAINT =
+        "model standing in a clean symmetrical catalog posture with hands open and fingers completely " +
+        "separated down at their sides, showing clear natural hand anatomy, relaxed open palms, " +
+        "no clenched fists, no crossed arms";
+
       // ── Negative prompt: anatomical distortion protection ──
       const NEGATIVE_PROMPT =
         "deformed hands, abnormal fingers, extra digits, broken anatomy, " +
@@ -415,11 +422,13 @@ export async function runAIPipeline(params: {
       };
       const framingDirective = cameraFraming ? CAMERA_FRAMING_DIRECTIVES[cameraFraming] ?? "" : "";
       const ageLabel = modelAgeRange ? `Featuring a ${AGE_RANGE_LABELS[modelAgeRange] ?? ""}.` : "";
+      // Structural garment tokens go FIRST so the renderer prioritises exact cut replication
       const promptParts = [
+        garmentDetails ? `Garment: ${garmentDetails}.` : "",
         basePrompt,
+        HAND_POSE_CONSTRAINT,
         ageLabel,
         framingDirective,
-        garmentDetails ? `Garment: ${garmentDetails}` : "",
       ].filter(Boolean).join(" ");
 
       const result = await fal.subscribe("fal-ai/fashn/tryon/v1.6", {
@@ -431,6 +440,9 @@ export async function runAIPipeline(params: {
           mode: "quality",
           num_samples: 1,
           output_format: "jpeg",
+          // cover_weight at 1.0 = maximum garment fidelity — forces exact button/collar/fabric
+          // replication rather than degrading to generic shapes
+          cover_weight: 1.0,
           prompt: promptParts,
           negative_prompt: NEGATIVE_PROMPT,
         },
