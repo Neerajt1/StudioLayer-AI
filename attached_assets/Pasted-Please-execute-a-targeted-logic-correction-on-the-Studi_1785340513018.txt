@@ -1,0 +1,22 @@
+Please execute a targeted logic correction on the StudioLayer AI background engine. Completely migrate the rendering loop back to the premium 'fal-ai/fashn/tryon/v1.6' Virtual Try-On endpoint, and implement multi-category mapping to support Tops, Bottoms, and Full-Body garments perfectly:
+
+1. INTRODUCE THE GARMENT PLACEMENT SELECTOR:
+- In the left sidebar workspace control panel, add a mandatory dropdown menu positioned directly beneath 'Target Category / Gender' labeled 'Garment Placement Layer'.
+- Provide exactly three clear options: 'Upper Body (Shirts, Jackets, Tops)', 'Lower Body (Jeans, Trousers, Joggers)', and 'Full Body (Dresses, Gowns, Jumpsuits)'.
+- Ensure the 'Render Studio Image Layer' button locks into its active black state when a valid hanger clothing asset is confirmed in the upload zone.
+
+2. DYNAMICALLY MAP PAYLOAD CLASSIFICATION FLAGS:
+- Update the background python server script handling the Fal.ai request loop (main.py or server routers).
+- You must dynamically pass the exact user selection to Fal.ai's 'garment_type' API key parameter:
+  * If the user selects 'Upper Body', map 'garment_type': 'top_garment' and pass a clean adult or youth torso base human model asset url.
+  * If the user selects 'Lower Body', map 'garment_type': 'bottom_garment'. The backend MUST inject a pristine, high-resolution FULL-BODY base human model image layout (showing clear, natural legs) to ensure trousers or joggers wrap perfectly over limbs without crashing.
+  * If the user selects 'Full Body', map 'garment_type': 'one_piece' to handle dresses and gowns.
+
+3. HARDCODE CORES AND FIDELITY PARAMETERS:
+- Set the garment detail preservation weight parameter ('fidelity_weight' or 'cover_weight') to its absolute maximum value of '1.0' to force the try-on engine to lock onto the exact original colors, textures, and drawstring elements of the user's uploaded asset.
+- Maintain strict open-palm natural posing negative prompt constraints ('deformed hands, abnormal fingers') to keep model anatomy 100% clean and professional.
+
+4. PRESERVE LAYOUT COMPLIANCE MARGINS:
+- Ensure the 'Download High-Res Studio Asset' button directly fires a local data blob attachment download straight to their machine without opening any new browser windows or tab displacements.
+- Isolate the profile fields cleanly: Account Owner display 'Neeraj Tripathi' and Brand name display '29Copper Media Works' inside the profile views.
+- Ensure all pricing container bullets remain symmetrically centered and balanced on the Subscription viewport page.

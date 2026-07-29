@@ -167,6 +167,14 @@ export const RenderInputCameraFraming = {
   close_up: 'close_up',
 } as const;
 
+export type RenderInputGarmentPlacement = typeof RenderInputGarmentPlacement[keyof typeof RenderInputGarmentPlacement];
+
+export const RenderInputGarmentPlacement = {
+  upper_body: 'upper_body',
+  lower_body: 'lower_body',
+  full_body: 'full_body',
+} as const;
+
 export interface RenderInput {
   sourceImageUrl: string;
   modelPersona: RenderInputModelPersona;
@@ -178,6 +186,7 @@ export interface RenderInput {
   modelGender?: RenderInputModelGender;
   modelAgeRange?: RenderInputModelAgeRange;
   cameraFraming?: RenderInputCameraFraming;
+  garmentPlacement?: RenderInputGarmentPlacement;
 }
 
 export type RenderUsageTier = typeof RenderUsageTier[keyof typeof RenderUsageTier];

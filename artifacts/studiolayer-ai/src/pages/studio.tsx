@@ -51,6 +51,7 @@ const FAQ_ITEMS = [
 export default function StudioPage() {
   const [sourceImages, setSourceImages] = useState<string[]>([]);
   const [modelGender, setModelGender] = useState('');
+  const [garmentPlacement, setGarmentPlacement] = useState('');
   const [modelAgeRange, setModelAgeRange] = useState('');
   const [cameraFraming, setCameraFraming] = useState('');
   const [modelPersona, setModelPersona] = useState('');
@@ -154,6 +155,7 @@ export default function StudioPage() {
           modelGender: (modelGender as any) || undefined,
           modelAgeRange: (modelAgeRange as any) || undefined,
           cameraFraming: (cameraFraming as any) || undefined,
+          garmentPlacement: (garmentPlacement as any) || undefined,
         },
       },
       {
@@ -420,6 +422,27 @@ export default function StudioPage() {
                       <SelectItem value="mens">Men's Fashion (60 Active Models Locked)</SelectItem>
                       <SelectItem value="womens">Women's Fashion (40 Active Models Locked)</SelectItem>
                       <SelectItem value="kids">Kids' Fashion (Boys &amp; Girls Models Locked)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Garment Placement Layer — full width, directly below Category/Gender */}
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-sm font-medium">
+                    Garment Placement Layer <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={garmentPlacement}
+                    onValueChange={setGarmentPlacement}
+                    disabled={createRender.isPending}
+                  >
+                    <SelectTrigger data-testid="select-garment-placement">
+                      <SelectValue placeholder="Select garment placement" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="upper_body">Upper Body (Shirts, Jackets, Tops)</SelectItem>
+                      <SelectItem value="lower_body">Lower Body (Jeans, Trousers, Joggers)</SelectItem>
+                      <SelectItem value="full_body">Full Body (Dresses, Gowns, Jumpsuits)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
