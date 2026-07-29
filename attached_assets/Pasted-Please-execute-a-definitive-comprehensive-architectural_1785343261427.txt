@@ -1,0 +1,27 @@
+Please execute a definitive, comprehensive architectural override on the StudioLayer AI platform. Rewrite the backend core logic (main.py) and frontend states (src/studio.tsx) to enforce these absolute, non-negotiable structural and rendering constraints across ALL permutations and combinations:
+
+1. HARDCODE STRUTURAL DETAIL PROTECTION (FIXES BUTTONS, POCKETS & TEXTURES):
+- Locate the API payload parameter block sent to the 'fal-ai/fashn/tryon/v1.6' engine block. 
+- You must permanently hardcode and lock 'denoise_strength' to a strict low threshold of '0.35'.
+- Hardcode 'fidelity_weight' and 'cover_weight' to their absolute maximum limit of '1.0'. This mathematically prevents the diffusion network from smoothing over fine details, forcefully preserving your exact original metallic buttons, pocket seam flaps, fabric folds, and texturing lines under any scenario.
+
+2. UNBREAKABLE COMPOSITION BOUNDS (FIXES CAMERA FRAMING DROPDOWN):
+- Clean out all open-ended prompt compiling strings inside the server routing script.
+- Enforce strict, conditional composition switches based on the 'Studio Camera Framing' dropdown token value:
+  * If user selects 'Full Body Catalog Shot', the prompt string sent to Fal.ai must forcefully and exclusively append: "A crisp, full-length commercial lookbook catalog photograph capturing the entire human model completely from head to toe, ensuring the full outfit, waist, legs, and shoes are perfectly visible within the frame boundary with zero cropping or negative empty space above the head."
+  * If user selects 'Mid-Shot Portrait', append: "A clean waist-up medium portrait composition."
+  * If user selects 'Texture Close-Up', append: "A tight macro close-up shot focused purely on the chest fabric details."
+
+3. UNBREAKABLE GLOBAL FALLBACK MATRIX (ZERO MISSING KEYS):
+- Implement broad conditional loops based on the 'Target Category / Gender' dropdown to prevent database crashes:
+  * If selection contains 'Kids', automatically assign a verified, high-resolution child model body asset URL as the 'person_image' base layer.
+  * If selection contains 'Men', assign a verified front-facing adult male model body asset URL.
+  * If selection contains 'Women', assign a verified front-facing adult female model body asset URL.
+- Automatically connect the 'Garment Placement Layer' dropdown to pass: 'top_garment' for upper body items, 'bottom_garment' for lower body items, and 'one_piece' for dresses.
+
+4. INTERFACE LAYOUT COMPLIANCE RESTORATION:
+- Ensure the 'Download High-Res Studio Asset' button initiates a local data blob attachment download straight to the desktop machine, completely blocking new browser windows or tab displacements.
+- Isolate the account profile text box containers: User Name to display 'Neeraj Tripathi' and Brand name to display '29Copper Media Works' inside the profile dashboard cards with zero text row crossovers.
+- Ensure the 'Subscription & Billing' view cards sit perfectly center-canvas with checklist bullets wrapped cleanly to the right side of checkmark graphics, completely deleting the 'Most Powerful' tag layer.
+- Map the support pipeline email submissions to route directly to your corporate inbox: 'info@studiolayerai.com'.
+- Base Copyright Footer: '© 2026 StudioLayer AI. All rights reserved. A product of 29Copper Media Works.'

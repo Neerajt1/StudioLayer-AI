@@ -204,44 +204,28 @@ export async function runAIPipeline(params: {
       "AI pipeline: model image selected",
     );
 
-    // 3a. LOGIC STEP C — Dynamic lookbook prompt assembled from active UI tokens.
-    //     Formulaic template: framing + expression + pose + location.
-    //     Each lookup has a hardcoded default so no selection ever produces
-    //     an empty string or an undefined interpolation.
-    const framingLabel: Record<string, string> = {
-      full_body: "full body catalog",
-      mid_shot: "mid-shot portrait",
-      close_up: "extreme texture close-up",
-    };
-    const expressionLabel: Record<string, string> = {
-      high_fashion_editorial: "high-fashion editorial",
-      natural_smile: "natural smile",
-      confident_commercial: "confident commercial",
-      high_fashion: "high-fashion editorial",
-      casual: "natural smile",
-      athletic: "confident commercial",
-      minimalist: "confident commercial",
-    };
-    const poseLabel: Record<string, string> = {
-      standing_frontal: "straight front-facing",
-      walking_dynamic: "dynamic walking",
-      sideways_posing: "elegant sideways",
-    };
-    const locationLabel: Record<string, string> = {
-      photo_studio: "clean professional photo studio",
-      urban_street: "urban street",
-      luxury_interior: "luxurious interior",
-      nature: "natural outdoor",
-    };
-    const prompt =
-      `A high-resolution, sharp, professional commercial e-commerce lookbook catalog photograph ` +
-      `of a human model cleanly wearing the fabric asset in a ` +
-      `${framingLabel[cameraFraming ?? ""] ?? "full body catalog"} composition, ` +
-      `displaying a ${expressionLabel[modelPersona ?? ""] ?? "professional"} ` +
-      `and a ${poseLabel[modelPose ?? ""] ?? "straight front-facing"} stance, ` +
-      `situated inside a beautifully blurred ` +
-      `${locationLabel[locationEnvironment ?? ""] ?? "clean professional photo studio"} background scene.`;
-    logger.info({ renderId, prompt }, "AI pipeline: lookbook prompt compiled");
+    // 3a. UNBREAKABLE COMPOSITION BOUNDS — strict per-framing conditional prompt.
+    //     Each camera framing token maps to one locked, non-negotiable string.
+    //     No open-ended template interpolation; no dict lookups that can miss.
+    //     Unrecognised / unset framing defaults to the full-body catalog string.
+    let prompt: string;
+    if (cameraFraming === "full_body") {
+      prompt =
+        "A crisp, full-length commercial lookbook catalog photograph capturing the entire human model " +
+        "completely from head to toe, ensuring the full outfit, waist, legs, and shoes are perfectly " +
+        "visible within the frame boundary with zero cropping or negative empty space above the head.";
+    } else if (cameraFraming === "mid_shot") {
+      prompt = "A clean waist-up medium portrait composition.";
+    } else if (cameraFraming === "close_up") {
+      prompt = "A tight macro close-up shot focused purely on the chest fabric details.";
+    } else {
+      // Default: treat as full-body catalog when framing is unset or unrecognised
+      prompt =
+        "A crisp, full-length commercial lookbook catalog photograph capturing the entire human model " +
+        "completely from head to toe, ensuring the full outfit, waist, legs, and shoes are perfectly " +
+        "visible within the frame boundary with zero cropping or negative empty space above the head.";
+    }
+    logger.info({ renderId, cameraFraming, prompt }, "AI pipeline: composition prompt locked");
 
     // 3. Resolve garment category for the fal.ai `category` parameter.
     //    User's Garment Placement Selector maps directly:
@@ -294,8 +278,15 @@ export async function runAIPipeline(params: {
           num_samples: 1,
           output_format: "jpeg",
           prompt,
-          // cover_weight: 1.0 = maximum fidelity lock — preserves exact stitching,
-          // button placements, fabric texture, zippers, and drawstrings from upload
+          // Structural detail protection — three-parameter fidelity lock:
+          //   denoise_strength: 0.35 → strict low threshold; prevents the diffusion
+          //     network from smoothing over fine details (buttons, pockets, zippers)
+          //   fidelity_weight: 1.0  → absolute max; forces exact replication of the
+          //     designer's original garment geometry under any permutation
+          //   cover_weight: 1.0    → maximum preserve_details; retains exact colours,
+          //     stitching, metallic buttons, pocket seam flaps, and fabric folds
+          denoise_strength: 0.35,
+          fidelity_weight: 1.0,
           cover_weight: 1.0,
           negative_prompt: NEGATIVE_PROMPT,
         },
