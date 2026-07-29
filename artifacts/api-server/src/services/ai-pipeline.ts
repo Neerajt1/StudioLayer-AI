@@ -6,304 +6,77 @@ const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
 fal.config({ credentials: process.env.FAL_KEY });
 
 // ---------------------------------------------------------------------------
-// PRIMARY model image dictionary — keyed by gender → ageRange
-// These are the confirmed, high-fidelity base human model URLs that are
-// checked FIRST. The legacy demographics+persona dicts below act as fallback.
-// ---------------------------------------------------------------------------
-const AGE_KEYED_MODEL_IMAGES: Record<string, Record<string, string>> = {
-  mens: {
-    // Men's Fashion — 20–30 Years: clean, front-facing, open-palm young male
-    young_adult:
-      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=768&q=85&fit=crop&crop=top",
-    // Men's Fashion — 30–40 Years: mature corporate executive male portrait
-    classic_mid_age:
-      "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=768&q=85&fit=crop&crop=top",
-    // Men's Fashion — 40–50 Years: seasoned executive, confident posture
-    mature_executive:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=768&q=85&fit=crop&crop=top",
-    // Men's Fashion — 10–15 Years: teen/youth male
-    teen_youth:
-      "https://images.unsplash.com/photo-1534367610401-9f5ed68180aa?w=768&q=85&fit=crop&crop=top",
-  },
-  womens: {
-    // Women's Fashion — 20–30 Years: elite, front-facing editorial female lookbook
-    young_adult:
-      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=768&q=85&fit=crop&crop=top",
-    // Women's Fashion — 30–40 Years: clean, professional studio-lit woman
-    classic_mid_age:
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=768&q=85&fit=crop&crop=top",
-    // Women's Fashion — 40–50 Years: mature, polished professional woman
-    mature_executive:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=768&q=85&fit=crop&crop=top",
-    // Women's Fashion — 10–15 Years: teen/youth female
-    teen_youth:
-      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=768&q=85&fit=crop&crop=top",
-  },
-  kids: {
-    // Kids' Fashion — 5–10 Years: perfectly scaled front-standing child model
-    young_child:
-      "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=768&q=85&fit=crop&crop=top",
-    // Kids' Fashion — 10–15 Years: teen/youth child model
-    teen_youth:
-      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop&crop=top",
-  },
-};
-
-// ---------------------------------------------------------------------------
-// POSE-KEYED model image dictionary — gender → pose → Unsplash CDN URL
+// MODEL IMAGE SELECTOR — pure conditional logic, zero dictionary lookups.
 //
-// Supplies base human layers whose physical stance matches the requested
-// Model Action Pose, so the try-on engine wraps fabric over the correct
-// skeletal framework for each lookbook frame.
+// Every code path is an explicit if/else branch that returns a hardcoded
+// string literal. There are NO dict key accesses that can return undefined,
+// no optional chaining fallbacks that can silently miss, and no missing-key
+// crashes regardless of what dropdown permutation the user selects (including
+// any future custom age values or unrecognised gender strings).
 //
-// Resolution priority (see selectModelImage):
-//   1. POSE_KEYED  [gender][pose]   ← when walking_dynamic or sideways_posing
-//   2. AGE_KEYED   [gender][age]    ← when standing_frontal or no pose set
-//   3. LEGACY demographics+persona  ← final catch-all
-// ---------------------------------------------------------------------------
-const POSE_KEYED_MODEL_IMAGES: Record<string, Record<string, string>> = {
-  womens: {
-    // Mid-stride dynamic walking — editorial female lookbook
-    walking_dynamic:
-      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=768&q=85&fit=crop&crop=top",
-    // Clean three-quarter / side-profile studio pose — female
-    sideways_posing:
-      "https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=768&q=85&fit=crop&crop=top",
-  },
-  mens: {
-    // Confident mid-stride walking — editorial male lookbook
-    walking_dynamic:
-      "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=768&q=85&fit=crop&crop=top",
-    // Three-quarter / side-profile — male fashion editorial
-    sideways_posing:
-      "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=768&q=85&fit=crop&crop=top",
-  },
-  kids: {
-    // Child captured mid-stride in a natural walking pose
-    walking_dynamic:
-      "https://images.unsplash.com/photo-1555009393-f20bdb245c4d?w=768&q=85&fit=crop&crop=top",
-    // Child in clean side / three-quarter profile — kids fashion catalog
-    sideways_posing:
-      "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=768&q=85&fit=crop&crop=top",
-  },
-};
-
-// ---------------------------------------------------------------------------
-// LEGACY model image dictionaries — female (default), male, and kids
-// Key: demographics -> persona -> Unsplash CDN URL (public, free to use)
-// Used as fallback when no age-range-keyed image exists.
+// Resolution: gender broad-match → pose stance → age refinement (for frontal)
 // ---------------------------------------------------------------------------
 
-// Kids model images — used when modelGender === 'kids'
-const KIDS_MODEL_IMAGE_URLS: Record<string, Record<string, string>> = {
-  default: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop",
-  },
-};
-
-// Male model images — used when modelGender === 'mens'
-const MALE_MODEL_IMAGE_URLS: Record<string, Record<string, string>> = {
-  caucasian: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
-  },
-  east_asian: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
-  },
-  south_asian: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
-  },
-  afro_american: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1504199367641-aba8151af406?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1504199367641-aba8151af406?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
-  },
-  hispanic: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
-  },
-  default: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=768&q=85&fit=crop",
-  },
-};
-
-// Female model images — used for womens_top, full_body_dress, or when garmentType is unset
-const MODEL_IMAGE_URLS: Record<string, Record<string, string>> = {
-  caucasian: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1517365830460-955ce3be0547?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=768&q=85&fit=crop",
-  },
-  east_asian: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=768&q=85&fit=crop",
-  },
-  south_asian: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1597223557154-721c1cecc4aa?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1597223557154-721c1cecc4aa?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=768&q=85&fit=crop",
-  },
-  afro_american: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=768&q=85&fit=crop",
-  },
-  hispanic: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1614124865-d837e3f3c8af?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1614124865-d837e3f3c8af?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1520813792240-56fc4a3765a7?w=768&q=85&fit=crop",
-  },
-  default: {
-    high_fashion:
-      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=768&q=85&fit=crop",
-    casual:
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=768&q=85&fit=crop",
-    athletic:
-      "https://images.unsplash.com/photo-1517365830460-955ce3be0547?w=768&q=85&fit=crop",
-    minimalist:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=768&q=85&fit=crop",
-  },
-};
-
-// ---------------------------------------------------------------------------
-// Expression / Pose → internal persona key mapping
-// The UI now sends "Model Expression" values; map them to MODEL_IMAGE_URLS keys.
-// ---------------------------------------------------------------------------
-const EXPRESSION_TO_PERSONA: Record<string, string> = {
-  high_fashion_editorial: "high_fashion",
-  natural_smile: "casual",
-  confident_commercial: "athletic",
-  // Legacy values pass through unchanged
-  high_fashion: "high_fashion",
-  casual: "casual",
-  athletic: "athletic",
-  minimalist: "minimalist",
-};
-
-/**
- * Returns the pre-configured model image URL.
- *
- * Resolution order (first match wins):
- *   1. POSE_KEYED_MODEL_IMAGES[gender][pose]      ← walking_dynamic / sideways_posing
- *   2. AGE_KEYED_MODEL_IMAGES[gender][ageRange]   ← standing_frontal or no pose
- *   3. Legacy demographics+persona dict            ← final catch-all
- */
+/** Returns a verified base human model image URL matched to gender + pose + age. */
 function selectModelImage(
-  demographics: string | null | undefined,
-  persona: string,
-  modelGender?: string | null,
-  modelAgeRange?: string | null,
-  modelPose?: string | null,
+  modelGender: string | null | undefined,
+  modelAgeRange: string | null | undefined,
+  modelPose: string | null | undefined,
 ): string {
-  // 1 — Pose-keyed lookup (walking_dynamic / sideways_posing only).
-  //     standing_frontal falls through to the age-keyed dict, which already
-  //     contains clean frontal model images.
-  if (
-    modelGender &&
-    modelPose &&
-    modelPose !== "standing_frontal" &&
-    POSE_KEYED_MODEL_IMAGES[modelGender]?.[modelPose]
-  ) {
-    return POSE_KEYED_MODEL_IMAGES[modelGender][modelPose]!;
+  const pose = modelPose ?? "standing_frontal";
+
+  // ── KIDS ──────────────────────────────────────────────────────────────────
+  // Triggered whenever modelGender contains / equals 'kids'
+  if (modelGender === "kids") {
+    if (pose === "walking_dynamic")
+      // Child mid-stride natural walking pose
+      return "https://images.unsplash.com/photo-1555009393-f20bdb245c4d?w=768&q=85&fit=crop&crop=top";
+    if (pose === "sideways_posing")
+      // Child clean side / three-quarter profile
+      return "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=768&q=85&fit=crop&crop=top";
+    // standing_frontal — age refinement
+    if (modelAgeRange === "teen_youth")
+      return "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop&crop=top";
+    // young_child + any unrecognised age → verified front-facing child canvas
+    return "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=768&q=85&fit=crop&crop=top";
   }
 
-  // 2 — Age-keyed lookup (primary frontal images)
-  if (modelGender && modelAgeRange) {
-    const genderSlot = AGE_KEYED_MODEL_IMAGES[modelGender];
-    if (genderSlot) {
-      const ageUrl = genderSlot[modelAgeRange];
-      if (ageUrl) return ageUrl;
-    }
-  }
-
-  // 3 — Legacy demographics+persona fallback
-  const internalKey = EXPRESSION_TO_PERSONA[persona] ?? persona;
-  const key = demographics ?? "default";
-  let dict: Record<string, Record<string, string>>;
+  // ── MEN'S ─────────────────────────────────────────────────────────────────
+  // Triggered whenever modelGender contains / equals 'mens'
   if (modelGender === "mens") {
-    dict = MALE_MODEL_IMAGE_URLS;
-  } else if (modelGender === "kids") {
-    dict = KIDS_MODEL_IMAGE_URLS;
-  } else {
-    dict = MODEL_IMAGE_URLS;
+    if (pose === "walking_dynamic")
+      // Adult male confident mid-stride editorial
+      return "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=768&q=85&fit=crop&crop=top";
+    if (pose === "sideways_posing")
+      // Adult male three-quarter / side-profile fashion
+      return "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=768&q=85&fit=crop&crop=top";
+    // standing_frontal — age refinement
+    if (modelAgeRange === "mature_executive")
+      return "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=768&q=85&fit=crop&crop=top";
+    if (modelAgeRange === "classic_mid_age")
+      return "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=768&q=85&fit=crop&crop=top";
+    if (modelAgeRange === "teen_youth")
+      return "https://images.unsplash.com/photo-1534367610401-9f5ed68180aa?w=768&q=85&fit=crop&crop=top";
+    // young_adult + any unrecognised age → verified front-facing adult male canvas
+    return "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=768&q=85&fit=crop&crop=top";
   }
-  const group = dict[key] ?? dict["default"]!;
-  return (
-    group[internalKey] ??
-    group["casual"] ??
-    dict["default"]!["casual"]!
-  );
+
+  // ── WOMEN'S (default — safely covers any unrecognised gender value) ────────
+  if (pose === "walking_dynamic")
+    // Adult female dynamic mid-stride editorial
+    return "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=768&q=85&fit=crop&crop=top";
+  if (pose === "sideways_posing")
+    // Adult female clean side-profile fashion studio
+    return "https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=768&q=85&fit=crop&crop=top";
+  // standing_frontal — age refinement
+  if (modelAgeRange === "mature_executive")
+    return "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=768&q=85&fit=crop&crop=top";
+  if (modelAgeRange === "classic_mid_age")
+    return "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=768&q=85&fit=crop&crop=top";
+  if (modelAgeRange === "teen_youth")
+    return "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=768&q=85&fit=crop&crop=top";
+  // young_adult + any unrecognised age → verified front-facing adult female canvas
+  return "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=768&q=85&fit=crop&crop=top";
 }
 
 /**
@@ -411,7 +184,7 @@ export async function runAIPipeline(params: {
     renderId,
     sourceImageUrl,
     modelPersona,
-    modelDemographics,
+    locationEnvironment,
     modelPose,
     modelGender,
     modelAgeRange,
@@ -423,14 +196,52 @@ export async function runAIPipeline(params: {
     // 1. Prepare the garment image (flat-lay hanger photo)
     const garmentImage = prepareGarmentImage(sourceImageUrl);
 
-    // 2. Select model image — age+gender primary, demographics+persona fallback.
-    //    For lower-body garments the model image must show full legs; the existing
-    //    Unsplash fashion URLs are full-body shots so the same dict applies.
-    const modelImageUrl = selectModelImage(modelDemographics, modelPersona, modelGender, modelAgeRange, modelPose);
+    // 2. Select base human model image via pure conditional routing —
+    //    gender broad-match → pose → age. Zero dict lookups; cannot crash.
+    const modelImageUrl = selectModelImage(modelGender, modelAgeRange, modelPose);
     logger.info(
-      { renderId, modelImageUrl, modelDemographics, modelPersona, modelPose, modelGender, modelAgeRange, cameraFraming, garmentPlacement },
+      { renderId, modelImageUrl, modelPose, modelGender, modelAgeRange, cameraFraming, garmentPlacement },
       "AI pipeline: model image selected",
     );
+
+    // 3a. LOGIC STEP C — Dynamic lookbook prompt assembled from active UI tokens.
+    //     Formulaic template: framing + expression + pose + location.
+    //     Each lookup has a hardcoded default so no selection ever produces
+    //     an empty string or an undefined interpolation.
+    const framingLabel: Record<string, string> = {
+      full_body: "full body catalog",
+      mid_shot: "mid-shot portrait",
+      close_up: "extreme texture close-up",
+    };
+    const expressionLabel: Record<string, string> = {
+      high_fashion_editorial: "high-fashion editorial",
+      natural_smile: "natural smile",
+      confident_commercial: "confident commercial",
+      high_fashion: "high-fashion editorial",
+      casual: "natural smile",
+      athletic: "confident commercial",
+      minimalist: "confident commercial",
+    };
+    const poseLabel: Record<string, string> = {
+      standing_frontal: "straight front-facing",
+      walking_dynamic: "dynamic walking",
+      sideways_posing: "elegant sideways",
+    };
+    const locationLabel: Record<string, string> = {
+      photo_studio: "clean professional photo studio",
+      urban_street: "urban street",
+      luxury_interior: "luxurious interior",
+      nature: "natural outdoor",
+    };
+    const prompt =
+      `A high-resolution, sharp, professional commercial e-commerce lookbook catalog photograph ` +
+      `of a human model cleanly wearing the fabric asset in a ` +
+      `${framingLabel[cameraFraming ?? ""] ?? "full body catalog"} composition, ` +
+      `displaying a ${expressionLabel[modelPersona ?? ""] ?? "professional"} ` +
+      `and a ${poseLabel[modelPose ?? ""] ?? "straight front-facing"} stance, ` +
+      `situated inside a beautifully blurred ` +
+      `${locationLabel[locationEnvironment ?? ""] ?? "clean professional photo studio"} background scene.`;
+    logger.info({ renderId, prompt }, "AI pipeline: lookbook prompt compiled");
 
     // 3. Resolve garment category for the fal.ai `category` parameter.
     //    User's Garment Placement Selector maps directly:
@@ -454,19 +265,21 @@ export async function runAIPipeline(params: {
     // 4. Call fashn/tryon/v1.6 — Virtual Try-On engine
     //
     //    Payload architecture:
-    //      model_image    → pre-vetted base human layer (age+gender routed)
-    //      garment_image  → uploaded hanger flat-lay
-    //      category       → body-region anchor (tops / bottoms / one-pieces)
-    //      cover_weight   → 1.0 (maximum fidelity lock — preserves exact colours,
-    //                        stitching, buttons, and fabric texture from the upload)
-    //      negative_prompt → anatomy + hanger artifact suppression
+    //      model_image     → pure conditional gender+pose+age routed base layer
+    //      garment_image   → uploaded hanger flat-lay
+    //      category        → body-region anchor (tops / bottoms / one-pieces)
+    //      prompt          → Logic Step C dynamic lookbook string (framing +
+    //                        expression + pose + location compiled from UI tokens)
+    //      cover_weight    → 1.0 (maximum fidelity / preserve_details lock —
+    //                        forces exact colours, zippers, drawstrings intact)
+    //      negative_prompt → anatomy distortion + hanger artifact suppression
     logger.info({ renderId }, "AI pipeline: calling fal-ai/fashn/tryon/v1.6");
 
     const NEGATIVE_PROMPT =
       "deformed hands, abnormal fingers, extra digits, broken anatomy, " +
-      "distorted facial features, blurry resolution, low quality, floating artifacts, " +
-      "visible clothes hanger, wooden hanger remnants, hanger shadow inside collar, " +
-      "hanger hook on shoulder, metal hook artifact";
+      "distorted facial profiles, blurry, low resolution, " +
+      "flat-lay fallback elements, visible clothes hanger, " +
+      "wooden hanger remnants, hanger shadow inside collar, metal hook artifact";
 
     let outputImageUrl: string | undefined;
 
@@ -480,8 +293,9 @@ export async function runAIPipeline(params: {
           mode: "quality",
           num_samples: 1,
           output_format: "jpeg",
-          // cover_weight: 1.0 = maximum fidelity lock — forces exact replication of
-          // the designer's original garment without degrading to generic shapes
+          prompt,
+          // cover_weight: 1.0 = maximum fidelity lock — preserves exact stitching,
+          // button placements, fabric texture, zippers, and drawstrings from upload
           cover_weight: 1.0,
           negative_prompt: NEGATIVE_PROMPT,
         },

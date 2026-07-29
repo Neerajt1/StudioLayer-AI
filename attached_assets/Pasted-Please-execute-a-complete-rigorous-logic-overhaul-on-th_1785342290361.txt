@@ -1,0 +1,19 @@
+Please execute a complete, rigorous logic overhaul on the background image rendering pipeline to enforce 100% unbreakable stability across ALL dropdown filters, permutations, and custom clothing combinations. Cleanly override the core server files (main.py and src/studio.tsx) using this strict algorithmic architecture:
+
+1. IMPLEMENT AN UNBREAKABLE PERMUTATION-PROOF GATEWAY (ZERO DICTIONARY MISMATCHES):
+- Open the backend server script handling the 'fal-ai/fashn/tryon/v1.6' request payload matrix.
+- Completely erase all fragile, manual dictionary keys that rely on matching specific hardcoded asset links for every individual age group or pose combination.
+- In their place, hardcode an algorithmic, fluid conditional logic grid that dynamically extracts and maps properties on the fly:
+  * LOGIC STEP A (GENDER/AGE BROAD TARGETING): Analyze the 'Target Category / Gender' string. If the selector contains the word 'Kids', the code must automatically assign a verified, high-resolution child model body asset URL as the 'person_image' base canvas layer. If it contains 'Men', assign a verified adult male body asset URL. If it contains 'Women', assign a verified adult female body asset URL. This broad safety loop handles any custom age year input (e.g., 5, 10, 15, 20, 30, 40) safely without any missing-key crashes.
+  * LOGIC STEP B (AUTOMATED CATEGORY CLASSIFICATION): Read the user's 'Garment Placement Layer' dropdown. Dynamically map the selection straight to Fal.ai's mandatory structural payload token keys: If 'Upper Body' is selected, set 'garment_type': 'top_garment'. If 'Lower Body' is selected, set 'garment_type': 'bottom_garment'. If 'Full Body' is selected, set 'garment_type': 'one_piece'. This forces absolute mathematical alignment across shirts, jackets, trousers, or dresses under any scenario.
+  * LOGIC STEP C (DYNAMIC STRING PROMPT COMPILING): The backend must dynamically compile the prompt parameter string sent to Fal.ai by reading the text tokens directly from the active user selections. Formulaically assemble the string: "A high-resolution, sharp, professional commercial e-commerce lookbook catalog photograph of a human model cleanly wearing the fabric asset in a [Studio Camera Framing] composition, displaying a [Model Expression] and a [Model Action Pose] stance, situated inside a beautifully blurred [Location Environment] background scene."
+
+2. ENGAGE ANATOMY PROTECTION & MAXIMUM DETAIL WEIGHT:
+- Hardcode the 'fidelity_weight' (or preserve_details) parameter to its absolute maximum limit of '1.0' inside the payload array to force the warping engine to keep 100% original fabric colors, zippers, and drawstrings intact.
+- Enforce a robust, permanent negative prompt string within the processing loop to block structural distortions: 'negative_prompt': 'deformed hands, abnormal fingers, extra digits, broken anatomy, distorted facial profiles, blurry, low resolution, flat-lay fallback elements'.
+
+3. VISUAL LAYOUT & INTERFACE COMPLIANCE RESTORATION:
+- Ensure the 'Download High-Res Studio Asset' button directly fires a local data blob attachment download stream to their desktop machine, completely blocking new browser windows or tab displacements.
+- Isolate the account profile text box containers: User Name to display 'Neeraj Tripathi' and Brand name to display '29Copper Media Works' inside the profile dashboard cards with zero text row crossovers.
+- Ensure the 'Subscription & Billing' view cards sit perfectly center-canvas with checklist bullets wrapped cleanly to the right side of checkmark graphics, completely deleting the 'Most Powerful' tag layer.
+- Map the support pipeline email submissions to route directly to your corporate inbox: 'info@studiolayerai.com'.
