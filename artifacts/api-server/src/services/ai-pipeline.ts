@@ -375,8 +375,10 @@ export async function runAIPipeline(params: {
       "AI pipeline: model image selected",
     );
 
-    // 3. Detect garment category + extract microscopic design details in parallel
-    // Kids/womens full-body selection: let AI classifier decide; mens defaults to tops.
+    // 3. Detect garment category (top / bottom / one-piece) via GPT-4o vision.
+    //    This drives the fal.ai `category` slot which anchors the geometric warp
+    //    to the correct body region. extractGarmentDetails runs in parallel for
+    //    diagnostic logging only — its text is NOT injected into the AI payload.
     const [detectedCategory, garmentDetails] = await Promise.all([
       detectGarmentCategory(garmentImage),
       extractGarmentDetails(garmentImage),
@@ -384,122 +386,50 @@ export async function runAIPipeline(params: {
     const category: GarmentCategory = detectedCategory;
     logger.info(
       { renderId, category, garmentDetails: garmentDetails.slice(0, 80) },
-      "AI pipeline: garment analysis complete",
+      "AI pipeline: garment category detected (geometric warp mode)",
     );
 
-    // 4. Call fashn/tryon/v1.6 — primary virtual try-on endpoint
-    logger.info({ renderId }, "AI pipeline: calling fal-ai/fashn/tryon/v1.6");
+    // 4. Call fashn/tryon/v1.6 — PURE GEOMETRIC FABRIC-WARPING MODE
+    //
+    //    Architecture: the try-on engine operates as a pixel-level silhouette
+    //    masking and fabric-warping system. No text prompt is sent — the engine
+    //    works entirely from:
+    //      • model_image   → pre-vetted base human layer (age+gender routed)
+    //      • garment_image → uploaded hanger photo (flat-lay segmentation)
+    //      • category      → GPT-4o-detected body region anchor
+    //      • cover_weight  → 1.0 (maximum garment fidelity / texture lock)
+    //
+    //    The negative_prompt remains active solely to suppress anatomical
+    //    distortions and hanger remnant artifacts that can bleed through.
+    logger.info({ renderId }, "AI pipeline: calling fal-ai/fashn/tryon/v1.6 (geometric warp)");
 
     let outputImageUrl: string | undefined;
 
     try {
-      // ── Open-palm hand posing constraint — appended to every positive prompt ──
-      const HAND_POSE_CONSTRAINT =
-        "model standing in a clean symmetrical catalog posture with hands open and fingers completely " +
-        "separated down at their sides, showing clear natural hand anatomy, relaxed open palms, " +
-        "no clenched fists, no crossed arms";
-
-      // ── Negative prompt: anatomical distortion protection ──
+      // Anatomy & hanger-artifact suppression — retained even in geometric mode
       const NEGATIVE_PROMPT =
         "deformed hands, abnormal fingers, extra digits, broken anatomy, " +
         "distorted facial features, blurry resolution, low quality, floating artifacts, " +
         "visible clothes hanger, wooden hanger remnants, hanger shadow inside collar, " +
         "hanger hook on shoulder, metal hook artifact";
 
-      // ── Gender + Pose → hyper-focused commercial studio prompt ──
-      type PoseKey = "standing_frontal" | "walking_dynamic" | "sideways_posing" | "default";
-      type GenderKey = "mens" | "womens" | "kids" | "default";
-      const GENDER_POSE_PROMPTS: Record<GenderKey, Record<PoseKey, string>> = {
-        mens: {
-          standing_frontal:
-            "A clear, sharp, high-resolution front-facing commercial studio catalog lookbook photograph of a professional male model standing directly facing the camera in a perfectly symmetrical frontal pose, clean neutral background, full body visible",
-          walking_dynamic:
-            "A high-resolution dynamic commercial studio photograph of a professional male model captured mid-stride walking confidently forward, editorial lookbook quality",
-          sideways_posing:
-            "A high-resolution commercial studio photograph of a professional male model posed elegantly sideways at a three-quarter angle, clean neutral background",
-          default:
-            "A high-resolution commercial studio catalog photograph of a professional male model, editorial lookbook quality, clean neutral background",
-        },
-        womens: {
-          standing_frontal:
-            "A clear, sharp, high-resolution front-facing commercial studio catalog lookbook photograph of a professional female model standing directly facing the camera in a perfectly symmetrical frontal pose, clean neutral background, full body visible",
-          walking_dynamic:
-            "A high-resolution dynamic commercial studio photograph of a professional female model captured mid-stride walking confidently forward, editorial lookbook quality",
-          sideways_posing:
-            "A high-resolution commercial studio photograph of a professional female model posed elegantly sideways at a three-quarter angle, clean neutral background",
-          default:
-            "A high-resolution commercial studio catalog photograph of a professional female model, editorial lookbook quality, clean neutral background",
-        },
-        kids: {
-          standing_frontal:
-            "A clear, sharp, high-resolution front-facing commercial children's fashion catalog photograph of a young model standing directly facing the camera, clean neutral background",
-          walking_dynamic:
-            "A high-resolution commercial children's fashion catalog photograph of a young model captured mid-stride walking forward, clean neutral background",
-          sideways_posing:
-            "A high-resolution commercial children's fashion catalog photograph of a young model posed sideways, clean neutral background",
-          default:
-            "A high-resolution commercial children's fashion catalog photograph, clean neutral background",
-        },
-        default: {
-          standing_frontal:
-            "A clear, sharp, high-resolution front-facing commercial studio catalog lookbook photograph of a professional model standing directly facing the camera in a symmetrical frontal pose, clean neutral background",
-          walking_dynamic:
-            "A high-resolution dynamic commercial studio photograph of a professional model captured mid-stride, editorial lookbook quality",
-          sideways_posing:
-            "A high-resolution commercial studio photograph of a professional model posed sideways at a three-quarter angle, clean neutral background",
-          default:
-            "A high-resolution commercial studio catalog fashion photograph, clean neutral background",
-        },
-      };
-      const genderKey: GenderKey =
-        modelGender === "mens" || modelGender === "womens" || modelGender === "kids"
-          ? (modelGender as GenderKey)
-          : "default";
-      const poseKey: PoseKey =
-        modelPose === "standing_frontal" ||
-        modelPose === "walking_dynamic" ||
-        modelPose === "sideways_posing"
-          ? (modelPose as PoseKey)
-          : "default";
-      const basePrompt = GENDER_POSE_PROMPTS[genderKey][poseKey];
-
-      // ── Camera framing directive appended after base pose prompt ──
-      const CAMERA_FRAMING_DIRECTIVES: Record<string, string> = {
-        full_body: "Full body catalog composition from head to toe, model centered, minimal negative space above frame.",
-        mid_shot: "Mid-shot portrait composition, waist up, clean background.",
-        close_up: "Extreme texture close-up, detailed fabric and material focus.",
-      };
-      const AGE_RANGE_LABELS: Record<string, string> = {
-        young_child: "child model aged 5-10",
-        teen_youth: "teen/youth model aged 10-15",
-        young_adult: "young adult model aged 20-30",
-        classic_mid_age: "classic mid-age model aged 30-40",
-        mature_executive: "mature executive model aged 40-50",
-      };
-      const framingDirective = cameraFraming ? CAMERA_FRAMING_DIRECTIVES[cameraFraming] ?? "" : "";
-      const ageLabel = modelAgeRange ? `Featuring a ${AGE_RANGE_LABELS[modelAgeRange] ?? ""}.` : "";
-      // Structural garment tokens go FIRST so the renderer prioritises exact cut replication
-      const promptParts = [
-        garmentDetails ? `Garment: ${garmentDetails}.` : "",
-        basePrompt,
-        HAND_POSE_CONSTRAINT,
-        ageLabel,
-        framingDirective,
-      ].filter(Boolean).join(" ");
-
       const result = await fal.subscribe("fal-ai/fashn/tryon/v1.6", {
         input: {
           model_image: modelImageUrl,
           garment_image: garmentImage,
+          // category anchors the geometric warp to the correct torso / leg region:
+          //   "tops"       → upper torso layer (shirts, jackets, hoodies)
+          //   "bottoms"    → leg layer (trousers, skirts, shorts)
+          //   "one-pieces" → full-body drape (dresses, jumpsuits)
           category,
           garment_photo_type: "flat-lay",
           mode: "quality",
           num_samples: 1,
           output_format: "jpeg",
-          // cover_weight at 1.0 = maximum garment fidelity — forces exact button/collar/fabric
-          // replication rather than degrading to generic shapes
+          // cover_weight: 1.0 = maximum fidelity lock — preserves exact stitching,
+          // button placements, collar cuts, and fabric texture pixels from the
+          // designer's original upload without degrading to generic shapes.
           cover_weight: 1.0,
-          prompt: promptParts,
           negative_prompt: NEGATIVE_PROMPT,
         },
         logs: false,

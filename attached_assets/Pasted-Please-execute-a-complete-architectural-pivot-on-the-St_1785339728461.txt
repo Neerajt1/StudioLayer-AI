@@ -1,0 +1,20 @@
+Please execute a complete architectural pivot on the StudioLayer AI background rendering pipeline. Strip away all restrictive text-prompting templates and implement a pure Geometric Fabric-Warping and Silhouette Masking Engine to support completely custom, newly designed apparel assets:
+
+1. ENFORCE PIXEL SEGMENTATION & SILHOUETTE ISOLATION:
+- Update the backend python route handling the 'Render Studio Image Layer' request pipeline (main.py or server routers).
+- Completely stop trying to describe garment styles with text prompts. Instead, configure the pre-processing script to run a strict semantic edge-detection mask on the uploaded hanger image file. 
+- It must cleanly isolate the clothing fabric edges, completely discard the wooden clothes hanger geometry, and strip out any background wall or floor textures to create a raw, floating asset silhouette layer.
+
+2. ACTIVATE PURE GEOMETRIC WARPING AND MAXIMUM FIDELITY LOCK:
+- When communicating with the 'fal-ai/fashn/tryon/v1.6' endpoint, hardcode the 'fidelity_weight' and 'preserve_details' keys to their absolute maximum threshold value of '1.0'.
+- Configure the API to operate strictly as a geometric pixel-warping system. Force the engine to capture the exact real-world texture pixels, custom seams, unique cuts, and graphics from the designer's original uploaded asset, and mathematically drape that identical fabric structure straight onto the base human model's body canvas grid. This ensures newly designed, unique garments never lose their premium material texture or creative silhouette lines.
+
+3. HARDCODE THE UNIVERSAL CORE SYSTEM SLOTS:
+- Map the backend dictionary to process based entirely on two simple mapping quadrants to accommodate any custom design scenario effortlessly:
+  * If the user selects any option under Men's/Women's/Kids' Fashion and the system detects a top-half asset, force 'garment_type': 'top_garment' to anchor the warp onto the model's upper torso layer.
+  * If the asset is a pant, trousers, or lower piece, force 'garment_type': 'bottom_garment' and inject a high-resolution, full-body adult or child template base human layer to expose the model's legs cleanly.
+
+4. PRESERVE LAYOUT COMPLIANCE MARGINS:
+- Ensure the 'Download High-Res Studio Asset' button directly fires a local data blob attachment download straight to their machine without opening any new browser windows or tab displacements.
+- Isolate the profile fields cleanly: Account Owner display 'Neeraj Tripathi' and Brand name display '29Copper Media Works' inside the profile block grids.
+- Ensure all pricing container bullets remain symmetrically centered and balanced on the Subscription viewport page.
