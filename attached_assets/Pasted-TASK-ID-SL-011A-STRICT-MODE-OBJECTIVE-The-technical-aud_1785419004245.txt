@@ -1,0 +1,243 @@
+TASK ID: SL-011A
+
+STRICT MODE
+
+OBJECTIVE
+
+The technical audit has confirmed that StudioLayer AI is currently using the correct endpoint:
+
+fal-ai/fashn/tryon/v1.6
+
+However, the implementation is only partially compliant with the official V1.6 API.
+
+The objective of this sprint is to make StudioLayer fully compliant with the official V1.6 specification before making any further rendering improvements.
+
+This sprint is NOT a feature sprint.
+
+Do NOT redesign the application.
+
+Do NOT improve UI.
+
+Do NOT add new capabilities.
+
+Only improve API compliance.
+
+------------------------------------------------------------
+
+DO NOT MODIFY
+
+• Authentication
+
+• Billing
+
+• Studio UI
+
+• Identity Library
+
+• Upload Flow
+
+• Database
+
+• API Contracts
+
+• Render History
+
+------------------------------------------------------------
+
+TASK 1
+
+Remove all unsupported parameters currently being sent to V1.6.
+
+The following parameters are NOT part of the official V1.6 API and should no longer be included in the request payload:
+
+prompt
+
+negative_prompt
+
+denoise_strength
+
+fidelity_weight
+
+cover_weight
+
+restore_clothes
+
+Remove them completely.
+
+Do not replace them.
+
+------------------------------------------------------------
+
+TASK 2
+
+Enable official body segmentation.
+
+Set
+
+segmentation_free = false
+
+This enables body-part segmentation during garment placement.
+
+This is now the highest-priority parameter for improving garment boundary accuracy.
+
+------------------------------------------------------------
+
+TASK 3
+
+Correct garment photo type.
+
+Current implementation:
+
+garment_photo_type = "flat-lay"
+
+After BirefNet preprocessing the uploaded garment becomes a transparent cut-out.
+
+Therefore change to
+
+garment_photo_type = "auto"
+
+Allow the V1.6 engine to classify the garment automatically.
+
+------------------------------------------------------------
+
+TASK 4
+
+Improve output fidelity.
+
+Current implementation:
+
+output_format = "jpeg"
+
+Change to
+
+output_format = "png"
+
+Use lossless PNG output to preserve
+
+• stitching
+
+• logos
+
+• embroidery
+
+• seams
+
+• fabric texture
+
+------------------------------------------------------------
+
+TASK 5
+
+Seed Support
+
+Add optional support for
+
+seed
+
+If no seed is supplied
+
+continue using random generation.
+
+If a seed is supplied
+
+send it to the API.
+
+Purpose:
+
+Enable reproducible A/B testing.
+
+------------------------------------------------------------
+
+TASK 6
+
+Developer Configuration
+
+Create one configuration object containing
+
+segmentation_free
+
+garment_photo_type
+
+output_format
+
+seed
+
+mode
+
+num_samples
+
+Do not expose this in the production UI.
+
+Keep it centralized for future engineering work.
+
+------------------------------------------------------------
+
+TASK 7
+
+Code Cleanup
+
+Remove any obsolete logic that only existed for the unsupported parameters.
+
+Simplify the render pipeline.
+
+Improve readability.
+
+Do not change behaviour beyond the official V1.6 parameters.
+
+------------------------------------------------------------
+
+TASK 8
+
+Validation
+
+Confirm that requests sent to
+
+fal-ai/fashn/tryon/v1.6
+
+contain ONLY officially supported parameters.
+
+Verify that no unsupported fields remain.
+
+------------------------------------------------------------
+
+RETURN
+
+1.
+
+Files modified
+
+2.
+
+Final request payload
+
+3.
+
+Parameters removed
+
+4.
+
+Parameters added
+
+5.
+
+Before vs After payload comparison
+
+6.
+
+Confirmation that payload is now fully compliant with the official V1.6 specification.
+
+IMPORTANT
+
+This sprint is about engineering correctness.
+
+Do NOT introduce any new rendering logic.
+
+Do NOT redesign the prompt.
+
+Do NOT modify preprocessing.
+
+Do NOT modify identities.
+
+Do NOT change business logic.
+
+Only make StudioLayer AI a fully compliant V1.6 client.

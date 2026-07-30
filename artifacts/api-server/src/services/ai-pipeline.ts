@@ -1,24 +1,74 @@
-import OpenAI from "openai";
 import { fal } from "@fal-ai/client";
+import OpenAI from "openai";
 import { logger } from "../lib/logger";
 import { findIdentityById } from "../data/identity-library";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
 fal.config({ credentials: process.env.FAL_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
+
+// ---------------------------------------------------------------------------
+// FASHN V1.6 DEVELOPER CONFIGURATION (SL-011A)
+//
+// Centralised config object for all official V1.6 API parameters that are
+// not driven by user input. Do NOT expose in the production UI.
+// Change values here to tune behaviour for the entire pipeline.
+//
+// Official V1.6 reference: https://fal.ai/models/fal-ai/fashn/tryon/v1.6/api
+// ---------------------------------------------------------------------------
+const FASHN_CONFIG = {
+  /** "quality" = slower, highest output quality. */
+  mode: "quality" as const,
+
+  /**
+   * segmentation_free: false → enables body-part segmentation during garment
+   * placement. Default is true (disabled). Enabling segmentation gives the
+   * model explicit torso / arm / leg zone boundaries, which directly improves
+   * garment boundary accuracy and reduces reference-clothing bleed-through.
+   * This is the single highest-impact official parameter for overlay reduction.
+   */
+  segmentation_free: false,
+
+  /**
+   * garment_photo_type: "auto" → let V1.6 classify the garment image itself.
+   * After BirefNet preprocessing the uploaded garment is a transparent PNG
+   * cutout — no longer a flat-lay — so auto-detection is more accurate than
+   * hard-coding "flat-lay".
+   */
+  garment_photo_type: "auto" as const,
+
+  /**
+   * output_format: "png" → lossless output. Preserves stitching, logos,
+   * embroidery, seams, and fine fabric texture with no JPEG compression
+   * artefacts. Default for the V1.6 API.
+   */
+  output_format: "png" as const,
+
+  /** Number of output images per request. Increase for stochastic variety. */
+  num_samples: 1,
+
+  /**
+   * seed: undefined → random generation each time (default behaviour).
+   * Set to a fixed integer to reproduce results for A/B testing, e.g.:
+   *   seed: 42
+   * Passing undefined omits the field from the payload entirely.
+   */
+  seed: undefined as number | undefined,
+} satisfies {
+  mode: "performance" | "balanced" | "quality";
+  segmentation_free: boolean;
+  garment_photo_type: "auto" | "model" | "flat-lay";
+  output_format: "png" | "jpeg";
+  num_samples: number;
+  seed: number | undefined;
+};
 
 // ---------------------------------------------------------------------------
 // MODEL IMAGE SELECTOR — pure conditional logic, zero dictionary lookups.
 //
-// Every code path is an explicit if/else branch that returns a hardcoded
-// string literal. There are NO dict key accesses that can return undefined,
-// no optional chaining fallbacks that can silently miss, and no missing-key
-// crashes regardless of what dropdown permutation the user selects (including
-// any future custom age values or unrecognised gender strings).
-//
 // Resolution: gender broad-match → pose stance → age refinement (for frontal)
 // ---------------------------------------------------------------------------
 
-/** Returns a verified base human model image URL matched to gender + pose + age. */
+/** Returns a base human model image URL matched to gender + pose + age. */
 function selectModelImage(
   modelGender: string | null | undefined,
   modelAgeRange: string | null | undefined,
@@ -27,114 +77,51 @@ function selectModelImage(
   const pose = modelPose ?? "standing_frontal";
 
   // ── KIDS ──────────────────────────────────────────────────────────────────
-  // Triggered whenever modelGender contains / equals 'kids'
   if (modelGender === "kids") {
     if (pose === "walking_dynamic")
-      // Child mid-stride natural walking pose
       return "https://images.unsplash.com/photo-1555009393-f20bdb245c4d?w=768&q=85&fit=crop&crop=top";
     if (pose === "sideways_posing")
-      // Child clean side / three-quarter profile
       return "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=768&q=85&fit=crop&crop=top";
-    // standing_frontal — age refinement
     if (modelAgeRange === "teen_youth")
       return "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop&crop=top";
-    // young_child + any unrecognised age → verified front-facing child canvas
     return "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=768&q=85&fit=crop&crop=top";
   }
 
   // ── MEN'S ─────────────────────────────────────────────────────────────────
-  // Triggered whenever modelGender contains / equals 'mens'
   if (modelGender === "mens") {
     if (pose === "walking_dynamic")
-      // Adult male confident mid-stride editorial
       return "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=768&q=85&fit=crop&crop=top";
     if (pose === "sideways_posing")
-      // Adult male three-quarter / side-profile fashion
       return "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=768&q=85&fit=crop&crop=top";
-    // standing_frontal — age refinement
     if (modelAgeRange === "mature_executive")
       return "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=768&q=85&fit=crop&crop=top";
     if (modelAgeRange === "classic_mid_age")
       return "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=768&q=85&fit=crop&crop=top";
     if (modelAgeRange === "teen_youth")
       return "https://images.unsplash.com/photo-1534367610401-9f5ed68180aa?w=768&q=85&fit=crop&crop=top";
-    // young_adult + any unrecognised age → verified front-facing adult male canvas
     return "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=768&q=85&fit=crop&crop=top";
   }
 
-  // ── WOMEN'S (default — safely covers any unrecognised gender value) ────────
+  // ── WOMEN'S (default — covers any unrecognised gender value) ──────────────
   if (pose === "walking_dynamic")
-    // Adult female dynamic mid-stride editorial
     return "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=768&q=85&fit=crop&crop=top";
   if (pose === "sideways_posing")
-    // Adult female clean side-profile fashion studio
     return "https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=768&q=85&fit=crop&crop=top";
-  // standing_frontal — age refinement
   if (modelAgeRange === "mature_executive")
     return "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=768&q=85&fit=crop&crop=top";
   if (modelAgeRange === "classic_mid_age")
     return "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=768&q=85&fit=crop&crop=top";
   if (modelAgeRange === "teen_youth")
     return "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=768&q=85&fit=crop&crop=top";
-  // young_adult + any unrecognised age → verified front-facing adult female canvas
   return "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=768&q=85&fit=crop&crop=top";
 }
 
-/**
- * Calls GPT-4o Vision to extract microscopic garment design details
- * (zipper shapes, button materials, collar seams, fabric textures) from the
- * hanger photo. Returns a short descriptive string to enrich the Fal.ai prompt.
- *
- * HANGER ISOLATION: The system prompt explicitly instructs the vision model to
- * treat the hanger as transparent void — only the fabric garment geometry matters.
- */
-async function extractGarmentDetails(imageUrl: string): Promise<string> {
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a precision garment analyst for a luxury fashion AI rendering engine. " +
-            "CRITICAL MASKING DIRECTIVE: The image will show a garment on a clothes hanger. " +
-            "You MUST mentally isolate and completely discard the hanger object from your analysis — " +
-            "treat the hanger, hook, rod, and any mounting hardware as transparent empty space. " +
-            "Capture ONLY the pure fabric edge borders and garment geometry itself. " +
-            "STRUCTURAL TOKEN PRIORITY RULE: Lead your response with the most visually defining structural " +
-            "tokens in this order — front button plackets, collar construction (e.g. linen collar, lapel, " +
-            "band collar), sleeve style (e.g. rolled sleeves, dropped shoulder), hem line (e.g. loose bottom hem, " +
-            "curved hem), then fabric type. This ordering is mandatory — structural details FIRST. " +
-            "Format: '[structural tokens], [fabric], [silhouette]' — all in one compact paragraph. " +
-            "Be extremely specific. No filler phrases. Never mention hangers or hooks in your output.",
-        },
-        {
-          role: "user",
-          content: [{ type: "image_url", image_url: { url: imageUrl } }],
-        },
-      ],
-      max_tokens: 120,
-    });
-    return response.choices[0]?.message?.content?.trim() ?? "";
-  } catch {
-    return "";
-  }
-}
-
 // ---------------------------------------------------------------------------
-// TASK 2 — Garment Preprocessing (SL-010A)
+// GARMENT PREPROCESSING (SL-010A)
 //
-// Before the garment image reaches fal.ai, run it through fal-ai/birefnet to:
-//   ✓ Remove hanger influence (hanger is background — birefnet strips it)
-//   ✓ Strip excessive empty white studio background
-//   ✓ Isolate the pure garment silhouette with a transparent backing
-//   ✓ Preserve stitching, buttons, zippers, logos at sub-pixel accuracy
-//       (birefnet is a segmentation model, not a resize/crop — it never
-//        stretches or distorts the garment geometry)
-//   ✓ Natural aspect ratio preserved — birefnet masks in place, no resampling
-//
-// On any preprocessing failure, the original image is used unchanged so
-// the rendering pipeline never hard-fails because of a preprocessing step.
+// Passes the uploaded garment through fal-ai/birefnet to strip the hanger
+// and background, returning a clean transparent PNG cutout. Falls back to
+// the original image on any error so the pipeline never hard-fails.
 // ---------------------------------------------------------------------------
 async function prepareGarmentImage(
   sourceImageUrl: string,
@@ -159,7 +146,7 @@ async function prepareGarmentImage(
 
     const data = result.data as Record<string, unknown> | undefined;
 
-    // Defensive multi-key extraction — birefnet returns { image: { url } }
+    // birefnet returns { image: { url } }
     const candidates = [
       (data?.["image"] as { url?: string } | undefined)?.url,
       data?.["image_url"],
@@ -192,8 +179,10 @@ async function prepareGarmentImage(
 }
 
 // ---------------------------------------------------------------------------
-// Garment category detection via OpenAI vision
-// Includes hanger masking instruction so the model ignores hanger geometry.
+// GARMENT CATEGORY DETECTION — GPT-4o vision fallback
+//
+// Used only when the user has not set an explicit garment placement.
+// Maps to the official V1.6 `category` values: tops / bottoms / one-pieces.
 // ---------------------------------------------------------------------------
 type GarmentCategory = "tops" | "bottoms" | "one-pieces" | "auto";
 
@@ -229,7 +218,7 @@ async function detectGarmentCategory(
 }
 
 // ---------------------------------------------------------------------------
-// Main pipeline
+// MAIN PIPELINE
 // ---------------------------------------------------------------------------
 export async function runAIPipeline(params: {
   renderId: number;
@@ -244,8 +233,6 @@ export async function runAIPipeline(params: {
   modelAgeRange?: string | null;
   cameraFraming?: string | null;
   garmentPlacement?: string | null;
-  /** Optional Identity Library ID (e.g. "W001"). When supplied and resolved,
-   *  its imageUrl is used as model_image instead of selectModelImage(). */
   modelIdentityId?: string | null;
   onComplete: (outputImageUrl: string) => Promise<void>;
   onError: (error: Error) => Promise<void>;
@@ -253,31 +240,22 @@ export async function runAIPipeline(params: {
   const {
     renderId,
     sourceImageUrl,
-    modelPersona,
-    locationEnvironment,
     modelPose,
     modelGender,
     modelAgeRange,
-    cameraFraming,
     garmentPlacement,
     modelIdentityId,
   } = params;
 
   try {
-    // 1. Prepare the garment image — strips hanger/background via birefnet
+    // 1. Preprocess garment — strip hanger/background via birefnet
     const garmentImage = await prepareGarmentImage(sourceImageUrl, renderId);
 
-    // 2. Select base human model image.
+    // 2. Select model image
     //
-    //    IDENTITY LIBRARY GUARD (SL-001):
-    //    If a modelIdentityId was supplied, attempt to resolve it against the
-    //    Identity Library first. If found, use that identity's imageUrl directly
-    //    — this is the locked-model fast path for future catalog consistency.
-    //    If the ID is not found (typo, deleted entry, etc.), fall through to
-    //    selectModelImage() so existing rendering is never broken.
-    //
-    //    If no modelIdentityId was supplied (current default for all renders),
-    //    selectModelImage() runs exactly as before — zero behaviour change.
+    //    Identity Library path (SL-009): if a modelIdentityId is supplied and
+    //    resolves, use that portrait directly — no attribute routing needed.
+    //    Falls through to selectModelImage() if the ID is unknown or absent.
     let modelImageUrl: string;
     if (modelIdentityId) {
       const identity = findIdentityById(modelIdentityId);
@@ -295,30 +273,17 @@ export async function runAIPipeline(params: {
         modelImageUrl = selectModelImage(modelGender, modelAgeRange, modelPose);
       }
     } else {
-      // Default path — attribute-based routing, unchanged from original behaviour
       modelImageUrl = selectModelImage(modelGender, modelAgeRange, modelPose);
     }
 
-    // SL-009 — Resolve local identity image paths to absolute URLs.
-    //
-    // Identity Library imageUrls are stored as root-relative paths
-    // (e.g. "/identities/F-IN-01.png") so the frontend can render them
-    // directly as <img src>. fal.ai requires a publicly reachable absolute URL.
-    //
-    // The Vite frontend artifact is mounted at the root path ("/"), so:
-    //   /identities/F-IN-01.png → https://<REPLIT_DEV_DOMAIN>/identities/F-IN-01.png
-    //
-    // REPLIT_DEV_DOMAIN is injected by the Replit platform into every service
-    // process. If absent (local dev without Replit), fall back to localhost on
-    // the frontend's default PORT (25562 matches the studiolayer-ai service).
+    // Resolve root-relative identity paths to absolute URLs.
+    // fal.ai requires a publicly reachable URL; local /identities/... paths
+    // are served by the Vite frontend at REPLIT_DEV_DOMAIN.
     if (modelImageUrl.startsWith("/")) {
       const domain = process.env.REPLIT_DEV_DOMAIN;
-      if (domain) {
-        modelImageUrl = `https://${domain}${modelImageUrl}`;
-      } else {
-        const frontendPort = 25562;
-        modelImageUrl = `http://localhost:${frontendPort}${modelImageUrl}`;
-      }
+      modelImageUrl = domain
+        ? `https://${domain}${modelImageUrl}`
+        : `http://localhost:25562${modelImageUrl}`;
       logger.info(
         { renderId, resolvedModelImageUrl: modelImageUrl },
         "AI pipeline: resolved relative identity imageUrl to absolute URL",
@@ -326,131 +291,14 @@ export async function runAIPipeline(params: {
     }
 
     logger.info(
-      { renderId, modelImageUrl, modelIdentityId, modelPose, modelGender, modelAgeRange, cameraFraming, garmentPlacement },
+      { renderId, modelImageUrl, modelIdentityId, modelPose, modelGender, modelAgeRange, garmentPlacement },
       "AI pipeline: model image selected",
     );
 
-    // ── PROMPT COMPOSER (SL-006 + SL-010A) ─────────────────────────────────
+    // 3. Resolve garment category (official V1.6 `category` parameter)
     //
-    //  Modular architecture — four independent sections composed into one
-    //  final prompt string sent to fal.ai:
-    //
-    //    Section R  Replacement Directive  (required — garment replacement)
-    //    Section A  Camera Framing         (required — drives composition)
-    //    Section B  Expression             (optional — re-activates modelPersona)
-    //    Section C  Location               (optional — re-activates locationEnvironment)
-    //
-    //  SL-010A adds Section R as the FIRST section. Garment replacement
-    //  intent must lead the prompt so it receives maximum attention weight
-    //  from the diffusion model. All other sections follow unchanged.
-    // ────────────────────────────────────────────────────────────────────────
-
-    // ── Section R: Garment Replacement Directive (required, SL-010A) ─────
-    // Explicitly instructs the try-on model to perform COMPLETE garment
-    // replacement, not an overlay or blend. The grey t-shirt and shorts on
-    // the base model are pose-reference guides only — they must not appear
-    // in the output. This section must lead the prompt for maximum weight.
-    const REPLACEMENT_DIRECTIVE =
-      "COMPLETE GARMENT REPLACEMENT: The uploaded garment MUST completely replace " +
-      "all existing grey reference clothing on the model. The grey t-shirt and grey " +
-      "shorts are pose reference guides ONLY — they MUST NOT remain visible in the " +
-      "final result. Do NOT overlay, blend, or layer the uploaded garment on top of " +
-      "the grey reference outfit. REMOVE the grey reference clothing entirely. " +
-      "Display the uploaded garment as naturally worn clothing: correct body-conforming " +
-      "drape, realistic fabric folds and creases, correct sleeve wrapping around the " +
-      "arms, correct trouser leg wrapping around the legs, correct waistband position " +
-      "at the natural waist, correct ankle openings and hem fall. The garment must " +
-      "conform naturally to the model's body shape and pose. " +
-      "Preserve garment construction exactly: original fabric texture, seam lines, " +
-      "stitching, buttons, zippers, drawstrings, brand logos, colour accuracy. " +
-      "Do NOT stretch, distort, or alter the garment design. " +
-      "Final result must resemble professional ecommerce fashion catalogue photography " +
-      "with the uploaded garment completely and naturally worn by the model.";
-
-    // ── Section A: Camera Framing (required) ─────────────────────────────
-    // Full body strings are reinforced with repeated explicit constraints
-    // (SL-004) because fashn/tryon defaults to 3/4 crops and resists a single
-    // "head to toe" mention.
-    const FULL_BODY_FRAMING =
-      "Full body commercial lookbook photograph. CRITICAL FRAMING REQUIREMENT: " +
-      "The entire human model must be captured completely from the very top of the head " +
-      "down to both feet. Both feet and ankles must be FULLY VISIBLE and completely inside " +
-      "the frame — absolutely no cropping at or below the ankle, knee, or thigh. " +
-      "The complete outfit must be visible from collar to hemline to shoe sole. " +
-      "Subject must be entirely contained within the frame with neutral space above the head. " +
-      "Preserve the original garment proportions from neckline to full hem length. " +
-      "Do NOT crop the body. Do NOT zoom in. Show the complete full-length figure.";
-
-    let cameraSection: string;
-    if (cameraFraming === "full_body") {
-      cameraSection = FULL_BODY_FRAMING;
-    } else if (cameraFraming === "mid_shot") {
-      cameraSection = "A clean waist-up medium portrait composition showing the model from the waist to the top of the head.";
-    } else if (cameraFraming === "close_up") {
-      cameraSection = "A tight macro close-up shot focused purely on the chest and upper torso fabric details.";
-    } else {
-      cameraSection = FULL_BODY_FRAMING; // default when unset or unrecognised
-    }
-
-    // ── Section B: Expression / Model Persona (optional) ─────────────────
-    // Maps each modelPersona enum value to a concise expression instruction.
-    // Legacy enum aliases (casual/high_fashion/athletic/minimalist) are
-    // included alongside the current values so old renders remain consistent.
-    const EXPRESSION_MAP: Record<string, string> = {
-      high_fashion_editorial: "The model holds an intense, serious high-fashion editorial expression.",
-      natural_smile:          "The model wears a warm, natural smile.",
-      confident_commercial:   "The model projects a confident, direct commercial look.",
-      // Legacy aliases kept for backwards compatibility
-      high_fashion:           "The model holds an intense, serious high-fashion editorial expression.",
-      casual:                 "The model wears a relaxed, natural smile.",
-      athletic:               "The model projects a confident, athletic commercial stance.",
-      minimalist:             "The model holds a clean, understated neutral expression.",
-    };
-    const expressionSection: string | null =
-      EXPRESSION_MAP[modelPersona ?? ""] ?? null;
-
-    // ── Section C: Location Environment (optional) ────────────────────────
-    // Maps each locationEnvironment enum value to a concise scene description.
-    const LOCATION_MAP: Record<string, string> = {
-      photo_studio:    "Set against a clean, professional studio backdrop with soft, even lighting.",
-      urban_street:    "Set against a softly blurred urban street backdrop.",
-      luxury_interior: "Set inside a beautifully blurred luxurious interior space.",
-      nature:          "Set against a softly blurred natural outdoor landscape.",
-    };
-    const locationSection: string | null =
-      LOCATION_MAP[locationEnvironment ?? ""] ?? null;
-
-    // ── Compose final prompt ───────────────────────────────────────────────
-    // Order: R (replacement directive) → A (camera) → B (expression) → C (location)
-    // REPLACEMENT_DIRECTIVE leads so it receives maximum diffusion model weight.
-    const promptParts: string[] = [REPLACEMENT_DIRECTIVE, cameraSection];
-    if (expressionSection) promptParts.push(expressionSection);
-    if (locationSection)   promptParts.push(locationSection);
-    const prompt = promptParts.join(" ");
-
-    logger.info(
-      {
-        renderId,
-        cameraFraming,
-        modelPersona,
-        locationEnvironment,
-        sections: {
-          replacement: REPLACEMENT_DIRECTIVE.slice(0, 80) + "…",
-          camera:      cameraSection.slice(0, 60) + "…",
-          expression:  expressionSection,
-          location:    locationSection,
-        },
-        finalPrompt: prompt,
-      },
-      "AI pipeline: prompt composer assembled",
-    );
-
-    // 3. Resolve garment category for the fal.ai `category` parameter.
-    //    User's Garment Placement Selector maps directly:
-    //      upper_body → "tops"       (shirts, jackets, hoodies)
-    //      lower_body → "bottoms"    (jeans, trousers, joggers)
-    //      full_body  → "one-pieces" (dresses, gowns, jumpsuits)
-    //    If no explicit selection was made, fall back to GPT-4o auto-detection.
+    //    Explicit user selection takes priority. GPT-4o auto-detection is the
+    //    fallback when the user has not set a garment placement preference.
     let category: GarmentCategory;
     if (garmentPlacement === "upper_body") {
       category = "tops";
@@ -459,107 +307,59 @@ export async function runAIPipeline(params: {
     } else if (garmentPlacement === "full_body") {
       category = "one-pieces";
     } else {
-      // Auto-detect via GPT-4o vision when the user didn't set a placement
       category = await detectGarmentCategory(garmentImage);
     }
     logger.info({ renderId, category, garmentPlacement }, "AI pipeline: garment category resolved");
 
-    // 4. Call fashn/tryon/v1.6 — Virtual Try-On engine
+    // 4. Build the V1.6 payload — official parameters only (SL-011A)
     //
-    //    Payload architecture:
-    //      model_image     → pure conditional gender+pose+age routed base layer
-    //      garment_image   → uploaded hanger flat-lay
-    //      category        → body-region anchor (tops / bottoms / one-pieces)
-    //      prompt          → Logic Step C dynamic lookbook string (framing +
-    //                        expression + pose + location compiled from UI tokens)
-    //      cover_weight    → 1.0 (maximum fidelity / preserve_details lock —
-    //                        forces exact colours, zippers, drawstrings intact)
-    //      negative_prompt → anatomy distortion + hanger artifact suppression
-    // SL-004 — Full payload debug log: every field that reaches fal.ai visible in one entry.
+    //    All unsupported parameters have been removed:
+    //      ✗ prompt            (not in V16Input)
+    //      ✗ negative_prompt   (not in V16Input)
+    //      ✗ denoise_strength  (not in V16Input)
+    //      ✗ fidelity_weight   (not in V16Input)
+    //      ✗ cover_weight      (not in V16Input)
+    //      ✗ restore_clothes   (not in V16Input)
+    //
+    //    Key compliance changes:
+    //      segmentation_free: false   — enables body-part segmentation
+    //      garment_photo_type: "auto" — correct for transparent PNG cutout
+    //      output_format: "png"       — lossless (was "jpeg")
+    //      seed: from FASHN_CONFIG    — omitted when undefined (random)
+    const falPayload = {
+      model_image:        modelImageUrl,
+      garment_image:      garmentImage,
+      category,
+      mode:               FASHN_CONFIG.mode,
+      segmentation_free:  FASHN_CONFIG.segmentation_free,
+      garment_photo_type: FASHN_CONFIG.garment_photo_type,
+      output_format:      FASHN_CONFIG.output_format,
+      num_samples:        FASHN_CONFIG.num_samples,
+      ...(FASHN_CONFIG.seed !== undefined ? { seed: FASHN_CONFIG.seed } : {}),
+    };
+
     logger.info(
-      {
-        renderId,
-        debug_payload: {
-          modelIdentityId:    modelIdentityId ?? null,
-          resolvedModelImage: modelImageUrl,
-          cameraFraming:      cameraFraming ?? null,
-          compositionPrompt:  prompt,
-          garmentPlacement:   garmentPlacement ?? null,
-          resolvedCategory:   category,
-          garmentImage:       garmentImage,
-          denoise_strength:   0.95,
-          fidelity_weight:    1.0,
-          cover_weight:       1.0,
-          restore_clothes:    false,
-        },
-      },
-      "AI pipeline: fal.ai payload summary",
+      { renderId, payload: falPayload },
+      "AI pipeline: fal.ai V1.6 compliant payload",
     );
     logger.info({ renderId }, "AI pipeline: calling fal-ai/fashn/tryon/v1.6");
-
-    // SL-010A — Expanded negative prompt.
-    // Added explicit suppression of grey reference clothing artifacts — the
-    // primary cause of overlay/blend failures in previous renders.
-    const NEGATIVE_PROMPT =
-      // ── Reference clothing suppression (SL-010A) ──────────────────────────
-      "grey t-shirt visible, grey shorts visible, grey reference outfit showing, " +
-      "original grey clothing showing through, grey underlayer visible, " +
-      "reference outfit blending, clothing overlay, garment pasted on top, " +
-      "transparent garment, see-through clothing, double clothing layer, " +
-      "superimposed garment, blended clothing, clothing transparency, " +
-      // ── Anatomy / quality (unchanged) ─────────────────────────────────────
-      "deformed hands, abnormal fingers, extra digits, broken anatomy, " +
-      "distorted facial profiles, blurry, low resolution, " +
-      // ── Hanger artifacts (unchanged) ──────────────────────────────────────
-      "flat-lay fallback elements, visible clothes hanger, " +
-      "wooden hanger remnants, hanger shadow inside collar, metal hook artifact";
 
     let outputImageUrl: string | undefined;
 
     try {
-      // The @fal-ai/client V16Input generated type omits fields that fashn/tryon
-      // v1.6 accepts at runtime (e.g. prompt, restore_clothes). Build the payload
-      // as a plain object and cast to bypass the incomplete type definition.
-      //
-      // SL-010A — Fidelity parameter rebalance:
-      //   denoise_strength: 0.95 (was 0.35)
-      //     HIGH value allows the diffusion model to fully replace the grey
-      //     reference outfit. The previous 0.35 preserved the reference image
-      //     too strongly, causing grey t-shirt/shorts to bleed through.
-      //     Garment detail is now preserved by fidelity_weight/cover_weight.
-      //   fidelity_weight: 1.0 — maximum garment texture/construction fidelity.
-      //   cover_weight:    1.0 — maximum coverage of reference clothing.
-      //   restore_clothes: false — do not restore reference clothes outside
-      //     the selected category (prevents grey shorts showing when tops-only).
-      const falPayload = {
-        model_image:        modelImageUrl,
-        garment_image:      garmentImage,
-        category,
-        garment_photo_type: "flat-lay",
-        mode:               "quality",
-        num_samples:        1,
-        output_format:      "jpeg",
-        prompt,
-        denoise_strength:   0.95,
-        fidelity_weight:    1.0,
-        cover_weight:       1.0,
-        restore_clothes:    false,
-        negative_prompt:    NEGATIVE_PROMPT,
-      };
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await fal.subscribe("fal-ai/fashn/tryon/v1.6", {
-        input: falPayload as any,
+        input: falPayload,
         logs: false,
       });
 
-      // Defensively check all common output URL keys
+      // V16Output shape: { images: Array<{ url: string, ... }> }
+      // Check the canonical key first, then defensive fallbacks.
       const data = result.data as Record<string, unknown> | undefined;
       const candidates = [
+        (data?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
+        (data?.["image"] as { url?: string } | undefined)?.url,
         data?.["image_url"],
         data?.["url"],
-        (data?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
-        (data?.["image"] as { url: string } | undefined)?.url,
       ];
       for (const c of candidates) {
         if (typeof c === "string" && c.startsWith("http")) {
@@ -578,19 +378,19 @@ export async function runAIPipeline(params: {
 
       const fallbackResult = await fal.subscribe("fal-ai/image-apps-v2/virtual-try-on", {
         input: {
-          person_image_url: modelImageUrl,
+          person_image_url:   modelImageUrl,
           clothing_image_url: garmentImage,
-          preserve_pose: true,
+          preserve_pose:      true,
         },
         logs: false,
       });
 
       const fd = fallbackResult.data as Record<string, unknown> | undefined;
       const fallbackCandidates = [
+        (fd?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
+        (fd?.["image"] as { url?: string } | undefined)?.url,
         fd?.["image_url"],
         fd?.["url"],
-        (fd?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
-        (fd?.["image"] as { url: string } | undefined)?.url,
       ];
       for (const c of fallbackCandidates) {
         if (typeof c === "string" && c.startsWith("http")) {
