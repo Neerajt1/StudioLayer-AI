@@ -1,0 +1,199 @@
+TASK ID: SL-012
+
+STRICT MODE
+
+OBJECTIVE
+
+StudioLayer now includes two new Generation 2 benchmark identity models.
+
+Female
+
+F-TEST-02
+
+Male
+
+M-TEST-02
+
+These identities replace the previous benchmark identities for engineering evaluation.
+
+The objective of this sprint is ONLY to integrate these new identities into the Identity Library and rendering pipeline.
+
+Do NOT modify the rendering engine.
+
+Do NOT modify FASHN parameters.
+
+Do NOT modify preprocessing.
+
+Do NOT modify API calls.
+
+------------------------------------------------------------
+
+DO NOT MODIFY
+
+• Authentication
+
+• Billing
+
+• Studio UI Layout
+
+• Database
+
+• Upload Flow
+
+• FASHN Integration
+
+• Rendering Pipeline
+
+------------------------------------------------------------
+
+TASK 1
+
+Register the two new identities.
+
+Female
+
+Code
+
+F-TEST-02
+
+Display Name
+
+Emma Base (Gen2)
+
+Category
+
+Women
+
+------------------------------------------------------------
+
+Male
+
+Code
+
+M-TEST-02
+
+Display Name
+
+Liam Base (Gen2)
+
+Category
+
+Men
+
+------------------------------------------------------------
+
+TASK 2
+
+Identity Library
+
+Ensure both identities appear in the Identity Library.
+
+Use the same thumbnail generation process as existing identities.
+
+No special behaviour.
+
+------------------------------------------------------------
+
+TASK 3
+
+Selection Logic
+
+When selected,
+
+these identities should behave exactly like every other identity.
+
+No custom rendering rules.
+
+No hidden prompt logic.
+
+No parameter overrides.
+
+------------------------------------------------------------
+
+TASK 4
+
+Rendering
+
+Verify the renderer correctly resolves
+
+F-TEST-02
+
+and
+
+M-TEST-02
+
+to their respective image files.
+
+No other rendering changes.
+
+------------------------------------------------------------
+
+TASK 5
+
+Developer Logging
+
+When rendering,
+
+log
+
+Selected Identity
+
+Identity Code
+
+Identity Image URL
+
+This is for debugging only.
+
+------------------------------------------------------------
+
+TASK 6
+
+Validation
+
+Confirm
+
+✓ Identity appears in selector
+
+✓ Thumbnail loads
+
+✓ Image URL resolves correctly
+
+✓ Render pipeline receives correct identity image
+
+✓ No regressions to existing identities
+
+------------------------------------------------------------
+
+RETURN
+
+1.
+
+Files modified
+
+2.
+
+Identity registration changes
+
+3.
+
+Identity mapping
+
+4.
+
+Validation results
+
+5.
+
+Confirmation that Gen2 identities are fully integrated.
+
+IMPORTANT
+
+This sprint integrates ONLY the two new benchmark identities.
+
+Do NOT modify rendering quality.
+
+Do NOT modify FASHN parameters.
+
+Do NOT modify prompts.
+
+Do NOT modify preprocessing.

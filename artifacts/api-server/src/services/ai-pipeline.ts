@@ -290,6 +290,17 @@ export async function runAIPipeline(params: {
       );
     }
 
+    // Task 5 (SL-012): Dedicated identity selection log for debugging.
+    // Always emitted — shows the final resolved URL sent to fal.ai.
+    logger.info(
+      {
+        renderId,
+        selectedIdentityCode: modelIdentityId ?? null,
+        selectedIdentityImageUrl: modelImageUrl,
+      },
+      "AI pipeline: Selected Identity",
+    );
+
     logger.info(
       { renderId, modelImageUrl, modelIdentityId, modelPose, modelGender, modelAgeRange, garmentPlacement },
       "AI pipeline: model image selected",

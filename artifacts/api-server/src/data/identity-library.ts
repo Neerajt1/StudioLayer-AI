@@ -62,7 +62,7 @@ export interface Identity {
 }
 
 // ---------------------------------------------------------------------------
-// Global Identity Library — 12 production-approved studio assets
+// Global Identity Library — 14 production-approved studio assets
 // ---------------------------------------------------------------------------
 // All images share the same studio standard:
 //   ✓ Pure white / light grey seamless studio background
@@ -179,6 +179,29 @@ export const IDENTITIES: Identity[] = [
     bodyType: "athletic",
     heightCm: 180,
     imageUrl: "/identities/M-ME-01.png",
+  },
+
+  // ── GENERATION 2 BENCHMARKS ──────────────────────────────────────────────
+
+  {
+    id: "F-TEST-02",
+    displayName: "Emma Base (Gen2)",
+    gender: "womens",
+    ethnicity: "caucasian",
+    ageGroup: "young_adult",
+    bodyType: "slim",
+    heightCm: 170,
+    imageUrl: "/identities/F-Test-02.png",
+  },
+  {
+    id: "M-TEST-02",
+    displayName: "Liam Base (Gen2)",
+    gender: "mens",
+    ethnicity: "caucasian",
+    ageGroup: "young_adult",
+    bodyType: "athletic",
+    heightCm: 182,
+    imageUrl: "/identities/M-Test-02.png",
   },
 
   // ── KIDS' ────────────────────────────────────────────────────────────────
