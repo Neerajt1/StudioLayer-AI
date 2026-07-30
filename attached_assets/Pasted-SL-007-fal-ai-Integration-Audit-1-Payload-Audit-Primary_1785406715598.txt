@@ -1,0 +1,107 @@
+SL-007 — fal.ai Integration Audit
+1. Payload Audit
+Primary endpoint — fal-ai/fashn/tryon/v1.6
+Parameter	Value	Origin
+model_image	URL string	Resolved — see Step 2
+garment_image	URL string	sourceImageUrl via prepareGarmentImage()
+category	"tops" | "bottoms" | "one-pieces" | "auto"	garmentPlacement mapping or GPT-4o auto-detect
+garment_photo_type	"flat-lay"	Hardcoded
+mode	"quality"	Hardcoded
+num_samples	1	Hardcoded
+output_format	"jpeg"	Hardcoded
+prompt	Composed string	Prompt Composer (Sections A + B + C)
+denoise_strength	0.35	Hardcoded
+fidelity_weight	1.0	Hardcoded
+cover_weight	1.0	Hardcoded
+negative_prompt	Fixed string	Hardcoded
+12 parameters total. 8 hardcoded. 4 dynamic.
+
+Fallback endpoint — fal-ai/image-apps-v2/virtual-try-on
+Parameter	Value	Origin
+person_image_url	URL string	Same modelImageUrl from primary path
+clothing_image_url	URL string	Same garmentImage
+preserve_pose	true	Hardcoded
+3 parameters total. All hardcoded except the two image URLs carried over from the primary.
+
+2. Integration Audit — Full Stack Trace
+UI control              → State variable       → mutate field       → Pipeline param      → fal.ai field
+─────────────────────────────────────────────────────────────────────────────────────────────────────────
+Selected Model          → selectedIdentityId   → modelIdentityId    → modelIdentityId     → model_image *
+Target Category/Gender  → modelGender          → modelGender        → modelGender         → model_image *
+Age Range               → modelAgeRange        → modelAgeRange      → modelAgeRange       → model_image *
+Pose                    → modelPose            → modelPose          → modelPose           → model_image *
+Camera Framing          → cameraFraming        → cameraFraming      → cameraFraming       → prompt (Section A)
+Expression / Persona    → modelPersona         → modelPersona       → modelPersona        → prompt (Section B)
+Location Environment    → locationEnvironment  → locationEnvironment→ locationEnvironment → prompt (Section C)
+Garment Placement       → garmentPlacement     → garmentPlacement   → garmentPlacement    → category
+[Garment upload]        → sourceImages[0]      → sourceImageUrl     → sourceImageUrl      → garment_image
+Image Dimensions        → imageDimensions      → imageDimensions    → (not used)         → ✗ nothing
+Smart Lighting          → smartLighting        → smartLighting      → (not used)         → ✗ nothing
+Brand Watermark         → brandWatermark       → (never sent)       → —                  → ✗ nothing
+* model_image resolution: if modelIdentityId resolves → identity.imageUrl;
+  otherwise selectModelImage(modelGender, modelAgeRange, modelPose)
+
+prepareGarmentImage() is a no-op — it accepts sourceImageUrl and returns it unchanged. It exists as a future hook for pre-processing (resizing, background removal, etc.) but currently performs no transformation.
+
+extractGarmentDetails() is defined but never called — it was the old prompt-enrichment path superseded by the fidelity parameter lock. It consumes a full GPT-4o vision call if invoked.
+
+3. Hardcoded Parameters
+Parameter	Value	Stated Rationale	Notes
+garment_photo_type	"flat-lay"	Source images are always flat-lay hanger photos	Correct for current use case. API also accepts "model" for already-worn garments.
+mode	"quality"	Maximum render fidelity	API also supports "balanced" and "performance". No latency/quality benchmark was done against alternatives.
+num_samples	1	One output per request	API supports 1–4 samples per call. Only one output slot is displayed or stored. Bulk mode (sourceImages[0..9]) fires one request per garment but could request N samples per garment.
+output_format	"jpeg"	Smaller file size	API also supports "png". No compression quality parameter is exposed — the JPEG quality level is controlled by fal.ai internally.
+denoise_strength	0.35	Low threshold to preserve fine details (buttons, zippers, pockets)	Range is 0–1. Lower = more preservation, less creative generation. 0.35 is conservative but not at the floor. Higher values allow more natural drape at the cost of exact garment replication.
+fidelity_weight	1.0	Absolute maximum garment geometry lock	Range 0–1. At 1.0, garment shape is maximally forced onto the model. Can produce a "pasted on" look rather than natural fabric drape.
+cover_weight	1.0	Maximum colour and texture preservation	Range 0–1. At 1.0, the model is instructed to reproduce every pixel of colour, stitching, and metallic detail exactly. Also reduces the engine's ability to simulate realistic fabric shadows and wrinkles.
+negative_prompt	Fixed string	Suppress hanger artifacts and anatomy distortions	Currently targets specific hanger artifacts (wooden hanger, metal hook, collar shadow) and generic anatomy issues. Does not suppress background bleed, skin tone shifts, or lighting mismatches.
+preserve_pose	true	Maintain model stance in fallback	Fallback-only. No quality parameters are passed to the fallback endpoint.
+logs	false	Both calls	Fal.ai streaming logs are suppressed. Enabling logs would allow per-step inference visibility.
+4. Fallback Analysis
+When fallback occurs: fal.subscribe("fal-ai/fashn/tryon/v1.6") throws any error — including:
+
+Network timeout or connectivity failure
+fal.ai API error (invalid parameters, content policy, server error)
+Invalid model_image URL (e.g. a 404 — the root cause of the pre-SL-004 identity pipeline failure)
+Invalid garment_image URL
+There is no retry on the primary endpoint. One failure → immediate fallback.
+
+Expected frequency post-SL-004: Low. The placeholder URL issue that caused every identity render to fail silently has been resolved. Under normal conditions, the primary endpoint is production-grade and should succeed. Fallback should now only trigger on genuine API or infrastructure failures.
+
+Pre-SL-004 frequency: 100% of identity renders. Every identity selection used a placeholder.studiolayerai.com URL that returned a 404. The primary endpoint failed to fetch model_image → threw → fallback was invoked for every identity render with no indication to the user.
+
+Whether fallback reduces quality: Yes, substantially. The comparison:
+
+Capability	Primary (v1.6)	Fallback (image-apps-v2)
+Prompt / composition	✓ Sent	✗ Not sent
+Category / body anchor	✓ Sent	✗ Not sent
+Negative prompt	✓ Sent	✗ Not sent
+Fidelity lock (3 params)	✓ All three	✗ None
+Mode / quality setting	✓ Sent	✗ Not sent
+Output format	✓ JPEG	Engine default
+The fallback engine receives only two image URLs and preserve_pose: true. It performs its own garment detection, uses its own internal composition and quality defaults, and ignores all the fidelity, category, and prompt context that the primary uses. Results will be materially different in framing, colour fidelity, and garment placement accuracy.
+
+Whether fallback bypasses the Identity Library: No. modelImageUrl is fully resolved — from either findIdentityById() or selectModelImage() — before the primary call is attempted. If the primary fails, the fallback receives the same already-resolved URL. The identity selection is preserved in both paths.
+
+5. Highest-Impact Opportunities
+Ranked by evidence from the current implementation only:
+
+1. Base model images — highest impact
+
+All 16 model_image URLs in selectModelImage() and all 4 in the Identity Library are Unsplash lifestyle photographs taken under varied conditions: mixed backgrounds (street, nature, indoor), inconsistent lighting (golden hour, fluorescent, daylight), and casual non-studio poses. The fashn/tryon engine is calibrated for input images with neutral grey or white studio backgrounds and controlled flat lighting. When the base image has complex backgrounds or directional shadows, the engine's compositing must reconcile the garment lighting against an incompatible background, which reduces realism. This is the single highest-leverage parameter in the entire pipeline — the prompt, fidelity weights, and category all operate downstream of the model image quality.
+
+2. Fidelity parameter tension — medium impact
+
+fidelity_weight: 1.0 and cover_weight: 1.0 are both set to maximum simultaneously alongside denoise_strength: 0.35. This combination tells the engine to exactly replicate every pixel of the garment, suppress all creative generation, and do minimal denoising. The result is the highest possible garment accuracy, but at the cost of natural fabric behaviour — the engine has no freedom to simulate how the garment would drape, wrinkle, or shadow on the actual model body. For photorealistic catalog renders, some relaxation of fidelity_weight (e.g. 0.7–0.8) and cover_weight (e.g. 0.8–0.9) may produce more naturally integrated renders without sacrificing garment recognisability. These three values were set together without documented benchmarking against alternatives.
+
+3. Prompt influence — medium impact, diminishing returns
+
+The fashn/tryon engine is a specialized try-on model, not a general text-to-image diffusion model. The prompt field influences composition and background framing but its weight is lower than in a standard Stable Diffusion pipeline. Section B (expression) and Section C (location) now contribute to the prompt (SL-006), but their actual influence on output depends on how heavily the v1.6 model weighs the prompt field against its internal try-on conditioning. No documentation establishes the relative weight. The prompt improvements from SL-004 through SL-006 are sound, but the ceiling of prompt-driven improvement is lower than for base model image quality.
+
+4. Fallback endpoint — now low impact post-SL-004
+
+Pre-SL-004, this was the dominant quality issue for identity renders — every one silently degraded to the fallback. Post-SL-004, with working URLs in the identity library, the fallback should only trigger on genuine infrastructure failures. The fallback itself remains a significant quality cliff (no prompt, no fidelity, no category), but it should now be a rare path rather than the default.
+
+5. Primary endpoint version — no impact
+
+fal-ai/fashn/tryon/v1.6 is the current production version of the fashn endpoint. There is no evidence of a higher version available. The endpoint itself is not a quality bottleneck — the quality constraints are upstream (base images) and in the payload configuration (fidelity parameter balance).
