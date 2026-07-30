@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// IDENTITY LIBRARY — SL-001
+// IDENTITY LIBRARY — SL-001 / SL-002
 //
 // A curated roster of named, photographically consistent model identities.
 // Each identity maps a stable ID to a specific verified base image URL,
@@ -26,7 +26,30 @@ export interface Identity {
   /** Broad gender category — must match the pipeline's gender tokens. */
   gender: "womens" | "mens" | "kids";
   /** Age group descriptor — informational; does not drive routing logic. */
-  ageGroup: "young_adult" | "classic_mid_age" | "mature_executive" | "teen_youth" | "young_child";
+  ageGroup:
+    | "young_adult"
+    | "classic_mid_age"
+    | "mature_executive"
+    | "teen_youth"
+    | "young_child";
+  /** Model ethnicity descriptor — for catalog diversity filtering. */
+  ethnicity:
+    | "south_asian"
+    | "east_asian"
+    | "afro_caribbean"
+    | "caucasian"
+    | "hispanic_latino"
+    | "middle_eastern"
+    | "mixed";
+  /** Body type descriptor — for garment fit reference. */
+  bodyType: "slim" | "athletic" | "standard" | "plus" | "petite" | "tall";
+  /** Approximate model height in centimetres — for garment length calibration. */
+  heightCm: number;
+  /**
+   * Free-form searchable tags for UI filtering and future ML tagging.
+   * Examples: "editorial", "streetwear", "formal", "activewear", "kids_casual"
+   */
+  tags: string[];
   /**
    * Verified base model image URL.
    * Requirements for production images:
@@ -50,6 +73,10 @@ const IDENTITIES: Identity[] = [
     displayName: "Sofia — Women's, Young Adult",
     gender: "womens",
     ageGroup: "young_adult",
+    ethnicity: "south_asian",
+    bodyType: "slim",
+    heightCm: 172,
+    tags: ["editorial", "luxury", "formal", "womenswear"],
     imageUrl: "https://placeholder.studiolayerai.com/identities/W001.jpg",
   },
   {
@@ -57,6 +84,10 @@ const IDENTITIES: Identity[] = [
     displayName: "Marcus — Men's, Young Adult",
     gender: "mens",
     ageGroup: "young_adult",
+    ethnicity: "afro_caribbean",
+    bodyType: "athletic",
+    heightCm: 185,
+    tags: ["streetwear", "casual", "activewear", "menswear"],
     imageUrl: "https://placeholder.studiolayerai.com/identities/M001.jpg",
   },
   {
@@ -64,6 +95,10 @@ const IDENTITIES: Identity[] = [
     displayName: "Riley — Kids', Teen Youth",
     gender: "kids",
     ageGroup: "teen_youth",
+    ethnicity: "caucasian",
+    bodyType: "slim",
+    heightCm: 158,
+    tags: ["kids_casual", "teen", "schoolwear", "sportswear"],
     imageUrl: "https://placeholder.studiolayerai.com/identities/K001.jpg",
   },
   {
@@ -71,6 +106,10 @@ const IDENTITIES: Identity[] = [
     displayName: "Alex — Kids', Young Child",
     gender: "kids",
     ageGroup: "young_child",
+    ethnicity: "east_asian",
+    bodyType: "standard",
+    heightCm: 120,
+    tags: ["kids_casual", "playful", "everyday", "young_child"],
     imageUrl: "https://placeholder.studiolayerai.com/identities/K002.jpg",
   },
 ];
