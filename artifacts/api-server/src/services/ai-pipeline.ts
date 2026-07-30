@@ -241,22 +241,38 @@ export async function runAIPipeline(params: {
     //     Each camera framing token maps to one locked, non-negotiable string.
     //     No open-ended template interpolation; no dict lookups that can miss.
     //     Unrecognised / unset framing defaults to the full-body catalog string.
+    //
+    //     FULL BODY — reinforced with repeated explicit constraints (SL-004):
+    //     The fashn/tryon engine defaults to 3/4 crops. A single "head to toe"
+    //     mention is insufficient. The prompt must redundantly assert feet
+    //     visibility, no ankle crop, and full containment to override the model's
+    //     internal composition bias.
     let prompt: string;
     if (cameraFraming === "full_body") {
       prompt =
-        "A crisp, full-length commercial lookbook catalog photograph capturing the entire human model " +
-        "completely from head to toe, ensuring the full outfit, waist, legs, and shoes are perfectly " +
-        "visible within the frame boundary with zero cropping or negative empty space above the head.";
+        "Full body commercial lookbook photograph. CRITICAL FRAMING REQUIREMENT: " +
+        "The entire human model must be captured completely from the very top of the head " +
+        "down to both feet. Both feet and ankles must be FULLY VISIBLE and completely inside " +
+        "the frame — absolutely no cropping at or below the ankle, knee, or thigh. " +
+        "The complete outfit must be visible from collar to hemline to shoe sole. " +
+        "Subject must be entirely contained within the frame with neutral space above the head. " +
+        "Preserve the original garment proportions from neckline to full hem length. " +
+        "Do NOT crop the body. Do NOT zoom in. Show the complete full-length figure.";
     } else if (cameraFraming === "mid_shot") {
-      prompt = "A clean waist-up medium portrait composition.";
+      prompt = "A clean waist-up medium portrait composition showing the model from the waist to the top of the head.";
     } else if (cameraFraming === "close_up") {
-      prompt = "A tight macro close-up shot focused purely on the chest fabric details.";
+      prompt = "A tight macro close-up shot focused purely on the chest and upper torso fabric details.";
     } else {
       // Default: treat as full-body catalog when framing is unset or unrecognised
       prompt =
-        "A crisp, full-length commercial lookbook catalog photograph capturing the entire human model " +
-        "completely from head to toe, ensuring the full outfit, waist, legs, and shoes are perfectly " +
-        "visible within the frame boundary with zero cropping or negative empty space above the head.";
+        "Full body commercial lookbook photograph. CRITICAL FRAMING REQUIREMENT: " +
+        "The entire human model must be captured completely from the very top of the head " +
+        "down to both feet. Both feet and ankles must be FULLY VISIBLE and completely inside " +
+        "the frame — absolutely no cropping at or below the ankle, knee, or thigh. " +
+        "The complete outfit must be visible from collar to hemline to shoe sole. " +
+        "Subject must be entirely contained within the frame with neutral space above the head. " +
+        "Preserve the original garment proportions from neckline to full hem length. " +
+        "Do NOT crop the body. Do NOT zoom in. Show the complete full-length figure.";
     }
     logger.info({ renderId, cameraFraming, prompt }, "AI pipeline: composition prompt locked");
 
@@ -290,6 +306,25 @@ export async function runAIPipeline(params: {
     //      cover_weight    → 1.0 (maximum fidelity / preserve_details lock —
     //                        forces exact colours, zippers, drawstrings intact)
     //      negative_prompt → anatomy distortion + hanger artifact suppression
+    // SL-004 — Full payload debug log: every field that reaches fal.ai visible in one entry.
+    logger.info(
+      {
+        renderId,
+        debug_payload: {
+          modelIdentityId:    modelIdentityId ?? null,
+          resolvedModelImage: modelImageUrl,
+          cameraFraming:      cameraFraming ?? null,
+          compositionPrompt:  prompt,
+          garmentPlacement:   garmentPlacement ?? null,
+          resolvedCategory:   category,
+          garmentImage:       garmentImage,
+          denoise_strength:   0.35,
+          fidelity_weight:    1.0,
+          cover_weight:       1.0,
+        },
+      },
+      "AI pipeline: fal.ai payload summary",
+    );
     logger.info({ renderId }, "AI pipeline: calling fal-ai/fashn/tryon/v1.6");
 
     const NEGATIVE_PROMPT =

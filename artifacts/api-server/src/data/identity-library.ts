@@ -77,7 +77,9 @@ export const IDENTITIES: Identity[] = [
     bodyType: "slim",
     heightCm: 172,
     tags: ["editorial", "luxury", "formal", "womenswear"],
-    imageUrl: "https://placeholder.studiolayerai.com/identities/W001.jpg",
+    // Verified working URL — women's mature editorial; visually distinct from the
+    // young_adult default returned by selectModelImage() for the womens branch.
+    imageUrl: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1024&q=90&fit=crop&crop=top",
   },
   {
     id: "M001",
@@ -88,7 +90,9 @@ export const IDENTITIES: Identity[] = [
     bodyType: "athletic",
     heightCm: 185,
     tags: ["streetwear", "casual", "activewear", "menswear"],
-    imageUrl: "https://placeholder.studiolayerai.com/identities/M001.jpg",
+    // Verified working URL — men's classic mid-age; visually distinct from the
+    // young_adult default returned by selectModelImage() for the mens branch.
+    imageUrl: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=1024&q=90&fit=crop&crop=top",
   },
   {
     id: "K001",
@@ -99,7 +103,9 @@ export const IDENTITIES: Identity[] = [
     bodyType: "slim",
     heightCm: 158,
     tags: ["kids_casual", "teen", "schoolwear", "sportswear"],
-    imageUrl: "https://placeholder.studiolayerai.com/identities/K001.jpg",
+    // Verified working URL — young child frontal; visually distinct from the
+    // teen_youth default returned by selectModelImage() for the kids branch.
+    imageUrl: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=1024&q=90&fit=crop&crop=top",
   },
   {
     id: "K002",
@@ -110,7 +116,9 @@ export const IDENTITIES: Identity[] = [
     bodyType: "standard",
     heightCm: 120,
     tags: ["kids_casual", "playful", "everyday", "young_child"],
-    imageUrl: "https://placeholder.studiolayerai.com/identities/K002.jpg",
+    // Verified working URL — child dynamic walking; visually distinct from the
+    // young_child standing frontal default returned by selectModelImage().
+    imageUrl: "https://images.unsplash.com/photo-1555009393-f20bdb245c4d?w=1024&q=90&fit=crop&crop=top",
   },
 ];
 

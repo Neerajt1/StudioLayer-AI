@@ -1,0 +1,114 @@
+TASK ID: SL-004
+
+STRICT MODE
+
+Modify only the rendering pipeline if required.
+
+Do NOT modify the frontend layout.
+
+Do NOT modify authentication.
+
+Do NOT modify billing.
+
+------------------------------------------------------------
+
+OBJECTIVE
+
+Two issues must be verified and fixed.
+
+ISSUE 1
+
+Selecting an Identity (W001/M001/etc.) produces no visible difference from the standard Gender/Age flow.
+
+ISSUE 2
+
+Selecting Full Body framing still produces half-body or close-up renders.
+
+------------------------------------------------------------
+
+TASK 1 — Verify Identity Pipeline
+
+Trace the request from:
+
+Studio UI
+↓
+
+createRender.mutate()
+
+↓
+
+renders.ts
+
+↓
+
+runAIPipeline()
+
+↓
+
+fal.ai request
+
+Verify:
+
+1. modelIdentityId reaches the backend.
+
+2. findIdentityById() returns the expected identity.
+
+3. modelImageUrl is actually replaced by identity.imageUrl.
+
+4. The final fal.ai payload uses identity.imageUrl as model_image.
+
+If not, fix the issue.
+
+------------------------------------------------------------
+
+TASK 2 — Verify Camera Framing
+
+Trace:
+
+cameraFraming
+
+from UI to fal.ai.
+
+Verify it is never overwritten.
+
+Show the exact value sent to fal.ai.
+
+------------------------------------------------------------
+
+TASK 3 — Improve Full Body Reliability
+
+If Full Body is selected:
+
+Strengthen the prompt sent to fal.ai so that it explicitly requests:
+
+- complete head-to-toe composition
+- feet fully visible
+- no crop above ankles
+- subject fully inside frame
+- maintain garment visibility
+- preserve original garment proportions
+
+Only modify the framing prompt.
+
+Do not change garment transfer logic.
+
+------------------------------------------------------------
+
+TASK 4 — Debug Logging
+
+For one render log:
+
+- selectedIdentityId
+- resolved modelImageUrl
+- cameraFraming
+- final fal.ai payload
+
+------------------------------------------------------------
+
+Return:
+
+1. Root cause of Identity issue
+2. Root cause of Full Body issue
+3. Files modified
+4. Exact fixes applied
+5. Confirmation after testing
