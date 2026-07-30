@@ -1,2 +1,3 @@
 - [Orval Zod v4 compat](orval-zod-v4-compat.md) — Orval v8 generates Zod v4 syntax; avoid integer/email formats in OpenAPI spec
 - [Session cookie fetch](session-cookie-fetch.md) — credentials: 'include' must be in customFetch for session auth to work
+- [SL-017 Render Orchestrator](sl017-render-orchestrator.md) — all rendering routes through getOrchestrator(); new strategies/providers in rendering/ only

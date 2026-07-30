@@ -1,505 +1,84 @@
-import { fal } from "@fal-ai/client";
-import { logger } from "../lib/logger";
-import { findIdentityById } from "../data/identity-library";
-import {
-  selectBaseModel,
-  mapStyleModeToTemplate,
-} from "../data/base-model-library";
-import { runIntelligenceAnalysis } from "../intelligence";
-
-fal.config({ credentials: process.env.FAL_KEY });
-
 // ---------------------------------------------------------------------------
-// FASHN V1.6 DEVELOPER CONFIGURATION (SL-011A)
+// StudioLayer AI — AI Pipeline Entry Point (SL-017)
 //
-// Centralised config object for all official V1.6 API parameters that are
-// not driven by user input. Do NOT expose in the production UI.
-// Change values here to tune behaviour for the entire pipeline.
+// This file is the bridge between the renders route and the Render Orchestrator.
+// It is intentionally thin — all rendering logic now lives in:
 //
-// Official V1.6 reference: https://fal.ai/models/fal-ai/fashn/tryon/v1.6/api
-// ---------------------------------------------------------------------------
-const FASHN_CONFIG = {
-  /** "quality" = slower, highest output quality. */
-  mode: "quality" as const,
-
-  /**
-   * segmentation_free: false → enables body-part segmentation during garment
-   * placement. Default is true (disabled). Enabling segmentation gives the
-   * model explicit torso / arm / leg zone boundaries, which directly improves
-   * garment boundary accuracy and reduces reference-clothing bleed-through.
-   * This is the single highest-impact official parameter for overlay reduction.
-   */
-  segmentation_free: false,
-
-  /**
-   * garment_photo_type: "auto" → let V1.6 classify the garment image itself.
-   * After BirefNet preprocessing the uploaded garment is a transparent PNG
-   * cutout — no longer a flat-lay — so auto-detection is more accurate than
-   * hard-coding "flat-lay".
-   */
-  garment_photo_type: "auto" as const,
-
-  /**
-   * output_format: "png" → lossless output. Preserves stitching, logos,
-   * embroidery, seams, and fine fabric texture with no JPEG compression
-   * artefacts. Default for the V1.6 API.
-   */
-  output_format: "png" as const,
-
-  /** Number of output images per request. Increase for stochastic variety. */
-  num_samples: 1,
-
-  /**
-   * seed: undefined → random generation each time (default behaviour).
-   * Set to a fixed integer to reproduce results for A/B testing, e.g.:
-   *   seed: 42
-   * Passing undefined omits the field from the payload entirely.
-   */
-  seed: undefined as number | undefined,
-} satisfies {
-  mode: "performance" | "balanced" | "quality";
-  segmentation_free: boolean;
-  garment_photo_type: "auto" | "model" | "flat-lay";
-  output_format: "png" | "jpeg";
-  num_samples: number;
-  seed: number | undefined;
-};
-
-// ---------------------------------------------------------------------------
-// FASHN category mapper
+//   src/rendering/render-orchestrator.ts   — context preparation, strategy selection
+//   src/rendering/strategies/              — StandardRenderingStrategy, HybridRenderingStrategy
+//   src/rendering/providers/               — FluxSceneProvider
+//   src/rendering/scene-cache.ts           — scene cache
+//   src/rendering/rendering-config.ts      — FASHN_CONFIG, RENDERING_CONFIG
 //
-// The intelligence layer produces a rich GarmentCategory; fal-ai/fashn/tryon/v1.6
-// accepts only three values. This function converts without changing FASHN params.
-// ---------------------------------------------------------------------------
-function mapToFashnCategory(
-  intelligenceCategory: string,
-): "tops" | "bottoms" | "one-pieces" {
-  if (intelligenceCategory === "bottoms")    return "bottoms";
-  if (intelligenceCategory === "one-pieces") return "one-pieces";
-  // tops, outerwear, footwear, accessories — all map to the upper/full body slot
-  return "tops";
-}
-
-// ---------------------------------------------------------------------------
-// MODEL IMAGE SELECTOR — pure conditional logic, zero dictionary lookups.
-//
-// Resolution: gender broad-match → pose stance → age refinement (for frontal)
+// History:
+//   SL-011A — FASHN V1.6 compliance + FASHN_CONFIG
+//   SL-012  — Identity library + SL-012 identity log
+//   SL-013A — Intelligence layer (fire-and-forget)
+//   SL-014  — Intelligence layer integrated into pipeline (parallel execution)
+//   SL-016  — Base Model Selector replaces selectModelImage()
+//   SL-017  — Render Orchestrator replaces all pipeline logic in this file.
+//             This file is now a < 40 line wrapper. All implementation is in
+//             src/rendering/. The public signature of runAIPipeline() is
+//             unchanged — no callers require modification.
 // ---------------------------------------------------------------------------
 
-/** Returns a base human model image URL matched to gender + pose + age. */
-function selectModelImage(
-  modelGender: string | null | undefined,
-  modelAgeRange: string | null | undefined,
-  modelPose: string | null | undefined,
-): string {
-  const pose = modelPose ?? "standing_frontal";
-
-  // ── KIDS ──────────────────────────────────────────────────────────────────
-  if (modelGender === "kids") {
-    if (pose === "walking_dynamic")
-      return "https://images.unsplash.com/photo-1555009393-f20bdb245c4d?w=768&q=85&fit=crop&crop=top";
-    if (pose === "sideways_posing")
-      return "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=768&q=85&fit=crop&crop=top";
-    if (modelAgeRange === "teen_youth")
-      return "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop&crop=top";
-    return "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=768&q=85&fit=crop&crop=top";
-  }
-
-  // ── MEN'S ─────────────────────────────────────────────────────────────────
-  if (modelGender === "mens") {
-    if (pose === "walking_dynamic")
-      return "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=768&q=85&fit=crop&crop=top";
-    if (pose === "sideways_posing")
-      return "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=768&q=85&fit=crop&crop=top";
-    if (modelAgeRange === "mature_executive")
-      return "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=768&q=85&fit=crop&crop=top";
-    if (modelAgeRange === "classic_mid_age")
-      return "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=768&q=85&fit=crop&crop=top";
-    if (modelAgeRange === "teen_youth")
-      return "https://images.unsplash.com/photo-1534367610401-9f5ed68180aa?w=768&q=85&fit=crop&crop=top";
-    return "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=768&q=85&fit=crop&crop=top";
-  }
-
-  // ── WOMEN'S (default — covers any unrecognised gender value) ──────────────
-  if (pose === "walking_dynamic")
-    return "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=768&q=85&fit=crop&crop=top";
-  if (pose === "sideways_posing")
-    return "https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=768&q=85&fit=crop&crop=top";
-  if (modelAgeRange === "mature_executive")
-    return "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=768&q=85&fit=crop&crop=top";
-  if (modelAgeRange === "classic_mid_age")
-    return "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=768&q=85&fit=crop&crop=top";
-  if (modelAgeRange === "teen_youth")
-    return "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=768&q=85&fit=crop&crop=top";
-  return "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=768&q=85&fit=crop&crop=top";
-}
+import { logger }          from "../lib/logger";
+import { getOrchestrator } from "../rendering";
+import type { RenderingRequest } from "../rendering";
 
 // ---------------------------------------------------------------------------
-// GARMENT PREPROCESSING (SL-010A)
-//
-// Passes the uploaded garment through fal-ai/birefnet to strip the hanger
-// and background, returning a clean transparent PNG cutout. Falls back to
-// the original image on any error so the pipeline never hard-fails.
+// runAIPipeline — public API (signature unchanged from SL-016)
 // ---------------------------------------------------------------------------
-async function prepareGarmentImage(
-  sourceImageUrl: string,
-  renderId: number,
-): Promise<string> {
-  try {
-    logger.info(
-      { renderId, sourceImageUrl },
-      "AI pipeline: garment preprocessing — removing hanger/background via birefnet",
-    );
 
-    const result = await fal.subscribe("fal-ai/birefnet", {
-      input: {
-        image_url: sourceImageUrl,
-        model: "General Use (Light)",
-        output_format: "png",
-        operating_resolution: "1024x1024",
-        refine_foreground: true,
-      },
-      logs: false,
-    });
-
-    const data = result.data as Record<string, unknown> | undefined;
-
-    // birefnet returns { image: { url } }
-    const candidates = [
-      (data?.["image"] as { url?: string } | undefined)?.url,
-      data?.["image_url"],
-      data?.["url"],
-      (data?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
-    ];
-
-    for (const c of candidates) {
-      if (typeof c === "string" && c.startsWith("http")) {
-        logger.info(
-          { renderId, preprocessedGarmentUrl: c },
-          "AI pipeline: garment background removed — hanger eliminated",
-        );
-        return c;
-      }
-    }
-
-    logger.warn(
-      { renderId },
-      "AI pipeline: birefnet returned no URL — using original garment image",
-    );
-    return sourceImageUrl;
-  } catch (preprocessErr) {
-    logger.warn(
-      { renderId, preprocessErr },
-      "AI pipeline: garment preprocessing failed — falling back to original image",
-    );
-    return sourceImageUrl;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// MAIN PIPELINE (SL-014)
-//
-// Integration order:
-//   0. Intelligence analysis + birefnet preprocessing — run in PARALLEL
-//      (intelligence uses the original upload; birefnet strips the hanger)
-//   1. Select model image (identity library or attribute routing)
-//   2. Resolve identity image URL to absolute URL
-//   3. Derive fal.ai `category` from intelligence layer result
-//   4. Build V1.6 payload (parameters unchanged from SL-011A)
-//   5. Call fal.ai — identical to SL-011A
-//   6. Part 8 render summary log
-// ---------------------------------------------------------------------------
 export async function runAIPipeline(params: {
-  renderId: number;
-  sourceImageUrl: string;
-  modelPersona: string;
+  renderId:            number;
+  sourceImageUrl:      string;
+  modelPersona:        string;
   locationEnvironment: string;
-  modelDemographics?: string | null;
-  imageDimensions?: string | null;
-  smartLighting?: boolean | null;
-  modelPose?: string | null;
-  modelGender?: string | null;
-  modelAgeRange?: string | null;
-  cameraFraming?: string | null;
-  garmentPlacement?: string | null;
-  modelIdentityId?: string | null;
-  onComplete: (outputImageUrl: string) => Promise<void>;
-  onError: (error: Error) => Promise<void>;
+  modelDemographics?:  string | null;
+  imageDimensions?:    string | null;
+  smartLighting?:      boolean | null;
+  modelPose?:          string | null;
+  modelGender?:        string | null;
+  modelAgeRange?:      string | null;
+  cameraFraming?:      string | null;
+  garmentPlacement?:   string | null;
+  modelIdentityId?:    string | null;
+  onComplete:          (outputImageUrl: string) => Promise<void>;
+  onError:             (error: Error) => Promise<void>;
 }): Promise<void> {
-  const {
-    renderId,
-    sourceImageUrl,
-    modelPose,
-    modelGender,
-    modelAgeRange,
-    garmentPlacement,
-    modelIdentityId,
-  } = params;
-
-  const renderStart = Date.now();
+  const request: RenderingRequest = {
+    renderId:        params.renderId,
+    sourceImageUrl:  params.sourceImageUrl,
+    modelGender:     params.modelGender,
+    modelAgeRange:   params.modelAgeRange,
+    modelPose:       params.modelPose,
+    garmentPlacement: params.garmentPlacement,
+    modelIdentityId: params.modelIdentityId,
+    // renderMode: omitted — orchestrator uses RENDERING_CONFIG.renderMode (env-driven)
+  };
 
   try {
-    // 0. Intelligence analysis + birefnet preprocessing — run in PARALLEL
-    //
-    //    Both operations are independent:
-    //      • Intelligence analyses the ORIGINAL uploaded image for garment profile
-    //      • BirefNet strips the hanger from the ORIGINAL image for fal.ai input
-    //    Running them concurrently absorbs the intelligence analysis time inside
-    //    the birefnet wait, keeping total render latency unchanged.
-    const [garmentImage, intelligenceResult] = await Promise.all([
-      prepareGarmentImage(sourceImageUrl, renderId),
-      runIntelligenceAnalysis({
-        renderId,
-        garmentImageUrl: sourceImageUrl,
-        garmentPlacement,
-        modelGender,
-        modelAgeRange,
-      }),
-    ]);
+    const result = await getOrchestrator().orchestrate(request);
 
-    // 1. Derive FASHN category + style template from intelligence result (SL-016)
-    //
-    //    Computed here (before model image selection) so both the Base Model
-    //    Selector and the fal.ai payload builder can consume them. This
-    //    consolidates the category derivation that previously lived in Step 3.
-    const category = mapToFashnCategory(intelligenceResult.profile.category);
-    const styleTemplate = mapStyleModeToTemplate(
-      intelligenceResult.recommendation.styleMode,
-    );
-
-    // 2. Select model image — SL-016 Base Model Selector
-    //
-    //    Resolution order (Part 5 — identity override always wins):
-    //      A. modelIdentityId supplied + resolved → Identity Library (user choice)
-    //      B. modelIdentityId supplied + NOT resolved → Base Model Selector
-    //         (unknown identity; warn and fall through)
-    //      C. No modelIdentityId → Base Model Selector (standard SL-016 path)
-    //      D. Base Model Selector returns null → selectModelImage() (emergency fallback)
-    //
-    //    Rendering must never fail (Part 8) — every branch produces a valid URL.
-    const modelSelectionStart = Date.now();
-
-    type ModelSource =
-      | "identity_override"
-      | "base_model_selector"
-      | "attribute_routing_fallback";
-
-    let modelImageUrl: string;
-    let modelSource: ModelSource;
-    let selectedBaseModelId: string | null = null;
-    let identityOverride = false;
-    let baseModelFallbackReason: string | null = null;
-
-    if (modelIdentityId) {
-      // ── Branch A: User-selected identity ────────────────────────────────
-      const identity = findIdentityById(modelIdentityId);
-      if (identity) {
-        modelImageUrl    = identity.imageUrl;
-        modelSource      = "identity_override";
-        identityOverride = true;
-        logger.info(
-          { renderId, modelIdentityId, identityName: identity.displayName, modelImageUrl },
-          "AI pipeline: model image resolved from Identity Library (identity override)",
-        );
-      } else {
-        // ── Branch B: Identity not found — fall through to Base Model Selector
-        logger.warn(
-          { renderId, modelIdentityId },
-          "AI pipeline: modelIdentityId not found in library — falling back to Base Model Selector (SL-016)",
-        );
-        const baseModel = selectBaseModel(modelGender, category, styleTemplate);
-        if (baseModel) {
-          modelImageUrl        = baseModel.imageUrl;
-          modelSource          = "base_model_selector";
-          selectedBaseModelId  = baseModel.id;
-          baseModelFallbackReason = "identity_not_found";
-        } else {
-          modelImageUrl        = selectModelImage(modelGender, modelAgeRange, modelPose);
-          modelSource          = "attribute_routing_fallback";
-          baseModelFallbackReason = "identity_not_found_and_base_model_lookup_failed";
-        }
-      }
-    } else {
-      // ── Branch C: No identity selected — Base Model Selector (SL-016 standard path)
-      const baseModel = selectBaseModel(modelGender, category, styleTemplate);
-      if (baseModel) {
-        modelImageUrl       = baseModel.imageUrl;
-        modelSource         = "base_model_selector";
-        selectedBaseModelId = baseModel.id;
-      } else {
-        // ── Branch D: Base Model Selector returned null — emergency fallback
-        modelImageUrl        = selectModelImage(modelGender, modelAgeRange, modelPose);
-        modelSource          = "attribute_routing_fallback";
-        baseModelFallbackReason = "base_model_lookup_failed";
-      }
-    }
-
-    // 3. Resolve root-relative identity paths to absolute URLs.
-    //    fal.ai requires a publicly reachable URL; local /identities/... paths
-    //    are served by the Vite frontend at REPLIT_DEV_DOMAIN.
-    if (modelImageUrl.startsWith("/")) {
-      const domain = process.env.REPLIT_DEV_DOMAIN;
-      modelImageUrl = domain
-        ? `https://${domain}${modelImageUrl}`
-        : `http://localhost:25562${modelImageUrl}`;
-      logger.info(
-        { renderId, resolvedModelImageUrl: modelImageUrl },
-        "AI pipeline: resolved relative identity imageUrl to absolute URL",
-      );
-    }
-
-    // SL-016 model selection log (Part 9 — replaces SL-012 identity log + model image selected log)
-    const modelSelectionDurationMs = Date.now() - modelSelectionStart;
     logger.info(
       {
-        renderId,
-        modelSelection: {
-          source:              modelSource,
-          gender:              modelGender ?? null,
-          fashnCategory:       category,
-          styleTemplate,
-          baseModelId:         selectedBaseModelId,
-          identityOverride,
-          identityId:          modelIdentityId ?? null,
-          fallbackUsed:        baseModelFallbackReason,
-          resolvedImageUrl:    modelImageUrl,
-          durationMs:          modelSelectionDurationMs,
-        },
+        renderId:      params.renderId,
+        strategyUsed:  result.strategyUsed,
+        totalMs:       result.totalDurationMs,
+        cacheHit:      result.cacheHit,
+        fallbackReason: result.fallbackReason,
       },
-      "AI pipeline: SL-016 model image selected",
+      "AI pipeline: orchestration complete",
     );
 
-    // 4-old→ category already derived in Step 1 (SL-016). Log for traceability.
-    logger.info(
-      {
-        renderId,
-        intelligenceCategory: intelligenceResult.profile.category,
-        fashnCategory: category,
-        styleTemplate,
-        garmentPlacement,
-      },
-      "AI pipeline: garment category resolved from intelligence layer",
-    );
-
-    // 4. Build the V1.6 payload — official parameters only (SL-011A)
-    //
-    //    All unsupported parameters have been removed:
-    //      ✗ prompt            (not in V16Input)
-    //      ✗ negative_prompt   (not in V16Input)
-    //      ✗ denoise_strength  (not in V16Input)
-    //      ✗ fidelity_weight   (not in V16Input)
-    //      ✗ cover_weight      (not in V16Input)
-    //      ✗ restore_clothes   (not in V16Input)
-    //
-    //    Key compliance (SL-011A):
-    //      segmentation_free: false   — enables body-part segmentation
-    //      garment_photo_type: "auto" — correct for transparent PNG cutout
-    //      output_format: "png"       — lossless (was "jpeg")
-    //      seed: from FASHN_CONFIG    — omitted when undefined (random)
-    const falPayload = {
-      model_image:        modelImageUrl,
-      garment_image:      garmentImage,
-      category,
-      mode:               FASHN_CONFIG.mode,
-      segmentation_free:  FASHN_CONFIG.segmentation_free,
-      garment_photo_type: FASHN_CONFIG.garment_photo_type,
-      output_format:      FASHN_CONFIG.output_format,
-      num_samples:        FASHN_CONFIG.num_samples,
-      ...(FASHN_CONFIG.seed !== undefined ? { seed: FASHN_CONFIG.seed } : {}),
-    };
-
-    logger.info(
-      { renderId, payload: falPayload },
-      "AI pipeline: fal.ai V1.6 compliant payload",
-    );
-    logger.info({ renderId }, "AI pipeline: calling fal-ai/fashn/tryon/v1.6");
-
-    let outputImageUrl: string | undefined;
-
-    try {
-      const result = await fal.subscribe("fal-ai/fashn/tryon/v1.6", {
-        input: falPayload,
-        logs: false,
-      });
-
-      // V16Output shape: { images: Array<{ url: string, ... }> }
-      // Check the canonical key first, then defensive fallbacks.
-      const data = result.data as Record<string, unknown> | undefined;
-      const candidates = [
-        (data?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
-        (data?.["image"] as { url?: string } | undefined)?.url,
-        data?.["image_url"],
-        data?.["url"],
-      ];
-      for (const c of candidates) {
-        if (typeof c === "string" && c.startsWith("http")) {
-          outputImageUrl = c;
-          break;
-        }
-      }
-
-      logger.info({ renderId, outputImageUrl }, "AI pipeline: fashn/tryon/v1.6 succeeded");
-    } catch (primaryError) {
-      // Fallback: image-apps-v2/virtual-try-on
-      logger.warn(
-        { renderId, primaryError },
-        "AI pipeline: fashn/tryon/v1.6 failed — falling back to image-apps-v2/virtual-try-on",
-      );
-
-      const fallbackResult = await fal.subscribe("fal-ai/image-apps-v2/virtual-try-on", {
-        input: {
-          person_image_url:   modelImageUrl,
-          clothing_image_url: garmentImage,
-          preserve_pose:      true,
-        },
-        logs: false,
-      });
-
-      const fd = fallbackResult.data as Record<string, unknown> | undefined;
-      const fallbackCandidates = [
-        (fd?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
-        (fd?.["image"] as { url?: string } | undefined)?.url,
-        fd?.["image_url"],
-        fd?.["url"],
-      ];
-      for (const c of fallbackCandidates) {
-        if (typeof c === "string" && c.startsWith("http")) {
-          outputImageUrl = c;
-          break;
-        }
-      }
-
-      logger.info({ renderId, outputImageUrl }, "AI pipeline: fallback succeeded");
-    }
-
-    if (!outputImageUrl) {
-      throw new Error("No output image URL returned from fal.ai");
-    }
-
-    // 6. Part 8 — Render summary log (SL-014)
-    const renderDurationMs = Date.now() - renderStart;
-    logger.info(
-      {
-        renderId,
-        renderSummary: {
-          uploadedGarment:    intelligenceResult.recommendation.uploadedGarment,
-          detectedStyle:      intelligenceResult.recommendation.styleMode,
-          selectedStyleMode:  intelligenceResult.recommendation.styleMode,
-          generatedOutfit:    intelligenceResult.recommendation.recommendedOutfit,
-          generatedPrompt:    intelligenceResult.prompt,
-          decisionSource:     intelligenceResult.recommendation.decisionSource,
-          renderDurationMs,
-          intelligenceDurationMs: intelligenceResult.durationMs,
-          fallbackUsed:       intelligenceResult.usedHardFallback ? "hard_default" : "none",
-        },
-      },
-      "AI pipeline: SL-014 render summary",
-    );
-
-    await params.onComplete(outputImageUrl);
+    await params.onComplete(result.outputImageUrl);
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error({ renderId, err: err.message }, "AI pipeline: failed");
+    logger.error(
+      { renderId: params.renderId, err: err.message },
+      "AI pipeline: orchestration failed",
+    );
     await params.onError(err);
   }
 }

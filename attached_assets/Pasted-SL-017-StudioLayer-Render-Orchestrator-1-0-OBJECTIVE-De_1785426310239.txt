@@ -1,0 +1,205 @@
+SL-017 — StudioLayer Render Orchestrator 1.0
+OBJECTIVE
+Design and implement the Render Orchestrator as the central decision-making engine for StudioLayer.
+The Render Orchestrator is responsible for selecting the optimal rendering strategy for every request while remaining independent of any individual AI provider (FASHN, FLUX, or future providers).
+
+This sprint introduces the architectural foundation for intelligent rendering without breaking any existing functionality.
+
+IMPLEMENTATION PRINCIPLES
+Preserve complete backward compatibility.
+Do not modify the Intelligence Engine.
+Do not modify the Identity Library.
+Do not modify the Base Model Library.
+Do not modify existing API contracts.
+Extend the rendering pipeline through orchestration rather than replacement.
+PART 1 — Render Orchestrator
+Create:
+render-orchestrator.ts
+Responsibilities:
+Receive rendering request.
+Read Intelligence Engine output.
+Evaluate rendering context.
+Select rendering strategy.
+Execute strategy.
+Handle fallbacks.
+Return final render.
+The orchestrator must become the single entry point for all future rendering.
+PART 2 — Rendering Strategy Interface
+Create a strategy interface.
+Every rendering strategy must implement:
+
+canHandle(request)
+
+execute(request)
+
+fallback()
+The orchestrator must never contain provider-specific logic.
+PART 3 — Implement Standard Strategy
+Create:
+StandardRenderingStrategy
+Pipeline:
+Intelligence Engine
+        ↓
+BaseModelSelector
+        ↓
+FASHN
+        ↓
+Output
+This strategy reproduces today's production behaviour exactly.
+PART 4 — Implement Hybrid Strategy
+Create:
+HybridRenderingStrategy
+Pipeline:
+Prompt Composer
+        ↓
+Scene Provider
+        ↓
+Generated Scene
+        ↓
+FASHN
+        ↓
+Output
+Hybrid Strategy should exist but remain behind a feature flag until validated.
+PART 5 — Provider Abstraction Layer
+Create:
+scene-provider.ts
+Expose a provider-independent interface:
+generateScene()
+
+health()
+
+costEstimate()
+The orchestrator must never call FLUX directly.
+Only the provider layer may know which AI model is being used.
+
+PART 6 — Implement FLUX Provider
+Create:
+FluxSceneProvider
+Initial implementation:
+fal-ai/flux/schnell
+Requirements:
+Generate complete fashion scene.
+Return generated image.
+Report latency.
+Report generation errors.
+Support future replacement without API changes.
+PART 7 — Rendering Strategy Selection
+The orchestrator should evaluate:
+feature flag
+render mode
+garment category
+style mode
+provider availability
+Example:
+if Hybrid disabled
+
+↓
+
+Standard Strategy
+if Hybrid enabled
+
+↓
+
+Hybrid Strategy
+Future strategies must plug into the same architecture.
+PART 8 — Scene Cache
+Implement cache using:
+Prompt Hash
+Cache:
+generated scene
+timestamp
+provider
+latency
+If identical prompt exists:
+Reuse cached scene.
+
+Do not regenerate.
+
+PART 9 — Provider Health Monitor
+Every provider exposes:
+Healthy
+
+Slow
+
+Unavailable
+If unavailable:
+Automatically switch strategy.
+
+Rendering must never fail because one provider is unavailable.
+
+PART 10 — Fallback Chain
+Priority:
+Hybrid Strategy
+
+↓
+
+Standard Strategy
+
+↓
+
+Existing Emergency Fallback
+Never allow rendering failure.
+PART 11 — Logging
+Log:
+Selected strategy
+Selected provider
+Prompt hash
+Cache hit/miss
+FLUX latency
+FASHN latency
+Total render time
+Fallback reason
+Final strategy used
+PART 12 — Configuration
+Create:
+rendering-config.ts
+Support:
+STANDARD
+
+HYBRID
+
+AUTO
+AUTO initially resolves to STANDARD.
+Future rollout can enable HYBRID without code changes.
+
+PART 13 — Maintain Existing Components
+Do not modify:
+Intelligence Engine
+Decision Engine
+WardrobeCompletionEngine
+BaseModelSelector
+Identity Library
+Existing API routes
+Existing database schema
+Only extend the rendering architecture.
+PART 14 — Validation
+Validate:
+Standard Strategy produces identical output to SL-016.
+Hybrid Strategy executes successfully when enabled.
+Automatic fallback works.
+Provider failure does not interrupt rendering.
+Existing identity selection still overrides Base Models.
+Existing API contracts remain unchanged.
+PART 15 — Performance Targets
+Targets:
+Strategy selection: <10 ms
+FLUX generation: ≤6 s
+FASHN rendering: ≤25 s
+Total render time: ≤30 s
+No measurable overhead when using Standard Strategy.
+PART 16 — Deliverables
+Provide a complete engineering report including:
+Files created.
+Files modified.
+Render Orchestrator architecture.
+Strategy implementation.
+Provider abstraction.
+FLUX integration.
+Cache implementation.
+Fallback chain.
+Performance analysis.
+Cost impact.
+Readiness for future rendering strategies.
+CTO Notes
+This sprint is intentionally architectural. It establishes the orchestration framework while keeping StudioLayer fully compatible with the current SL-016 production pipeline. Once complete, future capabilities—multi-garment rendering, editorial scenes, video rendering, additional AI providers, and advanced optimization—can be added as new strategies or providers rather than by rewriting the pipeline.
+One important instruction for Replit: If implementing the provider abstraction and Hybrid Strategy together introduces unnecessary complexity, prioritize delivering the Render Orchestrator, Strategy Interface, and Provider Abstraction Layer first, with FLUX integrated as the initial provider. The architecture is the primary deliverable; additional rendering strategies can evolve on top of it.
