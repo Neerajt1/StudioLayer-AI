@@ -1,38 +1,39 @@
 // ---------------------------------------------------------------------------
-// IDENTITY LIBRARY — SL-001 / SL-002
+// IDENTITY LIBRARY — SL-009
 //
-// A curated roster of named, photographically consistent model identities.
-// Each identity maps a stable ID to a specific verified base image URL,
-// guaranteeing visual consistency across a brand's catalog regardless of
-// the gender / age / pose attribute dropdowns.
+// The StudioLayer AI Global Identity Library.
+// Each entry maps a stable ID to a production-approved local model image.
 //
-// USAGE (future):
-//   Pass modelIdentityId into runAIPipeline(). If the ID resolves here,
-//   the identity's imageUrl is used directly as model_image, bypassing
-//   the selectModelImage() attribute-routing function entirely.
+// Image files live in:
+//   artifacts/studiolayer-ai/public/identities/
+// They are served by the Vite frontend at the root path, so imageUrl values
+// are root-relative paths such as "/identities/F-IN-01.png".
 //
-// CURRENT STATUS:
-//   Identities hold placeholder URLs. Real studio-shot photographs will
-//   replace these URLs before the Identity Library is exposed in the UI.
-//   All existing rendering logic remains completely unaffected until a
-//   modelIdentityId is explicitly supplied by the caller.
+// PIPELINE RESOLUTION:
+//   The AI pipeline resolves relative imageUrl paths to absolute URLs before
+//   passing model_image to fal.ai (which requires an external-reachable URL).
+//   See ai-pipeline.ts → resolveModelImageUrl().
+//
+// BACKWARD COMPATIBILITY:
+//   Legacy IDs (W001, M001, K001, K002) are no longer present in this array.
+//   Any stored render referencing those IDs will safely fall through to the
+//   selectModelImage() attribute-routing function — this is the existing
+//   documented fallback and requires no migration.
+//
+// DO NOT:
+//   - Rename or move image files (filenames are the stable key).
+//   - Reuse a retired ID.
+//   - Add external CDN URLs — all imageUrls must be local root-relative paths.
 // ---------------------------------------------------------------------------
 
 export interface Identity {
-  /** Stable unique identifier, e.g. "W001". Never reuse or rename. */
+  /** Stable unique identifier matching the image filename prefix. Never reuse. */
   id: string;
-  /** Human-readable label shown in the UI picker. */
+  /** Human-readable name shown in the UI picker. */
   displayName: string;
-  /** Broad gender category — must match the pipeline's gender tokens. */
+  /** Broad gender category — used by the pipeline for garment routing. */
   gender: "womens" | "mens" | "kids";
-  /** Age group descriptor — informational; does not drive routing logic. */
-  ageGroup:
-    | "young_adult"
-    | "classic_mid_age"
-    | "mature_executive"
-    | "teen_youth"
-    | "young_child";
-  /** Model ethnicity descriptor — for catalog diversity filtering. */
+  /** Model ethnicity — for catalog diversity filtering. */
   ethnicity:
     | "south_asian"
     | "east_asian"
@@ -41,117 +42,166 @@ export interface Identity {
     | "hispanic_latino"
     | "middle_eastern"
     | "mixed";
+  /** Age group descriptor — informational; does not drive routing logic. */
+  ageGroup:
+    | "young_adult"
+    | "classic_mid_age"
+    | "mature_executive"
+    | "teen_youth"
+    | "young_child";
   /** Body type descriptor — for garment fit reference. */
   bodyType: "slim" | "athletic" | "standard" | "plus" | "petite" | "tall";
   /** Approximate model height in centimetres — for garment length calibration. */
   heightCm: number;
   /**
-   * Free-form searchable tags for UI filtering and future ML tagging.
-   * Examples: "editorial", "streetwear", "formal", "activewear", "kids_casual"
-   */
-  tags: string[];
-  /**
-   * Verified base model image URL.
-   * Requirements for production images:
-   *   - Minimum 1024 px on the short axis
-   *   - Studio-lit, neutral grey or white background
-   *   - Standing frontal pose (unless the identity targets a specific pose)
-   *   - Full body visible from head to ankle
-   *   - JPEG, ≥90 quality
+   * Root-relative path to the local model image served by the Vite frontend.
+   * Format: "/identities/<filename>.png"
+   * The pipeline resolves this to an absolute URL before calling fal.ai.
    */
   imageUrl: string;
 }
 
 // ---------------------------------------------------------------------------
-// Catalogue
-// Replace placeholder URLs with owned studio assets before UI launch.
+// Global Identity Library — 12 production-approved studio assets
 // ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// SL-008 Identity Standard
-// ---------------------------------------------------------------------------
-// All images verified against the StudioLayer AI Identity Standard:
-//   ✓ URL reachable at production resolution (HTTP 200, verified 2026-07-30)
-//   ✓ Grey or neutral studio background
-//   ✓ Standing upright, full or substantial body visible
-//   ✓ Soft, even studio lighting
-//   ✓ Neutral expression
-//   ✓ Plain / minimal clothing
-//   ✓ No accessories, bags, scarves, or hats
-//   ✓ Suitable for AI virtual try-on
-//
-// Source:  Unsplash (https://unsplash.com/license) — free commercial use
-//          Pexels   (https://www.pexels.com/license/) — free commercial use
+// All images share the same studio standard:
+//   ✓ Pure white / light grey seamless studio background
+//   ✓ Full body visible head to feet, standing upright
+//   ✓ Frontal neutral pose, arms away from torso
+//   ✓ Soft, even studio lighting — no harsh shadows
+//   ✓ Plain grey fitted t-shirt + shorts — no accessories, no branding
+//   ✓ Barefoot — full leg length visible
+//   ✓ Verified local file, production-approved 2026-07-30
 // ---------------------------------------------------------------------------
 
 export const IDENTITIES: Identity[] = [
+  // ── WOMEN'S ──────────────────────────────────────────────────────────────
+
   {
-    id: "W001",
-    displayName: "Sofia — Women's, Young Adult",
+    id: "F-IN-01",
+    displayName: "Aarohi",
     gender: "womens",
-    ageGroup: "young_adult",
     ethnicity: "south_asian",
+    ageGroup: "young_adult",
     bodyType: "slim",
-    heightCm: 172,
-    tags: ["editorial", "luxury", "formal", "womenswear"],
-    // SL-008 upgrade — Unsplash photo-1614786269829-d24616faf56d
-    // FULL BODY standing, dark-grey studio seamless, even studio lighting,
-    // neutral hands-in-pockets stance, no accessories. Best full-body studio
-    // shot found after scanning 60+ candidates across Unsplash + Pexels.
-    // Compromise: grey (not white) background; black business suit includes
-    // a jacket — both are acceptable trade-offs for full-body coverage.
-    imageUrl: "https://images.unsplash.com/photo-1614786269829-d24616faf56d?w=1024&q=90&fit=crop&crop=top",
+    heightCm: 165,
+    imageUrl: "/identities/F-IN-01.png",
   },
   {
-    id: "M001",
-    displayName: "Marcus — Men's, Young Adult",
-    gender: "mens",
+    id: "F-CA-01",
+    displayName: "Emma",
+    gender: "womens",
+    ethnicity: "caucasian",
     ageGroup: "young_adult",
+    bodyType: "slim",
+    heightCm: 170,
+    imageUrl: "/identities/F-CA-01.png",
+  },
+  {
+    id: "F-AF-01",
+    displayName: "Amina",
+    gender: "womens",
     ethnicity: "afro_caribbean",
+    ageGroup: "young_adult",
+    bodyType: "slim",
+    heightCm: 168,
+    imageUrl: "/identities/F-AF-01.png",
+  },
+  {
+    id: "F-EA-01",
+    displayName: "Yuna",
+    gender: "womens",
+    ethnicity: "east_asian",
+    ageGroup: "young_adult",
+    bodyType: "petite",
+    heightCm: 162,
+    imageUrl: "/identities/F-EA-01.png",
+  },
+  {
+    id: "F-ME-01",
+    displayName: "Layla",
+    gender: "womens",
+    ethnicity: "middle_eastern",
+    ageGroup: "young_adult",
+    bodyType: "slim",
+    heightCm: 165,
+    imageUrl: "/identities/F-ME-01.png",
+  },
+
+  // ── MEN'S ────────────────────────────────────────────────────────────────
+
+  {
+    id: "M-IN-01",
+    displayName: "Arjun",
+    gender: "mens",
+    ethnicity: "south_asian",
+    ageGroup: "young_adult",
+    bodyType: "athletic",
+    heightCm: 178,
+    imageUrl: "/identities/M-IN-01.png",
+  },
+  {
+    id: "M-CA-01",
+    displayName: "Liam",
+    gender: "mens",
+    ethnicity: "caucasian",
+    ageGroup: "young_adult",
+    bodyType: "athletic",
+    heightCm: 182,
+    imageUrl: "/identities/M-CA-01.png",
+  },
+  {
+    id: "M-AF-01",
+    displayName: "Kwame",
+    gender: "mens",
+    ethnicity: "afro_caribbean",
+    ageGroup: "young_adult",
     bodyType: "athletic",
     heightCm: 185,
-    tags: ["streetwear", "casual", "activewear", "menswear"],
-    // SL-008 upgrade — Pexels 3785079
-    // Waist-up, neutral grey studio background, plain olive button shirt,
-    // no accessories, natural smile. Best available clean-background men's
-    // shot. Compromise: waist-up only (no full body); grey bg not white.
-    // Significantly better than prior lifestyle office headshot.
-    imageUrl: "https://images.pexels.com/photos/3785079/pexels-photo-3785079.jpeg?auto=compress&cs=tinysrgb&w=1260&h=1890&dpr=1",
+    imageUrl: "/identities/M-AF-01.png",
   },
   {
-    id: "K001",
-    displayName: "Riley — Kids', Teen Youth",
-    gender: "kids",
-    ageGroup: "teen_youth",
-    ethnicity: "caucasian",
-    bodyType: "slim",
-    heightCm: 158,
-    tags: ["kids_casual", "teen", "schoolwear", "sportswear"],
-    // SL-008 upgrade — Pexels 1620760
-    // FULL BODY — children's fashion catalog shoot. Two children, grey
-    // seamless studio background, consistent soft studio lighting, fashion
-    // catalog clothing, feet fully visible. Only catalog-quality children's
-    // studio image found in extensive free-stock search. Compromise: two
-    // children in frame rather than one; flower crown accessory on girl.
-    imageUrl: "https://images.pexels.com/photos/1620760/pexels-photo-1620760.jpeg?auto=compress&cs=tinysrgb&w=1260&h=1890&dpr=1",
-  },
-  {
-    id: "K002",
-    displayName: "Alex — Kids', Young Child",
-    gender: "kids",
-    ageGroup: "young_child",
+    id: "M-EA-01",
+    displayName: "Kenji",
+    gender: "mens",
     ethnicity: "east_asian",
+    ageGroup: "young_adult",
+    bodyType: "athletic",
+    heightCm: 176,
+    imageUrl: "/identities/M-EA-01.png",
+  },
+  {
+    id: "M-ME-01",
+    displayName: "Omar",
+    gender: "mens",
+    ethnicity: "middle_eastern",
+    ageGroup: "young_adult",
+    bodyType: "athletic",
+    heightCm: 180,
+    imageUrl: "/identities/M-ME-01.png",
+  },
+
+  // ── KIDS' ────────────────────────────────────────────────────────────────
+
+  {
+    id: "K-B-01",
+    displayName: "Ethan",
+    gender: "kids",
+    ethnicity: "south_asian",
+    ageGroup: "young_child",
     bodyType: "standard",
-    heightCm: 120,
-    tags: ["kids_casual", "playful", "everyday", "young_child"],
-    // SL-008 upgrade — Pexels 1620756 (same series as K001 / 1620760)
-    // FULL BODY — single boy, grey seamless studio background, same series
-    // lighting and styling as K001. Plain white graphic t-shirt + striped
-    // joggers, no accessories, neutral standing pose, feet visible.
-    // Best single-child studio shot found. Compromise: not east_asian
-    // ethnicity match; slight graphic on shirt. Both are acceptable
-    // trade-offs for full-body studio quality.
-    imageUrl: "https://images.pexels.com/photos/1620756/pexels-photo-1620756.jpeg?auto=compress&cs=tinysrgb&w=1260&h=1890&dpr=1",
+    heightCm: 128,
+    imageUrl: "/identities/K-B-01.png",
+  },
+  {
+    id: "K-G-01",
+    displayName: "Mia",
+    gender: "kids",
+    ethnicity: "south_asian",
+    ageGroup: "young_child",
+    bodyType: "slim",
+    heightCm: 118,
+    imageUrl: "/identities/K-G-01.png",
   },
 ];
 
@@ -162,6 +212,8 @@ export const IDENTITIES: Identity[] = [
 /**
  * Returns the Identity matching the given id, or null if not found.
  * Case-sensitive match against the id field.
+ * Unknown / legacy IDs return null — callers should fall back to
+ * attribute-based routing (selectModelImage) when null is returned.
  */
 export function findIdentityById(id: string): Identity | null {
   return IDENTITIES.find((identity) => identity.id === id) ?? null;

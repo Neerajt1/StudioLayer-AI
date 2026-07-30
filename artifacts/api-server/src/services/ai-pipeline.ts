@@ -232,6 +232,33 @@ export async function runAIPipeline(params: {
       // Default path — attribute-based routing, unchanged from original behaviour
       modelImageUrl = selectModelImage(modelGender, modelAgeRange, modelPose);
     }
+
+    // SL-009 — Resolve local identity image paths to absolute URLs.
+    //
+    // Identity Library imageUrls are stored as root-relative paths
+    // (e.g. "/identities/F-IN-01.png") so the frontend can render them
+    // directly as <img src>. fal.ai requires a publicly reachable absolute URL.
+    //
+    // The Vite frontend artifact is mounted at the root path ("/"), so:
+    //   /identities/F-IN-01.png → https://<REPLIT_DEV_DOMAIN>/identities/F-IN-01.png
+    //
+    // REPLIT_DEV_DOMAIN is injected by the Replit platform into every service
+    // process. If absent (local dev without Replit), fall back to localhost on
+    // the frontend's default PORT (25562 matches the studiolayer-ai service).
+    if (modelImageUrl.startsWith("/")) {
+      const domain = process.env.REPLIT_DEV_DOMAIN;
+      if (domain) {
+        modelImageUrl = `https://${domain}${modelImageUrl}`;
+      } else {
+        const frontendPort = 25562;
+        modelImageUrl = `http://localhost:${frontendPort}${modelImageUrl}`;
+      }
+      logger.info(
+        { renderId, resolvedModelImageUrl: modelImageUrl },
+        "AI pipeline: resolved relative identity imageUrl to absolute URL",
+      );
+    }
+
     logger.info(
       { renderId, modelImageUrl, modelIdentityId, modelPose, modelGender, modelAgeRange, cameraFraming, garmentPlacement },
       "AI pipeline: model image selected",

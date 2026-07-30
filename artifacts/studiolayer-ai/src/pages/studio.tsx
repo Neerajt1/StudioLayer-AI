@@ -425,51 +425,42 @@ export default function StudioPage() {
                   <div className="grid grid-cols-2 gap-2">
                     {identities.map((identity) => {
                       const isSelected = selectedIdentityId === identity.id;
-                      const initials = identity.displayName
-                        .split(/[\s—–-]+/)
-                        .filter(Boolean)
-                        .slice(0, 2)
-                        .map((w: string) => w[0])
-                        .join('')
-                        .toUpperCase();
                       return (
                         <div
                           key={identity.id}
                           onClick={() =>
                             setSelectedIdentityId(isSelected ? '' : identity.id)
                           }
-                          className={`cursor-pointer rounded border p-3 flex flex-col items-center gap-2 transition-all select-none ${
+                          className={`cursor-pointer rounded border overflow-hidden flex flex-col transition-all select-none ${
                             isSelected
-                              ? 'border-accent bg-accent/10 ring-1 ring-accent'
+                              ? 'border-accent ring-1 ring-accent'
                               : 'border-border bg-card hover:border-accent/40'
                           }`}
                         >
-                          {/* Placeholder avatar — initials only; imageUrl not used yet */}
-                          <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
-                              isSelected
-                                ? 'bg-accent text-accent-foreground'
-                                : 'bg-muted text-muted-foreground'
-                            }`}
-                          >
-                            {initials}
+                          {/* Model image thumbnail — portrait 3:4 crop */}
+                          <div className="w-full aspect-[3/4] bg-muted overflow-hidden relative">
+                            <img
+                              src={identity.imageUrl}
+                              alt={identity.displayName}
+                              className="w-full h-full object-cover object-top"
+                              loading="lazy"
+                            />
+                            {isSelected && (
+                              <div className="absolute inset-0 bg-accent/10 flex items-end justify-center pb-1">
+                                <span className="text-[9px] text-accent font-mono bg-background/80 px-1.5 py-0.5 rounded">
+                                  ✓ Selected
+                                </span>
+                              </div>
+                            )}
                           </div>
-                          <div className="text-center w-full">
+                          <div className="text-center w-full px-2 py-1.5">
                             <p className="text-xs font-medium text-foreground leading-tight truncate">
-                              {identity.displayName.split(/\s*[—–]\s*/)[0].trim()}
+                              {identity.displayName}
                             </p>
                             <p className="text-[10px] text-muted-foreground font-mono mt-0.5 capitalize">
-                              {identity.gender} · {identity.ageGroup.replace(/_/g, ' ')}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground font-mono capitalize">
-                              {identity.ethnicity.replace(/_/g, ' ')} · {identity.bodyType}
+                              {identity.ethnicity.replace(/_/g, ' ')}
                             </p>
                           </div>
-                          {isSelected && (
-                            <span className="text-[10px] text-accent font-mono leading-none">
-                              ✓ Selected
-                            </span>
-                          )}
                         </div>
                       );
                     })}
