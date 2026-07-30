@@ -4,6 +4,7 @@ import { db, rendersTable, usersTable } from "@workspace/db";
 import { CreateRenderBody, GetRenderParams } from "@workspace/api-zod";
 import { FREE_TIER_LIMIT } from "./auth";
 import { runAIPipeline } from "../services/ai-pipeline";
+import { runIntelligenceAnalysis } from "../intelligence";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -131,6 +132,16 @@ router.post("/renders", async (req, res): Promise<void> => {
     .update(rendersTable)
     .set({ status: "processing" })
     .where(eq(rendersTable.id, render.id));
+
+  // Fire-and-forget: run the Intelligence Layer analysis in the background.
+  // This does NOT affect rendering parameters or API response — logging only.
+  runIntelligenceAnalysis({
+    renderId:          render.id,
+    garmentImageUrl:   sourceImageUrl,
+    garmentPlacement,
+  }).catch((err) => {
+    logger.warn({ renderId: render.id, err }, "Intelligence analysis failed (non-critical)");
+  });
 
   // Fire-and-forget: run the AI pipeline in the background
   runAIPipeline({

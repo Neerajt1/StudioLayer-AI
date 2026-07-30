@@ -1,0 +1,425 @@
+TASK ID: SL-013A
+
+STRICT MODE
+
+OBJECTIVE
+
+StudioLayer AI is evolving from a Virtual Try-On application into an AI Fashion Styling Platform.
+
+The objective of this sprint is NOT to improve image rendering.
+
+The objective is to build the Intelligence Layer that understands garments and intelligently completes outfits before rendering.
+
+This sprint creates the decision engine only.
+
+Rendering behaviour MUST remain exactly the same.
+
+------------------------------------------------------------
+
+DO NOT MODIFY
+
+• Authentication
+
+• Billing
+
+• Identity Library
+
+• Rendering Pipeline
+
+• FASHN Integration
+
+• Rendering Parameters
+
+• Existing API Behaviour
+
+• Upload Flow
+
+• Database Schema
+
+------------------------------------------------------------
+
+PART 1
+
+Garment Intelligence
+
+When a garment is uploaded,
+
+automatically determine
+
+• category
+• subcategory
+• gender
+• age group
+• colour
+• fit
+• fabric
+• sleeve type
+• sleeve length
+• neckline
+• collar
+• garment length
+• pattern
+• texture
+• season
+• occasion
+
+Example
+
+Women's Satin Bow Blouse
+
+↓
+
+Category:
+Top
+
+Style:
+Smart Casual
+
+Fabric:
+Satin
+
+Colour:
+Camel
+
+Occasion:
+Office / Casual
+
+Season:
+Spring / Autumn
+
+------------------------------------------------------------
+
+PART 2
+
+StudioLayer Style Engine
+
+Create a dedicated module
+
+StyleEngine
+
+The Style Engine is responsible for selecting complementary clothing.
+
+The Style Engine MUST NOT search the internet.
+
+The Style Engine MUST use the internal Fashion Knowledge Base.
+
+------------------------------------------------------------
+
+PART 3
+
+Fashion Knowledge Base
+
+Create a structured editable knowledge base.
+
+DO NOT hardcode outfit combinations inside TypeScript.
+
+The knowledge base must be editable without changing application code.
+
+Example
+
+Blue Slim Jeans
+
+Recommended Tops
+
+• White Crew Neck Tee
+• Black Polo
+• Oxford Shirt
+• Grey Sweatshirt
+
+Recommended Footwear
+
+• White Sneakers
+• Brown Loafers
+
+Recommended Accessories
+
+• Brown Belt
+• Watch
+
+------------------------------------------------------------
+
+Women's Satin Blouse
+
+Recommended Bottoms
+
+• White Wide-leg Pants
+• Beige Trousers
+• Blue Straight Jeans
+• Black Pencil Skirt
+
+Recommended Footwear
+
+• Nude Heels
+• White Sneakers
+
+Recommended Accessories
+
+• Minimal Jewellery
+
+------------------------------------------------------------
+
+PART 4
+
+Style Modes
+
+Support
+
+Default
+
+• E-Commerce Catalog
+
+Future Modes
+
+• Casual
+• Smart Casual
+• Business Casual
+• Luxury
+• Minimal
+• Streetwear
+• Old Money
+• Editorial
+• Athleisure
+• Kids Casual
+
+Do NOT expose these modes in the UI yet.
+
+------------------------------------------------------------
+
+PART 5
+
+Smart Wardrobe Completion
+
+Automatically determine which garments are missing.
+
+Uploaded Top
+
+↓
+
+Generate
+
+Bottom
+
+Shoes
+
+Accessories
+
+------------------------------------------------------------
+
+Uploaded Bottom
+
+↓
+
+Generate
+
+Top
+
+Shoes
+
+Accessories
+
+------------------------------------------------------------
+
+Dress
+
+↓
+
+Generate
+
+Shoes
+
+Accessories
+
+------------------------------------------------------------
+
+Jacket
+
+↓
+
+Generate
+
+Inner Layer
+
+Bottom
+
+Shoes
+
+------------------------------------------------------------
+
+Never recommend another garment from the uploaded category.
+
+The completed outfit should always look intentional and commercially presentable.
+
+The user should never see reference clothing, compression garments, leggings or base garments in the final styled concept.
+
+------------------------------------------------------------
+
+PART 6
+
+Decision Engine
+
+Build a deterministic Rule Engine.
+
+The Rule Engine makes the first decision.
+
+GPT is OPTIONAL.
+
+GPT should only be used when
+
+• no suitable rule exists
+
+OR
+
+• Rule Engine confidence is low.
+
+The application must function correctly using only the Rule Engine.
+
+GPT is an enhancement layer, not a dependency.
+
+------------------------------------------------------------
+
+PART 7
+
+Developer Logging
+
+For every render generate
+
+• Detected Garment
+• Detected Style
+• Selected Style Mode
+• Recommended Outfit
+• Confidence Score
+• Decision Source
+
+Rule Engine
+
+or
+
+GPT
+
+------------------------------------------------------------
+
+PART 8
+
+Architecture
+
+Create the following independent modules
+
+GarmentAnalyzer
+
+StyleEngine
+
+FashionKnowledgeBase
+
+WardrobeCompletionEngine
+
+DecisionEngine
+
+These modules must remain completely independent from the rendering engine.
+
+------------------------------------------------------------
+
+PART 9
+
+Architecture Principles
+
+Rendering MUST NEVER decide styling.
+
+Styling MUST NEVER decide rendering.
+
+The Intelligence Layer produces ONE structured outfit object.
+
+Example
+
+{
+  "styleMode": "ecommerce_catalog",
+  "uploadedGarment": {
+    "category": "bottom",
+    "subcategory": "jeans"
+  },
+  "recommendedOutfit": {
+    "top": "white crew neck t-shirt",
+    "footwear": "white sneakers",
+    "accessories": [
+      "brown belt"
+    ]
+  }
+}
+
+The rendering engine simply consumes this object.
+
+Do NOT duplicate styling logic inside rendering code.
+
+The Fashion Knowledge Base must remain the single source of truth.
+
+The architecture must allow future replacement of the Rule Engine without modifying the renderer.
+
+------------------------------------------------------------
+
+PART 10
+
+Future Compatibility
+
+The architecture must support future expansion to
+
+• Shoes
+• Belts
+• Watches
+• Handbags
+• Jewellery
+• Caps
+• Eyewear
+• Scarves
+
+without redesign.
+
+The Fashion Knowledge Base must support multiple regional styling packs.
+
+Examples
+
+• India
+• Europe
+• United States
+• Middle East
+• East Asia
+
+Regional styling must be selectable without modifying application code.
+
+------------------------------------------------------------
+
+PART 11
+
+Deliverables
+
+Return
+
+1. Files Modified
+
+2. Architecture Diagram
+
+3. New Modules
+
+4. Fashion Knowledge Base Structure
+
+5. Example Rule Sets
+
+6. Example Outfit Object
+
+7. Developer Logs
+
+8. Future Extension Points
+
+IMPORTANT
+
+This sprint builds ONLY the StudioLayer Intelligence Engine.
+
+DO NOT modify
+
+• Rendering
+
+• FASHN Integration
+
+• API Parameters
+
+• Image Generation
+
+The renderer must continue behaving exactly as it does today.

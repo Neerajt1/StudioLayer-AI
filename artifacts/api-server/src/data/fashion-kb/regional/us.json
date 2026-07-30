@@ -1,0 +1,63 @@
+{
+  "version": "1.0",
+  "region": "us",
+  "description": "StudioLayer AI Fashion Knowledge Base — United States Regional Pack. American casual, athleisure, and streetwear emphasis.",
+  "styleModes": {
+    "ecommerce_catalog": {
+      "description": "US catalog styling — relaxed, expressive, layered with streetwear influence",
+      "rules": [
+
+        {
+          "id": "us_tops_graphic_tee",
+          "name": "Graphic / Print T-Shirt",
+          "match": {
+            "category": "tops",
+            "subcategory": ["graphic tee", "print tee", "band tee", "logo tee"],
+            "pattern": ["graphic", "print", "logo"]
+          },
+          "recommendations": {
+            "bottoms": ["Relaxed Blue Jeans", "Cargo Pants", "Cargo Shorts"],
+            "footwear": ["High-Top Sneakers", "Air Force 1s", "Skate Shoes"],
+            "accessories": ["Baseball Cap", "Backpack", "Sports Watch"]
+          },
+          "confidence": 0.87,
+          "tags": ["streetwear", "casual", "american", "spring", "summer"]
+        },
+
+        {
+          "id": "us_bottoms_cargo_pants",
+          "name": "Cargo Pants",
+          "match": {
+            "category": "bottoms",
+            "subcategory": ["cargo pants", "cargo trousers", "utility pants"]
+          },
+          "recommendations": {
+            "tops": ["Slim Fit Tee", "Ribbed Tank Top", "Fitted Polo"],
+            "footwear": ["Chunky Sneakers", "Work Boots", "High-Top Sneakers"],
+            "accessories": ["Sports Watch", "Baseball Cap", "Utility Belt"]
+          },
+          "confidence": 0.88,
+          "tags": ["streetwear", "casual", "american", "utility", "spring", "autumn"]
+        },
+
+        {
+          "id": "us_outerwear_varsity_jacket",
+          "name": "Varsity / Bomber Jacket",
+          "match": {
+            "category": "outerwear",
+            "subcategory": ["varsity jacket", "bomber jacket", "letterman jacket", "baseball jacket"]
+          },
+          "recommendations": {
+            "innerLayer": ["White Crew Neck Tee", "Graphic Tee"],
+            "bottoms": ["Straight Leg Jeans", "Jogger Pants", "Cargo Pants"],
+            "footwear": ["Retro Sneakers", "White Chunky Trainers", "Clean Air Forces"],
+            "accessories": ["Baseball Cap", "Simple Chain", "Backpack"]
+          },
+          "confidence": 0.89,
+          "tags": ["streetwear", "american", "casual", "autumn", "spring"]
+        }
+
+      ]
+    }
+  }
+}

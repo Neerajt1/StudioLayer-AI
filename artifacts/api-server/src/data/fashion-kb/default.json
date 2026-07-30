@@ -1,0 +1,475 @@
+{
+  "version": "1.0",
+  "region": "default",
+  "description": "StudioLayer AI Fashion Knowledge Base — Global Default Pack",
+  "styleModes": {
+    "ecommerce_catalog": {
+      "description": "Clean, commercially presentable catalog styling for fashion e-commerce",
+      "rules": [
+
+        {
+          "id": "tops_satin_blouse_womens",
+          "name": "Women's Satin / Silk Blouse",
+          "match": {
+            "category": "tops",
+            "subcategory": ["blouse", "satin blouse", "silk blouse", "bow blouse"],
+            "gender": ["womens"],
+            "fabric": ["satin", "silk", "charmeuse"]
+          },
+          "recommendations": {
+            "bottoms": ["White Wide-leg Pants", "Beige Tailored Trousers", "Blue Straight-leg Jeans", "Black Pencil Skirt"],
+            "footwear": ["Nude Block Heels", "White Leather Sneakers", "Pointed Toe Mules"],
+            "accessories": ["Minimal Gold Jewellery", "Delicate Chain Necklace", "Small Leather Clutch"]
+          },
+          "confidence": 0.92,
+          "tags": ["formal", "office", "smart-casual", "spring", "autumn"]
+        },
+
+        {
+          "id": "tops_cotton_tee_womens",
+          "name": "Women's Cotton T-Shirt",
+          "match": {
+            "category": "tops",
+            "subcategory": ["t-shirt", "tee", "crew neck tee", "basic tee"],
+            "gender": ["womens"],
+            "fabric": ["cotton", "jersey"]
+          },
+          "recommendations": {
+            "bottoms": ["High-waist Blue Jeans", "White Linen Trousers", "Black Mini Skirt", "Beige Cargo Pants"],
+            "footwear": ["White Canvas Sneakers", "Slide Sandals", "Clean White Trainers"],
+            "accessories": ["Hoop Earrings", "Layered Necklaces", "Crossbody Bag"]
+          },
+          "confidence": 0.88,
+          "tags": ["casual", "everyday", "summer", "spring"]
+        },
+
+        {
+          "id": "tops_cotton_tee_mens",
+          "name": "Men's Cotton T-Shirt",
+          "match": {
+            "category": "tops",
+            "subcategory": ["t-shirt", "tee", "crew neck tee", "basic tee"],
+            "gender": ["mens"],
+            "fabric": ["cotton", "jersey"]
+          },
+          "recommendations": {
+            "bottoms": ["Slim Blue Jeans", "Chinos", "Cargo Shorts", "Grey Joggers"],
+            "footwear": ["White Leather Sneakers", "Clean White Trainers", "Slip-On Loafers"],
+            "accessories": ["Simple Watch", "Silver Chain", "Canvas Tote"]
+          },
+          "confidence": 0.88,
+          "tags": ["casual", "everyday", "summer", "spring"]
+        },
+
+        {
+          "id": "tops_oxford_shirt_mens",
+          "name": "Men's Oxford / Dress Shirt",
+          "match": {
+            "category": "tops",
+            "subcategory": ["oxford shirt", "dress shirt", "button-down shirt", "button-up shirt", "shirt"],
+            "gender": ["mens"],
+            "fabric": ["cotton", "poplin", "oxford", "twill"]
+          },
+          "recommendations": {
+            "bottoms": ["Slim Chinos", "Navy Slim Trousers", "Dark Slim Jeans"],
+            "footwear": ["Tan Leather Loafers", "White Oxford Shoes", "Brown Derby Shoes"],
+            "accessories": ["Leather Belt", "Classic Watch", "Minimal Pocket Square"]
+          },
+          "confidence": 0.91,
+          "tags": ["smart-casual", "office", "business-casual", "spring", "autumn"]
+        },
+
+        {
+          "id": "tops_polo_shirt_mens",
+          "name": "Men's Polo Shirt",
+          "match": {
+            "category": "tops",
+            "subcategory": ["polo", "polo shirt"],
+            "gender": ["mens"]
+          },
+          "recommendations": {
+            "bottoms": ["Slim Chinos", "Navy Shorts", "Slim Jeans"],
+            "footwear": ["White Leather Sneakers", "Tan Penny Loafers", "Boat Shoes"],
+            "accessories": ["Leather Belt", "Sport Watch", "Sunglasses"]
+          },
+          "confidence": 0.89,
+          "tags": ["smart-casual", "casual", "spring", "summer"]
+        },
+
+        {
+          "id": "tops_knit_sweater",
+          "name": "Knit Sweater / Jumper",
+          "match": {
+            "category": "tops",
+            "subcategory": ["sweater", "jumper", "pullover", "knitwear", "knit top"],
+            "fabric": ["wool", "cashmere", "knit", "cotton knit", "merino"]
+          },
+          "recommendations": {
+            "bottoms": ["Dark Slim Jeans", "Tailored Trousers", "Midi Skirt"],
+            "footwear": ["Leather Chelsea Boots", "White Sneakers", "Loafers"],
+            "accessories": ["Leather Belt", "Simple Watch", "Wool Scarf"]
+          },
+          "confidence": 0.87,
+          "tags": ["casual", "smart-casual", "autumn", "winter"]
+        },
+
+        {
+          "id": "tops_hoodie",
+          "name": "Hoodie / Sweatshirt",
+          "match": {
+            "category": "tops",
+            "subcategory": ["hoodie", "sweatshirt", "hooded sweatshirt", "pullover hoodie"],
+            "fabric": ["fleece", "cotton fleece", "cotton", "jersey"]
+          },
+          "recommendations": {
+            "bottoms": ["Slim Blue Jeans", "Jogger Trousers", "Cargo Pants"],
+            "footwear": ["White Chunky Sneakers", "Clean White Trainers", "Slides"],
+            "accessories": ["Crossbody Bag", "Simple Watch", "Cap"]
+          },
+          "confidence": 0.85,
+          "tags": ["casual", "streetwear", "autumn", "spring"]
+        },
+
+        {
+          "id": "tops_blazer_womens",
+          "name": "Women's Blazer",
+          "match": {
+            "category": "tops",
+            "subcategory": ["blazer", "jacket blazer", "suit jacket"],
+            "gender": ["womens"],
+            "fabric": ["wool", "linen", "crepe", "boucle", "polyester blend"]
+          },
+          "recommendations": {
+            "bottoms": ["Straight Leg Trousers", "Slim Blue Jeans", "Tailored Shorts"],
+            "footwear": ["Block Heels", "Loafers", "Pointed Toe Flats"],
+            "accessories": ["Gold Hoop Earrings", "Simple Watch", "Structured Mini Bag"]
+          },
+          "confidence": 0.90,
+          "tags": ["office", "smart-casual", "business-casual", "spring", "autumn"]
+        },
+
+        {
+          "id": "tops_blazer_mens",
+          "name": "Men's Blazer / Sport Coat",
+          "match": {
+            "category": "tops",
+            "subcategory": ["blazer", "sport coat", "suit jacket"],
+            "gender": ["mens"],
+            "fabric": ["wool", "linen", "tweed", "cotton", "herringbone"]
+          },
+          "recommendations": {
+            "bottoms": ["Tailored Dress Trousers", "Slim Chinos", "Dark Slim Jeans"],
+            "footwear": ["Brown Oxford Shoes", "Tan Derby Shoes", "Leather Loafers"],
+            "accessories": ["Leather Belt", "Classic Watch", "Pocket Square"]
+          },
+          "confidence": 0.91,
+          "tags": ["office", "smart-casual", "business-casual", "spring", "autumn"]
+        },
+
+        {
+          "id": "tops_crop_top_womens",
+          "name": "Women's Crop Top",
+          "match": {
+            "category": "tops",
+            "subcategory": ["crop top", "cropped tee", "cropped shirt", "bralette top"],
+            "gender": ["womens"],
+            "garmentLength": ["cropped"]
+          },
+          "recommendations": {
+            "bottoms": ["High-waist Wide-leg Jeans", "Maxi Skirt", "High-waist Linen Trousers"],
+            "footwear": ["Platform Sandals", "White Chunky Sneakers", "Mule Heels"],
+            "accessories": ["Gold Body Chain", "Hoop Earrings", "Bucket Bag"]
+          },
+          "confidence": 0.86,
+          "tags": ["casual", "summer", "editorial"]
+        },
+
+        {
+          "id": "bottoms_slim_jeans_mens",
+          "name": "Men's Slim / Straight Jeans",
+          "match": {
+            "category": "bottoms",
+            "subcategory": ["jeans", "slim jeans", "straight jeans", "skinny jeans"],
+            "gender": ["mens"],
+            "fabric": ["denim"],
+            "fit": ["slim", "straight", "skinny"]
+          },
+          "recommendations": {
+            "tops": ["White Crew Neck T-Shirt", "Black Polo Shirt", "Oxford Shirt", "Grey Sweatshirt"],
+            "footwear": ["White Leather Sneakers", "Brown Leather Loafers", "Chelsea Boots"],
+            "accessories": ["Leather Belt", "Simple Watch"]
+          },
+          "confidence": 0.92,
+          "tags": ["casual", "smart-casual", "everyday", "spring", "autumn"]
+        },
+
+        {
+          "id": "bottoms_slim_jeans_womens",
+          "name": "Women's Slim / Skinny Jeans",
+          "match": {
+            "category": "bottoms",
+            "subcategory": ["jeans", "slim jeans", "skinny jeans"],
+            "gender": ["womens"],
+            "fabric": ["denim"],
+            "fit": ["slim", "skinny"]
+          },
+          "recommendations": {
+            "tops": ["Fitted Blouse", "Striped Breton Top", "Fitted Turtleneck", "Cropped Blazer"],
+            "footwear": ["White Sneakers", "Block Heels", "Ankle Boots"],
+            "accessories": ["Hoop Earrings", "Leather Belt", "Mini Crossbody Bag"]
+          },
+          "confidence": 0.89,
+          "tags": ["casual", "smart-casual", "everyday", "spring", "autumn"]
+        },
+
+        {
+          "id": "bottoms_wide_leg_jeans_womens",
+          "name": "Women's Wide-Leg / Relaxed Jeans",
+          "match": {
+            "category": "bottoms",
+            "subcategory": ["wide-leg jeans", "baggy jeans", "barrel jeans", "relaxed jeans"],
+            "gender": ["womens"],
+            "fabric": ["denim"],
+            "fit": ["wide", "relaxed", "baggy", "oversized"]
+          },
+          "recommendations": {
+            "tops": ["Fitted Ribbed Tank", "Cropped Knit", "Fitted White Tee"],
+            "footwear": ["Platform Loafers", "White Chunky Sneakers", "Low Mules"],
+            "accessories": ["Minimal Belt", "Stud Earrings", "Tote Bag"]
+          },
+          "confidence": 0.88,
+          "tags": ["casual", "streetwear", "editorial", "spring", "summer"]
+        },
+
+        {
+          "id": "bottoms_black_trousers",
+          "name": "Black Tailored Trousers",
+          "match": {
+            "category": "bottoms",
+            "subcategory": ["trousers", "dress pants", "tailored trousers", "smart trousers"],
+            "colour": ["black"],
+            "fabric": ["wool", "polyester", "crepe", "twill", "ponte"]
+          },
+          "recommendations": {
+            "tops": ["White Dress Shirt", "Black Fitted Blazer", "Ivory Silk Blouse"],
+            "footwear": ["Black Oxford Shoes", "Pointed Toe Heels", "Black Loafers"],
+            "accessories": ["Leather Belt", "Minimal Jewellery", "Simple Watch"]
+          },
+          "confidence": 0.91,
+          "tags": ["office", "formal", "smart-casual", "autumn", "winter"]
+        },
+
+        {
+          "id": "bottoms_chinos_mens",
+          "name": "Men's Chinos",
+          "match": {
+            "category": "bottoms",
+            "subcategory": ["chinos", "chino trousers", "khaki trousers"],
+            "gender": ["mens"],
+            "fabric": ["cotton twill", "cotton", "chino"]
+          },
+          "recommendations": {
+            "tops": ["White Oxford Shirt", "Navy Polo", "Grey Crew Neck Tee", "Striped Breton"],
+            "footwear": ["Tan Penny Loafers", "White Leather Sneakers", "Boat Shoes"],
+            "accessories": ["Woven Belt", "Simple Watch", "Canvas Tote"]
+          },
+          "confidence": 0.90,
+          "tags": ["smart-casual", "casual", "spring", "summer", "autumn"]
+        },
+
+        {
+          "id": "bottoms_midi_skirt_womens",
+          "name": "Women's Midi Skirt",
+          "match": {
+            "category": "bottoms",
+            "subcategory": ["midi skirt", "pleated skirt", "satin skirt", "flared skirt"],
+            "gender": ["womens"],
+            "garmentLength": ["midi"]
+          },
+          "recommendations": {
+            "tops": ["Fitted Ribbed Top", "Tucked-in Blouse", "Knit Crop Top"],
+            "footwear": ["Square-Toe Mules", "Ankle Boots", "Kitten Heels", "White Trainers"],
+            "accessories": ["Delicate Necklace", "Small Shoulder Bag", "Gold Bangles"]
+          },
+          "confidence": 0.89,
+          "tags": ["smart-casual", "editorial", "spring", "summer", "autumn"]
+        },
+
+        {
+          "id": "bottoms_mini_skirt_womens",
+          "name": "Women's Mini Skirt",
+          "match": {
+            "category": "bottoms",
+            "subcategory": ["mini skirt", "micro skirt", "denim skirt"],
+            "gender": ["womens"],
+            "garmentLength": ["mini", "micro"]
+          },
+          "recommendations": {
+            "tops": ["Cropped Fitted Top", "Tucked-in Blouse", "Fitted Polo"],
+            "footwear": ["Over-Knee Boots", "Block-Heel Ankle Boots", "Pointed Toe Pumps"],
+            "accessories": ["Chunky Belt", "Hoop Earrings", "Mini Bag"]
+          },
+          "confidence": 0.87,
+          "tags": ["casual", "editorial", "summer", "spring"]
+        },
+
+        {
+          "id": "bottoms_wide_leg_trousers_womens",
+          "name": "Women's Wide-Leg Trousers",
+          "match": {
+            "category": "bottoms",
+            "subcategory": ["wide-leg trousers", "palazzo pants", "flared trousers", "wide-leg pants"],
+            "gender": ["womens"],
+            "fit": ["wide", "wide-leg", "palazzo", "flared"]
+          },
+          "recommendations": {
+            "tops": ["Fitted Crop Top", "Tucked-in Silk Blouse", "Ribbed Tank"],
+            "footwear": ["Platform Mules", "Pointed Toe Heels", "Barely-there Sandals"],
+            "accessories": ["Gold Cuff Bracelet", "Statement Earrings", "Minimal Belt"]
+          },
+          "confidence": 0.89,
+          "tags": ["smart-casual", "editorial", "office", "spring", "autumn"]
+        },
+
+        {
+          "id": "one_pieces_casual_dress_womens",
+          "name": "Women's Casual Dress",
+          "match": {
+            "category": "one-pieces",
+            "subcategory": ["casual dress", "sundress", "shirt dress", "day dress", "cotton dress"],
+            "gender": ["womens"],
+            "fabric": ["cotton", "linen", "rayon", "jersey"]
+          },
+          "recommendations": {
+            "footwear": ["White Canvas Sneakers", "Strappy Flat Sandals", "Espadrilles"],
+            "accessories": ["Woven Tote Bag", "Dainty Necklace", "Straw Hat"]
+          },
+          "confidence": 0.88,
+          "tags": ["casual", "everyday", "spring", "summer"]
+        },
+
+        {
+          "id": "one_pieces_formal_dress_womens",
+          "name": "Women's Formal / Evening Dress",
+          "match": {
+            "category": "one-pieces",
+            "subcategory": ["evening dress", "formal dress", "cocktail dress", "gown", "party dress"],
+            "gender": ["womens"],
+            "fabric": ["silk", "satin", "chiffon", "velvet", "lace", "crepe"],
+            "occasion": ["evening", "formal", "gala"]
+          },
+          "recommendations": {
+            "footwear": ["Strappy Heeled Sandals", "Pointed-Toe Heels", "Slingback Pumps"],
+            "accessories": ["Statement Earrings", "Delicate Bracelet", "Small Evening Clutch"]
+          },
+          "confidence": 0.93,
+          "tags": ["formal", "evening", "luxury", "autumn", "winter"]
+        },
+
+        {
+          "id": "one_pieces_wrap_dress_womens",
+          "name": "Women's Wrap Dress",
+          "match": {
+            "category": "one-pieces",
+            "subcategory": ["wrap dress", "wrap-around dress"],
+            "gender": ["womens"]
+          },
+          "recommendations": {
+            "footwear": ["Block-Heel Sandals", "Espadrille Wedges", "Flat Mules", "White Sneakers"],
+            "accessories": ["Hoop Earrings", "Delicate Necklace", "Small Crossbody Bag"]
+          },
+          "confidence": 0.89,
+          "tags": ["smart-casual", "casual", "spring", "summer"]
+        },
+
+        {
+          "id": "one_pieces_jumpsuit",
+          "name": "Jumpsuit / Playsuit",
+          "match": {
+            "category": "one-pieces",
+            "subcategory": ["jumpsuit", "playsuit", "romper", "dungarees"]
+          },
+          "recommendations": {
+            "footwear": ["Block-Heel Mules", "Heeled Sandals", "White Loafers", "Trainers"],
+            "accessories": ["Minimal Gold Jewellery", "Thin Belt", "Small Bag"]
+          },
+          "confidence": 0.87,
+          "tags": ["casual", "smart-casual", "editorial", "spring", "summer"]
+        },
+
+        {
+          "id": "outerwear_trench_coat",
+          "name": "Trench Coat",
+          "match": {
+            "category": "outerwear",
+            "subcategory": ["trench coat", "trenchcoat", "rain coat", "mac coat"],
+            "fabric": ["cotton", "gabardine", "polyester"]
+          },
+          "recommendations": {
+            "innerLayer": ["Ribbed Turtleneck", "White Button-Down Shirt", "Fitted Crew Neck Knit"],
+            "bottoms": ["Tailored Trousers", "Slim Jeans", "Straight Leg Jeans"],
+            "footwear": ["Ankle Boots", "Chelsea Boots", "Leather Loafers"],
+            "accessories": ["Leather Belt", "Simple Watch", "Leather Tote"]
+          },
+          "confidence": 0.90,
+          "tags": ["smart-casual", "autumn", "spring", "transitional"]
+        },
+
+        {
+          "id": "outerwear_puffer_jacket",
+          "name": "Puffer / Quilted Jacket",
+          "match": {
+            "category": "outerwear",
+            "subcategory": ["puffer jacket", "quilted jacket", "puffer coat", "down jacket", "down coat"],
+            "fabric": ["nylon", "polyester", "down", "puffer"]
+          },
+          "recommendations": {
+            "innerLayer": ["Grey Hoodie", "Fitted Sweatshirt", "Basic Knit"],
+            "bottoms": ["Slim Jeans", "Jogger Trousers", "Cargo Pants"],
+            "footwear": ["Chunky Sneakers", "White Trainers", "Combat Boots"],
+            "accessories": ["Beanie Hat", "Simple Watch", "Backpack"]
+          },
+          "confidence": 0.88,
+          "tags": ["casual", "streetwear", "winter", "autumn"]
+        },
+
+        {
+          "id": "outerwear_leather_jacket",
+          "name": "Leather / Biker Jacket",
+          "match": {
+            "category": "outerwear",
+            "subcategory": ["leather jacket", "biker jacket", "moto jacket", "faux leather jacket"],
+            "fabric": ["leather", "faux leather", "vegan leather"]
+          },
+          "recommendations": {
+            "innerLayer": ["White Crew Neck Tee", "Black Basic Tee", "Striped Breton"],
+            "bottoms": ["Slim Black Jeans", "Dark Slim Jeans", "Black Skinny Jeans"],
+            "footwear": ["Black Chelsea Boots", "Chunky Lug Boots", "White Chunky Sneakers"],
+            "accessories": ["Silver Chain Necklace", "Simple Watch", "Crossbody Bag"]
+          },
+          "confidence": 0.90,
+          "tags": ["casual", "streetwear", "editorial", "autumn", "winter"]
+        },
+
+        {
+          "id": "outerwear_suit_jacket",
+          "name": "Suit Jacket / Formal Coat",
+          "match": {
+            "category": "outerwear",
+            "subcategory": ["suit jacket", "frock coat", "overcoat", "topcoat", "wool coat"],
+            "fabric": ["wool", "cashmere", "tweed", "herringbone"]
+          },
+          "recommendations": {
+            "innerLayer": ["White Dress Shirt", "Fine Knit Turtleneck"],
+            "bottoms": ["Matching Suit Trousers", "Tailored Slim Trousers"],
+            "footwear": ["Oxford Shoes", "Derby Shoes", "Pointed Toe Heels"],
+            "accessories": ["Leather Belt", "Minimal Watch", "Leather Briefcase"]
+          },
+          "confidence": 0.91,
+          "tags": ["formal", "office", "business", "autumn", "winter"]
+        }
+
+      ]
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "region": "middle-east",
+  "description": "StudioLayer AI Fashion Knowledge Base — Middle East Regional Pack. Modest fashion, luxe fabrics, covered silhouettes alongside contemporary styles.",
+  "styleModes": {
+    "ecommerce_catalog": {
+      "description": "Middle East catalog styling — modest, elegant, layered with cultural nuance",
+      "rules": [
+
+        {
+          "id": "me_tops_abaya_layer",
+          "name": "Modest Layer Top / Abaya Top",
+          "match": {
+            "category": "tops",
+            "subcategory": ["abaya", "modest top", "long-sleeve top", "modest blouse"],
+            "gender": ["womens"],
+            "occasion": ["modest", "religious", "traditional"]
+          },
+          "recommendations": {
+            "bottoms": ["Wide-leg Palazzo Trousers", "Maxi Skirt", "Loose Linen Trousers"],
+            "footwear": ["Block-Heel Mules", "Embellished Flat Sandals", "Slip-On Loafers"],
+            "accessories": ["Silk Scarf", "Gold Statement Earrings", "Structured Handbag"]
+          },
+          "confidence": 0.93,
+          "tags": ["modest", "traditional", "elegant", "spring", "autumn", "winter"]
+        },
+
+        {
+          "id": "me_one_pieces_maxi_dress",
+          "name": "Maxi Dress (Modest Style)",
+          "match": {
+            "category": "one-pieces",
+            "subcategory": ["maxi dress", "kaftan", "abaya dress"],
+            "gender": ["womens"],
+            "garmentLength": ["maxi", "full-length"]
+          },
+          "recommendations": {
+            "footwear": ["Embellished Flat Sandals", "Block-Heel Mules", "Pointed-Toe Flats"],
+            "accessories": ["Gold Cuff Bracelet", "Statement Earrings", "Embroidered Clutch"]
+          },
+          "confidence": 0.92,
+          "tags": ["modest", "elegant", "festive", "spring", "summer", "autumn"]
+        },
+
+        {
+          "id": "me_bottoms_wide_trousers",
+          "name": "Wide-Leg / Palazzo Trousers (Modest)",
+          "match": {
+            "category": "bottoms",
+            "subcategory": ["palazzo pants", "wide-leg trousers", "harem pants"],
+            "gender": ["womens"],
+            "fit": ["wide", "loose", "relaxed"]
+          },
+          "recommendations": {
+            "tops": ["Fitted Modest Blouse", "Long-Sleeve Fitted Top", "Cropped Knit"],
+            "footwear": ["Embellished Sandals", "Block-Heel Mules", "Platform Sneakers"],
+            "accessories": ["Gold Bangles", "Chain Belt", "Structured Tote"]
+          },
+          "confidence": 0.89,
+          "tags": ["modest", "elegant", "smart-casual", "spring", "summer"]
+        }
+
+      ]
+    }
+  }
+}

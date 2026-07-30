@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "region": "india",
+  "description": "StudioLayer AI Fashion Knowledge Base — India Regional Pack. Adds ethnic and fusion wear rules layered on top of the global default.",
+  "styleModes": {
+    "ecommerce_catalog": {
+      "description": "Indian e-commerce catalog styling including ethnic, fusion, and western wear",
+      "rules": [
+
+        {
+          "id": "in_tops_kurti_womens",
+          "name": "Women's Kurti / Ethnic Top",
+          "match": {
+            "category": "tops",
+            "subcategory": ["kurti", "ethnic top", "embroidered top", "anarkali top", "cotton kurti"],
+            "gender": ["womens"]
+          },
+          "recommendations": {
+            "bottoms": ["Straight Palazzo Pants", "Cotton Leggings", "Churidar", "Fitted Trousers"],
+            "footwear": ["Kolhapuri Sandals", "Juttis", "Block-Heel Sandals", "Flat Mojris"],
+            "accessories": ["Oxidised Silver Earrings", "Bangles", "Potli Bag", "Dupatta"]
+          },
+          "confidence": 0.93,
+          "tags": ["ethnic", "fusion", "casual", "festive", "spring", "summer", "autumn"]
+        },
+
+        {
+          "id": "in_tops_kurta_mens",
+          "name": "Men's Kurta",
+          "match": {
+            "category": "tops",
+            "subcategory": ["kurta", "ethnic shirt", "nehru shirt"],
+            "gender": ["mens"]
+          },
+          "recommendations": {
+            "bottoms": ["White Pyjama Trousers", "Slim Churidar", "Cream Linen Trousers"],
+            "footwear": ["Mojris", "Kolhapuri Sandals", "Classic White Keds"],
+            "accessories": ["Thin Metal Watch", "Pocket Square"]
+          },
+          "confidence": 0.92,
+          "tags": ["ethnic", "festive", "smart-casual", "summer"]
+        },
+
+        {
+          "id": "in_one_pieces_saree_blouse",
+          "name": "Saree / Lehenga Blouse",
+          "match": {
+            "category": "tops",
+            "subcategory": ["blouse", "saree blouse", "choli"],
+            "gender": ["womens"],
+            "fabric": ["silk", "brocade", "georgette", "net", "velvet"],
+            "occasion": ["festive", "wedding", "traditional"]
+          },
+          "recommendations": {
+            "bottoms": ["Silk Saree Drape", "Lehenga Skirt", "Sharara Pants"],
+            "footwear": ["Embroidered Juttis", "Block-Heel Sandals", "Embellished Heels"],
+            "accessories": ["Polki Earrings", "Bangles", "Maangtika", "Potli Bag"]
+          },
+          "confidence": 0.95,
+          "tags": ["ethnic", "festive", "wedding", "luxury"]
+        }
+
+      ]
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "region": "east-asia",
+  "description": "StudioLayer AI Fashion Knowledge Base — East Asia Regional Pack. K-fashion, J-fashion, and C-fashion aesthetics: clean lines, layered coordination, streetwear precision.",
+  "styleModes": {
+    "ecommerce_catalog": {
+      "description": "East Asian catalog styling — minimal coordination, clean silhouettes, precision layering",
+      "rules": [
+
+        {
+          "id": "ea_tops_oversized_shirt",
+          "name": "Oversized Shirt (K/J Fashion)",
+          "match": {
+            "category": "tops",
+            "subcategory": ["oversized shirt", "relaxed shirt", "boxy shirt"],
+            "fit": ["oversized", "boxy", "relaxed"]
+          },
+          "recommendations": {
+            "bottoms": ["Straight Leg Trousers", "Cropped Wide-leg Pants", "Mini Skirt"],
+            "footwear": ["Platform Sneakers", "Mary Jane Shoes", "Clean White Trainers"],
+            "accessories": ["Simple Silver Jewellery", "Mini Bag", "Hair Clip"]
+          },
+          "confidence": 0.89,
+          "tags": ["k-fashion", "j-fashion", "casual", "minimal", "spring", "summer"]
+        },
+
+        {
+          "id": "ea_bottoms_pleated_trousers",
+          "name": "Pleated Wide-Leg Trousers",
+          "match": {
+            "category": "bottoms",
+            "subcategory": ["pleated trousers", "pleated pants", "wide-leg trousers"],
+            "fabric": ["polyester", "crepe", "linen", "wool blend"],
+            "fit": ["wide", "relaxed", "pleated"]
+          },
+          "recommendations": {
+            "tops": ["Fitted Ribbed Tank", "Fitted Knit Top", "Slim Turtleneck"],
+            "footwear": ["Platform Loafers", "Mary Jane Heels", "White Chunky Sneakers"],
+            "accessories": ["Simple Watch", "Minimal Silver Ring", "Tote Bag"]
+          },
+          "confidence": 0.90,
+          "tags": ["k-fashion", "c-fashion", "minimal", "smart-casual", "autumn", "spring"]
+        },
+
+        {
+          "id": "ea_outerwear_oversized_coat",
+          "name": "Oversized Coat (East Asian Street)",
+          "match": {
+            "category": "outerwear",
+            "subcategory": ["oversized coat", "cocoon coat", "longline coat"],
+            "fit": ["oversized", "cocoon", "boxy"]
+          },
+          "recommendations": {
+            "innerLayer": ["Ribbed Turtleneck", "Fitted Knit"],
+            "bottoms": ["Slim Jeans", "Straight Leg Trousers"],
+            "footwear": ["Platform Boots", "Chunky Sneakers", "Loafers"],
+            "accessories": ["Simple Watch", "Mini Bag", "Knit Beanie"]
+          },
+          "confidence": 0.88,
+          "tags": ["k-fashion", "j-fashion", "minimal", "editorial", "autumn", "winter"]
+        }
+
+      ]
+    }
+  }
+}

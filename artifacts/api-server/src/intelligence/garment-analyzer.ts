@@ -1,0 +1,131 @@
+// ---------------------------------------------------------------------------
+// StudioLayer AI — Garment Analyzer (SL-013A)
+//
+// Analyses an uploaded garment image using GPT-4o vision and returns a
+// structured GarmentProfile. Falls back to a minimal heuristic profile
+// derived from garmentPlacement if the vision call fails.
+// ---------------------------------------------------------------------------
+
+import OpenAI from "openai";
+import type { GarmentProfile, GarmentCategory } from "./types";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
+
+// ---------------------------------------------------------------------------
+// Fallback: derive a minimal profile from garmentPlacement alone
+// ---------------------------------------------------------------------------
+
+function fallbackProfile(
+  garmentPlacement: string | null | undefined,
+): GarmentProfile {
+  let category: GarmentCategory = "tops";
+  if (garmentPlacement === "lower_body")  category = "bottoms";
+  if (garmentPlacement === "full_body")   category = "one-pieces";
+
+  return {
+    category,
+    subcategory:     category === "tops"       ? "top"
+                   : category === "bottoms"    ? "trousers"
+                   : "dress",
+    gender:          "womens",
+    ageGroup:        "young_adult",
+    colour:          ["neutral"],
+    fit:             "standard",
+    fabric:          "unknown",
+    pattern:         "solid",
+    texture:         "smooth",
+    season:          ["spring", "autumn"],
+    occasion:        ["casual"],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// GPT-4o vision prompt
+// ---------------------------------------------------------------------------
+
+const SYSTEM_PROMPT = `You are a professional fashion analyst. Analyse the garment in the image and return a JSON object with ONLY these fields:
+
+{
+  "category": "tops" | "bottoms" | "one-pieces" | "outerwear" | "footwear" | "accessories",
+  "subcategory": string,         // e.g. "blouse", "jeans", "trench coat"
+  "gender": "womens" | "mens" | "kids" | "unisex",
+  "ageGroup": "young_child" | "teen_youth" | "young_adult" | "classic_mid_age" | "mature_executive",
+  "colour": string[],            // primary colours, lowercase, e.g. ["camel", "beige"]
+  "fit": string,                 // e.g. "slim", "relaxed", "oversized", "fitted"
+  "fabric": string,              // primary fabric, lowercase
+  "sleeveType": string | null,   // "short" | "long" | "sleeveless" | null
+  "sleeveLength": string | null, // "full" | "half" | "three-quarter" | null
+  "neckline": string | null,     // e.g. "crew" | "v-neck" | "turtleneck" | null
+  "collar": string | null,       // e.g. "spread" | "button-down" | "band" | "none" | null
+  "garmentLength": string | null,// "cropped" | "hip" | "knee" | "midi" | "maxi" | "full-length" | null
+  "pattern": string,             // "solid" | "stripe" | "floral" | "check" | "plaid" | "geometric" | "graphic"
+  "texture": string,             // "smooth" | "textured" | "knit" | "woven" | "sheer"
+  "season": string[],            // any of: "spring" | "summer" | "autumn" | "winter"
+  "occasion": string[]           // any of: "casual" | "office" | "evening" | "sport" | "formal" | "festive"
+}
+
+RULES:
+- Focus ONLY on the garment, ignore hangers, backgrounds, mannequins.
+- Respond with ONLY valid JSON, no markdown, no explanation.
+- If unsure about a nullable field, set it to null.`;
+
+// ---------------------------------------------------------------------------
+// Main export
+// ---------------------------------------------------------------------------
+
+/**
+ * Analyses a garment image URL and returns a structured GarmentProfile.
+ * Falls back gracefully to a minimal profile if GPT-4o vision fails.
+ */
+export async function analyzeGarment(params: {
+  imageUrl: string;
+  garmentPlacement?: string | null;
+}): Promise<GarmentProfile> {
+  const { imageUrl, garmentPlacement } = params;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: [
+            { type: "image_url", image_url: { url: imageUrl, detail: "low" } },
+          ],
+        },
+      ],
+      max_tokens: 400,
+      response_format: { type: "json_object" },
+    });
+
+    const raw = response.choices[0]?.message?.content ?? "";
+    const parsed = JSON.parse(raw) as Partial<GarmentProfile>;
+
+    // Validate required fields; fall back if missing
+    if (!parsed.category || !parsed.subcategory) {
+      return fallbackProfile(garmentPlacement);
+    }
+
+    return {
+      category:      parsed.category      ?? fallbackProfile(garmentPlacement).category,
+      subcategory:   parsed.subcategory   ?? "garment",
+      gender:        parsed.gender        ?? "womens",
+      ageGroup:      parsed.ageGroup      ?? "young_adult",
+      colour:        Array.isArray(parsed.colour) ? parsed.colour : ["neutral"],
+      fit:           parsed.fit           ?? "standard",
+      fabric:        parsed.fabric        ?? "unknown",
+      sleeveType:    parsed.sleeveType    ?? undefined,
+      sleeveLength:  parsed.sleeveLength  ?? undefined,
+      neckline:      parsed.neckline      ?? undefined,
+      collar:        parsed.collar        ?? undefined,
+      garmentLength: parsed.garmentLength ?? undefined,
+      pattern:       parsed.pattern       ?? "solid",
+      texture:       parsed.texture       ?? "smooth",
+      season:        Array.isArray(parsed.season)   ? parsed.season   : ["spring"],
+      occasion:      Array.isArray(parsed.occasion) ? parsed.occasion : ["casual"],
+    };
+  } catch {
+    return fallbackProfile(garmentPlacement);
+  }
+}

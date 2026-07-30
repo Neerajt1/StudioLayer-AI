@@ -1,0 +1,65 @@
+{
+  "version": "1.0",
+  "region": "europe",
+  "description": "StudioLayer AI Fashion Knowledge Base — Europe Regional Pack. European sensibility: understated elegance, quality materials, minimal accessories.",
+  "styleModes": {
+    "ecommerce_catalog": {
+      "description": "European catalog styling — minimal, high-quality, seasonally layered",
+      "rules": [
+
+        {
+          "id": "eu_tops_linen_shirt",
+          "name": "Linen Shirt (European Casual)",
+          "match": {
+            "category": "tops",
+            "subcategory": ["linen shirt", "shirt"],
+            "fabric": ["linen"]
+          },
+          "recommendations": {
+            "bottoms": ["Slim Linen Trousers", "Relaxed Chinos", "White Jeans"],
+            "footwear": ["Tan Leather Loafers", "Espadrilles", "White Canvas Sneakers"],
+            "accessories": ["Simple Leather Watch", "Canvas Tote"]
+          },
+          "confidence": 0.90,
+          "tags": ["casual", "summer", "smart-casual", "european", "minimal"]
+        },
+
+        {
+          "id": "eu_tops_breton_stripe",
+          "name": "Breton Stripe Top",
+          "match": {
+            "category": "tops",
+            "subcategory": ["breton", "breton top", "marinière", "striped top"],
+            "pattern": ["stripe", "horizontal stripe"]
+          },
+          "recommendations": {
+            "bottoms": ["Dark Slim Jeans", "Navy Wide-leg Trousers", "Cropped Trousers"],
+            "footwear": ["White Leather Sneakers", "Ballet Flats", "Espadrilles"],
+            "accessories": ["Simple Chain Necklace", "Canvas Tote", "Silk Scarf"]
+          },
+          "confidence": 0.91,
+          "tags": ["casual", "classic", "french", "european", "spring", "summer"]
+        },
+
+        {
+          "id": "eu_outerwear_wool_coat",
+          "name": "Wool Coat (European Classic)",
+          "match": {
+            "category": "outerwear",
+            "subcategory": ["wool coat", "camel coat", "overcoat", "topcoat"],
+            "fabric": ["wool", "cashmere", "camel hair"]
+          },
+          "recommendations": {
+            "innerLayer": ["Fine Knit Turtleneck", "White Oxford Shirt"],
+            "bottoms": ["Tailored Straight Trousers", "Dark Slim Jeans"],
+            "footwear": ["Leather Ankle Boots", "Oxford Shoes", "Chelsea Boots"],
+            "accessories": ["Wool Scarf", "Leather Gloves", "Minimal Leather Bag"]
+          },
+          "confidence": 0.92,
+          "tags": ["classic", "european", "autumn", "winter", "minimal"]
+        }
+
+      ]
+    }
+  }
+}
