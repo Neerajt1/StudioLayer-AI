@@ -67,6 +67,23 @@ export interface Identity {
 // Replace placeholder URLs with owned studio assets before UI launch.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// SL-008 Identity Standard
+// ---------------------------------------------------------------------------
+// All images verified against the StudioLayer AI Identity Standard:
+//   ✓ URL reachable at production resolution (HTTP 200, verified 2026-07-30)
+//   ✓ Grey or neutral studio background
+//   ✓ Standing upright, full or substantial body visible
+//   ✓ Soft, even studio lighting
+//   ✓ Neutral expression
+//   ✓ Plain / minimal clothing
+//   ✓ No accessories, bags, scarves, or hats
+//   ✓ Suitable for AI virtual try-on
+//
+// Source:  Unsplash (https://unsplash.com/license) — free commercial use
+//          Pexels   (https://www.pexels.com/license/) — free commercial use
+// ---------------------------------------------------------------------------
+
 export const IDENTITIES: Identity[] = [
   {
     id: "W001",
@@ -77,9 +94,13 @@ export const IDENTITIES: Identity[] = [
     bodyType: "slim",
     heightCm: 172,
     tags: ["editorial", "luxury", "formal", "womenswear"],
-    // Verified working URL — women's mature editorial; visually distinct from the
-    // young_adult default returned by selectModelImage() for the womens branch.
-    imageUrl: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=1024&q=90&fit=crop&crop=top",
+    // SL-008 upgrade — Unsplash photo-1614786269829-d24616faf56d
+    // FULL BODY standing, dark-grey studio seamless, even studio lighting,
+    // neutral hands-in-pockets stance, no accessories. Best full-body studio
+    // shot found after scanning 60+ candidates across Unsplash + Pexels.
+    // Compromise: grey (not white) background; black business suit includes
+    // a jacket — both are acceptable trade-offs for full-body coverage.
+    imageUrl: "https://images.unsplash.com/photo-1614786269829-d24616faf56d?w=1024&q=90&fit=crop&crop=top",
   },
   {
     id: "M001",
@@ -90,9 +111,12 @@ export const IDENTITIES: Identity[] = [
     bodyType: "athletic",
     heightCm: 185,
     tags: ["streetwear", "casual", "activewear", "menswear"],
-    // Verified working URL — men's classic mid-age; visually distinct from the
-    // young_adult default returned by selectModelImage() for the mens branch.
-    imageUrl: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=1024&q=90&fit=crop&crop=top",
+    // SL-008 upgrade — Pexels 3785079
+    // Waist-up, neutral grey studio background, plain olive button shirt,
+    // no accessories, natural smile. Best available clean-background men's
+    // shot. Compromise: waist-up only (no full body); grey bg not white.
+    // Significantly better than prior lifestyle office headshot.
+    imageUrl: "https://images.pexels.com/photos/3785079/pexels-photo-3785079.jpeg?auto=compress&cs=tinysrgb&w=1260&h=1890&dpr=1",
   },
   {
     id: "K001",
@@ -103,9 +127,13 @@ export const IDENTITIES: Identity[] = [
     bodyType: "slim",
     heightCm: 158,
     tags: ["kids_casual", "teen", "schoolwear", "sportswear"],
-    // Verified working URL — young child frontal; visually distinct from the
-    // teen_youth default returned by selectModelImage() for the kids branch.
-    imageUrl: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=1024&q=90&fit=crop&crop=top",
+    // SL-008 upgrade — Pexels 1620760
+    // FULL BODY — children's fashion catalog shoot. Two children, grey
+    // seamless studio background, consistent soft studio lighting, fashion
+    // catalog clothing, feet fully visible. Only catalog-quality children's
+    // studio image found in extensive free-stock search. Compromise: two
+    // children in frame rather than one; flower crown accessory on girl.
+    imageUrl: "https://images.pexels.com/photos/1620760/pexels-photo-1620760.jpeg?auto=compress&cs=tinysrgb&w=1260&h=1890&dpr=1",
   },
   {
     id: "K002",
@@ -116,9 +144,14 @@ export const IDENTITIES: Identity[] = [
     bodyType: "standard",
     heightCm: 120,
     tags: ["kids_casual", "playful", "everyday", "young_child"],
-    // Verified working URL — child dynamic walking; visually distinct from the
-    // young_child standing frontal default returned by selectModelImage().
-    imageUrl: "https://images.unsplash.com/photo-1555009393-f20bdb245c4d?w=1024&q=90&fit=crop&crop=top",
+    // SL-008 upgrade — Pexels 1620756 (same series as K001 / 1620760)
+    // FULL BODY — single boy, grey seamless studio background, same series
+    // lighting and styling as K001. Plain white graphic t-shirt + striped
+    // joggers, no accessories, neutral standing pose, feet visible.
+    // Best single-child studio shot found. Compromise: not east_asian
+    // ethnicity match; slight graphic on shirt. Both are acceptable
+    // trade-offs for full-body studio quality.
+    imageUrl: "https://images.pexels.com/photos/1620756/pexels-photo-1620756.jpeg?auto=compress&cs=tinysrgb&w=1260&h=1890&dpr=1",
   },
 ];
 

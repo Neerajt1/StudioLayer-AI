@@ -1,0 +1,240 @@
+TASK ID: SL-008
+
+STRICT MODE
+
+This task improves StudioLayer AI's Identity Library.
+
+Do NOT modify:
+
+- Authentication
+- Billing
+- Database schema
+- Rendering pipeline
+- Prompt Composer
+- UI layout
+
+Only improve the Identity Library implementation.
+
+------------------------------------------------------------
+
+OBJECTIVE
+
+Our current identity images are sourced from general lifestyle photographs.
+
+The render quality investigation identified the base model images as the highest-impact factor affecting garment fidelity.
+
+We will replace the existing identity assets with a professional studio-standard identity library.
+
+------------------------------------------------------------
+
+STEP 1
+
+Audit every current identity image.
+
+For each identity report:
+
+- Resolution
+- Aspect ratio
+- Background type
+- Lighting consistency
+- Body visibility
+- Pose
+- Image quality
+- Whether suitable for AI virtual try-on
+
+------------------------------------------------------------
+
+STEP 2
+
+Create the StudioLayer AI Identity Standard.
+
+Every identity should follow these specifications:
+
+BACKGROUND
+
+- Pure white or light grey studio background
+- No objects
+- No scenery
+- No furniture
+
+LIGHTING
+
+- Soft, even studio lighting
+- No harsh shadows
+- No coloured lighting
+- Consistent across all identities
+
+POSE
+
+- Standing upright
+- Arms naturally away from torso
+- Feet visible
+- Front-facing
+- Neutral stance
+
+CAMERA
+
+- Eye-level
+- Full body
+- Entire body inside frame
+- High resolution
+- Minimal perspective distortion
+
+EXPRESSION
+
+- Neutral
+- Slight smile only
+- No exaggerated emotion
+
+CLOTHING
+
+- Neutral fitted clothing
+- Minimal texture
+- Plain clothing without patterns
+- No jackets
+- No accessories
+- No handbags
+- No scarves
+- No hats
+- Clothing must not interfere with virtual try-on
+
+IMAGE QUALITY
+
+- Sharp focus
+- Studio photography quality
+- Catalog-grade
+- Consistent framing across all identities
+
+------------------------------------------------------------
+
+STEP 3
+
+Replace all existing identity URLs with images that match the above standard as closely as possible.
+
+If perfect matches are unavailable:
+
+- Choose the closest available images.
+- Consistency is more important than diversity.
+- Prefer studio-quality images over lifestyle photography.
+
+------------------------------------------------------------
+
+STEP 4
+
+Verify every identity.
+
+Ensure:
+
+✓ URL is valid
+
+✓ Image loads successfully
+
+✓ Full body visible
+
+✓ White/light background
+
+✓ Studio lighting
+
+✓ Neutral pose
+
+✓ Suitable for AI virtual try-on
+
+------------------------------------------------------------
+
+STEP 5
+
+Generate a comparison report.
+
+Include:
+
+Old Identity
+
+↓
+
+New Identity
+
+For each identity explain:
+
+- What improved
+- What compromises remain
+- Expected impact on rendering quality
+
+------------------------------------------------------------
+
+STEP 6
+
+Identity Library Validation
+
+Generate a comparison table.
+
+Identity ID
+
+Current Image
+
+New Image
+
+Background
+
+Lighting
+
+Pose
+
+Full Body Visibility
+
+Overall AI Suitability (1–10)
+
+------------------------------------------------------------
+
+Verify every identity satisfies:
+
+✓ Entire body visible
+
+✓ No cropping
+
+✓ Neutral pose
+
+✓ White/light background
+
+✓ Studio lighting
+
+✓ High resolution
+
+✓ No accessories
+
+✓ Suitable for fashion virtual try-on
+
+------------------------------------------------------------
+
+Verify every image URL is reachable.
+
+Return any broken URLs.
+
+------------------------------------------------------------
+
+STEP 7
+
+Recommendations
+
+Provide:
+
+1. Remaining limitations of the new identity library.
+
+2. Whether further improvement would require professionally photographed custom models.
+
+3. Estimated improvement in rendering quality from the upgraded identity library.
+
+4. Whether the current identity library is now suitable for production use.
+
+------------------------------------------------------------
+
+IMPORTANT
+
+Do NOT modify:
+
+- Rendering logic
+- Prompt Composer
+- Payload parameters
+- fal.ai integration
+- API endpoints
+
+Only improve the Identity Library assets and provide the complete audit.
