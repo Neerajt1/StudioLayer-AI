@@ -243,6 +243,9 @@ export class RenderOrchestrator {
         garmentPlacement: request.garmentPlacement,
         modelGender:      request.modelGender,
         modelAgeRange:    request.modelAgeRange,
+        // SL-018B: forward Complete the Look selection so the PromptComposer
+        // can override the Intelligence Engine's own outfit recommendation.
+        outfitStyle:      request.outfitStyle,
       }),
     ]);
 

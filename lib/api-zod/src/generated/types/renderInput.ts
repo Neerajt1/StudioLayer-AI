@@ -17,4 +17,6 @@ export interface RenderInput {
   modelDemographics?: RenderInputModelDemographics;
   imageDimensions?: RenderInputImageDimensions;
   smartLighting?: boolean;
+  /** Complete the Look style selection from the UI (SL-018B). */
+  outfitStyle?: string;
 }

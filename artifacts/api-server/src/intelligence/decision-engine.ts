@@ -26,6 +26,7 @@ import { FashionKnowledgeBase } from "./fashion-knowledge-base";
 import { selectStyleMode, describeStyleMode } from "./style-engine";
 import { getCompletionPlan, filterRecommendationsToSlots } from "./wardrobe-completion";
 import { composeRenderPrompt } from "./prompt-composer";
+import { resolveOutfitOverride } from "./outfit-style-override";
 import type {
   GarmentCategory,
   GarmentProfile,
@@ -200,6 +201,14 @@ export interface IntelligenceParams {
   modelGender?: string | null;
   modelAgeRange?: string | null;
   region?: string;
+  /**
+   * Complete the Look style selection forwarded from the rendering request (SL-018B).
+   * When set and not "none", the PromptComposer receives an outfit override
+   * from the Outfit Style Override module instead of using the Intelligence
+   * Engine's own KB / GPT / hard-fallback recommendation.
+   * "none" means: let the Intelligence Engine decide (no override applied).
+   */
+  outfitStyle?: string | null;
 }
 
 /**
@@ -221,6 +230,7 @@ export async function runIntelligenceAnalysis(
     garmentPlacement,
     modelGender,
     modelAgeRange,
+    outfitStyle,
     region = "default",
   } = params;
 
@@ -282,7 +292,35 @@ export async function runIntelligenceAnalysis(
     ...(ruleId ? { ruleId } : {}),
   };
 
-  // 7. Compose render prompt ─────────────────────────────────────────────────
+  // 7. Complete the Look override (SL-018B) ────────────────────────────────────
+  // If the user selected a style other than "none", replace the Intelligence
+  // Engine's recommendation with the Outfit Style Override module output.
+  // The override is applied here — after garment analysis (so we know the
+  // detected category) but before PromptComposer (so the prompt uses the
+  // user's chosen outfit items).
+  let outfitOverrideApplied = false;
+  const outfitOverride = resolveOutfitOverride(
+    profile.category,
+    modelGender,
+    outfitStyle,
+  );
+
+  if (outfitOverride) {
+    logger.info(
+      {
+        renderId,
+        outfitStyle,
+        appliedOverride: outfitOverride,
+        replacedOutfit:  outfit,
+      },
+      "Intelligence: Complete the Look override applied — outfit replaced with user selection",
+    );
+    outfit                         = outfitOverride;
+    recommendation.recommendedOutfit = outfitOverride;
+    outfitOverrideApplied          = true;
+  }
+
+  // 8. Compose render prompt ─────────────────────────────────────────────────
   const prompt = composeRenderPrompt({
     profile,
     recommendation,
@@ -292,7 +330,7 @@ export async function runIntelligenceAnalysis(
 
   const durationMs = Date.now() - startMs;
 
-  // 8. Part 7 / Part 8 — Developer logging ──────────────────────────────────
+  // 9. Part 7 / Part 8 — Developer logging ──────────────────────────────────
   logger.info(
     {
       renderId,
@@ -315,8 +353,12 @@ export async function runIntelligenceAnalysis(
         generatedPrompt:    prompt,
         confidenceScore:    Math.round(confidence * 100) / 100,
         decisionSource,
-        ...(ruleId          ? { matchedRuleId: ruleId }        : {}),
-        ...(usedHardFallback ? { fallbackUsed: "hard_default" } : {}),
+        ...(ruleId              ? { matchedRuleId: ruleId }           : {}),
+        ...(usedHardFallback    ? { fallbackUsed: "hard_default" }    : {}),
+        ...(outfitOverrideApplied ? {
+          completeTheLookStyle: outfitStyle,
+          outfitOverrideApplied: true,
+        } : {}),
         durationMs,
       },
     },

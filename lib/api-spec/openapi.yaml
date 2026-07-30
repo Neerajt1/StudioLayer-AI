@@ -434,6 +434,19 @@ components:
         cameraFraming:
           type: string
           enum: [full_body, mid_shot, close_up]
+        garmentPlacement:
+          type: string
+          enum: [upper_body, lower_body, full_body]
+        modelIdentityId:
+          type: string
+        outfitStyle:
+          type: string
+          description: >
+            Complete the Look selection from the UI.
+            One of: ai_recommended, formal, business_casual, casual, denim,
+            streetwear, ethnic, sportswear, none.
+            When present and not "none", the PromptComposer uses the externally
+            computed outfit specification instead of its own recommendation.
       required:
         - sourceImageUrl
         - modelPersona

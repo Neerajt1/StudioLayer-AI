@@ -263,10 +263,8 @@ export default function StudioPage() {
       : { locationEnvironment: 'photo_studio', modelPersona: 'confident_commercial' };
 
     // ── Build final rendering request ─────────────────────────────────────
-    // modelPersona stays as a valid enum value (confident_commercial /
-    // high_fashion_editorial / natural_smile) derived from the Creative Brief.
-    // The outfit specification travels via the pre-render log (Part 4) and
-    // is available for the Hybrid strategy's FLUX prompt in a future sprint.
+    // outfitStyle is forwarded through the pipeline so the backend
+    // PromptComposer can apply the Outfit Style Override (SL-018B).
     const renderingRequest = {
       sourceImageUrl:      primary,
       modelPersona:        modelPersona        as any,
@@ -277,6 +275,7 @@ export default function StudioPage() {
       modelAgeRange:       modelAgeRange       as any,
       smartLighting:       true,
       imageDimensions:     'portrait_45'       as any,
+      outfitStyle:         completeTheLook,
     };
 
     // ── SL-018A Part 4: Pre-render structured log ──────────────────────────

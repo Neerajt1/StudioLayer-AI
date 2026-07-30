@@ -44,17 +44,20 @@ export async function runAIPipeline(params: {
   cameraFraming?:      string | null;
   garmentPlacement?:   string | null;
   modelIdentityId?:    string | null;
+  /** Complete the Look selection from the UI (SL-018B). Forwarded to the orchestrator. */
+  outfitStyle?:        string | null;
   onComplete:          (outputImageUrl: string) => Promise<void>;
   onError:             (error: Error) => Promise<void>;
 }): Promise<void> {
   const request: RenderingRequest = {
-    renderId:        params.renderId,
-    sourceImageUrl:  params.sourceImageUrl,
-    modelGender:     params.modelGender,
-    modelAgeRange:   params.modelAgeRange,
-    modelPose:       params.modelPose,
+    renderId:         params.renderId,
+    sourceImageUrl:   params.sourceImageUrl,
+    modelGender:      params.modelGender,
+    modelAgeRange:    params.modelAgeRange,
+    modelPose:        params.modelPose,
     garmentPlacement: params.garmentPlacement,
-    modelIdentityId: params.modelIdentityId,
+    modelIdentityId:  params.modelIdentityId,
+    outfitStyle:      params.outfitStyle,
     // renderMode: omitted — orchestrator uses RENDERING_CONFIG.renderMode (env-driven)
   };
 

@@ -56,6 +56,15 @@ export interface RenderingRequest {
   modelIdentityId?: string | null;
   /** Optional override of the global RENDERING_CONFIG.renderMode. */
   renderMode?: RenderMode;
+  /**
+   * Complete the Look style selection from the UI (SL-018B).
+   * One of: ai_recommended | formal | business_casual | casual | denim |
+   *         streetwear | ethnic | sportswear | none
+   * When present and not "none", the PromptComposer uses the outfit
+   * specification from the Outfit Style Override module instead of the
+   * Intelligence Engine's own recommendation.
+   */
+  outfitStyle?: string | null;
 }
 
 // ---------------------------------------------------------------------------

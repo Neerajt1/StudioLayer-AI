@@ -123,7 +123,8 @@ export const CreateRenderBody = zod.object({
   "modelAgeRange": zod.enum(['young_child', 'teen_youth', 'young_adult', 'classic_mid_age', 'mature_executive']).optional(),
   "cameraFraming": zod.enum(['full_body', 'mid_shot', 'close_up']).optional(),
   "garmentPlacement": zod.enum(['upper_body', 'lower_body', 'full_body']).optional(),
-  "modelIdentityId": zod.string().optional()
+  "modelIdentityId": zod.string().optional(),
+  "outfitStyle": zod.string().optional()
 })
 
 export const CreateRenderResponse = zod.object({

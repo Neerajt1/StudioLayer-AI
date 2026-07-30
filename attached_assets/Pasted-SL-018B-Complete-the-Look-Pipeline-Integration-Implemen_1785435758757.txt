@@ -1,0 +1,102 @@
+SL-018B – Complete the Look Pipeline Integration
+Implementation Guidelines
+Preserve the existing architecture and backward compatibility.
+Do not redesign the Render Orchestrator or Hybrid Strategy.
+Do not modify the existing UI.
+Complete the integration of the Complete the Look feature implemented in SL-018A.
+At the end of implementation, provide a detailed Engineering Report.
+OBJECTIVE
+SL-018A successfully implemented the Complete the Look UI and Outfit Completion Engine.
+However, the generated outfit specification currently stops at the frontend and is not incorporated into the final rendering prompt.
+The objective of this sprint is to complete the pipeline so the selected outfit reaches the PromptComposer and influences the generated render.
+PART 1 – Extend Rendering Request
+Update the rendering request model to support carrying the user's outfit selection.
+Ensure the request object can transport:
+Complete the Look selection
+Generated outfit specification
+from the frontend through the rendering pipeline.
+PART 2 – Pipeline Integration
+Update the pipeline so the outfit information is passed through every layer without being dropped.
+The implementation should complete the integration across the identified seams:
+Rendering request types
+AI Pipeline
+Intelligence Engine / PromptComposer
+No architectural redesign is required.
+PART 3 – PromptComposer Override
+Update the PromptComposer so that:
+If the user selects
+AI Recommended
+Formal
+Business Casual
+Casual
+Denim
+Streetwear
+Ethnic
+Sportswear
+then the PromptComposer should use the Outfit Completion Engine output instead of generating its own recommended outfit.
+If the user selects
+None
+do not override the outfit.
+Allow the Intelligence Engine to generate its own recommended outfit exactly as it does today.
+PART 4 – Hybrid Strategy
+Do not modify the Hybrid Strategy.
+It should continue consuming the generated prompt exactly as it currently does.
+The only expected change is that the prompt it receives now includes the correct outfit specification.
+PART 5 – Validation
+Provide proof that the outfit specification reaches the rendering stage.
+The Engineering Report must include one real example showing:
+User Selection
+Uploaded garment
+Complete the Look selection
+Creative Brief
+Outfit Engine Output
+Example:
+Beige Chinos
+Brown Leather Loafers
+PromptComposer Output
+Show the complete prompt generated.
+Hybrid Strategy Input
+Show the exact prompt passed into FLUX Stage 1.
+This is mandatory so we can verify the integration is complete.
+PART 6 – Testing
+Verify:
+Complete the Look selection reaches the rendering request.
+Rendering request reaches the AI Pipeline.
+AI Pipeline forwards the outfit specification.
+PromptComposer correctly overrides the default recommended outfit.
+Selecting None preserves the existing behaviour.
+Hybrid Strategy receives the updated prompt.
+Existing rendering workflow remains unaffected.
+Engineering Report
+Include:
+1. Files Modified
+2. Integration Changes
+Describe how the outfit specification now flows through the pipeline.
+3. Prompt Flow
+Document the complete data flow:
+Complete the Look
+        ↓
+Outfit Completion Engine
+        ↓
+Rendering Request
+        ↓
+AI Pipeline
+        ↓
+PromptComposer
+        ↓
+Hybrid Strategy
+        ↓
+FLUX Stage 1
+4. Example Prompt
+Provide the exact prompt sent into FLUX Stage 1.
+5. Testing Results
+Pass/Fail for each validation item.
+6. Known Issues
+List any remaining limitations or observations.
+Success Criteria
+This sprint is successful if:
+The Complete the Look selection influences the generated rendering prompt.
+The PromptComposer uses the externally generated outfit specification.
+Selecting None preserves the current AI behaviour.
+No existing functionality regresses.
+The Hybrid Strategy receives the updated prompt without requiring architectural changes.
