@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { fal } from "@fal-ai/client";
 import { logger } from "../lib/logger";
+import { findIdentityById } from "../data/identity-library";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
 fal.config({ credentials: process.env.FAL_KEY });
@@ -177,6 +178,9 @@ export async function runAIPipeline(params: {
   modelAgeRange?: string | null;
   cameraFraming?: string | null;
   garmentPlacement?: string | null;
+  /** Optional Identity Library ID (e.g. "W001"). When supplied and resolved,
+   *  its imageUrl is used as model_image instead of selectModelImage(). */
+  modelIdentityId?: string | null;
   onComplete: (outputImageUrl: string) => Promise<void>;
   onError: (error: Error) => Promise<void>;
 }): Promise<void> {
@@ -190,17 +194,46 @@ export async function runAIPipeline(params: {
     modelAgeRange,
     cameraFraming,
     garmentPlacement,
+    modelIdentityId,
   } = params;
 
   try {
     // 1. Prepare the garment image (flat-lay hanger photo)
     const garmentImage = prepareGarmentImage(sourceImageUrl);
 
-    // 2. Select base human model image via pure conditional routing —
-    //    gender broad-match → pose → age. Zero dict lookups; cannot crash.
-    const modelImageUrl = selectModelImage(modelGender, modelAgeRange, modelPose);
+    // 2. Select base human model image.
+    //
+    //    IDENTITY LIBRARY GUARD (SL-001):
+    //    If a modelIdentityId was supplied, attempt to resolve it against the
+    //    Identity Library first. If found, use that identity's imageUrl directly
+    //    — this is the locked-model fast path for future catalog consistency.
+    //    If the ID is not found (typo, deleted entry, etc.), fall through to
+    //    selectModelImage() so existing rendering is never broken.
+    //
+    //    If no modelIdentityId was supplied (current default for all renders),
+    //    selectModelImage() runs exactly as before — zero behaviour change.
+    let modelImageUrl: string;
+    if (modelIdentityId) {
+      const identity = findIdentityById(modelIdentityId);
+      if (identity) {
+        modelImageUrl = identity.imageUrl;
+        logger.info(
+          { renderId, modelIdentityId, identityName: identity.displayName, modelImageUrl },
+          "AI pipeline: model image resolved from Identity Library",
+        );
+      } else {
+        logger.warn(
+          { renderId, modelIdentityId },
+          "AI pipeline: modelIdentityId not found in library — falling back to attribute routing",
+        );
+        modelImageUrl = selectModelImage(modelGender, modelAgeRange, modelPose);
+      }
+    } else {
+      // Default path — attribute-based routing, unchanged from original behaviour
+      modelImageUrl = selectModelImage(modelGender, modelAgeRange, modelPose);
+    }
     logger.info(
-      { renderId, modelImageUrl, modelPose, modelGender, modelAgeRange, cameraFraming, garmentPlacement },
+      { renderId, modelImageUrl, modelIdentityId, modelPose, modelGender, modelAgeRange, cameraFraming, garmentPlacement },
       "AI pipeline: model image selected",
     );
 
