@@ -1,6 +1,10 @@
 import { fal } from "@fal-ai/client";
 import { logger } from "../lib/logger";
 import { findIdentityById } from "../data/identity-library";
+import {
+  selectBaseModel,
+  mapStyleModeToTemplate,
+} from "../data/base-model-library";
 import { runIntelligenceAnalysis } from "../intelligence";
 
 fal.config({ credentials: process.env.FAL_KEY });
@@ -253,32 +257,84 @@ export async function runAIPipeline(params: {
       }),
     ]);
 
-    // 1. Select model image
+    // 1. Derive FASHN category + style template from intelligence result (SL-016)
     //
-    //    Identity Library path (SL-009): if a modelIdentityId is supplied and
-    //    resolves, use that portrait directly — no attribute routing needed.
-    //    Falls through to selectModelImage() if the ID is unknown or absent.
+    //    Computed here (before model image selection) so both the Base Model
+    //    Selector and the fal.ai payload builder can consume them. This
+    //    consolidates the category derivation that previously lived in Step 3.
+    const category = mapToFashnCategory(intelligenceResult.profile.category);
+    const styleTemplate = mapStyleModeToTemplate(
+      intelligenceResult.recommendation.styleMode,
+    );
+
+    // 2. Select model image — SL-016 Base Model Selector
+    //
+    //    Resolution order (Part 5 — identity override always wins):
+    //      A. modelIdentityId supplied + resolved → Identity Library (user choice)
+    //      B. modelIdentityId supplied + NOT resolved → Base Model Selector
+    //         (unknown identity; warn and fall through)
+    //      C. No modelIdentityId → Base Model Selector (standard SL-016 path)
+    //      D. Base Model Selector returns null → selectModelImage() (emergency fallback)
+    //
+    //    Rendering must never fail (Part 8) — every branch produces a valid URL.
+    const modelSelectionStart = Date.now();
+
+    type ModelSource =
+      | "identity_override"
+      | "base_model_selector"
+      | "attribute_routing_fallback";
+
     let modelImageUrl: string;
+    let modelSource: ModelSource;
+    let selectedBaseModelId: string | null = null;
+    let identityOverride = false;
+    let baseModelFallbackReason: string | null = null;
+
     if (modelIdentityId) {
+      // ── Branch A: User-selected identity ────────────────────────────────
       const identity = findIdentityById(modelIdentityId);
       if (identity) {
-        modelImageUrl = identity.imageUrl;
+        modelImageUrl    = identity.imageUrl;
+        modelSource      = "identity_override";
+        identityOverride = true;
         logger.info(
           { renderId, modelIdentityId, identityName: identity.displayName, modelImageUrl },
-          "AI pipeline: model image resolved from Identity Library",
+          "AI pipeline: model image resolved from Identity Library (identity override)",
         );
       } else {
+        // ── Branch B: Identity not found — fall through to Base Model Selector
         logger.warn(
           { renderId, modelIdentityId },
-          "AI pipeline: modelIdentityId not found in library — falling back to attribute routing",
+          "AI pipeline: modelIdentityId not found in library — falling back to Base Model Selector (SL-016)",
         );
-        modelImageUrl = selectModelImage(modelGender, modelAgeRange, modelPose);
+        const baseModel = selectBaseModel(modelGender, category, styleTemplate);
+        if (baseModel) {
+          modelImageUrl        = baseModel.imageUrl;
+          modelSource          = "base_model_selector";
+          selectedBaseModelId  = baseModel.id;
+          baseModelFallbackReason = "identity_not_found";
+        } else {
+          modelImageUrl        = selectModelImage(modelGender, modelAgeRange, modelPose);
+          modelSource          = "attribute_routing_fallback";
+          baseModelFallbackReason = "identity_not_found_and_base_model_lookup_failed";
+        }
       }
     } else {
-      modelImageUrl = selectModelImage(modelGender, modelAgeRange, modelPose);
+      // ── Branch C: No identity selected — Base Model Selector (SL-016 standard path)
+      const baseModel = selectBaseModel(modelGender, category, styleTemplate);
+      if (baseModel) {
+        modelImageUrl       = baseModel.imageUrl;
+        modelSource         = "base_model_selector";
+        selectedBaseModelId = baseModel.id;
+      } else {
+        // ── Branch D: Base Model Selector returned null — emergency fallback
+        modelImageUrl        = selectModelImage(modelGender, modelAgeRange, modelPose);
+        modelSource          = "attribute_routing_fallback";
+        baseModelFallbackReason = "base_model_lookup_failed";
+      }
     }
 
-    // 2. Resolve root-relative identity paths to absolute URLs.
+    // 3. Resolve root-relative identity paths to absolute URLs.
     //    fal.ai requires a publicly reachable URL; local /identities/... paths
     //    are served by the Vite frontend at REPLIT_DEV_DOMAIN.
     if (modelImageUrl.startsWith("/")) {
@@ -292,36 +348,34 @@ export async function runAIPipeline(params: {
       );
     }
 
-    // SL-012 identity log
+    // SL-016 model selection log (Part 9 — replaces SL-012 identity log + model image selected log)
+    const modelSelectionDurationMs = Date.now() - modelSelectionStart;
     logger.info(
       {
         renderId,
-        selectedIdentityCode: modelIdentityId ?? null,
-        selectedIdentityImageUrl: modelImageUrl,
+        modelSelection: {
+          source:              modelSource,
+          gender:              modelGender ?? null,
+          fashnCategory:       category,
+          styleTemplate,
+          baseModelId:         selectedBaseModelId,
+          identityOverride,
+          identityId:          modelIdentityId ?? null,
+          fallbackUsed:        baseModelFallbackReason,
+          resolvedImageUrl:    modelImageUrl,
+          durationMs:          modelSelectionDurationMs,
+        },
       },
-      "AI pipeline: Selected Identity",
+      "AI pipeline: SL-016 model image selected",
     );
 
-    logger.info(
-      { renderId, modelImageUrl, modelIdentityId, modelPose, modelGender, modelAgeRange, garmentPlacement },
-      "AI pipeline: model image selected",
-    );
-
-    // 3. Derive fal.ai category from intelligence layer (SL-014)
-    //
-    //    The intelligence layer analysed the garment and returned a rich
-    //    GarmentCategory. We map it to fal.ai's three accepted values.
-    //    This replaces the previous garmentPlacement → category mapping and
-    //    the GPT-4o detectGarmentCategory() fallback, both now superseded by
-    //    the intelligence layer's more comprehensive garment analysis.
-    const category = mapToFashnCategory(
-      intelligenceResult.profile.category,
-    );
+    // 4-old→ category already derived in Step 1 (SL-016). Log for traceability.
     logger.info(
       {
         renderId,
         intelligenceCategory: intelligenceResult.profile.category,
         fashnCategory: category,
+        styleTemplate,
         garmentPlacement,
       },
       "AI pipeline: garment category resolved from intelligence layer",

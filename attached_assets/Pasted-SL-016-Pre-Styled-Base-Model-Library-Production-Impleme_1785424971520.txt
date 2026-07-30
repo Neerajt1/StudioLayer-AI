@@ -1,0 +1,265 @@
+SL-016 — Pre-Styled Base Model Library
+
+Production Implementation Sprint
+
+StudioLayer AI Rendering Pipeline v1.1
+
+Source Basis: Derived from the approved SL-015 investigation. This sprint implements Option B (Pre-Styled Base Model Library) only.
+
+Objective
+
+Implement a Pre-Styled Base Model Library that intelligently selects category-specific base model images for FASHN rendering.
+
+This sprint must:
+
+Preserve the current FASHN integration.
+
+Preserve BirefNet preprocessing.
+
+Preserve backward compatibility.
+
+Introduce no API breaking changes.
+
+Not implement FLUX integration.
+
+Not implement prompt-driven rendering.
+
+Design Principles
+
+Existing Identity Library remains intact.
+
+User-selected identities always override automatic selection.
+
+Base Models are internal rendering assets.
+
+Architecture must support future expansion (styles, seasons, occasions, regions).
+
+Part 1 — Base Model Library
+
+Create:server/src/data/base-model-library.ts
+
+Each record contains:
+
+id
+
+gender
+
+category
+
+styleTemplate
+
+imageUrl
+
+description
+
+active
+
+priority
+
+Part 2 — Initial Catalogue
+
+Women:
+
+BASE-F-TOPS-01
+
+BASE-F-TOPS-02
+
+BASE-F-BOTTOMS-01
+
+BASE-F-BOTTOMS-02
+
+BASE-F-DRESS-01
+
+BASE-F-DRESS-02
+
+Men:
+
+BASE-M-TOPS-01
+
+BASE-M-TOPS-02
+
+BASE-M-BOTTOMS-01
+
+BASE-M-BOTTOMS-02
+
+BASE-M-SUIT-01
+
+Kids:
+
+BASE-K-TOPS-01
+
+BASE-K-BOTTOMS-01
+
+BASE-K-DRESS-01
+
+Use placeholder image URLs only.
+
+Part 3 — Style Templates
+
+Support:
+
+Minimal
+
+Casual
+
+Business
+
+Luxury
+
+Street
+
+Editorial
+
+Default = Minimal.
+
+Part 4 — BaseModelSelector
+
+Inputs:
+
+Gender
+
+Category
+
+Style Template
+
+Output:
+
+One deterministic Base Model.
+
+Part 5 — Pipeline Integration
+
+If modelIdentityId exists:
+
+Use Identity Library.
+
+Otherwise:
+
+BaseModelSelector
+
+Base Model Library
+
+Identity override always wins.
+
+Part 6 — Intelligence Engine
+
+Reuse:
+
+Gender
+
+Category
+
+Default StyleTemplate = Minimal.
+
+Do not modify GPT logic.
+
+Part 7 — Rendering Flow
+
+User Upload→ Garment Analysis→ WardrobeCompletionEngine→ Category + Gender→ StyleTemplate→ BaseModelSelector→ Base Model→ BirefNet→ FASHN→ Final Render
+
+Part 8 — Validation
+
+If lookup fails:Fallback to Identity Library.
+
+Rendering must never fail.
+
+Part 9 — Logging
+
+Log:
+
+Gender
+
+Category
+
+Style Template
+
+Base Model
+
+Identity Override
+
+Fallback Used
+
+Duration
+
+Part 10 — Future Extensibility
+
+Design for:
+
+Seasons
+
+Occasion
+
+Region
+
+Body Type
+
+Age Group
+
+Ethnicity
+
+Background Theme
+
+Fashion Trend
+
+Part 11 — Preserve Existing Components
+
+Do NOT modify:
+
+FASHN
+
+BirefNet
+
+PromptComposer
+
+DecisionEngine
+
+Intelligence Engine
+
+API Contracts
+
+Database
+
+Part 12 — Testing
+
+Validate:
+
+Men
+
+Women
+
+Kids
+
+Verify:
+
+Base model selection
+
+Identity override
+
+Fallback
+
+Existing renders
+
+Deliverables
+
+Files created
+
+Files modified
+
+Architecture diagram
+
+Before vs After pipeline
+
+Validation
+
+Performance
+
+Readiness for SL-017
+
+Success Criteria
+
+Eliminate grey clothing dependency.
+
+Improve complementary clothing.
+
+Maintain backward compatibility.
+
+Prepare for SL-017 Hybrid Rendering.
