@@ -112,6 +112,7 @@ router.post("/renders", async (req, res): Promise<void> => {
     modelAgeRange,
     cameraFraming,
     garmentPlacement,
+    modelIdentityId,
   } = parsed.data;
 
   const [render] = await db
@@ -145,6 +146,7 @@ router.post("/renders", async (req, res): Promise<void> => {
     modelAgeRange,
     cameraFraming,
     garmentPlacement,
+    modelIdentityId,
     onComplete: async (outputImageUrl) => {
       await db
         .update(rendersTable)

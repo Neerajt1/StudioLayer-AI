@@ -5,6 +5,7 @@ import {
   useGetRender,
   useCompleteOnboarding,
   useGetMe,
+  useGetIdentities,
   getGetRenderUsageQueryKey,
   getGetMeQueryKey,
 } from '@workspace/api-client-react';
@@ -64,12 +65,14 @@ export default function StudioPage() {
   const [bulkMode, setBulkMode] = useState(false);
   const [activeRenderId, setActiveRenderId] = useState<number | null>(null);
   const [showValidation, setShowValidation] = useState(false);
+  const [selectedIdentityId, setSelectedIdentityId] = useState<string>('');
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const { data: user } = useGetMe();
   const { data: usage, isLoading: usageLoading } = useGetRenderUsage();
+  const { data: identities = [] } = useGetIdentities();
   const createRender = useCreateRender();
   const completeOnboarding = useCompleteOnboarding();
 
@@ -156,6 +159,7 @@ export default function StudioPage() {
           modelAgeRange: (modelAgeRange as any) || undefined,
           cameraFraming: (cameraFraming as any) || undefined,
           garmentPlacement: (garmentPlacement as any) || undefined,
+          modelIdentityId: selectedIdentityId || undefined,
         },
       },
       {
@@ -399,6 +403,82 @@ export default function StudioPage() {
                   )}
                 </div>
               )}
+
+              {/* ── Choose Model — Identity Library ── */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Choose Model</Label>
+                  {selectedIdentityId && (
+                    <button
+                      onClick={() => setSelectedIdentityId('')}
+                      className="text-xs text-muted-foreground font-mono hover:text-foreground transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                {identities.length === 0 ? (
+                  <p className="text-xs text-muted-foreground font-mono py-2">
+                    Loading identities...
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {identities.map((identity) => {
+                      const isSelected = selectedIdentityId === identity.id;
+                      const initials = identity.displayName
+                        .split(/[\s—–-]+/)
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((w: string) => w[0])
+                        .join('')
+                        .toUpperCase();
+                      return (
+                        <div
+                          key={identity.id}
+                          onClick={() =>
+                            setSelectedIdentityId(isSelected ? '' : identity.id)
+                          }
+                          className={`cursor-pointer rounded border p-3 flex flex-col items-center gap-2 transition-all select-none ${
+                            isSelected
+                              ? 'border-accent bg-accent/10 ring-1 ring-accent'
+                              : 'border-border bg-card hover:border-accent/40'
+                          }`}
+                        >
+                          {/* Placeholder avatar — initials only; imageUrl not used yet */}
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
+                              isSelected
+                                ? 'bg-accent text-accent-foreground'
+                                : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
+                            {initials}
+                          </div>
+                          <div className="text-center w-full">
+                            <p className="text-xs font-medium text-foreground leading-tight truncate">
+                              {identity.displayName.split(/\s*[—–]\s*/)[0].trim()}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground font-mono mt-0.5 capitalize">
+                              {identity.gender} · {identity.ageGroup.replace(/_/g, ' ')}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground font-mono capitalize">
+                              {identity.ethnicity.replace(/_/g, ' ')} · {identity.bodyType}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <span className="text-[10px] text-accent font-mono leading-none">
+                              ✓ Selected
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="text-[10px] text-muted-foreground font-mono">
+                  Optional — selecting a model overrides the Gender / Age routing below.
+                </p>
+              </div>
 
               {/* ── Dropdowns grid A–F + Location ── */}
               <div className="grid grid-cols-2 gap-3">

@@ -1,0 +1,125 @@
+TASK ID: SL-003
+
+STRICT MODE
+
+Modify only the files necessary for this task.
+
+Do NOT refactor unrelated code.
+Do NOT modify the AI rendering pipeline.
+Do NOT modify authentication.
+Do NOT modify billing.
+Do NOT modify gallery.
+Do NOT modify existing rendering behaviour.
+
+------------------------------------------------------------
+
+OBJECTIVE
+
+Implement the first version of the Identity Library so users can select a model before rendering.
+
+The implementation must preserve backward compatibility.
+
+------------------------------------------------------------
+
+PART 1 — Backend
+
+Create a new API endpoint:
+
+GET /identities
+
+This endpoint should return all identities from:
+
+artifacts/api-server/src/data/identity-library.ts
+
+Return:
+
+- id
+- displayName
+- gender
+- ageGroup
+- ethnicity
+- bodyType
+- heightCm
+- tags
+- imageUrl
+
+------------------------------------------------------------
+
+PART 2 — Frontend
+
+In Studio page:
+
+Add a new section above the Gender selector.
+
+Title:
+
+Choose Model
+
+Fetch identities from:
+
+GET /identities
+
+Display them as responsive cards.
+
+Each card should show:
+
+- Placeholder avatar (do NOT use imageUrl yet)
+- displayName
+- gender
+- ageGroup
+- ethnicity
+- bodyType
+
+Only one card can be selected.
+
+Highlight the selected card.
+
+------------------------------------------------------------
+
+PART 3 — Render Request
+
+When Render is clicked:
+
+If a model is selected:
+
+Include
+
+modelIdentityId
+
+inside createRender.mutate()
+
+If no model is selected:
+
+Do not send modelIdentityId.
+
+Existing rendering must continue working exactly as before.
+
+------------------------------------------------------------
+
+IMPORTANT
+
+Do NOT replace the current Gender/Age/Pose controls.
+
+Do NOT remove any existing functionality.
+
+This feature is additive only.
+
+------------------------------------------------------------
+
+Acceptance Criteria
+
+✓ GET /identities returns the identity library
+
+✓ Identity cards are displayed
+
+✓ User can select one identity
+
+✓ Selected identity is passed as modelIdentityId
+
+✓ Existing rendering still works
+
+Return:
+
+1. Files changed
+2. Summary of implementation
+3. Confirmation that existing rendering remains unchanged

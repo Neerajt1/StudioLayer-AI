@@ -187,6 +187,21 @@ export interface RenderInput {
   modelAgeRange?: RenderInputModelAgeRange;
   cameraFraming?: RenderInputCameraFraming;
   garmentPlacement?: RenderInputGarmentPlacement;
+  /** Optional Identity Library ID — when set, bypasses attribute-based model routing. */
+  modelIdentityId?: string;
+}
+
+/** A single entry from the Identity Library catalogue. */
+export interface ModelIdentity {
+  id: string;
+  displayName: string;
+  gender: 'womens' | 'mens' | 'kids';
+  ageGroup: 'young_adult' | 'classic_mid_age' | 'mature_executive' | 'teen_youth' | 'young_child';
+  ethnicity: 'south_asian' | 'east_asian' | 'afro_caribbean' | 'caucasian' | 'hispanic_latino' | 'middle_eastern' | 'mixed';
+  bodyType: 'slim' | 'athletic' | 'standard' | 'plus' | 'petite' | 'tall';
+  heightCm: number;
+  tags: string[];
+  imageUrl: string;
 }
 
 export type RenderUsageTier = typeof RenderUsageTier[keyof typeof RenderUsageTier];

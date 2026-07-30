@@ -67,7 +67,7 @@ export interface Identity {
 // Replace placeholder URLs with owned studio assets before UI launch.
 // ---------------------------------------------------------------------------
 
-const IDENTITIES: Identity[] = [
+export const IDENTITIES: Identity[] = [
   {
     id: "W001",
     displayName: "Sofia — Women's, Young Adult",

@@ -23,6 +23,7 @@ import type {
   ErrorResponse,
   HealthStatus,
   LoginInput,
+  ModelIdentity,
   RegisterInput,
   Render,
   RenderInput,
@@ -920,4 +921,41 @@ export const useCreateSupportTicket = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getCreateSupportTicketMutationOptions(options));
     }
+
+
+// ---------------------------------------------------------------------------
+// Identity Library — GET /identities
+// ---------------------------------------------------------------------------
+
+export const getGetIdentitiesUrl = () => `/api/identities`
+
+export const getIdentities = async (options?: Parameters<typeof customFetch>[1]): Promise<ModelIdentity[]> => {
+  return customFetch<ModelIdentity[]>(getGetIdentitiesUrl(), {
+    ...options,
+    method: 'GET',
+  });
+}
+
+export const getGetIdentitiesQueryKey = () => [`/api/identities`] as const;
+
+export const getGetIdentitiesQueryOptions = <TData = Awaited<ReturnType<typeof getIdentities>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getIdentities>>, TError, TData>, request?: SecondParameter<typeof customFetch> }
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getGetIdentitiesQueryKey();
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getIdentities>>> = ({ signal }) =>
+    getIdentities({ signal, ...requestOptions });
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof getIdentities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetIdentitiesQueryResult = NonNullable<Awaited<ReturnType<typeof getIdentities>>>
+export type GetIdentitiesQueryError = ErrorType<ErrorResponse>
+
+export function useGetIdentities<TData = Awaited<ReturnType<typeof getIdentities>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getIdentities>>, TError, TData>, request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetIdentitiesQueryOptions(options)
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
