@@ -1,0 +1,257 @@
+TASK ID: SL-010A
+
+STRICT MODE
+
+OBJECTIVE
+
+The Identity Library has been completed successfully.
+
+The next objective is NOT to redesign the application.
+
+The next objective is to improve garment rendering quality.
+
+The current render behaves like an image overlay.
+
+The goal is to make the garment appear naturally worn.
+
+------------------------------------------------------------
+
+DO NOT MODIFY
+
+Authentication
+
+Billing
+
+Studio UI
+
+Identity Library
+
+Model Selector
+
+Database
+
+API Contracts
+
+Upload Flow
+
+------------------------------------------------------------
+
+CURRENT PROBLEMS OBSERVED
+
+1.
+
+Bottom garments appear pasted onto legs.
+
+2.
+
+Grey reference clothing remains visible.
+
+3.
+
+Uploaded garments blend with the reference clothing.
+
+4.
+
+Shirts and tops do not completely replace reference clothing.
+
+5.
+
+Rendered clothing lacks natural wrapping around the body.
+
+------------------------------------------------------------
+
+TASK 1
+
+Audit the current fal.ai request.
+
+Return the current
+
+prompt
+
+image order
+
+payload
+
+image preprocessing
+
+without changing anything first.
+
+Determine why garments are blended instead of replaced.
+
+------------------------------------------------------------
+
+TASK 2
+
+Improve garment preprocessing.
+
+Before the fal.ai request
+
+Automatically
+
+✓ remove hanger influence
+
+✓ crop excessive empty background
+
+✓ center garment
+
+✓ normalize garment scale
+
+✓ preserve aspect ratio
+
+✓ preserve stitching
+
+✓ preserve buttons
+
+✓ preserve zippers
+
+✓ preserve logos
+
+Do NOT stretch garments.
+
+------------------------------------------------------------
+
+TASK 3
+
+Improve rendering instructions.
+
+Rewrite the render prompt.
+
+The prompt should explicitly instruct the model to
+
+REPLACE
+
+existing clothing.
+
+NOT overlay.
+
+NOT blend.
+
+NOT preserve the grey reference outfit.
+
+The prompt should instruct
+
+complete garment replacement
+
+natural draping
+
+natural fabric folds
+
+correct body wrapping
+
+correct sleeve wrapping
+
+correct trouser wrapping
+
+correct waist fit
+
+correct ankle openings
+
+preserve garment construction
+
+preserve garment texture
+
+preserve seams
+
+preserve branding
+
+preserve colour accuracy
+
+The final result should resemble professional ecommerce fashion photography.
+
+------------------------------------------------------------
+
+TASK 4
+
+Reference clothing
+
+The grey t-shirt and shorts exist ONLY as pose references.
+
+They MUST NOT remain visible.
+
+If replacement fails,
+
+the uploaded garment takes priority.
+
+------------------------------------------------------------
+
+TASK 5
+
+Improve prompt weighting.
+
+If the current prompt is weak,
+
+increase emphasis on
+
+uploaded garment fidelity
+
+garment replacement
+
+garment realism
+
+identity preservation
+
+while reducing preservation of the reference outfit.
+
+------------------------------------------------------------
+
+TASK 6
+
+Validation
+
+Test using
+
+one men's jeans
+
+one men's shirt
+
+one women's top
+
+Compare
+
+BEFORE
+
+AFTER
+
+Evaluate
+
+✓ transparency removed
+
+✓ overlay removed
+
+✓ waistband realistic
+
+✓ legs correctly wrapped
+
+✓ shirt fully replaces grey shirt
+
+✓ trousers fully replace grey shorts
+
+------------------------------------------------------------
+
+RETURN
+
+1
+
+Current prompt analysis
+
+2
+
+Changes made
+
+3
+
+Prompt differences
+
+4
+
+Files modified
+
+5
+
+Remaining limitations
+
+IMPORTANT
+
+This task improves ONLY the Render Engine.
+
+Do NOT redesign unrelated parts of the application.

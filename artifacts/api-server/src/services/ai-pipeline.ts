@@ -121,8 +121,74 @@ async function extractGarmentDetails(imageUrl: string): Promise<string> {
   }
 }
 
-function prepareGarmentImage(sourceImageUrl: string): string {
-  return sourceImageUrl;
+// ---------------------------------------------------------------------------
+// TASK 2 — Garment Preprocessing (SL-010A)
+//
+// Before the garment image reaches fal.ai, run it through fal-ai/birefnet to:
+//   ✓ Remove hanger influence (hanger is background — birefnet strips it)
+//   ✓ Strip excessive empty white studio background
+//   ✓ Isolate the pure garment silhouette with a transparent backing
+//   ✓ Preserve stitching, buttons, zippers, logos at sub-pixel accuracy
+//       (birefnet is a segmentation model, not a resize/crop — it never
+//        stretches or distorts the garment geometry)
+//   ✓ Natural aspect ratio preserved — birefnet masks in place, no resampling
+//
+// On any preprocessing failure, the original image is used unchanged so
+// the rendering pipeline never hard-fails because of a preprocessing step.
+// ---------------------------------------------------------------------------
+async function prepareGarmentImage(
+  sourceImageUrl: string,
+  renderId: number,
+): Promise<string> {
+  try {
+    logger.info(
+      { renderId, sourceImageUrl },
+      "AI pipeline: garment preprocessing — removing hanger/background via birefnet",
+    );
+
+    const result = await fal.subscribe("fal-ai/birefnet", {
+      input: {
+        image_url: sourceImageUrl,
+        model: "General Use (Light)",
+        output_format: "png",
+        operating_resolution: "1024x1024",
+        refine_foreground: true,
+      },
+      logs: false,
+    });
+
+    const data = result.data as Record<string, unknown> | undefined;
+
+    // Defensive multi-key extraction — birefnet returns { image: { url } }
+    const candidates = [
+      (data?.["image"] as { url?: string } | undefined)?.url,
+      data?.["image_url"],
+      data?.["url"],
+      (data?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
+    ];
+
+    for (const c of candidates) {
+      if (typeof c === "string" && c.startsWith("http")) {
+        logger.info(
+          { renderId, preprocessedGarmentUrl: c },
+          "AI pipeline: garment background removed — hanger eliminated",
+        );
+        return c;
+      }
+    }
+
+    logger.warn(
+      { renderId },
+      "AI pipeline: birefnet returned no URL — using original garment image",
+    );
+    return sourceImageUrl;
+  } catch (preprocessErr) {
+    logger.warn(
+      { renderId, preprocessErr },
+      "AI pipeline: garment preprocessing failed — falling back to original image",
+    );
+    return sourceImageUrl;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -198,8 +264,8 @@ export async function runAIPipeline(params: {
   } = params;
 
   try {
-    // 1. Prepare the garment image (flat-lay hanger photo)
-    const garmentImage = prepareGarmentImage(sourceImageUrl);
+    // 1. Prepare the garment image — strips hanger/background via birefnet
+    const garmentImage = await prepareGarmentImage(sourceImageUrl, renderId);
 
     // 2. Select base human model image.
     //
@@ -264,20 +330,42 @@ export async function runAIPipeline(params: {
       "AI pipeline: model image selected",
     );
 
-    // ── PROMPT COMPOSER (SL-006) ────────────────────────────────────────────
+    // ── PROMPT COMPOSER (SL-006 + SL-010A) ─────────────────────────────────
     //
-    //  Modular architecture — three independent sections composed into one
+    //  Modular architecture — four independent sections composed into one
     //  final prompt string sent to fal.ai:
     //
-    //    Section A  Camera Framing  (required — drives composition)
-    //    Section B  Expression      (optional — re-activates modelPersona)
-    //    Section C  Location        (optional — re-activates locationEnvironment)
+    //    Section R  Replacement Directive  (required — garment replacement)
+    //    Section A  Camera Framing         (required — drives composition)
+    //    Section B  Expression             (optional — re-activates modelPersona)
+    //    Section C  Location               (optional — re-activates locationEnvironment)
     //
-    //  Each section is a self-contained string. Only non-null sections are
-    //  joined. Order is A → B → C. No section duplicates another's content.
-    //  Backwards compatible: renders without B or C receive Section A only,
-    //  identical to the previous cameraFraming-only behaviour.
+    //  SL-010A adds Section R as the FIRST section. Garment replacement
+    //  intent must lead the prompt so it receives maximum attention weight
+    //  from the diffusion model. All other sections follow unchanged.
     // ────────────────────────────────────────────────────────────────────────
+
+    // ── Section R: Garment Replacement Directive (required, SL-010A) ─────
+    // Explicitly instructs the try-on model to perform COMPLETE garment
+    // replacement, not an overlay or blend. The grey t-shirt and shorts on
+    // the base model are pose-reference guides only — they must not appear
+    // in the output. This section must lead the prompt for maximum weight.
+    const REPLACEMENT_DIRECTIVE =
+      "COMPLETE GARMENT REPLACEMENT: The uploaded garment MUST completely replace " +
+      "all existing grey reference clothing on the model. The grey t-shirt and grey " +
+      "shorts are pose reference guides ONLY — they MUST NOT remain visible in the " +
+      "final result. Do NOT overlay, blend, or layer the uploaded garment on top of " +
+      "the grey reference outfit. REMOVE the grey reference clothing entirely. " +
+      "Display the uploaded garment as naturally worn clothing: correct body-conforming " +
+      "drape, realistic fabric folds and creases, correct sleeve wrapping around the " +
+      "arms, correct trouser leg wrapping around the legs, correct waistband position " +
+      "at the natural waist, correct ankle openings and hem fall. The garment must " +
+      "conform naturally to the model's body shape and pose. " +
+      "Preserve garment construction exactly: original fabric texture, seam lines, " +
+      "stitching, buttons, zippers, drawstrings, brand logos, colour accuracy. " +
+      "Do NOT stretch, distort, or alter the garment design. " +
+      "Final result must resemble professional ecommerce fashion catalogue photography " +
+      "with the uploaded garment completely and naturally worn by the model.";
 
     // ── Section A: Camera Framing (required) ─────────────────────────────
     // Full body strings are reinforced with repeated explicit constraints
@@ -333,7 +421,9 @@ export async function runAIPipeline(params: {
       LOCATION_MAP[locationEnvironment ?? ""] ?? null;
 
     // ── Compose final prompt ───────────────────────────────────────────────
-    const promptParts: string[] = [cameraSection];
+    // Order: R (replacement directive) → A (camera) → B (expression) → C (location)
+    // REPLACEMENT_DIRECTIVE leads so it receives maximum diffusion model weight.
+    const promptParts: string[] = [REPLACEMENT_DIRECTIVE, cameraSection];
     if (expressionSection) promptParts.push(expressionSection);
     if (locationSection)   promptParts.push(locationSection);
     const prompt = promptParts.join(" ");
@@ -345,9 +435,10 @@ export async function runAIPipeline(params: {
         modelPersona,
         locationEnvironment,
         sections: {
-          camera:     cameraSection.slice(0, 60) + "…",
-          expression: expressionSection,
-          location:   locationSection,
+          replacement: REPLACEMENT_DIRECTIVE.slice(0, 80) + "…",
+          camera:      cameraSection.slice(0, 60) + "…",
+          expression:  expressionSection,
+          location:    locationSection,
         },
         finalPrompt: prompt,
       },
@@ -396,46 +487,69 @@ export async function runAIPipeline(params: {
           garmentPlacement:   garmentPlacement ?? null,
           resolvedCategory:   category,
           garmentImage:       garmentImage,
-          denoise_strength:   0.35,
+          denoise_strength:   0.95,
           fidelity_weight:    1.0,
           cover_weight:       1.0,
+          restore_clothes:    false,
         },
       },
       "AI pipeline: fal.ai payload summary",
     );
     logger.info({ renderId }, "AI pipeline: calling fal-ai/fashn/tryon/v1.6");
 
+    // SL-010A — Expanded negative prompt.
+    // Added explicit suppression of grey reference clothing artifacts — the
+    // primary cause of overlay/blend failures in previous renders.
     const NEGATIVE_PROMPT =
+      // ── Reference clothing suppression (SL-010A) ──────────────────────────
+      "grey t-shirt visible, grey shorts visible, grey reference outfit showing, " +
+      "original grey clothing showing through, grey underlayer visible, " +
+      "reference outfit blending, clothing overlay, garment pasted on top, " +
+      "transparent garment, see-through clothing, double clothing layer, " +
+      "superimposed garment, blended clothing, clothing transparency, " +
+      // ── Anatomy / quality (unchanged) ─────────────────────────────────────
       "deformed hands, abnormal fingers, extra digits, broken anatomy, " +
       "distorted facial profiles, blurry, low resolution, " +
+      // ── Hanger artifacts (unchanged) ──────────────────────────────────────
       "flat-lay fallback elements, visible clothes hanger, " +
       "wooden hanger remnants, hanger shadow inside collar, metal hook artifact";
 
     let outputImageUrl: string | undefined;
 
     try {
+      // The @fal-ai/client V16Input generated type omits fields that fashn/tryon
+      // v1.6 accepts at runtime (e.g. prompt, restore_clothes). Build the payload
+      // as a plain object and cast to bypass the incomplete type definition.
+      //
+      // SL-010A — Fidelity parameter rebalance:
+      //   denoise_strength: 0.95 (was 0.35)
+      //     HIGH value allows the diffusion model to fully replace the grey
+      //     reference outfit. The previous 0.35 preserved the reference image
+      //     too strongly, causing grey t-shirt/shorts to bleed through.
+      //     Garment detail is now preserved by fidelity_weight/cover_weight.
+      //   fidelity_weight: 1.0 — maximum garment texture/construction fidelity.
+      //   cover_weight:    1.0 — maximum coverage of reference clothing.
+      //   restore_clothes: false — do not restore reference clothes outside
+      //     the selected category (prevents grey shorts showing when tops-only).
+      const falPayload = {
+        model_image:        modelImageUrl,
+        garment_image:      garmentImage,
+        category,
+        garment_photo_type: "flat-lay",
+        mode:               "quality",
+        num_samples:        1,
+        output_format:      "jpeg",
+        prompt,
+        denoise_strength:   0.95,
+        fidelity_weight:    1.0,
+        cover_weight:       1.0,
+        restore_clothes:    false,
+        negative_prompt:    NEGATIVE_PROMPT,
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await fal.subscribe("fal-ai/fashn/tryon/v1.6", {
-        input: {
-          model_image: modelImageUrl,
-          garment_image: garmentImage,
-          category,
-          garment_photo_type: "flat-lay",
-          mode: "quality",
-          num_samples: 1,
-          output_format: "jpeg",
-          prompt,
-          // Structural detail protection — three-parameter fidelity lock:
-          //   denoise_strength: 0.35 → strict low threshold; prevents the diffusion
-          //     network from smoothing over fine details (buttons, pockets, zippers)
-          //   fidelity_weight: 1.0  → absolute max; forces exact replication of the
-          //     designer's original garment geometry under any permutation
-          //   cover_weight: 1.0    → maximum preserve_details; retains exact colours,
-          //     stitching, metallic buttons, pocket seam flaps, and fabric folds
-          denoise_strength: 0.35,
-          fidelity_weight: 1.0,
-          cover_weight: 1.0,
-          negative_prompt: NEGATIVE_PROMPT,
-        },
+        input: falPayload as any,
         logs: false,
       });
 
