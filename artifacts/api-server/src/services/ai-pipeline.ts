@@ -237,44 +237,95 @@ export async function runAIPipeline(params: {
       "AI pipeline: model image selected",
     );
 
-    // 3a. UNBREAKABLE COMPOSITION BOUNDS — strict per-framing conditional prompt.
-    //     Each camera framing token maps to one locked, non-negotiable string.
-    //     No open-ended template interpolation; no dict lookups that can miss.
-    //     Unrecognised / unset framing defaults to the full-body catalog string.
+    // ── PROMPT COMPOSER (SL-006) ────────────────────────────────────────────
     //
-    //     FULL BODY — reinforced with repeated explicit constraints (SL-004):
-    //     The fashn/tryon engine defaults to 3/4 crops. A single "head to toe"
-    //     mention is insufficient. The prompt must redundantly assert feet
-    //     visibility, no ankle crop, and full containment to override the model's
-    //     internal composition bias.
-    let prompt: string;
+    //  Modular architecture — three independent sections composed into one
+    //  final prompt string sent to fal.ai:
+    //
+    //    Section A  Camera Framing  (required — drives composition)
+    //    Section B  Expression      (optional — re-activates modelPersona)
+    //    Section C  Location        (optional — re-activates locationEnvironment)
+    //
+    //  Each section is a self-contained string. Only non-null sections are
+    //  joined. Order is A → B → C. No section duplicates another's content.
+    //  Backwards compatible: renders without B or C receive Section A only,
+    //  identical to the previous cameraFraming-only behaviour.
+    // ────────────────────────────────────────────────────────────────────────
+
+    // ── Section A: Camera Framing (required) ─────────────────────────────
+    // Full body strings are reinforced with repeated explicit constraints
+    // (SL-004) because fashn/tryon defaults to 3/4 crops and resists a single
+    // "head to toe" mention.
+    const FULL_BODY_FRAMING =
+      "Full body commercial lookbook photograph. CRITICAL FRAMING REQUIREMENT: " +
+      "The entire human model must be captured completely from the very top of the head " +
+      "down to both feet. Both feet and ankles must be FULLY VISIBLE and completely inside " +
+      "the frame — absolutely no cropping at or below the ankle, knee, or thigh. " +
+      "The complete outfit must be visible from collar to hemline to shoe sole. " +
+      "Subject must be entirely contained within the frame with neutral space above the head. " +
+      "Preserve the original garment proportions from neckline to full hem length. " +
+      "Do NOT crop the body. Do NOT zoom in. Show the complete full-length figure.";
+
+    let cameraSection: string;
     if (cameraFraming === "full_body") {
-      prompt =
-        "Full body commercial lookbook photograph. CRITICAL FRAMING REQUIREMENT: " +
-        "The entire human model must be captured completely from the very top of the head " +
-        "down to both feet. Both feet and ankles must be FULLY VISIBLE and completely inside " +
-        "the frame — absolutely no cropping at or below the ankle, knee, or thigh. " +
-        "The complete outfit must be visible from collar to hemline to shoe sole. " +
-        "Subject must be entirely contained within the frame with neutral space above the head. " +
-        "Preserve the original garment proportions from neckline to full hem length. " +
-        "Do NOT crop the body. Do NOT zoom in. Show the complete full-length figure.";
+      cameraSection = FULL_BODY_FRAMING;
     } else if (cameraFraming === "mid_shot") {
-      prompt = "A clean waist-up medium portrait composition showing the model from the waist to the top of the head.";
+      cameraSection = "A clean waist-up medium portrait composition showing the model from the waist to the top of the head.";
     } else if (cameraFraming === "close_up") {
-      prompt = "A tight macro close-up shot focused purely on the chest and upper torso fabric details.";
+      cameraSection = "A tight macro close-up shot focused purely on the chest and upper torso fabric details.";
     } else {
-      // Default: treat as full-body catalog when framing is unset or unrecognised
-      prompt =
-        "Full body commercial lookbook photograph. CRITICAL FRAMING REQUIREMENT: " +
-        "The entire human model must be captured completely from the very top of the head " +
-        "down to both feet. Both feet and ankles must be FULLY VISIBLE and completely inside " +
-        "the frame — absolutely no cropping at or below the ankle, knee, or thigh. " +
-        "The complete outfit must be visible from collar to hemline to shoe sole. " +
-        "Subject must be entirely contained within the frame with neutral space above the head. " +
-        "Preserve the original garment proportions from neckline to full hem length. " +
-        "Do NOT crop the body. Do NOT zoom in. Show the complete full-length figure.";
+      cameraSection = FULL_BODY_FRAMING; // default when unset or unrecognised
     }
-    logger.info({ renderId, cameraFraming, prompt }, "AI pipeline: composition prompt locked");
+
+    // ── Section B: Expression / Model Persona (optional) ─────────────────
+    // Maps each modelPersona enum value to a concise expression instruction.
+    // Legacy enum aliases (casual/high_fashion/athletic/minimalist) are
+    // included alongside the current values so old renders remain consistent.
+    const EXPRESSION_MAP: Record<string, string> = {
+      high_fashion_editorial: "The model holds an intense, serious high-fashion editorial expression.",
+      natural_smile:          "The model wears a warm, natural smile.",
+      confident_commercial:   "The model projects a confident, direct commercial look.",
+      // Legacy aliases kept for backwards compatibility
+      high_fashion:           "The model holds an intense, serious high-fashion editorial expression.",
+      casual:                 "The model wears a relaxed, natural smile.",
+      athletic:               "The model projects a confident, athletic commercial stance.",
+      minimalist:             "The model holds a clean, understated neutral expression.",
+    };
+    const expressionSection: string | null =
+      EXPRESSION_MAP[modelPersona ?? ""] ?? null;
+
+    // ── Section C: Location Environment (optional) ────────────────────────
+    // Maps each locationEnvironment enum value to a concise scene description.
+    const LOCATION_MAP: Record<string, string> = {
+      photo_studio:    "Set against a clean, professional studio backdrop with soft, even lighting.",
+      urban_street:    "Set against a softly blurred urban street backdrop.",
+      luxury_interior: "Set inside a beautifully blurred luxurious interior space.",
+      nature:          "Set against a softly blurred natural outdoor landscape.",
+    };
+    const locationSection: string | null =
+      LOCATION_MAP[locationEnvironment ?? ""] ?? null;
+
+    // ── Compose final prompt ───────────────────────────────────────────────
+    const promptParts: string[] = [cameraSection];
+    if (expressionSection) promptParts.push(expressionSection);
+    if (locationSection)   promptParts.push(locationSection);
+    const prompt = promptParts.join(" ");
+
+    logger.info(
+      {
+        renderId,
+        cameraFraming,
+        modelPersona,
+        locationEnvironment,
+        sections: {
+          camera:     cameraSection.slice(0, 60) + "…",
+          expression: expressionSection,
+          location:   locationSection,
+        },
+        finalPrompt: prompt,
+      },
+      "AI pipeline: prompt composer assembled",
+    );
 
     // 3. Resolve garment category for the fal.ai `category` parameter.
     //    User's Garment Placement Selector maps directly:
