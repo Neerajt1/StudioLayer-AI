@@ -1,0 +1,160 @@
+SL-018A – Complete the Look Engine & Workspace Reset
+Implementation Guidelines
+Preserve the existing architecture and backward compatibility.
+Do not modify the Render Orchestrator or Intelligence Engine architecture.
+Maintain existing coding standards and UI consistency.
+At the end of implementation, provide a detailed Engineering Report covering all deliverables, implementation details, files modified, testing performed, and any known issues discovered.
+OBJECTIVE
+Improve the first-time user experience by introducing an intelligent Complete the Look feature and fixing the New Photoshoot workflow so every new photoshoot starts with a completely clean workspace.
+This is a product enhancement plus a workflow bug fix.
+PART 1 – Complete the Look UI
+Add a new section between:
+Choose Model
+
+↓
+
+Complete the Look (Optional)
+
+↓
+
+Creative Brief
+Title:
+Complete the Look (Optional)
+Default Selection:
+✨ AI Recommended
+Options:
+✨ AI Recommended
+Formal
+Business Casual
+Casual
+Denim
+Streetwear
+Ethnic
+Sportswear
+None
+The UI should remain clean and consistent with the existing StudioLayer design.
+PART 2 – Outfit Completion Engine
+Implement a rule-based Outfit Completion layer before the rendering request is generated.
+Do not use AI or an LLM for these mappings.
+Example mappings:
+Men's Blazer
+AI Recommended
+Black Formal Trousers
+Black Oxford Shoes
+Formal
+Black Formal Trousers
+Black Oxford Shoes
+Business Casual
+Beige Chinos
+Brown Loafers
+Casual
+Blue Jeans
+White Sneakers
+Women's Jacket
+AI Recommended
+Straight-fit Off-white Trousers
+Nude Heels
+Business Casual
+Beige Trousers
+Loafers
+Casual
+Blue Denim
+White Sneakers
+Hoodie
+AI Recommended
+Denim
+Sneakers
+Kurta
+AI Recommended
+Pajama
+Mojari
+This should be implemented as a deterministic rule engine that can easily be expanded in future releases.
+PART 3 – Prompt Construction
+Do not simply append the selected option to the prompt.
+Instead, build a complete outfit specification before sending the rendering request.
+Example:
+Uploaded Garment:
+Olive Men's Blazer
+
+Complete Look:
+Black Formal Trousers
+Black Oxford Shoes
+
+Creative Brief:
+Luxury Hotel Lobby
+
+Generate a professional fashion photoshoot preserving the uploaded blazer exactly while dressing the model in black formal trousers and black Oxford shoes inside a luxury hotel lobby.
+The rendering request must contain the complete outfit specification.
+PART 4 – Prompt Logging
+Before the rendering request is sent:
+Log and expose the complete final rendering request.
+The Engineering Report must include:
+Uploaded garment
+Selected Complete the Look option
+Generated outfit specification
+Final rendering request sent to the rendering pipeline
+This is required so we can verify that the complete outfit specification is actually reaching the rendering engine.
+PART 5 – New Photoshoot Reset (Bug Fix)
+The New Photoshoot button must completely reset the Studio workspace.
+Currently, previous uploaded images and generated outputs remain visible, creating confusion.
+When the user clicks New Photoshoot, the application must:
+Clear uploaded garment image
+Clear generated photoshoot image
+Clear upload preview
+Reset selected model
+Reset Complete the Look to ✨ AI Recommended
+Clear Creative Brief
+Clear validation messages
+Clear rendering state
+Clear loading state
+Reset progress indicators
+Return the workspace to its original "ready for a new photoshoot" state
+The application should behave exactly as if the Studio page has just been opened.
+Download Behaviour
+Downloading a generated image must not reset the workspace.
+Only clicking New Photoshoot should create a fresh session.
+PART 6 – Validation
+Verify the following:
+Complete the Look
+Complete the Look selection is available.
+AI Recommended is selected by default.
+Different selections generate different outfit specifications.
+The complete outfit specification is included in the final rendering request.
+Workspace Reset
+After clicking New Photoshoot:
+No previous uploaded garment remains.
+No previous generated image remains.
+No previous Creative Brief remains.
+No previous render state remains.
+The next render begins with a completely fresh workspace.
+Engineering Report
+The report should include:
+1. Files Created
+2. Files Modified
+3. UI Changes
+4. Outfit Completion Engine Implementation
+Rule engine logic
+Outfit mapping strategy
+Extensibility approach
+5. Rendering Request
+Include one real example showing:
+Uploaded garment
+Complete the Look selection
+Generated outfit specification
+Final rendering request
+6. Testing Results
+Provide pass/fail status for:
+UI
+Prompt generation
+Workspace reset
+Rendering request generation
+7. Known Issues
+List any remaining UI, rendering, workflow, or performance issues observed during implementation, even if they are outside the scope of this sprint.
+Success Criteria
+This sprint will be considered successful if:
+The new Complete the Look feature is fully functional.
+The rendering request contains a structured outfit specification.
+The New Photoshoot button completely resets the workspace.
+No existing functionality is broken.
+Overall UI remains simple, clean, and intuitive.
+Note: This sprint is focused on improving the user experience and workflow. It does not require changes to the underlying rendering architecture. The goal is to ensure StudioLayer AI prepares and passes a richer, structured outfit specification to the existing rendering pipeline while delivering a clean, predictable user experience for every new photoshoot.
