@@ -1,0 +1,241 @@
+TASK ID: SL-015
+
+STRICT MODE
+
+OBJECTIVE
+
+The Intelligence Engine has been successfully integrated.
+
+However, current testing confirms that FASHN v1.6 does not consume natural language prompts and therefore cannot directly render complementary clothing selected by the Intelligence Engine.
+
+The objective of this sprint is to determine the maximum achievable rendering capability with the current technology stack and to recommend the optimal rendering architecture for StudioLayer.
+
+DO NOT implement a new rendering pipeline yet.
+
+This sprint is a technical investigation and architecture design exercise.
+
+------------------------------------------------------------
+
+DO NOT MODIFY
+
+• Authentication
+
+• Billing
+
+• Upload Flow
+
+• Identity Library
+
+• Fashion Knowledge Base
+
+• Decision Engine
+
+• Prompt Composer
+
+• Existing Rendering Pipeline
+
+------------------------------------------------------------
+
+PART 1
+
+FASHN Capability Audit
+
+Investigate the current capabilities of the integrated FASHN API.
+
+Determine whether FASHN supports any mechanism for influencing non-uploaded garments through:
+
+• API parameters
+• model image selection
+• masking
+• multiple garments
+• undocumented options
+• newly released features
+
+Document all findings.
+
+------------------------------------------------------------
+
+PART 2
+
+Rendering Pipeline Options
+
+Evaluate the following architectures.
+
+OPTION A
+
+Current
+
+Identity Image
+
+↓
+
+Uploaded Garment
+
+↓
+
+FASHN
+
+OPTION B
+
+Pre-Styled Base Model
+
+↓
+
+Uploaded Garment
+
+↓
+
+FASHN
+
+OPTION C
+
+Full AI Image Generation
+
+↓
+
+Garment Preservation
+
+↓
+
+Post Processing
+
+OPTION D
+
+Hybrid Multi-Model Pipeline
+
+↓
+
+AI Image Generation
+
+↓
+
+Garment Replacement
+
+↓
+
+Quality Enhancement
+
+Compare advantages, disadvantages, implementation complexity, expected quality, cost, and scalability.
+
+------------------------------------------------------------
+
+PART 3
+
+Base Model Strategy
+
+Determine whether StudioLayer should maintain a library of pre-styled reference models.
+
+Example
+
+Male
+
+Casual
+
+White Tee
+
+Black Tee
+
+Oxford Shirt
+
+Polo
+
+------------------------------------------------------------
+
+Female
+
+White Blouse
+
+Black Blouse
+
+Basic Tee
+
+Neutral Knit
+
+------------------------------------------------------------
+
+Kids
+
+Basic Tee
+
+Hoodie
+
+School Wear
+
+Evaluate whether these can improve try-on quality.
+
+------------------------------------------------------------
+
+PART 4
+
+Technology Evaluation
+
+Evaluate whether another image-generation model should be introduced before FASHN.
+
+Compare:
+
+• Quality
+• Cost
+• Latency
+• Consistency
+• API maturity
+• Licensing
+• Commercial suitability
+
+Recommend the best architecture.
+
+------------------------------------------------------------
+
+PART 5
+
+Architecture Recommendation
+
+Recommend the long-term rendering architecture for StudioLayer.
+
+The recommendation should include:
+
+• component diagram
+• data flow
+• rendering sequence
+• expected latency
+• expected quality improvements
+• implementation roadmap
+
+------------------------------------------------------------
+
+PART 6
+
+Risk Assessment
+
+Identify technical risks, including:
+
+• inconsistent garments
+• loss of uploaded garment fidelity
+• identity drift
+• latency
+• API dependency
+• vendor lock-in
+• cost
+
+Provide mitigation strategies.
+
+------------------------------------------------------------
+
+PART 7
+
+Deliverables
+
+Return:
+
+1. FASHN capability assessment.
+2. Comparison of rendering architectures.
+3. Recommended architecture.
+4. Technology comparison matrix.
+5. Estimated implementation effort.
+6. Risks and mitigation.
+7. Recommended SL-016 implementation plan.
+
+IMPORTANT
+
+This sprint is an engineering investigation.
+
+Do NOT implement a new rendering architecture until the investigation confirms the technically optimal approach.
