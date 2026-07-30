@@ -1,0 +1,294 @@
+TASK ID: SL-011
+
+STRICT MODE
+
+OBJECTIVE
+
+StudioLayer AI has reached the stage where prompt engineering alone is no longer sufficient.
+
+Before making further rendering changes, perform a comprehensive technical audit of the current FASHN/fal.ai virtual try-on implementation.
+
+The goal is to determine whether we are:
+
+1. Using the API correctly.
+2. Missing supported features.
+3. Using suboptimal parameters.
+4. Limited by the underlying model.
+
+DO NOT MODIFY
+
+• Authentication
+• Billing
+• Identity Library
+• Studio UI
+• Database
+• Upload Flow
+• API Contracts
+
+This is an investigation sprint.
+
+------------------------------------------------------------
+
+TASK 1
+
+Identify the exact FASHN/fal.ai endpoint currently in use.
+
+Return:
+
+• endpoint name
+• model version
+• API version
+• documentation reference used
+
+------------------------------------------------------------
+
+TASK 2
+
+List EVERY supported parameter exposed by the current endpoint.
+
+Include:
+
+parameter
+
+current value
+
+default value
+
+description
+
+whether StudioLayer currently uses it
+
+Example
+
+denoise_strength
+
+cover_weight
+
+restore_clothes
+
+garment_photo_type
+
+fidelity_weight
+
+etc.
+
+------------------------------------------------------------
+
+TASK 3
+
+Compare StudioLayer implementation against official best practices.
+
+Identify
+
+✓ implemented correctly
+
+✓ partially implemented
+
+✓ not implemented
+
+Provide recommendations.
+
+------------------------------------------------------------
+
+TASK 4
+
+Garment Photo Analysis
+
+Determine whether our current preprocessing output
+
+(background removed transparent garment)
+
+is still correctly classified as
+
+flat-lay
+
+or whether another garment_photo_type is recommended.
+
+If documentation recommends another type,
+
+explain why.
+
+------------------------------------------------------------
+
+TASK 5
+
+Prompt Analysis
+
+Review the current rendering prompt.
+
+Determine
+
+Which prompt sections influence
+
+• garment fidelity
+
+• identity preservation
+
+• clothing replacement
+
+• pose preservation
+
+Identify redundant instructions.
+
+Identify conflicting instructions.
+
+Recommend improvements.
+
+DO NOT rewrite yet.
+
+------------------------------------------------------------
+
+TASK 6
+
+Image Ordering Audit
+
+Review the order images are supplied to the API.
+
+Identity
+
+Garment
+
+Masks
+
+Reference
+
+Confirm whether the order matches official recommendations.
+
+------------------------------------------------------------
+
+TASK 7
+
+Capability Assessment
+
+Determine whether the current endpoint is capable of
+
+✓ preserving garment geometry
+
+✓ preserving garment length
+
+✓ preserving collars
+
+✓ preserving sleeve shape
+
+✓ preserving logos
+
+✓ preserving buttons
+
+✓ preserving fabric drape
+
+✓ preserving trouser fit
+
+Rate confidence
+
+High
+
+Medium
+
+Low
+
+------------------------------------------------------------
+
+TASK 8
+
+Known Limitations
+
+Based on official documentation,
+
+list known limitations of this model.
+
+Examples
+
+• loose garments
+
+• oversized clothing
+
+• transparent fabrics
+
+• dresses
+
+• long coats
+
+• accessories
+
+• handbags
+
+etc.
+
+------------------------------------------------------------
+
+TASK 9
+
+Competitive Options
+
+Without modifying the application,
+
+identify
+
+• newer versions
+
+• higher-quality endpoints
+
+• premium variants
+
+available within FASHN/fal.ai.
+
+Compare
+
+quality
+
+speed
+
+cost
+
+expected garment fidelity
+
+Do NOT migrate.
+
+Only report.
+
+------------------------------------------------------------
+
+RETURN
+
+1.
+
+Current endpoint
+
+2.
+
+Current implementation score (0–100)
+
+3.
+
+Missing features
+
+4.
+
+Unused API capabilities
+
+5.
+
+Best-practice deviations
+
+6.
+
+Model limitations
+
+7.
+
+Whether prompt engineering is likely to improve quality further
+
+8.
+
+Whether another endpoint would materially improve quality
+
+IMPORTANT
+
+This sprint is an engineering audit.
+
+Do NOT change application behaviour.
+Do NOT change prompts.
+Do NOT tune parameters.
+Do NOT refactor code.
+
+Only investigate and report.
