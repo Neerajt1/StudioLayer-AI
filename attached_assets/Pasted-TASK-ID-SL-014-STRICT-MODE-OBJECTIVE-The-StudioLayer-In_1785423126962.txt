@@ -1,0 +1,396 @@
+TASK ID: SL-014
+
+STRICT MODE
+
+OBJECTIVE
+
+The StudioLayer Intelligence Engine has been successfully implemented.
+
+This sprint integrates the Intelligence Engine with the rendering pipeline so that every uploaded garment is rendered as part of a complete, commercially styled outfit.
+
+The rendering engine MUST consume recommendations from the Intelligence Engine.
+
+The rendering engine MUST NOT make styling decisions.
+
+------------------------------------------------------------
+
+DO NOT MODIFY
+
+• Authentication
+
+• Billing
+
+• Upload Flow
+
+• Identity Library
+
+• Existing FASHN API Parameters
+
+• Existing Rendering Quality Optimizations
+
+• Existing API Contracts
+
+------------------------------------------------------------
+
+PART 1
+
+Integrate Intelligence Engine
+
+Before every render
+
+execute
+
+GarmentAnalyzer
+
+↓
+
+StyleEngine
+
+↓
+
+WardrobeCompletionEngine
+
+↓
+
+DecisionEngine
+
+The output becomes the Outfit Recommendation Object.
+
+The rendering engine consumes this object.
+
+------------------------------------------------------------
+
+PART 2
+
+Rendering Behaviour
+
+If the uploaded garment is
+
+BOTTOM
+
+Automatically generate
+
+• Top
+• Footwear
+• Accessories
+
+------------------------------------------------------------
+
+If the uploaded garment is
+
+TOP
+
+Automatically generate
+
+• Bottom
+• Footwear
+• Accessories
+
+------------------------------------------------------------
+
+If the uploaded garment is
+
+DRESS
+
+Automatically generate
+
+• Footwear
+• Accessories
+
+------------------------------------------------------------
+
+If the uploaded garment is
+
+JACKET
+
+Automatically generate
+
+• Inner Layer
+• Bottom
+• Footwear
+
+------------------------------------------------------------
+
+The uploaded garment must always remain the hero product.
+
+Complementary items must never dominate the uploaded product.
+
+------------------------------------------------------------
+
+PART 3
+
+Prompt Composition
+
+Build a PromptComposer module.
+
+The PromptComposer converts the Outfit Recommendation Object into a natural language rendering prompt.
+
+Example
+
+Uploaded Product
+
+Blue Slim Jeans
+
+↓
+
+Generated Prompt
+
+"A full-body studio fashion photograph of a young adult male wearing the uploaded blue slim-fit denim jeans as the hero product, paired with a premium white crew-neck T-shirt, clean white leather sneakers, and a brown leather belt. Neutral contemporary styling, professional catalogue photography, realistic proportions, accurate garment fit, natural lighting, clean white background."
+
+The PromptComposer must always prioritize
+
+• uploaded garment accuracy
+• garment visibility
+• catalogue realism
+
+------------------------------------------------------------
+
+PART 4
+
+Garment Protection
+
+The uploaded garment must never be replaced.
+
+The renderer must preserve
+
+• colour
+
+• fit
+
+• texture
+
+• stitching
+
+• logos
+
+• branding
+
+• pockets
+
+• buttons
+
+• zippers
+
+• prints
+
+• embroidery
+
+Complementary garments should adapt around the uploaded garment.
+
+------------------------------------------------------------
+
+PART 5
+
+Outfit Composition Rules
+
+The uploaded garment is always the visual focal point.
+
+Complementary garments should be visually neutral.
+
+Avoid highly patterned supporting garments.
+
+Avoid bright colours that distract.
+
+Avoid oversized accessories.
+
+Never hide the uploaded garment.
+
+------------------------------------------------------------
+
+PART 6
+
+Commercial Photography Rules
+
+Every output should resemble a premium fashion catalogue.
+
+Requirements
+
+• Full body
+
+• Natural standing pose
+
+• Neutral expression
+
+• Balanced posture
+
+• Professional lighting
+
+• Clean studio background
+
+• Accurate garment draping
+
+• Realistic footwear placement
+
+• Natural shadows
+
+------------------------------------------------------------
+
+PART 7
+
+Fallback Behaviour
+
+If no recommendation exists
+
+↓
+
+Use the Rule Engine default
+
+If confidence remains low
+
+↓
+
+Use GPT recommendation
+
+If GPT fails
+
+↓
+
+Use predefined StudioLayer Default Outfit
+
+Rendering must never fail because styling failed.
+
+------------------------------------------------------------
+
+PART 8
+
+Developer Logging
+
+Log
+
+Uploaded Garment
+
+Detected Style
+
+Selected Style Mode
+
+Generated Outfit
+
+Generated Prompt
+
+Decision Source
+
+Render Duration
+
+Any Fallback Used
+
+------------------------------------------------------------
+
+PART 9
+
+Performance
+
+Total Intelligence + Prompt Composition
+
+Target
+
+under 150 ms
+
+Rendering latency should remain as close as possible to current performance.
+
+------------------------------------------------------------
+
+PART 10
+
+Architecture Principles
+
+Rendering Engine receives only
+
+Outfit Recommendation Object
+
+and
+
+Render Prompt
+
+Rendering Engine must never
+
+• select clothing
+
+• select colours
+
+• decide styling
+
+• infer occasions
+
+• generate recommendations
+
+All styling logic remains inside the Intelligence Engine.
+
+------------------------------------------------------------
+
+PART 11
+
+Validation
+
+Test with
+
+Men
+
+• Jeans
+• Chinos
+• Shorts
+• Shirt
+• Polo
+• Hoodie
+• Jacket
+
+Women
+
+• Blouse
+• Shirt
+• Dress
+• Skirt
+• Trousers
+• Denim
+
+Kids
+
+• Hoodie
+• T-shirt
+• Jeans
+• Dress
+
+Verify
+
+The uploaded garment remains unchanged.
+
+The complementary outfit is realistic.
+
+The outfit appears commercially presentable.
+
+------------------------------------------------------------
+
+PART 12
+
+Deliverables
+
+Return
+
+1. Files Modified
+
+2. Updated Architecture Diagram
+
+3. PromptComposer Design
+
+4. Example Outfit Objects
+
+5. Example Render Prompts
+
+6. Validation Results
+
+7. Developer Logs
+
+8. Performance Metrics
+
+9. Future Extension Points
+
+IMPORTANT
+
+This sprint connects the existing Intelligence Engine to the rendering pipeline.
+
+Do NOT redesign the Intelligence Engine.
+
+Do NOT redesign the Fashion Knowledge Base.
+
+Do NOT change FASHN API behaviour.
+
+The renderer should simply consume the Outfit Recommendation Object and produce a fully styled commercial fashion image.

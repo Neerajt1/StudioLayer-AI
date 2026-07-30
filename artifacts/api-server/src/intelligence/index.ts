@@ -1,13 +1,16 @@
 // ---------------------------------------------------------------------------
-// StudioLayer AI — Intelligence Layer Public API (SL-013A)
+// StudioLayer AI — Intelligence Layer Public API (SL-013A / SL-014)
 //
 // This is the single entry point for all intelligence functionality.
-// The rendering engine consumes only this export — it never imports
-// individual modules directly.
+// The rendering engine imports only from this barrel — never from individual
+// submodules directly.
 // ---------------------------------------------------------------------------
 
 export { runIntelligenceAnalysis } from "./decision-engine";
-export type { IntelligenceParams }  from "./decision-engine";
+export type { IntelligenceParams, IntelligenceResult } from "./decision-engine";
+
+export { composeRenderPrompt }      from "./prompt-composer";
+export type { PromptComposerParams } from "./prompt-composer";
 
 export { analyzeGarment }           from "./garment-analyzer";
 export { FashionKnowledgeBase }     from "./fashion-knowledge-base";

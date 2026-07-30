@@ -1,10 +1,9 @@
 import { fal } from "@fal-ai/client";
-import OpenAI from "openai";
 import { logger } from "../lib/logger";
 import { findIdentityById } from "../data/identity-library";
+import { runIntelligenceAnalysis } from "../intelligence";
 
 fal.config({ credentials: process.env.FAL_KEY });
-const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
 
 // ---------------------------------------------------------------------------
 // FASHN V1.6 DEVELOPER CONFIGURATION (SL-011A)
@@ -61,6 +60,21 @@ const FASHN_CONFIG = {
   num_samples: number;
   seed: number | undefined;
 };
+
+// ---------------------------------------------------------------------------
+// FASHN category mapper
+//
+// The intelligence layer produces a rich GarmentCategory; fal-ai/fashn/tryon/v1.6
+// accepts only three values. This function converts without changing FASHN params.
+// ---------------------------------------------------------------------------
+function mapToFashnCategory(
+  intelligenceCategory: string,
+): "tops" | "bottoms" | "one-pieces" {
+  if (intelligenceCategory === "bottoms")    return "bottoms";
+  if (intelligenceCategory === "one-pieces") return "one-pieces";
+  // tops, outerwear, footwear, accessories — all map to the upper/full body slot
+  return "tops";
+}
 
 // ---------------------------------------------------------------------------
 // MODEL IMAGE SELECTOR — pure conditional logic, zero dictionary lookups.
@@ -179,46 +193,17 @@ async function prepareGarmentImage(
 }
 
 // ---------------------------------------------------------------------------
-// GARMENT CATEGORY DETECTION — GPT-4o vision fallback
+// MAIN PIPELINE (SL-014)
 //
-// Used only when the user has not set an explicit garment placement.
-// Maps to the official V1.6 `category` values: tops / bottoms / one-pieces.
-// ---------------------------------------------------------------------------
-type GarmentCategory = "tops" | "bottoms" | "one-pieces" | "auto";
-
-async function detectGarmentCategory(
-  imageUrl: string,
-): Promise<GarmentCategory> {
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content:
-            'You are a garment classifier. IMPORTANT: Ignore any clothes hanger, hook, rod, or mounting apparatus visible in the image — focus ONLY on the fabric garment itself. Classify the clothing item into exactly one of these three categories: "tops" (shirts, blouses, jackets, hoodies, t-shirts, coats, etc.), "bottoms" (pants, jeans, skirts, shorts, etc.), or "one-pieces" (dresses, jumpsuits, full-body outfits, rompers). Reply with only the category word, nothing else.',
-        },
-        {
-          role: "user",
-          content: [{ type: "image_url", image_url: { url: imageUrl } }],
-        },
-      ],
-      max_tokens: 10,
-    });
-
-    const raw =
-      response.choices[0]?.message?.content?.trim().toLowerCase() ?? "";
-    if (raw === "tops" || raw === "bottoms" || raw === "one-pieces") {
-      return raw;
-    }
-    return "auto";
-  } catch {
-    return "auto";
-  }
-}
-
-// ---------------------------------------------------------------------------
-// MAIN PIPELINE
+// Integration order:
+//   0. Intelligence analysis + birefnet preprocessing — run in PARALLEL
+//      (intelligence uses the original upload; birefnet strips the hanger)
+//   1. Select model image (identity library or attribute routing)
+//   2. Resolve identity image URL to absolute URL
+//   3. Derive fal.ai `category` from intelligence layer result
+//   4. Build V1.6 payload (parameters unchanged from SL-011A)
+//   5. Call fal.ai — identical to SL-011A
+//   6. Part 8 render summary log
 // ---------------------------------------------------------------------------
 export async function runAIPipeline(params: {
   renderId: number;
@@ -247,11 +232,28 @@ export async function runAIPipeline(params: {
     modelIdentityId,
   } = params;
 
-  try {
-    // 1. Preprocess garment — strip hanger/background via birefnet
-    const garmentImage = await prepareGarmentImage(sourceImageUrl, renderId);
+  const renderStart = Date.now();
 
-    // 2. Select model image
+  try {
+    // 0. Intelligence analysis + birefnet preprocessing — run in PARALLEL
+    //
+    //    Both operations are independent:
+    //      • Intelligence analyses the ORIGINAL uploaded image for garment profile
+    //      • BirefNet strips the hanger from the ORIGINAL image for fal.ai input
+    //    Running them concurrently absorbs the intelligence analysis time inside
+    //    the birefnet wait, keeping total render latency unchanged.
+    const [garmentImage, intelligenceResult] = await Promise.all([
+      prepareGarmentImage(sourceImageUrl, renderId),
+      runIntelligenceAnalysis({
+        renderId,
+        garmentImageUrl: sourceImageUrl,
+        garmentPlacement,
+        modelGender,
+        modelAgeRange,
+      }),
+    ]);
+
+    // 1. Select model image
     //
     //    Identity Library path (SL-009): if a modelIdentityId is supplied and
     //    resolves, use that portrait directly — no attribute routing needed.
@@ -276,9 +278,9 @@ export async function runAIPipeline(params: {
       modelImageUrl = selectModelImage(modelGender, modelAgeRange, modelPose);
     }
 
-    // Resolve root-relative identity paths to absolute URLs.
-    // fal.ai requires a publicly reachable URL; local /identities/... paths
-    // are served by the Vite frontend at REPLIT_DEV_DOMAIN.
+    // 2. Resolve root-relative identity paths to absolute URLs.
+    //    fal.ai requires a publicly reachable URL; local /identities/... paths
+    //    are served by the Vite frontend at REPLIT_DEV_DOMAIN.
     if (modelImageUrl.startsWith("/")) {
       const domain = process.env.REPLIT_DEV_DOMAIN;
       modelImageUrl = domain
@@ -290,8 +292,7 @@ export async function runAIPipeline(params: {
       );
     }
 
-    // Task 5 (SL-012): Dedicated identity selection log for debugging.
-    // Always emitted — shows the final resolved URL sent to fal.ai.
+    // SL-012 identity log
     logger.info(
       {
         renderId,
@@ -306,21 +307,25 @@ export async function runAIPipeline(params: {
       "AI pipeline: model image selected",
     );
 
-    // 3. Resolve garment category (official V1.6 `category` parameter)
+    // 3. Derive fal.ai category from intelligence layer (SL-014)
     //
-    //    Explicit user selection takes priority. GPT-4o auto-detection is the
-    //    fallback when the user has not set a garment placement preference.
-    let category: GarmentCategory;
-    if (garmentPlacement === "upper_body") {
-      category = "tops";
-    } else if (garmentPlacement === "lower_body") {
-      category = "bottoms";
-    } else if (garmentPlacement === "full_body") {
-      category = "one-pieces";
-    } else {
-      category = await detectGarmentCategory(garmentImage);
-    }
-    logger.info({ renderId, category, garmentPlacement }, "AI pipeline: garment category resolved");
+    //    The intelligence layer analysed the garment and returned a rich
+    //    GarmentCategory. We map it to fal.ai's three accepted values.
+    //    This replaces the previous garmentPlacement → category mapping and
+    //    the GPT-4o detectGarmentCategory() fallback, both now superseded by
+    //    the intelligence layer's more comprehensive garment analysis.
+    const category = mapToFashnCategory(
+      intelligenceResult.profile.category,
+    );
+    logger.info(
+      {
+        renderId,
+        intelligenceCategory: intelligenceResult.profile.category,
+        fashnCategory: category,
+        garmentPlacement,
+      },
+      "AI pipeline: garment category resolved from intelligence layer",
+    );
 
     // 4. Build the V1.6 payload — official parameters only (SL-011A)
     //
@@ -332,7 +337,7 @@ export async function runAIPipeline(params: {
     //      ✗ cover_weight      (not in V16Input)
     //      ✗ restore_clothes   (not in V16Input)
     //
-    //    Key compliance changes:
+    //    Key compliance (SL-011A):
     //      segmentation_free: false   — enables body-part segmentation
     //      garment_photo_type: "auto" — correct for transparent PNG cutout
     //      output_format: "png"       — lossless (was "jpeg")
@@ -416,6 +421,26 @@ export async function runAIPipeline(params: {
     if (!outputImageUrl) {
       throw new Error("No output image URL returned from fal.ai");
     }
+
+    // 6. Part 8 — Render summary log (SL-014)
+    const renderDurationMs = Date.now() - renderStart;
+    logger.info(
+      {
+        renderId,
+        renderSummary: {
+          uploadedGarment:    intelligenceResult.recommendation.uploadedGarment,
+          detectedStyle:      intelligenceResult.recommendation.styleMode,
+          selectedStyleMode:  intelligenceResult.recommendation.styleMode,
+          generatedOutfit:    intelligenceResult.recommendation.recommendedOutfit,
+          generatedPrompt:    intelligenceResult.prompt,
+          decisionSource:     intelligenceResult.recommendation.decisionSource,
+          renderDurationMs,
+          intelligenceDurationMs: intelligenceResult.durationMs,
+          fallbackUsed:       intelligenceResult.usedHardFallback ? "hard_default" : "none",
+        },
+      },
+      "AI pipeline: SL-014 render summary",
+    );
 
     await params.onComplete(outputImageUrl);
   } catch (error) {

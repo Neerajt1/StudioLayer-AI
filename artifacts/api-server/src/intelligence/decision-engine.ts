@@ -1,20 +1,22 @@
 // ---------------------------------------------------------------------------
-// StudioLayer AI — Decision Engine (SL-013A)
+// StudioLayer AI — Decision Engine (SL-013A / SL-014)
 //
 // Orchestrates the full intelligence pipeline:
 //   1. GarmentAnalyzer     → GarmentProfile
 //   2. StyleEngine         → StyleMode
 //   3. WardrobeCompletion  → which slots to fill
 //   4. Rule Engine         → FashionKnowledgeBase match (deterministic, first)
-//   5. GPT Fallback        → only when rule engine confidence is low (< 0.45)
-//                            or no rule matched at all
-//   6. Part 7 logging
+//   5. GPT Fallback        → only when confidence < 0.45 or no rule matched
+//   6. Hard Fallback       → DEFAULT_FALLBACK_OUTFITS (if GPT also fails)
+//   7. PromptComposer      → natural language render prompt
+//   8. Part 7/8 logging
 //
 // Architecture principle:
 //   Rendering MUST NEVER decide styling.
 //   Styling MUST NEVER decide rendering.
-//   This engine returns one OutfitRecommendation — the renderer ignores it
-//   until the integration is wired in a future sprint.
+//   This engine returns IntelligenceResult — the rendering pipeline consumes
+//   the profile (for FASHN category) and the prompt (for developer logging).
+//   The recommended outfit is recorded but does not alter fal.ai parameters.
 // ---------------------------------------------------------------------------
 
 import OpenAI from "openai";
@@ -23,7 +25,9 @@ import { analyzeGarment } from "./garment-analyzer";
 import { FashionKnowledgeBase } from "./fashion-knowledge-base";
 import { selectStyleMode, describeStyleMode } from "./style-engine";
 import { getCompletionPlan, filterRecommendationsToSlots } from "./wardrobe-completion";
+import { composeRenderPrompt } from "./prompt-composer";
 import type {
+  GarmentCategory,
   GarmentProfile,
   OutfitRecommendation,
   RecommendedOutfit,
@@ -36,6 +40,59 @@ const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
 // Confidence threshold — below this, GPT is invoked as fallback
 // ---------------------------------------------------------------------------
 const RULE_ENGINE_CONFIDENCE_THRESHOLD = 0.45;
+
+// ---------------------------------------------------------------------------
+// Hard fallback outfit — used when both rule engine and GPT fail.
+// Category-specific defaults ensure rendering never stalls on styling.
+// ---------------------------------------------------------------------------
+const DEFAULT_FALLBACK_OUTFITS: Record<GarmentCategory, RecommendedOutfit> = {
+  tops: {
+    bottom:      "Dark Blue Slim Jeans",
+    footwear:    "White Leather Sneakers",
+    accessories: ["Leather Belt"],
+  },
+  bottoms: {
+    top:         "White Crew Neck T-Shirt",
+    footwear:    "White Leather Sneakers",
+    accessories: ["Simple Watch"],
+  },
+  "one-pieces": {
+    footwear:    "White Leather Sneakers",
+    accessories: ["Minimal Gold Jewellery"],
+  },
+  outerwear: {
+    innerLayer:  "White Crew Neck T-Shirt",
+    bottom:      "Dark Slim Jeans",
+    footwear:    "Chelsea Boots",
+  },
+  footwear: {
+    top:         "White Crew Neck T-Shirt",
+    bottom:      "Dark Blue Slim Jeans",
+    accessories: ["Simple Watch"],
+  },
+  accessories: {
+    top:         "White Crew Neck T-Shirt",
+    bottom:      "Dark Blue Slim Jeans",
+    footwear:    "White Leather Sneakers",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// IntelligenceResult — returned to the rendering pipeline
+// ---------------------------------------------------------------------------
+
+export interface IntelligenceResult {
+  /** The analysed garment profile (category used for fal.ai payload). */
+  profile: GarmentProfile;
+  /** The outfit recommendation from the decision engine. */
+  recommendation: OutfitRecommendation;
+  /** Natural language render prompt (logging only — not sent to fal.ai). */
+  prompt: string;
+  /** Wall-clock time for the full intelligence pipeline in milliseconds. */
+  durationMs: number;
+  /** True if the hard fallback (DEFAULT_FALLBACK_OUTFITS) was used. */
+  usedHardFallback: boolean;
+}
 
 // ---------------------------------------------------------------------------
 // GPT fallback — builds outfit when no KB rule scores above threshold
@@ -73,7 +130,8 @@ Return a JSON object with ONLY these keys (all optional, use null if not needed)
 
 Rules:
 - NEVER recommend another ${profile.category} garment.
-- The outfit must be commercially presentable for a catalog shoot.
+- The uploaded garment is the hero product — all recommendations must be neutral and secondary.
+- Avoid highly patterned or brightly coloured complementary items.
 - Use specific, product-style descriptions (e.g. "White Slim Chinos" not "pants").
 - Respond with ONLY valid JSON.`;
 
@@ -100,11 +158,8 @@ Rules:
 
     return { outfit, confidence: 0.72 };
   } catch {
-    // Hard fallback — return empty outfit rather than crash
-    return {
-      outfit: { accessories: [] },
-      confidence: 0.0,
-    };
+    // Return empty — caller will apply hard fallback
+    return { outfit: {}, confidence: 0.0 };
   }
 }
 
@@ -120,11 +175,10 @@ function ruleEngineOutfit(
   const best = kb.bestMatch(profile, styleMode);
   if (!best || best.score < RULE_ENGINE_CONFIDENCE_THRESHOLD) return null;
 
-  const plan = getCompletionPlan(profile.category);
+  const plan    = getCompletionPlan(profile.category);
   const slotted = filterRecommendationsToSlots(best.rule.recommendations, plan);
 
   const outfit: RecommendedOutfit = {};
-
   if (slotted.top?.length)         outfit.top        = slotted.top[0];
   if (slotted.bottom?.length)      outfit.bottom     = slotted.bottom[0];
   if (slotted.innerLayer?.length)  outfit.innerLayer = slotted.innerLayer[0];
@@ -143,20 +197,35 @@ export interface IntelligenceParams {
   renderId: number;
   garmentImageUrl: string;
   garmentPlacement?: string | null;
+  modelGender?: string | null;
+  modelAgeRange?: string | null;
   region?: string;
 }
 
 /**
  * Runs the full intelligence pipeline for a render request.
  *
- * Does NOT affect rendering parameters. The OutfitRecommendation is
- * currently used only for developer logging (Part 7 — SL-013A).
- * Full rendering integration is a future sprint.
+ * Returns IntelligenceResult — the rendering pipeline consumes:
+ *   - profile.category → mapped to fal.ai `category` parameter
+ *   - prompt           → logged in Part 8 (not sent to fal.ai)
+ *   - recommendation   → logged and available for future features
+ *
+ * Never throws — all errors fall back to DEFAULT_FALLBACK_OUTFITS.
  */
 export async function runIntelligenceAnalysis(
   params: IntelligenceParams,
-): Promise<OutfitRecommendation> {
-  const { renderId, garmentImageUrl, garmentPlacement, region = "default" } = params;
+): Promise<IntelligenceResult> {
+  const {
+    renderId,
+    garmentImageUrl,
+    garmentPlacement,
+    modelGender,
+    modelAgeRange,
+    region = "default",
+  } = params;
+
+  const startMs = Date.now();
+  let usedHardFallback = false;
 
   // 1. Analyse garment ───────────────────────────────────────────────────────
   const profile: GarmentProfile = await analyzeGarment({
@@ -171,7 +240,7 @@ export async function runIntelligenceAnalysis(
   const completionPlan = getCompletionPlan(profile.category);
 
   // 4. Rule engine (deterministic, first) ───────────────────────────────────
-  const kb = new FashionKnowledgeBase(region);
+  const kb         = new FashionKnowledgeBase(region);
   const ruleResult = ruleEngineOutfit(profile, styleMode, kb);
 
   let outfit: RecommendedOutfit;
@@ -185,11 +254,20 @@ export async function runIntelligenceAnalysis(
     decisionSource = "rule_engine";
     ruleId         = ruleResult.ruleId;
   } else {
-    // 5. GPT fallback ──────────────────────────────────────────────────────
+    // 5. GPT fallback ─────────────────────────────────────────────────────
     const gptResult = await gptFallbackOutfit(profile, styleMode);
-    outfit         = gptResult.outfit;
-    confidence     = gptResult.confidence;
-    decisionSource = "gpt";
+
+    if (gptResult.confidence > 0) {
+      outfit         = gptResult.outfit;
+      confidence     = gptResult.confidence;
+      decisionSource = "gpt";
+    } else {
+      // 6. Hard fallback — DEFAULT_FALLBACK_OUTFITS ─────────────────────
+      outfit            = DEFAULT_FALLBACK_OUTFITS[profile.category] ?? DEFAULT_FALLBACK_OUTFITS["tops"];
+      confidence        = 0.30;
+      decisionSource    = "rule_engine";   // default outfit is deterministic
+      usedHardFallback  = true;
+    }
   }
 
   const recommendation: OutfitRecommendation = {
@@ -204,33 +282,46 @@ export async function runIntelligenceAnalysis(
     ...(ruleId ? { ruleId } : {}),
   };
 
-  // 6. Part 7 — Developer logging ────────────────────────────────────────────
+  // 7. Compose render prompt ─────────────────────────────────────────────────
+  const prompt = composeRenderPrompt({
+    profile,
+    recommendation,
+    modelGender,
+    modelAgeGroup: modelAgeRange,
+  });
+
+  const durationMs = Date.now() - startMs;
+
+  // 8. Part 7 / Part 8 — Developer logging ──────────────────────────────────
   logger.info(
     {
       renderId,
       intelligence: {
         detectedGarment: {
-          category:    profile.category,
-          subcategory: profile.subcategory,
-          gender:      profile.gender,
-          colour:      profile.colour,
-          fabric:      profile.fabric,
-          fit:         profile.fit,
-          pattern:     profile.pattern,
-          occasion:    profile.occasion,
-          season:      profile.season,
+          category:      profile.category,
+          subcategory:   profile.subcategory,
+          gender:        profile.gender,
+          colour:        profile.colour,
+          fabric:        profile.fabric,
+          fit:           profile.fit,
+          pattern:       profile.pattern,
+          occasion:      profile.occasion,
+          season:        profile.season,
         },
         detectedStyle:      describeStyleMode(styleMode),
         selectedStyleMode:  styleMode,
         completionPlan:     completionPlan.rationale,
         recommendedOutfit:  outfit,
+        generatedPrompt:    prompt,
         confidenceScore:    Math.round(confidence * 100) / 100,
         decisionSource,
-        ...(ruleId ? { matchedRuleId: ruleId } : {}),
+        ...(ruleId          ? { matchedRuleId: ruleId }        : {}),
+        ...(usedHardFallback ? { fallbackUsed: "hard_default" } : {}),
+        durationMs,
       },
     },
     "StudioLayer Intelligence: outfit analysis complete",
   );
 
-  return recommendation;
+  return { profile, recommendation, prompt, durationMs, usedHardFallback };
 }
