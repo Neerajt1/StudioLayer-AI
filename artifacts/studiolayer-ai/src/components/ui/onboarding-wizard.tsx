@@ -1,3 +1,12 @@
+// ---------------------------------------------------------------------------
+// StudioLayer AI — Onboarding Wizard (SL-018 updated)
+//
+// Updated step descriptions to match the new 3-step workflow:
+//   1. Upload your outfit photo
+//   2. Choose your model
+//   3. Add a creative brief (optional) → Create Photoshoot
+// ---------------------------------------------------------------------------
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -8,22 +17,22 @@ interface OnboardingWizardProps {
 
 const steps = [
   {
-    emoji: '📷',
-    title: '1. Upload Fabric Asset',
+    emoji: '👗',
+    title: 'Upload Your Outfit',
     description:
-      'Drop a high-resolution flat-lay or mannequin photo of your apparel item.',
+      'Drop a clear photo of your garment — flat-lay, hanger, or mannequin shot against a plain background works best.',
   },
   {
-    emoji: '🌍',
-    title: '2. Configure Persona & Studio',
+    emoji: '🧍',
+    title: 'Choose Your Model',
     description:
-      'Select your target model ethnicity, body type, and premium location environment background.',
+      'Browse our curated model gallery and select the perfect fit for your brand. We handle everything else automatically.',
   },
   {
     emoji: '✨',
-    title: '3. Render High-End Catalog Asset',
+    title: 'Create Your Photoshoot',
     description:
-      'Click Render and watch your fabric layer seamlessly morph onto a living human model.',
+      'Optionally describe the look you have in mind, then hit Create Photoshoot. Professional editorial images in minutes.',
   },
 ];
 
@@ -32,24 +41,27 @@ export function OnboardingWizard({ onComplete, onSkip }: OnboardingWizardProps) 
   const current = steps[step];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-md mx-4 bg-card border border-border rounded-lg p-8 shadow-2xl">
-        {/* Step indicators */}
-        <div className="flex gap-2 mb-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm">
+      <div className="w-full max-w-md mx-4 bg-card border border-border rounded-lg p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        {/* Progress bars */}
+        <div className="flex gap-1.5 mb-8">
           {steps.map((_, i) => (
             <div
               key={i}
               className={`h-0.5 flex-1 rounded-full transition-all duration-300 ${
-                i <= step ? 'bg-accent' : 'bg-border'
+                i <= step ? 'bg-foreground' : 'bg-border'
               }`}
             />
           ))}
         </div>
 
-        {/* Step content */}
+        {/* Content */}
         <div className="text-center mb-8">
           <div className="text-5xl mb-4">{current.emoji}</div>
-          <h2 className="font-serif text-2xl font-semibold text-foreground mb-3">
+          <h2
+            className="text-2xl font-semibold text-foreground mb-3"
+            style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
+          >
             {current.title}
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
@@ -59,7 +71,7 @@ export function OnboardingWizard({ onComplete, onSkip }: OnboardingWizardProps) 
 
         {/* Step counter */}
         <p className="text-center text-xs text-muted-foreground font-mono mb-6">
-          Step {step + 1} of {steps.length}
+          {step + 1} of {steps.length}
         </p>
 
         {/* Actions */}
@@ -83,19 +95,17 @@ export function OnboardingWizard({ onComplete, onSkip }: OnboardingWizardProps) 
               </Button>
             )
           )}
+
           {step < steps.length - 1 ? (
-            <Button
-              className="flex-1"
-              onClick={() => setStep((s) => s + 1)}
-            >
+            <Button className="flex-1" onClick={() => setStep((s) => s + 1)}>
               Next →
             </Button>
           ) : (
             <Button
-              className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground"
+              className="flex-1"
               onClick={onComplete}
             >
-              Get Started ➔
+              Get Started →
             </Button>
           )}
         </div>

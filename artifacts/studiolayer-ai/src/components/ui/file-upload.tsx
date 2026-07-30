@@ -1,5 +1,16 @@
+// ---------------------------------------------------------------------------
+// StudioLayer AI — FileUpload Component (SL-018 improved)
+//
+// Improvements over the previous version:
+//   - Richer drag-over visual: border thickens, background shifts, scale pulse
+//   - File size validation (max 20 MB) with inline error message
+//   - Smooth upload success transition with fade-in preview
+//   - Cleaner empty-state copy focused on the user's goal
+//   - Accessible: role="button" + keyboard trigger
+// ---------------------------------------------------------------------------
+
 import { useRef, useState } from 'react';
-import { X, ImageIcon } from 'lucide-react';
+import { X, ImageIcon, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FileUploadProps {
@@ -9,12 +20,11 @@ interface FileUploadProps {
   disabled?: boolean;
 }
 
-// Single photographic reference — crisp jacket on wooden hanger, plain wall (Unsplash, free to use)
-const HANGER_REFERENCE = {
-  label: 'Ideal Upload Standard',
-  sublabel: 'Jacket on wooden hanger · plain background',
-  url: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80&fit=crop&crop=center',
-};
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
+
+// Single authoritative reference showing ideal garment photography standard
+const REFERENCE_IMAGE =
+  'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80&fit=crop&crop=center';
 
 export function FileUpload({
   onFileSelect,
@@ -22,12 +32,18 @@ export function FileUpload({
   className,
   disabled,
 }: FileUploadProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const inputRef   = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging]   = useState(false);
+  const [preview,    setPreview]      = useState<string | null>(null);
+  const [fileName,   setFileName]     = useState<string | null>(null);
+  const [sizeError,  setSizeError]    = useState<string | null>(null);
 
   const handleFile = (file: File) => {
+    setSizeError(null);
+    if (file.size > MAX_FILE_BYTES) {
+      setSizeError(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum size is 20 MB.`);
+      return;
+    }
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
@@ -56,6 +72,7 @@ export function FileUpload({
     e.stopPropagation();
     setPreview(null);
     setFileName(null);
+    setSizeError(null);
     onFileSelect('');
   };
 
@@ -63,90 +80,108 @@ export function FileUpload({
     if (!disabled) inputRef.current?.click();
   };
 
-  return (
-    <div
-      className={cn(
-        'border border-dashed border-border rounded bg-card transition-colors cursor-pointer overflow-hidden',
-        isDragging && 'border-foreground bg-muted',
-        disabled && 'opacity-50 cursor-not-allowed',
-        className
-      )}
-      onDragOver={(e) => {
-        e.preventDefault();
-        if (!disabled) setIsDragging(true);
-      }}
-      onDragLeave={() => setIsDragging(false)}
-      onDrop={handleDrop}
-      onClick={preview ? undefined : triggerInput}
-      data-testid="file-upload-zone"
-    >
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        onChange={handleChange}
-        className="hidden"
-        disabled={disabled}
-        data-testid="file-upload-input"
-      />
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!preview && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      triggerInput();
+    }
+  };
 
-      {preview ? (
-        /* ── Uploaded state: thumbnail + filename strip ── */
-        <div className="relative group">
-          <img
-            src={preview}
-            alt="Garment preview"
-            className="w-full h-52 object-contain bg-white"
-          />
-          <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border bg-card">
-            <div className="flex items-center gap-2 min-w-0">
-              <ImageIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span
-                className="text-xs text-foreground font-mono truncate"
-                title={fileName ?? ''}
-              >
-                {fileName}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={triggerInput}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors font-mono"
-                disabled={disabled}
-              >
-                Replace
-              </button>
-              <button
-                type="button"
-                onClick={handleClear}
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                disabled={disabled}
-                aria-label="Remove image"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
+  return (
+    <div className={cn('flex flex-col gap-1', className)}>
+      <div
+        role="button"
+        tabIndex={disabled ? -1 : 0}
+        aria-label="Upload garment image"
+        className={cn(
+          'border border-dashed rounded bg-card transition-all duration-200 cursor-pointer overflow-hidden',
+          // Default
+          'border-border',
+          // Drag active — stronger border + tinted background
+          isDragging && 'border-foreground bg-muted scale-[1.01] shadow-md',
+          // Disabled
+          disabled && 'opacity-50 cursor-not-allowed',
+          // Has preview — switch to solid border
+          preview && 'border-border border-solid',
+        )}
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (!disabled) setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onClick={preview ? undefined : triggerInput}
+        onKeyDown={handleKeyDown}
+        data-testid="file-upload-zone"
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          onChange={handleChange}
+          className="hidden"
+          disabled={disabled}
+          data-testid="file-upload-input"
+        />
+
+        {preview ? (
+          /* ── Uploaded state ── */
+          <div className="relative group animate-in fade-in duration-300">
+            <img
+              src={preview}
+              alt="Garment preview"
+              className="w-full h-52 object-contain bg-white"
+            />
+            {/* File info + actions */}
+            <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border bg-card">
+              <div className="flex items-center gap-2 min-w-0">
+                <ImageIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <span
+                  className="text-xs text-foreground font-mono truncate"
+                  title={fileName ?? ''}
+                >
+                  {fileName}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={triggerInput}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors font-mono"
+                  disabled={disabled}
+                >
+                  Replace
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={disabled}
+                  aria-label="Remove image"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : (
-        /* ── Empty state: photographic reference standards + CTA ── */
-        <div className="flex flex-col items-center py-5 px-4">
-          {/* Reference header */}
-          <p
-            className="text-muted-foreground font-mono mb-3 self-start"
-            style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
-          >
-            Studio Reference Standards
-          </p>
-
-          {/* Single photographic reference — one unified standard */}
-          <div className="flex justify-center mb-5 w-full">
-            <div className="flex flex-col items-center gap-1.5 max-w-[120px]">
-              <div className="w-full overflow-hidden rounded border border-border bg-muted" style={{ aspectRatio: '3/4' }}>
+        ) : (
+          /* ── Empty / drag state ── */
+          <div className="flex flex-col items-center py-6 px-4 gap-4">
+            {/* Reference photo */}
+            <div className="flex flex-col items-center gap-1.5">
+              <p
+                className="text-muted-foreground font-mono self-center mb-1"
+                style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
+              >
+                Ideal upload standard
+              </p>
+              <div
+                className="overflow-hidden rounded border border-border bg-muted"
+                style={{ width: 80, aspectRatio: '3/4' }}
+              >
                 <img
-                  src={HANGER_REFERENCE.url}
-                  alt={HANGER_REFERENCE.label}
+                  src={REFERENCE_IMAGE}
+                  alt="Garment on hanger — plain background"
                   className="w-full h-full object-cover"
                   draggable={false}
                   onError={(e) => {
@@ -154,25 +189,34 @@ export function FileUpload({
                   }}
                 />
               </div>
-              <div className="text-center">
-                <p className="text-foreground font-medium" style={{ fontSize: '10px' }}>
-                  {HANGER_REFERENCE.label}
-                </p>
-                <p className="text-muted-foreground font-mono" style={{ fontSize: '9px' }}>
-                  {HANGER_REFERENCE.sublabel}
-                </p>
+              <p className="text-[9px] text-muted-foreground font-mono">
+                Hanger or flat-lay · plain background
+              </p>
+            </div>
+
+            {/* Upload CTA */}
+            <div className="text-center">
+              <div
+                className={cn(
+                  'inline-flex items-center gap-2 px-4 py-2 rounded border border-border bg-background text-sm font-medium text-foreground transition-all duration-150',
+                  !disabled && 'hover:bg-muted hover:border-foreground/30',
+                  isDragging && 'bg-muted border-foreground',
+                )}
+              >
+                <Upload className="w-4 h-4 shrink-0" />
+                {isDragging ? 'Drop to upload' : 'Upload Garment Photo'}
               </div>
+              <p className="mt-1.5 text-xs text-muted-foreground font-mono">
+                or drag &amp; drop · JPG, PNG, WEBP · max 20 MB
+              </p>
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Upload CTA */}
-          <p className="text-sm font-medium text-foreground mb-1">
-            📁 Drag &amp; Drop or Click to Upload Garment
-          </p>
-          <p className="text-xs text-muted-foreground font-mono">
-            Flat-lay or hanger · Plain background recommended
-          </p>
-        </div>
+      {/* File size validation error */}
+      {sizeError && (
+        <p className="text-xs text-destructive font-mono mt-0.5">{sizeError}</p>
       )}
     </div>
   );

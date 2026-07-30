@@ -1,0 +1,209 @@
+SL-018 – StudioLayer v1.0 MVP
+Product Requirements Document (PRD)
+PRODUCT VISION
+StudioLayer is an AI Fashion Photoshoot Platform.
+Its purpose is not to generate AI images.
+Its purpose is to allow apparel brands, fashion designers, manufacturers and e-commerce sellers to create professional fashion photoshoots in minutes.
+Users should feel like they are directing a professional photoshoot—not configuring an AI application.
+Artificial Intelligence should remain invisible.
+PRIMARY OBJECTIVE
+Transform StudioLayer from an engineering prototype into a polished customer-ready MVP.
+This sprint focuses on:
+Product simplicity
+User experience
+Launch readiness
+Performance
+Commercial quality
+This sprint does NOT introduce new rendering architecture.
+PRODUCT PRINCIPLES (NON-NEGOTIABLE)
+During implementation, every decision must follow these principles.
+1. Simplicity First
+If AI can decide automatically, do not ask the user.
+2. Customer Before Engineering
+User experience is always more important than engineering elegance.
+3. Launch First
+Do not over-engineer.
+Prioritize a polished MVP that can be released to real customers.
+4. Premium Experience
+Every interaction should feel modern, fast and effortless.
+5. Backward Compatibility
+Existing rendering architecture must remain intact.
+USER JOURNEY
+The entire product should become:
+Upload Outfit
+
+↓
+
+Choose Model
+
+↓
+
+Creative Brief (Optional)
+
+↓
+
+Create Photoshoot
+The workflow should take less than one minute.
+No additional mandatory steps should exist.
+FUNCTIONAL REQUIREMENTS
+PART 1 — Upload Outfit
+Retain the existing garment upload process.
+Improve the upload experience by:
+better drag & drop feedback
+clearer upload states
+better validation
+elegant loading indicators
+Do not change garment processing.
+PART 2 — Choose Model
+Replace the existing model selection experience with a visual gallery.
+Display three sections.
+Women
+Men
+Kids
+Each model should appear as a premium image card.
+Each card should include:
+preview image
+model name
+hover animation
+selected state
+Selecting a model automatically determines all underlying identity information.
+Do not ask users to select:
+gender
+age
+body type
+Those are automatically derived from the selected model.
+PART 3 — Creative Brief
+Replace all styling filters with a single optional input.
+Title:
+Creative Brief
+Placeholder:
+Describe the photoshoot you imagine...
+Example:
+Luxury hotel lobby during the evening with warm lighting and a confident executive look.
+Users may write naturally.
+Do not expose prompt engineering.
+The platform is responsible for interpreting user intent.
+PART 4 — Create Photoshoot
+Replace every occurrence of:
+Generate
+with
+Create Photoshoot
+The wording should reinforce creativity rather than technology.
+AI RESPONSIBILITIES
+The user should never configure these manually.
+StudioLayer should intelligently determine:
+pose
+framing
+camera angle
+lighting
+scene composition
+styling
+colour harmony
+complementary outfit completion (when applicable)
+rendering strategy
+rendering provider
+prompt optimisation
+The user provides only creative intent.
+StudioLayer performs the rest.
+UI REQUIREMENTS
+The interface should feel comparable to modern creative SaaS products.
+Improve:
+spacing
+typography
+card layout
+animations
+hover effects
+loading screens
+empty states
+success states
+error handling
+Do not redesign the product unnecessarily.
+Improve the existing design system.
+MODEL LIBRARY
+Do not attempt to generate new production models during this sprint.
+Instead:
+Create a dedicated Model Library architecture that supports future curated StudioLayer models.
+Continue using the existing placeholder assets until production-quality StudioLayer models are available.
+The software should be prepared for future model replacement without requiring additional engineering.
+IMPLEMENTATION FLEXIBILITY
+The following UI examples represent the desired experience.
+The engineering team may implement these using the most appropriate UI components.
+Examples include:
+cards
+chips
+autocomplete
+modal
+carousel
+searchable gallery
+Do not implement complexity for its own sake.
+PERFORMANCE
+Maintain current rendering performance.
+Do not increase rendering latency.
+Preserve:
+Render Orchestrator
+Provider Layer
+Scene Cache
+Existing APIs
+Existing rendering pipeline
+This sprint focuses on product experience only.
+WHAT NOT TO CHANGE
+Do not modify:
+rendering architecture
+orchestration logic
+provider abstraction
+rendering strategies
+intelligence engine
+database schema
+existing API contracts
+Only extend the product experience.
+MVP ACCEPTANCE CRITERIA
+StudioLayer v1.0 MVP will be considered complete when:
+✓ A first-time user understands the workflow without documentation.
+✓ A photoshoot can be created in under one minute.
+✓ The interface contains no unnecessary technical options.
+✓ Users provide creative intent using natural language.
+✓ Existing rendering quality is preserved.
+✓ Existing performance is maintained.
+✓ Mobile responsiveness is preserved.
+✓ No existing functionality is broken.
+DELIVERABLES
+Provide a complete engineering report including:
+Product
+User journey changes
+UI improvements
+Customer experience enhancements
+Engineering
+Files created
+Files modified
+Components added
+Components removed
+Architecture impact
+Performance impact
+Mobile responsiveness
+Assessment
+MVP readiness score
+Remaining launch blockers
+Recommendations before public beta
+CTO NOTES
+This sprint represents the transition from engineering to product.
+Do not think like software developers.
+Think like product designers building a premium creative platform.
+Every implementation decision should answer one question:
+Does this make creating a fashion photoshoot easier for the customer?
+If the answer is No, it should not be implemented in this sprint.
+FINAL IMPLEMENTATION INSTRUCTION
+Build StudioLayer v1.0 for customers—not engineers.
+
+Prioritize simplicity over features.
+
+Prioritize usability over configuration.
+
+Prioritize launch over perfection.
+
+Hide complexity behind intelligent automation.
+
+Every screen should reduce friction.
+
+Every interaction should increase confidence.
+
+Deliver a product that feels polished enough for public beta.

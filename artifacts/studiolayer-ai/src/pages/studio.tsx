@@ -1,3 +1,19 @@
+// ---------------------------------------------------------------------------
+// StudioLayer AI — Studio Page (SL-018 MVP)
+//
+// Simplified 3-step workflow:
+//   1. Upload Outfit  → garment photo + garment type
+//   2. Choose Model   → visual gallery (Women / Men / Kids)
+//   3. Creative Brief → optional natural-language description
+//   ↓  Create Photoshoot
+//
+// All AI parameters (pose, framing, lighting, scene, persona, dimensions)
+// are determined automatically. Users only provide creative intent.
+//
+// API contract is unchanged — creative brief is interpreted into existing
+// locationEnvironment + modelPersona enum values by interpretCreativeBrief().
+// ---------------------------------------------------------------------------
+
 import { useState } from 'react';
 import {
   useCreateRender,
@@ -10,75 +26,160 @@ import {
   getGetMeQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Sidebar } from '@/components/layout/sidebar';
-import { Footer } from '@/components/layout/footer';
-import { FileUpload } from '@/components/ui/file-upload';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Sidebar }        from '@/components/layout/sidebar';
+import { Footer }         from '@/components/layout/footer';
+import { FileUpload }     from '@/components/ui/file-upload';
+import { Button }         from '@/components/ui/button';
+import { Textarea }       from '@/components/ui/textarea';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Label } from '@/components/ui/label';
-import { Download } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { OnboardingWizard } from '@/components/ui/onboarding-wizard';
+import { Download, Camera, Sparkles } from 'lucide-react';
+import { useToast }          from '@/hooks/use-toast';
+import { OnboardingWizard }  from '@/components/ui/onboarding-wizard';
+import { ModelGallery }      from '@/components/studio/model-gallery';
+import { cn }                from '@/lib/utils';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const FAQ_ITEMS = [
   {
     q: 'Who legally owns the copyright of the final rendered fashion assets?',
-    a: 'You do. Every single image layer generated inside your dashboard is 100% commercially owned by your brand, completely royalty-free.',
+    a: 'You do. Every single image generated inside your dashboard is 100% commercially owned by your brand, completely royalty-free.',
   },
   {
-    q: 'What style of garment photography yields the highest-fidelity AI rendering results?',
-    a: 'Clear smartphone photos shot under bright, even lighting against a neutral background (or a mannequin) allow our vision engine to isolate textures flawlessly.',
+    q: 'What style of garment photography yields the best results?',
+    a: 'Clear photos shot under bright, even lighting against a neutral background — flat-lay, hanger, or mannequin — allow our vision engine to isolate textures flawlessly.',
   },
   {
     q: 'Can I cancel or alter my subscription tier at any time?',
-    a: 'Yes. You can upgrade, downgrade, or pause your active studio access instantly inside your billing command tab with zero exit contracts.',
+    a: 'Yes. You can upgrade, downgrade, or pause your studio access instantly inside your billing tab with zero exit contracts.',
   },
 ];
 
+const GARMENT_TYPES = [
+  {
+    value: 'upper_body',
+    label: 'Top',
+    sub: 'Shirts · Jackets · Knitwear',
+  },
+  {
+    value: 'lower_body',
+    label: 'Bottom',
+    sub: 'Jeans · Trousers · Skirts',
+  },
+  {
+    value: 'full_body',
+    label: 'Full Outfit',
+    sub: 'Dresses · Jumpsuits · Suits',
+  },
+] as const;
+
+// ---------------------------------------------------------------------------
+// Creative brief interpretation
+//
+// Maps free-text user intent to the existing locationEnvironment and
+// modelPersona enum values without changing the API contract.
+// ---------------------------------------------------------------------------
+
+function interpretCreativeBrief(brief: string): {
+  locationEnvironment: string;
+  modelPersona: string;
+} {
+  const t = brief.toLowerCase();
+
+  let locationEnvironment = 'photo_studio';
+  if (
+    /hotel|lobby|interior|lounge|penthouse|apartment|mansion|boutique|gallery|museum|restaurant|bar|club|ballroom|corridor/.test(t)
+  ) {
+    locationEnvironment = 'luxury_interior';
+  } else if (
+    /street|urban|city|downtown|sidewalk|alley|market|neighborhood|district|block/.test(t)
+  ) {
+    locationEnvironment = 'urban_street';
+  } else if (
+    /nature|garden|park|forest|beach|mountain|field|coast|outdoor|countryside|meadow|cliffs|lake/.test(t)
+  ) {
+    locationEnvironment = 'nature';
+  }
+
+  let modelPersona = 'confident_commercial';
+  if (
+    /editorial|high.?fashion|fierce|avant.?garde|runway|couture|vogue|serious|intense|powerful/.test(t)
+  ) {
+    modelPersona = 'high_fashion_editorial';
+  } else if (
+    /natural|casual|friendly|approachable|relaxed|warm|soft|smile|cheerful|candid/.test(t)
+  ) {
+    modelPersona = 'natural_smile';
+  }
+
+  return { locationEnvironment, modelPersona };
+}
+
+// ---------------------------------------------------------------------------
+// Step label
+// ---------------------------------------------------------------------------
+
+function StepLabel({ number, title, badge }: { number: number; title: string; badge?: string }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="w-5 h-5 rounded-full bg-foreground text-background text-[11px] font-semibold flex items-center justify-center shrink-0">
+        {number}
+      </span>
+      <span className="text-sm font-semibold text-foreground">{title}</span>
+      {badge && (
+        <span className="text-[10px] font-mono text-muted-foreground border border-border rounded px-1.5 py-0.5">
+          {badge}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Studio Page
+// ---------------------------------------------------------------------------
+
 export default function StudioPage() {
-  const [sourceImages, setSourceImages] = useState<string[]>([]);
-  const [modelGender, setModelGender] = useState('');
-  const [garmentPlacement, setGarmentPlacement] = useState('');
-  const [modelAgeRange, setModelAgeRange] = useState('');
-  const [cameraFraming, setCameraFraming] = useState('');
-  const [modelPersona, setModelPersona] = useState('');
-  const [modelPose, setModelPose] = useState('');
-  const [locationEnvironment, setLocationEnvironment] = useState('');
-  const [imageDimensions, setImageDimensions] = useState('');
-  const [smartLighting, setSmartLighting] = useState(false);
-  const [brandWatermark, setBrandWatermark] = useState(false);
-  const [watermarkUrl, setWatermarkUrl] = useState<string | null>(null);
-  const [bulkMode, setBulkMode] = useState(false);
-  const [activeRenderId, setActiveRenderId] = useState<number | null>(null);
-  const [showValidation, setShowValidation] = useState(false);
-  const [selectedIdentityId, setSelectedIdentityId] = useState<string>('');
+  // ── Form state ─────────────────────────────────────────────────────────────
+  const [sourceImages,      setSourceImages]      = useState<string[]>([]);
+  const [garmentPlacement,  setGarmentPlacement]  = useState('');
+  const [selectedIdentityId, setSelectedIdentityId] = useState('');
+  const [creativeBrief,     setCreativeBrief]     = useState('');
+  const [activeRenderId,    setActiveRenderId]     = useState<number | null>(null);
+  const [showValidation,    setShowValidation]     = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
 
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+  // ── API hooks ──────────────────────────────────────────────────────────────
+  const queryClient  = useQueryClient();
+  const { toast }    = useToast();
 
-  const { data: user } = useGetMe();
+  const { data: user }                  = useGetMe();
   const { data: usage, isLoading: usageLoading } = useGetRenderUsage();
-  const { data: identities = [] } = useGetIdentities();
-  const createRender = useCreateRender();
-  const completeOnboarding = useCompleteOnboarding();
+  const { data: identities = [] }       = useGetIdentities();
+  const createRender                    = useCreateRender();
+  const completeOnboarding              = useCompleteOnboarding();
 
-  const isBulkEligible =
-    user?.subscriptionTier === 'enterprise';
+  // ── Onboarding ─────────────────────────────────────────────────────────────
+  const showOnboarding =
+    !onboardingDismissed &&
+    user !== undefined &&
+    user.hasCompletedOnboarding === false;
 
+  const handleCompleteOnboarding = () => {
+    setOnboardingDismissed(true);
+    completeOnboarding.mutate(undefined, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() }),
+    });
+  };
+
+  // ── Active render polling ──────────────────────────────────────────────────
   const { data: activeRender } = useGetRender(activeRenderId || 0, {
     query: {
       enabled: !!activeRenderId,
@@ -92,157 +193,15 @@ export default function StudioPage() {
     } as any,
   });
 
-  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
-  const showOnboarding =
-    !onboardingDismissed &&
-    user !== undefined &&
-    user.hasCompletedOnboarding === false;
-
-  const handleCompleteOnboarding = () => {
-    // Close immediately — don't wait for the mutation or a refetch
-    setOnboardingDismissed(true);
-    completeOnboarding.mutate(undefined, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-      },
-    });
-  };
-
-  const handleFileSelect = (url: string) => {
-    if (!url) {
-      // Clear button pressed in file upload
-      if (!bulkMode) setSourceImages([]);
-      return;
-    }
-    if (bulkMode) {
-      setSourceImages((prev) =>
-        prev.length < 10 ? [...prev, url] : prev
-      );
-    } else {
-      setSourceImages([url]);
-    }
-  };
-
-  const handleRender = () => {
-    const primary = sourceImages[0];
-
-    // Show inline validation errors on the fields
-    if (!primary || !modelPersona || !locationEnvironment) {
-      setShowValidation(true);
-      toast({
-        title: 'Missing required fields',
-        description: 'Please upload a garment image, select a Model Persona, and select a Location.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (usage && !usage.canRender) {
-      toast({
-        title: 'Render limit reached',
-        description: 'Upgrade your plan to render more images.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    createRender.mutate(
-      {
-        data: {
-          sourceImageUrl: primary,
-          modelPersona: modelPersona as any,
-          locationEnvironment: locationEnvironment as any,
-          imageDimensions: (imageDimensions as any) || undefined,
-          smartLighting: smartLighting || undefined,
-          modelPose: (modelPose as any) || undefined,
-          modelGender: (modelGender as any) || undefined,
-          modelAgeRange: (modelAgeRange as any) || undefined,
-          cameraFraming: (cameraFraming as any) || undefined,
-          garmentPlacement: (garmentPlacement as any) || undefined,
-          modelIdentityId: selectedIdentityId || undefined,
-        },
-      },
-      {
-        onSuccess: (render) => {
-          setActiveRenderId(render.id);
-          queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
-          toast({
-            title: 'Render started',
-            description: 'Your editorial render is processing...',
-          });
-        },
-        onError: (error: any) => {
-          toast({
-            title: 'Render failed',
-            description: error?.error || 'Could not start render',
-            variant: 'destructive',
-          });
-        },
-      }
-    );
-  };
-
-  const handleDownload = async () => {
-    if (!resolvedOutputUrl) return;
-    // Corporate asset file naming: [BrandName]_garment_[Persona]_[Aspect_Ratio].jpg
-    const brandSlug = (user?.name ?? 'studio')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_|_$/g, '');
-    const personaSlug = modelPersona || 'model';
-    const aspectMap: Record<string, string> = {
-      portrait_45: '4-5',
-      portrait_916: '9-16',
-      square_11: '1-1',
-      landscape_169: '16-9',
-    };
-    const aspectSlug = aspectMap[imageDimensions] ?? '1-1';
-    const filename = `${brandSlug}_garment_${personaSlug}_${aspectSlug}.jpg`;
-
-    try {
-      // Fetch the image as a blob so the browser treats it as a local attachment.
-      // A plain <a download> on a cross-origin CDN URL (fal.media) is silently
-      // ignored by the browser and opens a new tab instead — blob URL avoids this.
-      const response = await fetch(resolvedOutputUrl);
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = objectUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      // Release the object URL after a short delay to allow the download to start
-      setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
-    } catch {
-      // Fallback: direct link (may open new tab on some browsers for cross-origin)
-      const link = document.createElement('a');
-      link.href = resolvedOutputUrl;
-      link.download = filename;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
-
-  // Button goes active the moment a valid image is detected in the upload state
-  const hasImage = sourceImages.length > 0 && !!sourceImages[0];
-  const limitConfirmedBlocked = usage !== undefined && !usage.canRender;
-  const canRender = hasImage && !createRender.isPending && !limitConfirmedBlocked;
+  // ── Derived state ──────────────────────────────────────────────────────────
   const isProcessing =
     activeRender?.status === 'processing' || activeRender?.status === 'pending';
-  // Safely resolve the output image URL from any common payload key shape
+
   const resolvedOutputUrl: string | null = (() => {
     if (!activeRender) return null;
-    const r = activeRender as Record<string, unknown>;
+    const r = activeRender as unknown as Record<string, unknown>;
     const candidates = [
-      r['outputImageUrl'],
-      r['outputUrl'],
-      r['url'],
-      r['image_url'],
-      // activeRender.images?.url  (array or object with .url)
+      r['outputImageUrl'], r['outputUrl'], r['url'], r['image_url'],
       Array.isArray(r['images'])
         ? (r['images'] as Array<Record<string, unknown>>)[0]?.['url']
         : (r['images'] as Record<string, unknown> | undefined)?.['url'],
@@ -253,7 +212,115 @@ export default function StudioPage() {
     return null;
   })();
 
-  const hasOutput = activeRender?.status === 'completed' && !!resolvedOutputUrl;
+  const hasOutput    = activeRender?.status === 'completed' && !!resolvedOutputUrl;
+  const hasImage     = sourceImages.length > 0 && !!sourceImages[0];
+  const limitBlocked = usage !== undefined && !usage.canRender;
+  const canRender    = hasImage && !!garmentPlacement && !!selectedIdentityId
+    && !createRender.isPending && !isProcessing && !limitBlocked;
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  const handleFileSelect = (url: string) => {
+    if (!url) { setSourceImages([]); return; }
+    setSourceImages([url]);
+    setShowValidation(false);
+  };
+
+  const handleRender = () => {
+    const primary = sourceImages[0];
+
+    if (!primary || !garmentPlacement || !selectedIdentityId) {
+      setShowValidation(true);
+      const msg = !primary
+        ? 'Upload a garment photo to get started.'
+        : !selectedIdentityId
+          ? 'Choose a model from the gallery.'
+          : 'Select what type of garment this is.';
+      toast({ title: 'Almost there', description: msg, variant: 'destructive' });
+      return;
+    }
+
+    if (usage && !usage.canRender) {
+      toast({
+        title: 'Render limit reached',
+        description: 'Upgrade your plan to create more photoshoots.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Interpret creative brief (or use smart defaults)
+    const { locationEnvironment, modelPersona } = creativeBrief.trim()
+      ? interpretCreativeBrief(creativeBrief)
+      : { locationEnvironment: 'photo_studio', modelPersona: 'confident_commercial' };
+
+    // Derive gender + age from the selected identity
+    const selectedIdentity = (identities as any[]).find((i) => i.id === selectedIdentityId);
+    const modelGender    = selectedIdentity?.gender    as string | undefined;
+    const modelAgeRange  = selectedIdentity?.ageGroup  as string | undefined;
+
+    createRender.mutate(
+      {
+        data: {
+          sourceImageUrl:      primary,
+          modelPersona:        modelPersona    as any,
+          locationEnvironment: locationEnvironment as any,
+          garmentPlacement:    garmentPlacement as any,
+          modelIdentityId:     selectedIdentityId || undefined,
+          modelGender:         modelGender      as any,
+          modelAgeRange:       modelAgeRange    as any,
+          smartLighting:       true,
+          imageDimensions:     'portrait_45'   as any,
+        },
+      },
+      {
+        onSuccess: (render) => {
+          setActiveRenderId(render.id);
+          queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
+          toast({ title: 'Photoshoot started', description: 'Your render is processing…' });
+        },
+        onError: (error: any) => {
+          toast({
+            title: 'Could not start photoshoot',
+            description: error?.error || 'Please try again.',
+            variant: 'destructive',
+          });
+        },
+      },
+    );
+  };
+
+  const handleDownload = async () => {
+    if (!resolvedOutputUrl) return;
+    const brandSlug = (user?.name ?? 'studio')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    const filename = `${brandSlug}_photoshoot.jpg`;
+    try {
+      const response  = await fetch(resolvedOutputUrl);
+      const blob      = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl; link.download = filename;
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+    } catch {
+      const link = document.createElement('a');
+      link.href = resolvedOutputUrl; link.download = filename;
+      link.target = '_blank'; link.rel = 'noopener noreferrer';
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+  };
+
+  const handleNewPhotoshoot = () => {
+    setSourceImages([]);
+    setGarmentPlacement('');
+    setSelectedIdentityId('');
+    setCreativeBrief('');
+    setActiveRenderId(null);
+    setShowValidation(false);
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex h-screen bg-background">
@@ -267,577 +334,296 @@ export default function StudioPage() {
       <Sidebar />
 
       <main className="flex-1 flex flex-col overflow-auto">
-        <div className="flex-1 p-8">
-          <div className="mb-6">
+        <div className="flex-1 p-6 lg:p-8">
+
+          {/* ── Page header ── */}
+          <div className="mb-8">
             <h2
               className="text-foreground mb-1"
               style={{
-                fontFamily: "'EB Garamond', Georgia, serif",
-                fontSize: '26px',
-                fontWeight: 600,
-                letterSpacing: '0.02em',
+                fontFamily:    "'EB Garamond', Georgia, serif",
+                fontSize:      '28px',
+                fontWeight:    600,
+                letterSpacing: '0.01em',
+                lineHeight:    1.2,
               }}
             >
-              Studio Workspace
+              Create Photoshoot
             </h2>
             <p className="text-sm text-muted-foreground font-mono">
-              Transform flat-lay clothing into editorial renders
+              Professional fashion photography in minutes
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* ── LEFT PANEL: Controls ── */}
-            <div className="space-y-4">
-              {/* Bulk mode toggle */}
-              <div className="flex items-center justify-between p-3 border border-border rounded bg-card">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    ⚡ Switch to Bulk Studio Mode
-                  </span>
-                  {!isBulkEligible && (
-                    <span className="text-xs text-muted-foreground font-mono">
-                      (Enterprise only)
-                    </span>
-                  )}
-                </div>
-                <Switch
-                  checked={bulkMode}
-                  onCheckedChange={(v) => {
-                    if (!isBulkEligible && v) {
-                      toast({
-                        title: 'Enterprise feature',
-                        description: 'Upgrade to Enterprise to unlock Bulk Studio Mode.',
-                        variant: 'destructive',
-                      });
-                      return;
-                    }
-                    setBulkMode(v);
-                    setSourceImages([]);
-                  }}
-                  disabled={createRender.isPending}
-                />
-              </div>
+          {/* ── Two-column layout ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 mb-10">
 
-              {/* File upload zone */}
-              {bulkMode ? (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">
-                    Bulk Upload ({sourceImages.length}/10)
-                  </Label>
-                  <div
-                    className="border-2 border-dashed border-border rounded bg-card p-4 min-h-[120px] cursor-pointer"
-                    onClick={() => {
-                      const inp = document.createElement('input');
-                      inp.type = 'file';
-                      inp.accept = 'image/*';
-                      inp.multiple = true;
-                      inp.onchange = (e) => {
-                        const files = Array.from(
-                          (e.target as HTMLInputElement).files ?? []
-                        ).slice(0, 10 - sourceImages.length);
-                        files.forEach((file) => {
-                          const reader = new FileReader();
-                          reader.onloadend = () =>
-                            setSourceImages((prev) =>
-                              prev.length < 10
-                                ? [...prev, reader.result as string]
-                                : prev
-                            );
-                          reader.readAsDataURL(file);
-                        });
-                      };
-                      inp.click();
-                    }}
-                  >
-                    {sourceImages.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-4 text-center">
-                        <p className="text-sm font-medium text-foreground mb-1">
-                          Bulk Upload Up to 10 Images
-                        </p>
-                        <p className="text-xs text-muted-foreground font-mono">
-                          Click to select multiple files
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-5 gap-2">
-                        {sourceImages.map((img, i) => (
-                          <div
-                            key={i}
-                            className="relative aspect-square rounded overflow-hidden border border-border"
-                          >
-                            <img
-                              src={img}
-                              alt={`Upload ${i + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                            <button
-                              className="absolute top-0.5 right-0.5 bg-black/60 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSourceImages((prev) =>
-                                  prev.filter((_, idx) => idx !== i)
-                                );
-                              }}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                        {sourceImages.length < 10 && (
-                          <div className="aspect-square rounded border border-dashed border-border flex items-center justify-center text-muted-foreground text-xl">
-                            +
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className={showValidation && sourceImages.length === 0 ? 'rounded ring-2 ring-destructive' : ''}>
+            {/* ═══════════════════════════════════════════════════════════════
+                LEFT PANEL — Steps
+            ═══════════════════════════════════════════════════════════════ */}
+            <div className="space-y-8">
+
+              {/* ── STEP 1: Upload Outfit ── */}
+              <section className="space-y-3">
+                <StepLabel number={1} title="Upload Outfit" />
+
+                <div className={cn(showValidation && !hasImage && 'rounded ring-2 ring-destructive ring-offset-1')}>
                   <FileUpload
-                    onFileSelect={(url) => { handleFileSelect(url); setShowValidation(false); }}
-                    disabled={createRender.isPending}
+                    onFileSelect={handleFileSelect}
+                    disabled={createRender.isPending || isProcessing}
                   />
-                  {showValidation && sourceImages.length === 0 && (
-                    <p className="text-xs text-destructive mt-1 font-mono">Garment image is required</p>
-                  )}
                 </div>
-              )}
-
-              {/* ── Choose Model — Identity Library ── */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Choose Model</Label>
-                  {selectedIdentityId && (
-                    <button
-                      onClick={() => setSelectedIdentityId('')}
-                      className="text-xs text-muted-foreground font-mono hover:text-foreground transition-colors"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-                {identities.length === 0 ? (
-                  <p className="text-xs text-muted-foreground font-mono py-2">
-                    Loading identities...
+                {showValidation && !hasImage && (
+                  <p className="text-xs text-destructive font-mono">
+                    Please upload a garment photo.
                   </p>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {identities.map((identity) => {
-                      const isSelected = selectedIdentityId === identity.id;
+                )}
+
+                {/* Garment type toggle */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-foreground">
+                    What type of garment is this?
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {GARMENT_TYPES.map((g) => {
+                      const isSelected = garmentPlacement === g.value;
                       return (
-                        <div
-                          key={identity.id}
-                          onClick={() =>
-                            setSelectedIdentityId(isSelected ? '' : identity.id)
-                          }
-                          className={`cursor-pointer rounded border overflow-hidden flex flex-col transition-all select-none ${
+                        <button
+                          key={g.value}
+                          type="button"
+                          onClick={() => { setGarmentPlacement(g.value); setShowValidation(false); }}
+                          disabled={createRender.isPending || isProcessing}
+                          className={cn(
+                            'rounded border px-2 py-2.5 text-center transition-all duration-150 select-none',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                             isSelected
-                              ? 'border-accent ring-1 ring-accent'
-                              : 'border-border bg-card hover:border-accent/40'
-                          }`}
+                              ? 'border-foreground bg-foreground text-background'
+                              : 'border-border bg-card text-foreground hover:border-foreground/40',
+                            (createRender.isPending || isProcessing) && 'opacity-50 pointer-events-none',
+                          )}
                         >
-                          {/* Model image thumbnail — portrait 3:4 crop */}
-                          <div className="w-full aspect-[3/4] bg-muted overflow-hidden relative">
-                            <img
-                              src={identity.imageUrl}
-                              alt={identity.displayName}
-                              className="w-full h-full object-cover object-top"
-                              loading="lazy"
-                            />
-                            {isSelected && (
-                              <div className="absolute inset-0 bg-accent/10 flex items-end justify-center pb-1">
-                                <span className="text-[9px] text-accent font-mono bg-background/80 px-1.5 py-0.5 rounded">
-                                  ✓ Selected
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="text-center w-full px-2 py-1.5">
-                            <p className="text-xs font-medium text-foreground leading-tight truncate">
-                              {identity.displayName}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground font-mono mt-0.5 capitalize">
-                              {identity.ethnicity.replace(/_/g, ' ')}
-                            </p>
-                          </div>
-                        </div>
+                          <p className="text-xs font-semibold">{g.label}</p>
+                          <p className={cn(
+                            'text-[10px] font-mono mt-0.5 leading-tight',
+                            isSelected ? 'text-background/70' : 'text-muted-foreground',
+                          )}>
+                            {g.sub}
+                          </p>
+                        </button>
                       );
                     })}
                   </div>
-                )}
-                <p className="text-[10px] text-muted-foreground font-mono">
-                  Optional — selecting a model overrides the Gender / Age routing below.
-                </p>
-              </div>
-
-              {/* ── Dropdowns grid A–F + Location ── */}
-              <div className="grid grid-cols-2 gap-3">
-
-                {/* A: Target Category / Gender — full width */}
-                <div className="col-span-2 space-y-1.5">
-                  <Label className="text-sm font-medium">Target Category / Gender</Label>
-                  <Select
-                    value={modelGender}
-                    onValueChange={(v) => {
-                      setModelGender(v);
-                      // Reset age when category changes to avoid invalid combinations
-                      setModelAgeRange('');
-                    }}
-                    disabled={createRender.isPending}
-                  >
-                    <SelectTrigger data-testid="select-model-gender">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mens">Men's Fashion (60 Active Models Locked)</SelectItem>
-                      <SelectItem value="womens">Women's Fashion (40 Active Models Locked)</SelectItem>
-                      <SelectItem value="kids">Kids' Fashion (Boys &amp; Girls Models Locked)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Garment Placement Layer — full width, directly below Category/Gender */}
-                <div className="col-span-2 space-y-1.5">
-                  <Label className="text-sm font-medium">
-                    Garment Placement Layer <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={garmentPlacement}
-                    onValueChange={setGarmentPlacement}
-                    disabled={createRender.isPending}
-                  >
-                    <SelectTrigger data-testid="select-garment-placement">
-                      <SelectValue placeholder="Select garment placement" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="upper_body">Upper Body (Shirts, Jackets, Tops)</SelectItem>
-                      <SelectItem value="lower_body">Lower Body (Jeans, Trousers, Joggers)</SelectItem>
-                      <SelectItem value="full_body">Full Body (Dresses, Gowns, Jumpsuits)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* B: Target Model Age Range — conditional options based on selected category */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">Target Model Age Range</Label>
-                  <Select
-                    value={modelAgeRange}
-                    onValueChange={setModelAgeRange}
-                    disabled={createRender.isPending}
-                  >
-                    <SelectTrigger data-testid="select-model-age">
-                      <SelectValue placeholder="Select age range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* Child age options — only shown for Kids' Fashion */}
-                      {modelGender === 'kids' && (
-                        <>
-                          <SelectItem value="young_child">5 – 10 Years (Young Child)</SelectItem>
-                          <SelectItem value="teen_youth">10 – 15 Years (Teen / Youth)</SelectItem>
-                        </>
-                      )}
-                      {/* Adult age options — shown for Men's / Women's or when unset */}
-                      {modelGender !== 'kids' && (
-                        <>
-                          <SelectItem value="young_adult">20 – 30 Years (Young Adult)</SelectItem>
-                          <SelectItem value="classic_mid_age">30 – 40 Years (Classic Mid-Age)</SelectItem>
-                          <SelectItem value="mature_executive">40 – 50 Years (Mature Executive)</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* C: Studio Camera Framing */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">Studio Camera Framing</Label>
-                  <Select
-                    value={cameraFraming}
-                    onValueChange={setCameraFraming}
-                    disabled={createRender.isPending}
-                  >
-                    <SelectTrigger data-testid="select-camera-framing">
-                      <SelectValue placeholder="Select framing" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="full_body">Full Body Catalog Shot</SelectItem>
-                      <SelectItem value="mid_shot">Mid-Shot Portrait</SelectItem>
-                      <SelectItem value="close_up">Texture Close-Up</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* D: Image Dimensions */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">Select Image Dimensions</Label>
-                  <Select
-                    value={imageDimensions}
-                    onValueChange={setImageDimensions}
-                    disabled={createRender.isPending}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Aspect ratio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="portrait_45">4:5 Portrait (Shopify &amp; Amazon)</SelectItem>
-                      <SelectItem value="portrait_916">9:16 Vertical (TikTok Ads)</SelectItem>
-                      <SelectItem value="square_11">1:1 Square (Social Media)</SelectItem>
-                      <SelectItem value="landscape_169">16:9 Landscape (Banners &amp; Magazines)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* E: Model Expression * */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">
-                    Model Expression <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={modelPersona}
-                    onValueChange={(v) => { setModelPersona(v); setShowValidation(false); }}
-                    disabled={createRender.isPending}
-                  >
-                    <SelectTrigger
-                      data-testid="select-model-persona"
-                      className={showValidation && !modelPersona ? 'ring-2 ring-destructive border-destructive' : ''}
-                    >
-                      <SelectValue placeholder="Select expression" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high_fashion_editorial">High-Fashion Editorial (Serious)</SelectItem>
-                      <SelectItem value="natural_smile">Natural Smile</SelectItem>
-                      <SelectItem value="confident_commercial">Confident Commercial</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {showValidation && !modelPersona && (
-                    <p className="text-xs text-destructive font-mono">Required</p>
-                  )}
-                </div>
-
-                {/* F: Model Action Pose */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-medium">Model Action Pose</Label>
-                  <Select
-                    value={modelPose}
-                    onValueChange={setModelPose}
-                    disabled={createRender.isPending}
-                  >
-                    <SelectTrigger data-testid="select-model-pose">
-                      <SelectValue placeholder="Select pose" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="standing_frontal">Standing Frontal</SelectItem>
-                      <SelectItem value="walking_dynamic">Walking Dynamic</SelectItem>
-                      <SelectItem value="sideways_posing">Sideways Posing</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Location Environment * */}
-                <div className="col-span-2 space-y-1.5">
-                  <Label className="text-sm font-medium">
-                    Location Environment <span className="text-destructive">*</span>
-                  </Label>
-                  <Select
-                    value={locationEnvironment}
-                    onValueChange={(v) => { setLocationEnvironment(v); setShowValidation(false); }}
-                    disabled={createRender.isPending}
-                  >
-                    <SelectTrigger
-                      data-testid="select-location"
-                      className={showValidation && !locationEnvironment ? 'ring-2 ring-destructive border-destructive' : ''}
-                    >
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="photo_studio">Photo Studio</SelectItem>
-                      <SelectItem value="urban_street">Urban Street</SelectItem>
-                      <SelectItem value="luxury_interior">Luxury Interior</SelectItem>
-                      <SelectItem value="nature">Nature</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {showValidation && !locationEnvironment && (
-                    <p className="text-xs text-destructive font-mono">Required</p>
-                  )}
-                </div>
-
-              </div>
-
-              {/* Smart Ambient Lighting toggle */}
-              <div className="flex items-center justify-between p-3 border border-border rounded bg-card">
-                <div>
-                  <p className="text-sm font-medium">Smart Ambient Lighting</p>
-                  <p className="text-xs text-muted-foreground font-mono">
-                    Match Ambient Studio Lighting
-                  </p>
-                </div>
-                <Switch
-                  checked={smartLighting}
-                  onCheckedChange={setSmartLighting}
-                  disabled={createRender.isPending}
-                />
-              </div>
-
-              {/* Dynamic Brand Watermark */}
-              <div className="p-3 border border-border rounded bg-card space-y-3">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="watermark"
-                    checked={brandWatermark}
-                    onCheckedChange={(v) => setBrandWatermark(!!v)}
-                    disabled={createRender.isPending}
-                  />
-                  <Label htmlFor="watermark" className="text-sm font-medium cursor-pointer">
-                    Dynamic Brand Watermark
-                  </Label>
-                </div>
-                {brandWatermark && (
-                  <div className="ml-6">
-                    <p className="text-xs text-muted-foreground font-mono mb-2">
-                      Upload transparent logo PNG
+                  {showValidation && !garmentPlacement && (
+                    <p className="text-xs text-destructive font-mono">
+                      Please select a garment type.
                     </p>
-                    <FileUpload
-                      onFileSelect={setWatermarkUrl}
-                      accept="image/png"
-                      disabled={createRender.isPending}
-                      className="min-h-0"
-                    />
-                    {watermarkUrl && (
-                      <div className="mt-2 w-16 h-16 border border-border rounded overflow-hidden">
-                        <img
-                          src={watermarkUrl}
-                          alt="Watermark"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    )}
+                  )}
+                </div>
+              </section>
+
+              {/* ── STEP 2: Choose Model ── */}
+              <section className="space-y-3">
+                <StepLabel number={2} title="Choose Model" />
+
+                {showValidation && !selectedIdentityId && (
+                  <p className="text-xs text-destructive font-mono -mt-1">
+                    Please choose a model.
+                  </p>
+                )}
+
+                <div className={cn(showValidation && !selectedIdentityId && 'rounded ring-2 ring-destructive ring-offset-1 p-2')}>
+                  <ModelGallery
+                    identities={identities as any}
+                    selectedId={selectedIdentityId}
+                    onSelect={(id) => { setSelectedIdentityId(id); setShowValidation(false); }}
+                    disabled={createRender.isPending || isProcessing}
+                  />
+                </div>
+              </section>
+
+              {/* ── STEP 3: Creative Brief ── */}
+              <section className="space-y-3">
+                <StepLabel number={3} title="Creative Brief" badge="Optional" />
+
+                <Textarea
+                  value={creativeBrief}
+                  onChange={(e) => setCreativeBrief(e.target.value)}
+                  placeholder="Describe the photoshoot you imagine…"
+                  rows={3}
+                  disabled={createRender.isPending || isProcessing}
+                  className="resize-none text-sm font-mono placeholder:text-muted-foreground/60"
+                />
+                <p className="text-[11px] text-muted-foreground font-mono leading-relaxed">
+                  <span className="font-semibold">Example:</span>{' '}
+                  Luxury hotel lobby during the evening with warm lighting and a confident executive look.
+                </p>
+              </section>
+
+              {/* ── Create Photoshoot CTA ── */}
+              <div className="space-y-3 pt-1">
+                <Button
+                  onClick={handleRender}
+                  disabled={!canRender}
+                  className="w-full h-12 text-sm font-semibold gap-2"
+                  data-testid="button-render"
+                >
+                  {createRender.isPending ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                      Starting…
+                    </>
+                  ) : isProcessing ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                      Rendering…
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-4 h-4" />
+                      Create Photoshoot
+                    </>
+                  )}
+                </Button>
+
+                {/* Trial notice */}
+                {!usageLoading && usage?.tier === 'free' && (
+                  <p className="text-center text-xs text-muted-foreground font-mono">
+                    Free trial — {usage.used} of {usage.limit} renders used
+                  </p>
+                )}
+
+                {/* Limit warning */}
+                {!usageLoading && limitBlocked && (
+                  <div className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2">
+                    <p className="text-xs text-destructive font-mono text-center">
+                      Render limit reached — upgrade your plan to continue.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ═══════════════════════════════════════════════════════════════
+                RIGHT PANEL — Output
+            ═══════════════════════════════════════════════════════════════ */}
+            <div className="space-y-4">
+              {/* Output canvas */}
+              <div
+                className="relative w-full rounded border border-border bg-card overflow-hidden flex items-center justify-center"
+                style={{ aspectRatio: '4 / 5' }}
+              >
+                {/* ── Processing state ── */}
+                {isProcessing && (
+                  <div className="flex flex-col items-center gap-4 p-8 text-center">
+                    <div className="relative w-14 h-14">
+                      <div className="absolute inset-0 border-2 border-border rounded-full" />
+                      <div className="absolute inset-0 border-2 border-t-foreground border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
+                      <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-muted-foreground animate-pulse-shimmer" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Creating your photoshoot…</p>
+                      <p className="text-xs text-muted-foreground font-mono mt-1">
+                        This usually takes 20–40 seconds
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Output image ── */}
+                {hasOutput && (
+                  <img
+                    src={resolvedOutputUrl!}
+                    alt="Photoshoot output"
+                    className="w-full h-full object-cover animate-in fade-in duration-500"
+                    data-testid="img-render-output"
+                  />
+                )}
+
+                {/* ── Empty state ── */}
+                {!isProcessing && !hasOutput && (
+                  <div className="flex flex-col items-center gap-3 p-8 text-center">
+                    <div className="w-12 h-12 rounded-full border border-dashed border-border flex items-center justify-center">
+                      <Camera className="w-5 h-5 text-muted-foreground/50" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">Your photoshoot will appear here</p>
+                      <p className="text-xs text-muted-foreground font-mono mt-1">
+                        Complete the steps on the left to get started
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Render button */}
-              <Button
-                onClick={handleRender}
-                disabled={!canRender}
-                className="w-full"
-                data-testid="button-render"
-              >
-                {createRender.isPending ? 'Starting render...' : 'Render Studio Image Layer'}
-              </Button>
-
-              {/* Trial tier notice */}
-              {!usageLoading && usage && usage.tier === 'free' && (
-                <div className="p-3 bg-card border border-border rounded">
-                  <p className="text-xs text-muted-foreground font-mono">
-                    Free Trial — {usage.used} of {usage.limit} complimentary renders used
-                  </p>
+              {/* Download + New photoshoot */}
+              {hasOutput && (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleDownload}
+                    className="flex-1 gap-2"
+                    data-testid="button-download"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleNewPhotoshoot}
+                    className="flex-1"
+                  >
+                    New Photoshoot
+                  </Button>
                 </div>
               )}
             </div>
+          </div>
 
-            {/* ── RIGHT PANEL: Output ── */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">AI Studio Output</Label>
-                <div
-                  className="border-2 border-dashed border-border rounded bg-card flex items-center justify-center overflow-hidden"
-                  style={{ aspectRatio: '1 / 1' }}
-                >
-                  {isProcessing && (
-                    <div className="text-center p-8">
-                      <div className="w-16 h-16 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4 animate-pulse-shimmer" />
-                      <p className="text-sm text-foreground font-medium">
-                        Rendering in progress...
-                      </p>
-                      <p className="text-xs text-muted-foreground font-mono mt-1">
-                        This may take a few moments
-                      </p>
-                    </div>
-                  )}
-                  {hasOutput && (
-                    <div className="relative w-full h-full">
+          {/* ── Source / output comparison strip ── */}
+          {(hasImage || hasOutput) && (
+            <div className="border-t border-border pt-6 mb-8">
+              <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-4">
+                Before &amp; After
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-medium text-foreground mb-2">Garment Photo</p>
+                  <div className="aspect-video border border-border rounded bg-card overflow-hidden flex items-center justify-center">
+                    {sourceImages[0] ? (
+                      <img
+                        src={sourceImages[0]}
+                        alt="Source garment"
+                        className="w-full h-full object-contain"
+                        data-testid="img-source"
+                      />
+                    ) : (
+                      <p className="text-xs text-muted-foreground font-mono">No image uploaded</p>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-foreground mb-2">Photoshoot Output</p>
+                  <div className="aspect-video border border-border rounded bg-card overflow-hidden flex items-center justify-center">
+                    {hasOutput ? (
                       <img
                         src={resolvedOutputUrl!}
-                        alt="Rendered output"
+                        alt="Photoshoot output"
                         className="w-full h-full object-cover"
-                        data-testid="img-render-output"
                       />
-                      {brandWatermark && watermarkUrl && (
-                        <img
-                          src={watermarkUrl}
-                          alt="Watermark"
-                          className="absolute bottom-3 right-3 w-16 h-16 object-contain opacity-80"
-                        />
-                      )}
-                    </div>
-                  )}
-                  {!isProcessing && !hasOutput && (
-                    <div className="text-center p-8">
-                      <p className="text-sm text-muted-foreground font-mono">
-                        Your rendered output will appear here
+                    ) : (
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {isProcessing ? 'Rendering…' : 'Not yet created'}
                       </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {hasOutput && (
-                <Button
-                  onClick={handleDownload}
-                  className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
-                  data-testid="button-download"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download High-Res Studio Asset
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Source / output preview strip */}
-          <div className="border-t border-border pt-6 mb-8">
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Source Layer</Label>
-                <div className="aspect-video border border-border rounded bg-card flex items-center justify-center overflow-hidden">
-                  {sourceImages[0] ? (
-                    <img
-                      src={sourceImages[0]}
-                      alt="Source"
-                      className="w-full h-full object-cover"
-                      data-testid="img-source"
-                    />
-                  ) : (
-                    <p className="text-xs text-muted-foreground font-mono">
-                      No source uploaded
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div>
-                <Label className="text-sm font-medium mb-2 block">AI Studio Output</Label>
-                <div className="aspect-video border border-border rounded bg-card flex items-center justify-center overflow-hidden">
-                  {hasOutput ? (
-                    <img
-                      src={resolvedOutputUrl!}
-                      alt="Output preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <p className="text-xs text-muted-foreground font-mono">
-                      {isProcessing ? 'Processing...' : 'No output yet'}
-                    </p>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* FAQ accordion */}
+          {/* ── FAQ ── */}
           <div className="border-t border-border pt-6">
-            <h3 className="text-sm font-medium text-muted-foreground font-mono mb-4 uppercase tracking-wider">
-              Studio FAQ
+            <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-4">
+              Frequently Asked Questions
             </h3>
             <Accordion type="single" collapsible className="space-y-2">
               {FAQ_ITEMS.map((item, i) => (
@@ -849,13 +635,14 @@ export default function StudioPage() {
                   <AccordionTrigger className="text-sm font-medium text-foreground hover:no-underline py-4">
                     {item.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-sm text-muted-foreground pb-4">
+                  <AccordionContent className="text-sm text-muted-foreground pb-4 font-mono text-xs leading-relaxed">
                     {item.a}
                   </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
           </div>
+
         </div>
 
         <Footer />
