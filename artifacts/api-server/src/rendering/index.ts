@@ -8,6 +8,13 @@
 // Primary orchestrator entry point
 export { RenderOrchestrator, getOrchestrator } from "./render-orchestrator";
 
+// Shared preprocessing utilities — used by orchestrator and OpenRouter pipeline
+export { prepareGarmentImage, resolveModelImage, mapStyleModeToTemplate } from "./preprocessing";
+export type { ModelResolutionResult } from "./preprocessing";
+
+// Image storage — base64 data-URI → fal CDN HTTPS URL
+export { uploadBase64Image } from "./image-storage";
+
 // Types needed by callers
 export type {
   RenderingRequest,

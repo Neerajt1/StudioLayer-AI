@@ -23,13 +23,7 @@
 //   StandardStrategy internally: FASHN V1.6 → image-apps-v2 → Error
 // ---------------------------------------------------------------------------
 
-import { fal }                             from "@fal-ai/client";
 import { logger }                           from "../lib/logger";
-import { findIdentityById }                 from "../data/identity-library";
-import {
-  selectBaseModel,
-  mapStyleModeToTemplate,
-}                                           from "../data/base-model-library";
 import {
   runIntelligenceAnalysis,
 }                                           from "../intelligence";
@@ -39,16 +33,17 @@ import { StandardRenderingStrategy }       from "./strategies/standard-strategy"
 import { HybridRenderingStrategy }         from "./strategies/hybrid-strategy";
 import { RENDERING_CONFIG }                from "./rendering-config";
 import {
+  prepareGarmentImage,
+  resolveModelImage,
+  mapStyleModeToTemplate,
+}                                           from "./preprocessing";
+import {
   mapToFashnCategory,
   type RenderingRequest,
   type RenderingResult,
   type OrchestratorContext,
-  type ModelImageContext,
-  type ModelImageSource,
 } from "./types";
 import type { RenderingStrategy }          from "./strategies/rendering-strategy";
-
-fal.config({ credentials: process.env["FAL_KEY"] });
 
 // ---------------------------------------------------------------------------
 // Singleton instance
@@ -236,7 +231,7 @@ export class RenderOrchestrator {
 
     // ── Parallel: BirefNet preprocessing + Intelligence Engine ───────────────
     const [garmentImageUrl, intelligenceResult] = await Promise.all([
-      this.prepareGarmentImage(request.sourceImageUrl, renderId),
+      prepareGarmentImage(request.sourceImageUrl, renderId),
       runIntelligenceAnalysis({
         renderId,
         garmentImageUrl:  request.sourceImageUrl,
@@ -253,27 +248,13 @@ export class RenderOrchestrator {
     const category      = mapToFashnCategory(intelligenceResult.profile.category);
     const styleTemplate = mapStyleModeToTemplate(intelligenceResult.recommendation.styleMode);
 
-    // ── Model image selection (SL-016 4-branch logic) ────────────────────────
-    const modelImageContext = this.selectModelImage(
+    // ── Model image selection + URL resolution (SL-016 4-branch logic) ───────
+    const { modelImageContext, modelImageUrl } = resolveModelImage(
       request,
       category,
       styleTemplate,
       renderId,
     );
-
-    // ── Resolve root-relative paths to absolute URLs ─────────────────────────
-    let modelImageUrl = modelImageContext.imageUrl;
-    if (modelImageUrl.startsWith("/")) {
-      const domain = process.env["REPLIT_DEV_DOMAIN"];
-      modelImageUrl = domain
-        ? `https://${domain}${modelImageUrl}`
-        : `http://localhost:25562${modelImageUrl}`;
-
-      logger.info(
-        { renderId, resolvedModelImageUrl: modelImageUrl },
-        "Render Orchestrator: resolved relative identity imageUrl to absolute URL",
-      );
-    }
 
     const preparationDurationMs = Date.now() - prepStart;
 
@@ -299,7 +280,7 @@ export class RenderOrchestrator {
       request,
       intelligenceResult,
       garmentImageUrl,
-      modelImageContext: { ...modelImageContext, imageUrl: modelImageUrl },
+      modelImageContext,
       modelImageUrl,
       category,
       styleTemplate,
@@ -341,196 +322,4 @@ export class RenderOrchestrator {
     return this.standardStrategy; // should never reach here; Standard always canHandle
   }
 
-  // ── BirefNet garment preprocessing ────────────────────────────────────────
-
-  /**
-   * Passes the uploaded garment through fal-ai/birefnet to remove hanger/background.
-   * Returns a transparent PNG cutout URL. Falls back to original on any error.
-   */
-  private async prepareGarmentImage(
-    sourceImageUrl: string,
-    renderId: number,
-  ): Promise<string> {
-    try {
-      logger.info(
-        { renderId, sourceImageUrl },
-        "Render Orchestrator: garment preprocessing — BirefNet hanger removal",
-      );
-
-      const result = await fal.subscribe("fal-ai/birefnet", {
-        input: {
-          image_url:            sourceImageUrl,
-          model:                "General Use (Light)",
-          output_format:        "png",
-          operating_resolution: "1024x1024",
-          refine_foreground:    true,
-        },
-        logs: false,
-      });
-
-      const data = result.data as Record<string, unknown> | undefined;
-      const candidates: unknown[] = [
-        (data?.["image"]  as { url?: string } | undefined)?.url,
-        data?.["image_url"],
-        data?.["url"],
-        (data?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
-      ];
-
-      for (const c of candidates) {
-        if (typeof c === "string" && c.startsWith("http")) {
-          logger.info(
-            { renderId, preprocessedGarmentUrl: c },
-            "Render Orchestrator: garment background removed",
-          );
-          return c;
-        }
-      }
-
-      logger.warn({ renderId }, "Render Orchestrator: BirefNet returned no URL — using original");
-      return sourceImageUrl;
-    } catch (err) {
-      logger.warn(
-        { renderId, err },
-        "Render Orchestrator: BirefNet failed — falling back to original garment image",
-      );
-      return sourceImageUrl;
-    }
-  }
-
-  // ── Model image selection (SL-016) ────────────────────────────────────────
-
-  /**
-   * Resolves the model image URL using the SL-016 4-branch priority chain.
-   *
-   * Branch A: modelIdentityId supplied + resolved in Identity Library (user override — always wins)
-   * Branch B: modelIdentityId supplied but NOT found → Base Model Selector
-   * Branch C: No modelIdentityId → Base Model Selector (standard SL-016 path)
-   * Branch D: Base Model Selector null → selectAttributeRoutedModel() (emergency fallback)
-   */
-  private selectModelImage(
-    request: RenderingRequest,
-    category: OrchestratorContext["category"],
-    styleTemplate: OrchestratorContext["styleTemplate"],
-    renderId: number,
-  ): ModelImageContext {
-    const selectionStart = Date.now();
-    const { modelIdentityId, modelGender, modelAgeRange, modelPose } = request;
-
-    let imageUrl: string;
-    let source: ModelImageSource;
-    let baseModelId: string | null = null;
-    let identityId: string | null = null;
-    let identityOverride = false;
-    let fallbackReason: string | null = null;
-
-    if (modelIdentityId) {
-      // ── Branch A: User-selected identity ──────────────────────────────────
-      const identity = findIdentityById(modelIdentityId);
-      if (identity) {
-        imageUrl         = identity.imageUrl;
-        source           = "identity_override";
-        identityId       = modelIdentityId;
-        identityOverride = true;
-
-        logger.info(
-          { renderId, modelIdentityId, identityName: identity.displayName },
-          "Render Orchestrator: model image from Identity Library (identity override)",
-        );
-      } else {
-        // ── Branch B: Identity not found → Base Model Selector ──────────────
-        logger.warn(
-          { renderId, modelIdentityId },
-          "Render Orchestrator: modelIdentityId not found — falling back to Base Model Selector",
-        );
-
-        const baseModel = selectBaseModel(modelGender, category, styleTemplate);
-        if (baseModel) {
-          imageUrl              = baseModel.imageUrl;
-          source                = "base_model_selector";
-          baseModelId           = baseModel.id;
-          fallbackReason        = "identity_not_found";
-        } else {
-          imageUrl              = this.selectAttributeRoutedModel(modelGender, modelAgeRange, modelPose);
-          source                = "attribute_routing_fallback";
-          fallbackReason        = "identity_not_found_and_base_model_null";
-        }
-      }
-    } else {
-      // ── Branch C: No identity selected — Base Model Selector ────────────────
-      const baseModel = selectBaseModel(modelGender, category, styleTemplate);
-      if (baseModel) {
-        imageUrl    = baseModel.imageUrl;
-        source      = "base_model_selector";
-        baseModelId = baseModel.id;
-      } else {
-        // ── Branch D: Base Model Selector null — emergency attribute routing ──
-        imageUrl       = this.selectAttributeRoutedModel(modelGender, modelAgeRange, modelPose);
-        source         = "attribute_routing_fallback";
-        fallbackReason = "base_model_selector_null";
-      }
-    }
-
-    const selectionDurationMs = Date.now() - selectionStart;
-
-    logger.info(
-      {
-        renderId,
-        modelSelection: {
-          source, baseModelId, identityId, identityOverride,
-          fallbackReason, category, styleTemplate,
-          resolvedImageUrl: imageUrl, durationMs: selectionDurationMs,
-        },
-      },
-      "Render Orchestrator: model image selected",
-    );
-
-    return {
-      imageUrl,
-      source,
-      baseModelId,
-      identityId,
-      identityOverride,
-      fallbackReason,
-      selectionDurationMs,
-    };
-  }
-
-  // ── Emergency attribute-routing fallback ──────────────────────────────────
-
-  /**
-   * Last-resort model image selection matching gender + age + pose to a
-   * known-good Unsplash URL. Behaviour identical to the pre-SL-016 pipeline.
-   * Used only when both Identity Library and Base Model Selector return null.
-   */
-  private selectAttributeRoutedModel(
-    modelGender:   string | null | undefined,
-    modelAgeRange: string | null | undefined,
-    modelPose:     string | null | undefined,
-  ): string {
-    const pose = modelPose ?? "standing_frontal";
-
-    if (modelGender === "kids") {
-      if (pose === "walking_dynamic")   return "https://images.unsplash.com/photo-1555009393-f20bdb245c4d?w=768&q=85&fit=crop&crop=top";
-      if (pose === "sideways_posing")   return "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=768&q=85&fit=crop&crop=top";
-      if (modelAgeRange === "teen_youth") return "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=768&q=85&fit=crop&crop=top";
-      return "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=768&q=85&fit=crop&crop=top";
-    }
-
-    if (modelGender === "mens") {
-      if (pose === "walking_dynamic")       return "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=768&q=85&fit=crop&crop=top";
-      if (pose === "sideways_posing")       return "https://images.unsplash.com/photo-1490367532201-b9bc1dc483f6?w=768&q=85&fit=crop&crop=top";
-      if (modelAgeRange === "mature_executive") return "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=768&q=85&fit=crop&crop=top";
-      if (modelAgeRange === "classic_mid_age")  return "https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=768&q=85&fit=crop&crop=top";
-      if (modelAgeRange === "teen_youth")       return "https://images.unsplash.com/photo-1534367610401-9f5ed68180aa?w=768&q=85&fit=crop&crop=top";
-      return "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=768&q=85&fit=crop&crop=top";
-    }
-
-    // Women's (default)
-    if (pose === "walking_dynamic")       return "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=768&q=85&fit=crop&crop=top";
-    if (pose === "sideways_posing")       return "https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=768&q=85&fit=crop&crop=top";
-    if (modelAgeRange === "mature_executive") return "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=768&q=85&fit=crop&crop=top";
-    if (modelAgeRange === "classic_mid_age")  return "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=768&q=85&fit=crop&crop=top";
-    if (modelAgeRange === "teen_youth")       return "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=768&q=85&fit=crop&crop=top";
-    return "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=768&q=85&fit=crop&crop=top";
-  }
 }
