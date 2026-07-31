@@ -189,6 +189,10 @@ export interface RenderInput {
   garmentPlacement?: RenderInputGarmentPlacement;
   /** Optional Identity Library ID — when set, bypasses attribute-based model routing. */
   modelIdentityId?: string;
+  /** Complete the Look selection from the UI. */
+  outfitStyle?: string;
+  /** Number of output images to generate: 1, 2, or 4. Defaults to 1. */
+  imageCount?: 1 | 2 | 4;
 }
 
 /** A single entry from the Identity Library catalogue. */

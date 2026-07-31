@@ -166,11 +166,13 @@ paths:
               $ref: "#/components/schemas/RenderInput"
       responses:
         "201":
-          description: Render job created
+          description: Render job(s) created — one per requested image
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Render"
+                type: array
+                items:
+                  $ref: "#/components/schemas/Render"
         "400":
           description: Validation error
           content:
@@ -447,6 +449,13 @@ components:
             streetwear, ethnic, sportswear, none.
             When present and not "none", the PromptComposer uses the externally
             computed outfit specification instead of its own recommendation.
+        imageCount:
+          type: number
+          enum: [1, 2, 4]
+          description: >
+            Number of output images to generate (1, 2, or 4).
+            Each image is an independently generated shot with a natural fashion pose.
+            Defaults to 1.
       required:
         - sourceImageUrl
         - modelPersona

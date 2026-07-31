@@ -1,18 +1,20 @@
 // ---------------------------------------------------------------------------
-// StudioLayer AI — Studio Page (SL-018A)
+// StudioLayer AI — Studio Page (SL-020)
 //
 // 4-step workflow:
 //   1. Upload Outfit       → garment photo + garment type
 //   2. Choose Model        → visual gallery (Women / Men / Kids)
 //   3. Complete the Look   → rule-based outfit completion (Optional)
 //   4. Creative Brief      → natural-language description (Optional)
+//   ↓  Image Count         → 1 / 2 / 4 output images
 //   ↓  Create Photoshoot
 //
-// SL-018A additions:
-//   - Complete the Look section (step 3) — 9-option pill selector
-//   - Outfit Completion Engine integration (deterministic rules, no LLM)
-//   - Pre-render structured logging of full outfit spec + rendering request
-//   - Workspace Reset fix: resetKey forces FileUpload re-mount on New Photoshoot
+// SL-020 additions:
+//   - Image count selector (1 / 2 / 4) before the CTA button
+//   - Multi-image polling: up to 4 render IDs tracked in state
+//   - Multi-image output grid replacing the single-image canvas
+//   - Each shot is an independently generated OpenRouter call (varied pose)
+//   - All shots share the same model identity and garment inputs
 // ---------------------------------------------------------------------------
 
 import { useState } from 'react';
@@ -77,6 +79,12 @@ const GARMENT_TYPES = [
   { value: 'full_body',  label: 'Full Outfit', sub: 'Dresses · Jumpsuits · Suits'  },
 ] as const;
 
+const IMAGE_COUNT_OPTIONS: { value: 1 | 2 | 4; label: string }[] = [
+  { value: 1, label: '1 Image'  },
+  { value: 2, label: '2 Images' },
+  { value: 4, label: '4 Images' },
+];
+
 // ---------------------------------------------------------------------------
 // Creative brief → API field interpretation
 // ---------------------------------------------------------------------------
@@ -131,6 +139,104 @@ function StepLabel({
 }
 
 // ---------------------------------------------------------------------------
+// Refetch interval helper — stop polling once a render reaches terminal state
+// ---------------------------------------------------------------------------
+
+function makeRefetchInterval(enabled: boolean) {
+  return (query: any) => {
+    if (!enabled) return false;
+    const render = query.state.data;
+    if (render && (render.status === 'processing' || render.status === 'pending')) {
+      return 2000;
+    }
+    return false;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Single render output card
+// ---------------------------------------------------------------------------
+
+function RenderOutputCard({
+  render,
+  index,
+  onDownload,
+}: {
+  render: any;
+  index: number;
+  onDownload: (url: string, index: number) => void;
+}) {
+  const outputUrl: string | null = (() => {
+    if (!render) return null;
+    const r = render as Record<string, unknown>;
+    const candidates = [
+      r['outputImageUrl'], r['outputUrl'], r['url'], r['image_url'],
+      Array.isArray(r['images'])
+        ? (r['images'] as Array<Record<string, unknown>>)[0]?.['url']
+        : (r['images'] as Record<string, unknown> | undefined)?.['url'],
+    ];
+    for (const c of candidates) {
+      if (typeof c === 'string' && c.startsWith('http')) return c;
+    }
+    return null;
+  })();
+
+  const isProcessing = render?.status === 'processing' || render?.status === 'pending';
+  const isCompleted  = render?.status === 'completed' && !!outputUrl;
+  const isFailed     = render?.status === 'failed';
+
+  return (
+    <div
+      className="relative w-full rounded border border-border bg-card overflow-hidden flex items-center justify-center"
+      style={{ aspectRatio: '4 / 5' }}
+    >
+      {isProcessing && (
+        <div className="flex flex-col items-center gap-3 p-4 text-center">
+          <div className="relative w-10 h-10">
+            <div className="absolute inset-0 border-2 border-border rounded-full" />
+            <div className="absolute inset-0 border-2 border-t-foreground border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
+            <Sparkles className="absolute inset-0 m-auto w-4 h-4 text-muted-foreground animate-pulse-shimmer" />
+          </div>
+          <p className="text-xs text-muted-foreground font-mono">Rendering…</p>
+        </div>
+      )}
+
+      {isCompleted && (
+        <>
+          <img
+            src={outputUrl!}
+            alt={`Photoshoot output ${index + 1}`}
+            className="w-full h-full object-cover animate-in fade-in duration-500"
+            data-testid={`img-render-output-${index}`}
+          />
+          <button
+            onClick={() => onDownload(outputUrl!, index)}
+            className="absolute bottom-2 right-2 bg-background/80 hover:bg-background text-foreground border border-border rounded p-1.5 transition-all opacity-0 group-hover:opacity-100 hover:opacity-100"
+            title={`Download image ${index + 1}`}
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+        </>
+      )}
+
+      {isFailed && (
+        <div className="flex flex-col items-center gap-2 p-4 text-center">
+          <p className="text-xs text-destructive font-mono">Generation failed</p>
+        </div>
+      )}
+
+      {!render && (
+        <div className="flex flex-col items-center gap-2 p-4 text-center">
+          <div className="w-8 h-8 rounded-full border border-dashed border-border flex items-center justify-center">
+            <Camera className="w-4 h-4 text-muted-foreground/50" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Studio Page
 // ---------------------------------------------------------------------------
 
@@ -141,7 +247,8 @@ export default function StudioPage() {
   const [selectedIdentityId, setSelectedIdentityId] = useState('');
   const [completeTheLook,    setCompleteTheLook]    = useState<CompleteTheLookStyle>('ai_recommended');
   const [creativeBrief,      setCreativeBrief]      = useState('');
-  const [activeRenderId,     setActiveRenderId]     = useState<number | null>(null);
+  const [imageCount,         setImageCount]         = useState<1 | 2 | 4>(1);
+  const [activeRenderIds,    setActiveRenderIds]    = useState<number[]>([]);
   const [showValidation,     setShowValidation]     = useState(false);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
 
@@ -157,7 +264,20 @@ export default function StudioPage() {
   const { data: usage, isLoading: usageLoading }  = useGetRenderUsage();
   const { data: identities = [] }                 = useGetIdentities();
   const createRender                              = useCreateRender();
-  const completeOnboarding                        = useCompleteOnboarding();
+
+  // ── Multi-render polling (max 4 slots, hooks called unconditionally) ───────
+  // Each hook is enabled only when its slot has an ID assigned.
+  const id0 = activeRenderIds[0] ?? 0;
+  const id1 = activeRenderIds[1] ?? 0;
+  const id2 = activeRenderIds[2] ?? 0;
+  const id3 = activeRenderIds[3] ?? 0;
+
+  const { data: render0 } = useGetRender(id0, { query: { enabled: !!activeRenderIds[0], refetchInterval: makeRefetchInterval(!!activeRenderIds[0]) } } as any);
+  const { data: render1 } = useGetRender(id1, { query: { enabled: !!activeRenderIds[1], refetchInterval: makeRefetchInterval(!!activeRenderIds[1]) } } as any);
+  const { data: render2 } = useGetRender(id2, { query: { enabled: !!activeRenderIds[2], refetchInterval: makeRefetchInterval(!!activeRenderIds[2]) } } as any);
+  const { data: render3 } = useGetRender(id3, { query: { enabled: !!activeRenderIds[3], refetchInterval: makeRefetchInterval(!!activeRenderIds[3]) } } as any);
+
+  const allRenderData = [render0, render1, render2, render3].slice(0, activeRenderIds.length);
 
   // ── Onboarding ─────────────────────────────────────────────────────────────
   const showOnboarding =
@@ -172,40 +292,32 @@ export default function StudioPage() {
     });
   };
 
-  // ── Active render polling ──────────────────────────────────────────────────
-  const { data: activeRender } = useGetRender(activeRenderId || 0, {
-    query: {
-      enabled: !!activeRenderId,
-      refetchInterval: (query: any) => {
-        const render = query.state.data;
-        if (render && (render.status === 'processing' || render.status === 'pending')) {
-          return 2000;
-        }
-        return false;
-      },
-    } as any,
-  });
+  const completeOnboarding = useCompleteOnboarding();
 
   // ── Derived state ──────────────────────────────────────────────────────────
-  const isProcessing =
-    activeRender?.status === 'processing' || activeRender?.status === 'pending';
+  const isProcessing = allRenderData.some(
+    (r) => r?.status === 'processing' || r?.status === 'pending',
+  );
 
+  // resolvedOutputUrl — first completed image URL (for the before/after strip)
   const resolvedOutputUrl: string | null = (() => {
-    if (!activeRender) return null;
-    const r = activeRender as unknown as Record<string, unknown>;
-    const candidates = [
-      r['outputImageUrl'], r['outputUrl'], r['url'], r['image_url'],
-      Array.isArray(r['images'])
-        ? (r['images'] as Array<Record<string, unknown>>)[0]?.['url']
-        : (r['images'] as Record<string, unknown> | undefined)?.['url'],
-    ];
-    for (const c of candidates) {
-      if (typeof c === 'string' && c.startsWith('http')) return c;
+    for (const render of allRenderData) {
+      if (!render) continue;
+      const r = render as unknown as Record<string, unknown>;
+      const candidates = [
+        r['outputImageUrl'], r['outputUrl'], r['url'], r['image_url'],
+        Array.isArray(r['images'])
+          ? (r['images'] as Array<Record<string, unknown>>)[0]?.['url']
+          : (r['images'] as Record<string, unknown> | undefined)?.['url'],
+      ];
+      for (const c of candidates) {
+        if (typeof c === 'string' && c.startsWith('http')) return c;
+      }
     }
     return null;
   })();
 
-  const hasOutput    = activeRender?.status === 'completed' && !!resolvedOutputUrl;
+  const hasOutput    = allRenderData.some((r) => r?.status === 'completed') && !!resolvedOutputUrl;
   const hasImage     = sourceImages.length > 0 && !!sourceImages[0];
   const limitBlocked = usage !== undefined && !usage.canRender;
   const canRender    = hasImage && !!garmentPlacement && !!selectedIdentityId
@@ -263,8 +375,6 @@ export default function StudioPage() {
       : { locationEnvironment: 'photo_studio', modelPersona: 'confident_commercial' };
 
     // ── Build final rendering request ─────────────────────────────────────
-    // outfitStyle is forwarded through the pipeline so the backend
-    // PromptComposer can apply the Outfit Style Override (SL-018B).
     const renderingRequest = {
       sourceImageUrl:      primary,
       modelPersona:        modelPersona        as any,
@@ -276,10 +386,11 @@ export default function StudioPage() {
       smartLighting:       true,
       imageDimensions:     'portrait_45'       as any,
       outfitStyle:         completeTheLook,
+      imageCount,
     };
 
-    // ── SL-018A Part 4: Pre-render structured log ──────────────────────────
-    console.group('SL-018A Rendering Request');
+    // ── Pre-render structured log ──────────────────────────────────────────
+    console.group('SL-020 Rendering Request');
     console.log('Uploaded Garment:         ', garmentPlacement);
     console.log('Selected Model:           ', selectedIdentity?.displayName ?? selectedIdentityId);
     console.log('Model Gender:             ', modelGender ?? '(not resolved)');
@@ -291,6 +402,7 @@ export default function StudioPage() {
     console.log('Creative Brief:           ', creativeBrief.trim() || '(none)');
     console.log('Resolved Location:        ', locationEnvironment);
     console.log('Resolved Persona:         ', modelPersona);
+    console.log('Image Count:              ', imageCount);
     console.log('Full Rendering Request:   ', renderingRequest);
     console.groupEnd();
 
@@ -298,10 +410,15 @@ export default function StudioPage() {
     createRender.mutate(
       { data: renderingRequest },
       {
-        onSuccess: (render) => {
-          setActiveRenderId(render.id);
+        onSuccess: (renders) => {
+          // POST /renders now returns Render[] — collect all IDs.
+          const ids = (renders as unknown as any[]).map((r: any) => r.id as number);
+          setActiveRenderIds(ids);
           queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
-          toast({ title: 'Photoshoot started', description: 'Your render is processing…' });
+          const desc = ids.length === 1
+            ? 'Your render is processing…'
+            : `${ids.length} images are processing…`;
+          toast({ title: 'Photoshoot started', description: desc });
         },
         onError: (error: any) => {
           toast({
@@ -314,42 +431,50 @@ export default function StudioPage() {
     );
   };
 
-  // ── Workspace Reset (SL-018A Part 5) ──────────────────────────────────────
-  // Increments resetKey to force FileUpload re-mount (clears internal preview/
-  // filename state that parent state changes cannot reach directly).
-  // Resets ALL form state to initial values — workspace behaves as if just opened.
+  // ── Workspace Reset ────────────────────────────────────────────────────────
   const handleNewPhotoshoot = () => {
     setSourceImages([]);
     setGarmentPlacement('');
     setSelectedIdentityId('');
     setCompleteTheLook('ai_recommended');
     setCreativeBrief('');
-    setActiveRenderId(null);
+    setImageCount(1);
+    setActiveRenderIds([]);
     setShowValidation(false);
-    setResetKey((k) => k + 1);   // triggers FileUpload re-mount
-    createRender.reset();         // clears isPending + isError mutation state
+    setResetKey((k) => k + 1);
+    createRender.reset();
   };
 
-  const handleDownload = async () => {
-    if (!resolvedOutputUrl) return;
-    // Download does NOT reset the workspace (SL-018A Part 5 requirement).
+  const handleDownloadSingle = async (url: string, index: number) => {
     const brandSlug = (user?.name ?? 'studio')
       .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-    const filename = `${brandSlug}_photoshoot.jpg`;
+    const suffix    = activeRenderIds.length > 1 ? `_${index + 1}` : '';
+    const filename  = `${brandSlug}_photoshoot${suffix}.jpg`;
     try {
-      const response  = await fetch(resolvedOutputUrl);
+      const response  = await fetch(url);
       const blob      = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link      = document.createElement('a');
       link.href = objectUrl; link.download = filename;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
       setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
     } catch {
       const link = document.createElement('a');
-      link.href = resolvedOutputUrl; link.download = filename;
+      link.href = url; link.download = filename;
       link.target = '_blank'; link.rel = 'noopener noreferrer';
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
+  };
+
+  const handleDownloadAll = () => {
+    allRenderData.forEach((render, i) => {
+      if (!render || render.status !== 'completed') return;
+      const r = render as unknown as Record<string, unknown>;
+      const url = r['outputImageUrl'] as string | null;
+      if (url?.startsWith('http')) {
+        handleDownloadSingle(url, i);
+      }
+    });
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -402,8 +527,6 @@ export default function StudioPage() {
                 <div className={cn(
                   showValidation && !hasImage && 'rounded ring-2 ring-destructive ring-offset-1',
                 )}>
-                  {/* key={resetKey} forces a full re-mount on New Photoshoot,
-                      clearing the component's internal preview + filename state */}
                   <FileUpload
                     key={resetKey}
                     onFileSelect={handleFileSelect}
@@ -564,6 +687,43 @@ export default function StudioPage() {
                 </p>
               </section>
 
+              {/* ── Image Count selector ── */}
+              <section className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-medium text-foreground">Number of Images</p>
+                </div>
+                <div className="flex gap-2">
+                  {IMAGE_COUNT_OPTIONS.map((opt) => {
+                    const isSelected = imageCount === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          if (!createRender.isPending && !isProcessing)
+                            setImageCount(opt.value);
+                        }}
+                        disabled={createRender.isPending || isProcessing}
+                        className={cn(
+                          'flex-1 rounded border px-3 py-2 text-xs font-semibold text-center',
+                          'transition-all duration-150 select-none',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          isSelected
+                            ? 'border-foreground bg-foreground text-background'
+                            : 'border-border bg-card text-foreground hover:border-foreground/40',
+                          (createRender.isPending || isProcessing) && 'opacity-50 pointer-events-none',
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-muted-foreground font-mono">
+                  Each image is a distinct pose using the same model and garment.
+                </p>
+              </section>
+
               {/* ── Create Photoshoot CTA ── */}
               <div className="space-y-3 pt-1">
                 <Button
@@ -598,7 +758,7 @@ export default function StudioPage() {
                 )}
 
                 {/* Limit warning */}
-                {!usageLoading && limitBlocked && (
+                {limitBlocked && (
                   <div className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2">
                     <p className="text-xs text-destructive font-mono text-center">
                       Render limit reached — upgrade your plan to continue.
@@ -612,68 +772,85 @@ export default function StudioPage() {
                 RIGHT PANEL — Output
             ═══════════════════════════════════════════════════════════════ */}
             <div className="space-y-4">
-              {/* Output canvas — 4:5 portrait to match portrait_45 default */}
-              <div
-                className="relative w-full rounded border border-border bg-card overflow-hidden flex items-center justify-center"
-                style={{ aspectRatio: '4 / 5' }}
-              >
-                {/* Processing state */}
-                {isProcessing && (
-                  <div className="flex flex-col items-center gap-4 p-8 text-center">
-                    <div className="relative w-14 h-14">
-                      <div className="absolute inset-0 border-2 border-border rounded-full" />
-                      <div className="absolute inset-0 border-2 border-t-foreground border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
-                      <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-muted-foreground animate-pulse-shimmer" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        Creating your photoshoot…
-                      </p>
-                      <p className="text-xs text-muted-foreground font-mono mt-1">
-                        This usually takes 20–40 seconds
-                      </p>
-                    </div>
-                  </div>
-                )}
 
-                {/* Output image */}
-                {hasOutput && (
-                  <img
-                    src={resolvedOutputUrl!}
-                    alt="Photoshoot output"
-                    className="w-full h-full object-cover animate-in fade-in duration-500"
-                    data-testid="img-render-output"
-                  />
-                )}
+              {/* Output area — single image or grid */}
+              {activeRenderIds.length <= 1 ? (
+                /* ── Single image canvas (original layout) ── */
+                <div
+                  className="relative w-full rounded border border-border bg-card overflow-hidden flex items-center justify-center group"
+                  style={{ aspectRatio: '4 / 5' }}
+                >
+                  {isProcessing && (
+                    <div className="flex flex-col items-center gap-4 p-8 text-center">
+                      <div className="relative w-14 h-14">
+                        <div className="absolute inset-0 border-2 border-border rounded-full" />
+                        <div className="absolute inset-0 border-2 border-t-foreground border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
+                        <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-muted-foreground animate-pulse-shimmer" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          Creating your photoshoot…
+                        </p>
+                        <p className="text-xs text-muted-foreground font-mono mt-1">
+                          This usually takes 20–40 seconds
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
-                {/* Empty state */}
-                {!isProcessing && !hasOutput && (
-                  <div className="flex flex-col items-center gap-3 p-8 text-center">
-                    <div className="w-12 h-12 rounded-full border border-dashed border-border flex items-center justify-center">
-                      <Camera className="w-5 h-5 text-muted-foreground/50" />
+                  {hasOutput && (
+                    <img
+                      src={resolvedOutputUrl!}
+                      alt="Photoshoot output"
+                      className="w-full h-full object-cover animate-in fade-in duration-500"
+                      data-testid="img-render-output"
+                    />
+                  )}
+
+                  {!isProcessing && !hasOutput && (
+                    <div className="flex flex-col items-center gap-3 p-8 text-center">
+                      <div className="w-12 h-12 rounded-full border border-dashed border-border flex items-center justify-center">
+                        <Camera className="w-5 h-5 text-muted-foreground/50" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          Your photoshoot will appear here
+                        </p>
+                        <p className="text-xs text-muted-foreground font-mono mt-1">
+                          Complete the steps on the left to get started
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        Your photoshoot will appear here
-                      </p>
-                      <p className="text-xs text-muted-foreground font-mono mt-1">
-                        Complete the steps on the left to get started
-                      </p>
+                  )}
+                </div>
+              ) : (
+                /* ── Multi-image grid ── */
+                <div className={cn(
+                  'grid gap-3',
+                  activeRenderIds.length === 2 ? 'grid-cols-2' : 'grid-cols-2',
+                )}>
+                  {activeRenderIds.map((_, i) => (
+                    <div key={i} className="group">
+                      <RenderOutputCard
+                        render={allRenderData[i]}
+                        index={i}
+                        onDownload={handleDownloadSingle}
+                      />
                     </div>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
 
               {/* Download + New Photoshoot */}
               {hasOutput && (
                 <div className="flex gap-2">
                   <Button
-                    onClick={handleDownload}
+                    onClick={() => activeRenderIds.length > 1 ? handleDownloadAll() : handleDownloadSingle(resolvedOutputUrl!, 0)}
                     className="flex-1 gap-2"
                     data-testid="button-download"
                   >
                     <Download className="w-4 h-4" />
-                    Download
+                    {activeRenderIds.length > 1 ? 'Download All' : 'Download'}
                   </Button>
                   <Button
                     variant="outline"

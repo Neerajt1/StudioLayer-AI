@@ -86,20 +86,6 @@ router.post("/renders", async (req, res): Promise<void> => {
   const tier = user.subscriptionTier;
   const limit = TIER_LIMITS[tier] ?? null;
 
-  if (limit !== null) {
-    const [result] = await db
-      .select({ count: count() })
-      .from(rendersTable)
-      .where(eq(rendersTable.userId, userId));
-    const used = result?.count ?? 0;
-    if (used >= limit) {
-      res.status(403).json({
-        error: `Free tier limit of ${limit} renders reached. Upgrade to Pro for unlimited renders.`,
-      });
-      return;
-    }
-  }
-
   const {
     sourceImageUrl,
     modelPersona,
@@ -114,29 +100,59 @@ router.post("/renders", async (req, res): Promise<void> => {
     garmentPlacement,
     modelIdentityId,
     outfitStyle,
+    imageCount,
   } = parsed.data;
 
-  const [render] = await db
-    .insert(rendersTable)
-    .values({
-      userId,
-      sourceImageUrl,
-      modelPersona,
-      locationEnvironment,
-      status: "pending",
-    })
-    .returning();
+  // Normalize to ShotCount — default to 1 if not supplied.
+  const shots = (imageCount ?? 1) as 1 | 2 | 4;
 
-  // Mark as processing immediately so the UI shows the spinner
-  await db
-    .update(rendersTable)
-    .set({ status: "processing" })
-    .where(eq(rendersTable.id, render.id));
+  if (limit !== null) {
+    const [result] = await db
+      .select({ count: count() })
+      .from(rendersTable)
+      .where(eq(rendersTable.userId, userId));
+    const used = result?.count ?? 0;
+    // Each image counts against the tier limit.
+    if (used + shots > limit) {
+      res.status(403).json({
+        error: `Free tier limit of ${limit} renders reached. Upgrade to Pro for unlimited renders.`,
+      });
+      return;
+    }
+  }
 
-  // Fire-and-forget: run the AI pipeline in the background
-  // Intelligence analysis now runs inside runAIPipeline (SL-014)
+  // Create one DB row per requested image — all start as "pending".
+  const insertedRows = await Promise.all(
+    Array.from({ length: shots }, () =>
+      db
+        .insert(rendersTable)
+        .values({
+          userId,
+          sourceImageUrl,
+          modelPersona,
+          locationEnvironment,
+          status: "pending",
+        })
+        .returning()
+        .then(([row]) => row!),
+    ),
+  );
+
+  // Mark all rows as processing immediately so the UI can show spinners.
+  await Promise.all(
+    insertedRows.map((row) =>
+      db
+        .update(rendersTable)
+        .set({ status: "processing" })
+        .where(eq(rendersTable.id, row.id)),
+    ),
+  );
+
+  // Fire-and-forget: run the full AI pipeline once for all shots.
+  // The pipeline calls onComplete(url, index) for each generated image,
+  // keying into insertedRows[index] to update the correct DB row.
   runAIPipeline({
-    renderId: render.id,
+    renderId: insertedRows[0]!.id,   // used only for logging/preprocessing keys
     sourceImageUrl,
     modelPersona,
     locationEnvironment,
@@ -150,22 +166,34 @@ router.post("/renders", async (req, res): Promise<void> => {
     garmentPlacement,
     modelIdentityId,
     outfitStyle,
-    onComplete: async (outputImageUrl) => {
+    shots,
+    onComplete: async (outputImageUrl, imageIndex) => {
+      const row = insertedRows[imageIndex];
+      if (!row) return;
       await db
         .update(rendersTable)
         .set({ status: "completed", outputImageUrl })
-        .where(eq(rendersTable.id, render.id));
+        .where(eq(rendersTable.id, row.id));
     },
     onError: async (error) => {
-      logger.error({ renderId: render.id, error }, "Render pipeline failed");
-      await db
-        .update(rendersTable)
-        .set({ status: "failed" })
-        .where(eq(rendersTable.id, render.id));
+      logger.error(
+        { renderIds: insertedRows.map((r) => r.id), error },
+        "Render pipeline failed",
+      );
+      await Promise.all(
+        insertedRows.map((row) =>
+          db
+            .update(rendersTable)
+            .set({ status: "failed" })
+            .where(eq(rendersTable.id, row.id)),
+        ),
+      );
     },
   });
 
-  res.status(201).json({ ...render, status: "processing" });
+  res.status(201).json(
+    insertedRows.map((row) => ({ ...row, status: "processing" })),
+  );
 });
 
 router.delete("/renders/:id", async (req, res): Promise<void> => {

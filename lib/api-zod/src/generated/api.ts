@@ -124,10 +124,11 @@ export const CreateRenderBody = zod.object({
   "cameraFraming": zod.enum(['full_body', 'mid_shot', 'close_up']).optional(),
   "garmentPlacement": zod.enum(['upper_body', 'lower_body', 'full_body']).optional(),
   "modelIdentityId": zod.string().optional(),
-  "outfitStyle": zod.string().optional()
+  "outfitStyle": zod.string().optional(),
+  "imageCount": zod.union([zod.literal(1), zod.literal(2), zod.literal(4)]).optional()
 })
 
-export const CreateRenderResponse = zod.object({
+export const CreateRenderResponseItem = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
   "sourceImageUrl": zod.string().nullable(),
@@ -138,6 +139,7 @@ export const CreateRenderResponse = zod.object({
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
+export const CreateRenderResponse = zod.array(CreateRenderResponseItem)
 
 
 /**

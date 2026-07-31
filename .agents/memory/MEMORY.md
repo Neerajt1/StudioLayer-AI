@@ -3,3 +3,4 @@
 - [SL-017 Render Orchestrator](sl017-render-orchestrator.md) — main generate flow now uses getRenderingEngine() (OpenRouter), not getOrchestrator(); preprocessing.ts is shared
 - [SL-018B Pipeline Integration](sl018b-pipeline-integration.md) — outfitStyle threads full pipeline; api-zod dist must be rebuilt after editing generated/api.ts
 - [OpenRouter image response shape](openrouter-image-response.md) — images in message.images[], not message.content; uses OPENROUTER_API_KEY directly (not Replit integration)
+- [Multi-image project references](multi-image-project-refs.md) — api-zod and api-client-react are composite TS projects; editing their generated files requires tsc --build before downstream packages see new types

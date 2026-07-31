@@ -22,6 +22,8 @@
 //             Preprocessing (BirefNet, intelligence, model resolution) retained.
 //             FASHN/Orchestrator path removed from main generate flow.
 //             Public signature of runAIPipeline() is unchanged.
+//   SL-020  — Multi-image support: shots parameter (1/2/4) + indexed onComplete.
+//             All shots share one preprocessing pass; results distributed by index.
 // ---------------------------------------------------------------------------
 
 import { logger }                    from "../lib/logger";
@@ -34,9 +36,10 @@ import {
 import { mapToFashnCategory }        from "../rendering/types";
 import { uploadBase64Image }         from "../rendering/image-storage";
 import { getRenderingEngine }        from "./rendering/RenderingEngine";
+import type { ShotCount }            from "./rendering/types";
 
 // ---------------------------------------------------------------------------
-// runAIPipeline — public API (signature unchanged from SL-017)
+// runAIPipeline — public API
 // ---------------------------------------------------------------------------
 
 export async function runAIPipeline(params: {
@@ -55,7 +58,17 @@ export async function runAIPipeline(params: {
   modelIdentityId?:    string | null;
   /** Complete the Look selection from the UI (SL-018B). */
   outfitStyle?:        string | null;
-  onComplete:          (outputImageUrl: string) => Promise<void>;
+  /**
+   * Number of images to generate (SL-020).
+   * Each shot is an independent OpenRouter call producing a naturally varied pose.
+   * Defaults to 1.
+   */
+  shots?:              ShotCount;
+  /**
+   * Called once per successfully generated image.
+   * imageIndex is 0-based within this generation batch.
+   */
+  onComplete:          (outputImageUrl: string, imageIndex: number) => Promise<void>;
   onError:             (error: Error) => Promise<void>;
 }): Promise<void> {
   const {
@@ -67,6 +80,7 @@ export async function runAIPipeline(params: {
     garmentPlacement,
     modelIdentityId,
     outfitStyle,
+    shots = 1,
   } = params;
 
   try {
@@ -105,6 +119,7 @@ export async function runAIPipeline(params: {
         baseModelId:     modelImageContext.baseModelId,
         category,
         styleTemplate,
+        shots,
         intelligenceMs:  intelligenceResult.durationMs,
       },
       "AI pipeline (OpenRouter): preprocessing complete",
@@ -112,52 +127,61 @@ export async function runAIPipeline(params: {
 
     // ── Step 3: OpenRouter image generation ───────────────────────────────────
     //
-    // The creative prompt from the Intelligence Engine is forwarded as optional
-    // context appended after the authoritative garmentInstruction in the provider.
-    // This lets the model factor in outfit style, location environment, and
-    // garment-specific composition hints from the intelligence layer.
+    // shots > 1: OpenRouterProvider fans out `shots` independent API calls,
+    // each with the same prompt. Non-deterministic generation produces naturally
+    // varied poses across images while the same model identity is maintained
+    // (all shots use the same modelImageUrl).
     const creativePrompt = intelligenceResult.prompt ?? "";
 
     const photoshootResult = await getRenderingEngine().generatePhotoshoot({
       garmentImageUrl,
       modelImageUrl,
       prompt: creativePrompt,
-      shots: 1,
+      shots,
     });
 
     if (photoshootResult.images.length === 0) {
       throw new Error("OpenRouter returned zero images");
     }
 
-    const rawImageUrl = photoshootResult.images[0]!.url;
-
     logger.info(
       {
         renderId,
-        provider:    photoshootResult.provider,
-        model:       photoshootResult.model,
-        durationMs:  photoshootResult.durationMs,
-        isBase64:    rawImageUrl.startsWith("data:"),
+        provider:       photoshootResult.provider,
+        model:          photoshootResult.model,
+        durationMs:     photoshootResult.durationMs,
+        shotsRequested: shots,
+        shotsReturned:  photoshootResult.images.length,
       },
       "AI pipeline (OpenRouter): generation complete",
     );
 
-    // ── Step 4: Upload base64 result to fal CDN → get HTTPS URL ──────────────
-    const outputImageUrl = await uploadBase64Image(rawImageUrl, renderId);
+    // ── Step 4: Upload each image to fal CDN and invoke onComplete ────────────
+    //
+    // Uploads run serially to avoid hammering the CDN, but each completes its
+    // DB write immediately so the UI can stream results as they arrive.
+    for (const image of photoshootResult.images) {
+      const outputImageUrl = await uploadBase64Image(image.url, renderId);
+
+      logger.info(
+        { renderId, imageIndex: image.index, outputImageUrl },
+        "AI pipeline (OpenRouter): image uploaded",
+      );
+
+      await params.onComplete(outputImageUrl, image.index);
+    }
 
     const totalMs = Date.now() - pipelineStart;
 
     logger.info(
       {
         renderId,
-        outputImageUrl,
         totalMs,
         generationMs:  photoshootResult.durationMs,
+        imagesDelivered: photoshootResult.images.length,
       },
       "AI pipeline (OpenRouter): pipeline complete",
     );
-
-    await params.onComplete(outputImageUrl);
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error(

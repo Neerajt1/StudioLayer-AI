@@ -587,9 +587,9 @@ export const getCreateRenderUrl = () => {
 /**
  * @summary Start a new render job
  */
-export const createRender = async (renderInput: RenderInput, options?: Parameters<typeof customFetch>[1]): Promise<Render> => {
+export const createRender = async (renderInput: RenderInput, options?: Parameters<typeof customFetch>[1]): Promise<Render[]> => {
 
-  return customFetch<Render>(getCreateRenderUrl(),
+  return customFetch<Render[]>(getCreateRenderUrl(),
   {
     ...options,
     method: 'POST',
