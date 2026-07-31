@@ -13,6 +13,24 @@ export interface ErrorResponse {
   error: string;
 }
 
+export type IdentityGender = typeof IdentityGender[keyof typeof IdentityGender];
+
+
+export const IdentityGender = {
+  womens: 'womens',
+  mens: 'mens',
+  kids: 'kids',
+} as const;
+
+export interface Identity {
+  id: string;
+  displayName: string;
+  gender: IdentityGender;
+  ethnicity: string;
+  ageGroup: string;
+  imageUrl: string;
+}
+
 export type UserSubscriptionTier = typeof UserSubscriptionTier[keyof typeof UserSubscriptionTier];
 
 
@@ -28,6 +46,7 @@ export interface User {
   name: string;
   subscriptionTier: UserSubscriptionTier;
   hasCompletedOnboarding: boolean;
+  isAdmin: boolean;
   createdAt: string;
 }
 
@@ -86,7 +105,10 @@ export interface Render {
   status: RenderStatus;
   createdAt: string;
   updatedAt: string;
-  /** ID of the parent render this was refined from. Null for original renders. */
+  /**
+     * ID of the parent render this was refined from. Null for original (non-refinement) renders.
+     * @nullable
+     */
   parentRenderId?: number | null;
 }
 
@@ -145,6 +167,7 @@ export const RenderInputModelPose = {
 
 export type RenderInputModelGender = typeof RenderInputModelGender[keyof typeof RenderInputModelGender];
 
+
 export const RenderInputModelGender = {
   mens: 'mens',
   womens: 'womens',
@@ -152,6 +175,7 @@ export const RenderInputModelGender = {
 } as const;
 
 export type RenderInputModelAgeRange = typeof RenderInputModelAgeRange[keyof typeof RenderInputModelAgeRange];
+
 
 export const RenderInputModelAgeRange = {
   young_child: 'young_child',
@@ -163,6 +187,7 @@ export const RenderInputModelAgeRange = {
 
 export type RenderInputCameraFraming = typeof RenderInputCameraFraming[keyof typeof RenderInputCameraFraming];
 
+
 export const RenderInputCameraFraming = {
   full_body: 'full_body',
   mid_shot: 'mid_shot',
@@ -171,10 +196,23 @@ export const RenderInputCameraFraming = {
 
 export type RenderInputGarmentPlacement = typeof RenderInputGarmentPlacement[keyof typeof RenderInputGarmentPlacement];
 
+
 export const RenderInputGarmentPlacement = {
   upper_body: 'upper_body',
   lower_body: 'lower_body',
   full_body: 'full_body',
+} as const;
+
+/**
+ * Number of output images to generate (1, 2, or 4). Each image is an independently generated shot with a natural fashion pose. Defaults to 1.
+ */
+export type RenderInputImageCount = typeof RenderInputImageCount[keyof typeof RenderInputImageCount];
+
+
+export const RenderInputImageCount = {
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+  NUMBER_4: 4,
 } as const;
 
 export interface RenderInput {
@@ -189,29 +227,15 @@ export interface RenderInput {
   modelAgeRange?: RenderInputModelAgeRange;
   cameraFraming?: RenderInputCameraFraming;
   garmentPlacement?: RenderInputGarmentPlacement;
-  /** Optional Identity Library ID — when set, bypasses attribute-based model routing. */
   modelIdentityId?: string;
-  /** Complete the Look selection from the UI. */
+  /** Complete the Look selection from the UI. One of: ai_recommended, formal, business_casual, casual, denim, streetwear, ethnic, sportswear, none. When present and not "none", the PromptComposer uses the externally computed outfit specification instead of its own recommendation. */
   outfitStyle?: string;
-  /** Number of output images to generate: 1, 2, or 4. Defaults to 1. */
-  imageCount?: 1 | 2 | 4;
-  /** Natural language instruction for refining a previously generated image. */
+  /** Number of output images to generate (1, 2, or 4). Each image is an independently generated shot with a natural fashion pose. Defaults to 1. */
+  imageCount?: RenderInputImageCount;
+  /** Natural language instruction for refining a previously generated image. When present, the AI applies only this specific change while preserving the uploaded garment and all other elements of the previous output. */
   refinementPrompt?: string;
-  /** ID of the parent render being refined (links this row for version history). */
+  /** ID of the render being refined. When set, the pipeline loads the parent's output image as context (Reference Image 3) and treats this request as a refinement rather than a fresh generation. Creates a new render row linked to the parent for version history. */
   parentRenderId?: number;
-}
-
-/** A single entry from the Identity Library catalogue. */
-export interface ModelIdentity {
-  id: string;
-  displayName: string;
-  gender: 'womens' | 'mens' | 'kids';
-  ageGroup: 'young_adult' | 'classic_mid_age' | 'mature_executive' | 'teen_youth' | 'young_child';
-  ethnicity: 'south_asian' | 'east_asian' | 'afro_caribbean' | 'caucasian' | 'hispanic_latino' | 'middle_eastern' | 'mixed';
-  bodyType: 'slim' | 'athletic' | 'standard' | 'plus' | 'petite' | 'tall';
-  heightCm: number;
-  tags: string[];
-  imageUrl: string;
 }
 
 export type RenderUsageTier = typeof RenderUsageTier[keyof typeof RenderUsageTier];
@@ -229,6 +253,7 @@ export interface RenderUsage {
   limit: number | null;
   tier: RenderUsageTier;
   canRender: boolean;
+  isAdmin: boolean;
 }
 
 export interface SupportTicketInput {

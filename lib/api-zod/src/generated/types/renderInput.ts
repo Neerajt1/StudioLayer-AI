@@ -5,10 +5,16 @@
  * StudioLayer AI API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { RenderInputCameraFraming } from './renderInputCameraFraming';
+import type { RenderInputGarmentPlacement } from './renderInputGarmentPlacement';
+import type { RenderInputImageCount } from './renderInputImageCount';
 import type { RenderInputImageDimensions } from './renderInputImageDimensions';
 import type { RenderInputLocationEnvironment } from './renderInputLocationEnvironment';
+import type { RenderInputModelAgeRange } from './renderInputModelAgeRange';
 import type { RenderInputModelDemographics } from './renderInputModelDemographics';
+import type { RenderInputModelGender } from './renderInputModelGender';
 import type { RenderInputModelPersona } from './renderInputModelPersona';
+import type { RenderInputModelPose } from './renderInputModelPose';
 
 export interface RenderInput {
   sourceImageUrl: string;
@@ -17,6 +23,18 @@ export interface RenderInput {
   modelDemographics?: RenderInputModelDemographics;
   imageDimensions?: RenderInputImageDimensions;
   smartLighting?: boolean;
-  /** Complete the Look style selection from the UI (SL-018B). */
+  modelPose?: RenderInputModelPose;
+  modelGender?: RenderInputModelGender;
+  modelAgeRange?: RenderInputModelAgeRange;
+  cameraFraming?: RenderInputCameraFraming;
+  garmentPlacement?: RenderInputGarmentPlacement;
+  modelIdentityId?: string;
+  /** Complete the Look selection from the UI. One of: ai_recommended, formal, business_casual, casual, denim, streetwear, ethnic, sportswear, none. When present and not "none", the PromptComposer uses the externally computed outfit specification instead of its own recommendation. */
   outfitStyle?: string;
+  /** Number of output images to generate (1, 2, or 4). Each image is an independently generated shot with a natural fashion pose. Defaults to 1. */
+  imageCount?: RenderInputImageCount;
+  /** Natural language instruction for refining a previously generated image. When present, the AI applies only this specific change while preserving the uploaded garment and all other elements of the previous output. */
+  refinementPrompt?: string;
+  /** ID of the render being refined. When set, the pipeline loads the parent's output image as context (Reference Image 3) and treats this request as a refinement rather than a fresh generation. Creates a new render row linked to the parent for version history. */
+  parentRenderId?: number;
 }

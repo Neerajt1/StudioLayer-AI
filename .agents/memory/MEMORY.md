@@ -1,4 +1,4 @@
-- [Orval Zod v4 compat](orval-zod-v4-compat.md) — Orval v8 generates Zod v4 syntax; avoid integer/email formats in OpenAPI spec
+- [Orval Zod v4 compat](orval-zod-v4-compat.md) — Orval v8 generates Zod v4 syntax; all endpoints must be in the spec or hooks get dropped on re-run; push DB schema with drizzle-kit push
 - [Session cookie fetch](session-cookie-fetch.md) — credentials: 'include' must be in customFetch for session auth to work
 - [SL-017 Render Orchestrator](sl017-render-orchestrator.md) — main generate flow now uses getRenderingEngine() (OpenRouter), not getOrchestrator(); preprocessing.ts is shared
 - [SL-018B Pipeline Integration](sl018b-pipeline-integration.md) — outfitStyle threads full pipeline; api-zod dist must be rebuilt after editing generated/api.ts

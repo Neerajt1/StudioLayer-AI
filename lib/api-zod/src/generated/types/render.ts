@@ -21,4 +21,9 @@ export interface Render {
   status: RenderStatus;
   createdAt: Date;
   updatedAt: Date;
+  /**
+     * ID of the parent render this was refined from. Null for original (non-refinement) renders.
+     * @nullable
+     */
+  parentRenderId?: number | null;
 }

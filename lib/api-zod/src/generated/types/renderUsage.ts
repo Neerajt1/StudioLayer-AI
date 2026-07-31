@@ -13,4 +13,5 @@ export interface RenderUsage {
   limit: number | null;
   tier: RenderUsageTier;
   canRender: boolean;
+  isAdmin: boolean;
 }

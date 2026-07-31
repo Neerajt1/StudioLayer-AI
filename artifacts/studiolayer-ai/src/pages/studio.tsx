@@ -14,7 +14,7 @@
 // the codebase but disconnected from this UI — available for enterprise.
 // ---------------------------------------------------------------------------
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import JSZip from 'jszip';
 import {
   useCreateRender,
@@ -66,10 +66,16 @@ const REFINEMENT_CHIPS = [
 ];
 
 const IMAGE_COUNT_OPTIONS = [
-  { value: 1 as const, label: '1 Image',  sub: 'Single shot' },
-  { value: 2 as const, label: '2 Images', sub: 'Two variants' },
-  { value: 4 as const, label: '4 Images', sub: 'Full set' },
+  { value: 1 as const, label: 'Hero',      sub: '1 Editorial Image' },
+  { value: 2 as const, label: 'Campaign',  sub: '2 Editorial Images' },
+  { value: 4 as const, label: 'Editorial', sub: '4 Editorial Images' },
 ];
+
+const SHOOT_TYPE_LABEL: Record<1 | 2 | 4, string> = {
+  1: 'Hero',
+  2: 'Campaign',
+  4: 'Editorial',
+};
 
 const FAQ_ITEMS = [
   {
@@ -132,6 +138,27 @@ export default function StudioPage() {
   // ── Refinement state ───────────────────────────────────────────────────────
   const [refinementText, setRefinementText] = useState('');
   const [isRefining, setIsRefining]         = useState(false);
+  // Which slot (index into activeRenderIds) the Refine panel targets.
+  const [selectedRefineIndex, setSelectedRefineIndex] = useState(0);
+
+  // ── "Refine from Gallery" — reads sessionStorage set by gallery.tsx ────────
+  useEffect(() => {
+    const stored = sessionStorage.getItem('studioRefineRender');
+    if (!stored) return;
+    try {
+      const rr = JSON.parse(stored) as { id: number; sourceImageUrl: string; outputImageUrl?: string | null };
+      if (rr?.id && rr?.sourceImageUrl) {
+        setSourceImages([rr.sourceImageUrl]);
+        setActiveRenderIds([rr.id]);
+        setSelectedRefineIndex(0);
+        sessionStorage.removeItem('studioRefineRender');
+        setTimeout(() => {
+          document.getElementById('refine-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 700);
+      }
+    } catch { /* ignore malformed data */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── API hooks ──────────────────────────────────────────────────────────────
   const queryClient  = useQueryClient();
@@ -268,7 +295,8 @@ export default function StudioPage() {
 
   const handleRefine = () => {
     const primary         = sourceImages[0];
-    const currentRenderId = activeRenderIds[0];
+    // Target the slot the user selected — never always index 0.
+    const currentRenderId = activeRenderIds[selectedRefineIndex];
     if (!refinementText.trim() || !currentRenderId || !primary) return;
     if (isRefining || isProcessing) return;
     if (limitBlocked) {
@@ -298,8 +326,15 @@ export default function StudioPage() {
       { data: refineRequest },
       {
         onSuccess: (renders) => {
-          const ids = (renders as unknown as { id: number }[]).map((r) => r.id);
-          setActiveRenderIds(ids);
+          const newId = (renders as unknown as { id: number }[])[0]?.id;
+          if (newId) {
+            // Replace only the selected slot — other images remain intact.
+            setActiveRenderIds((prev) => {
+              const next = [...prev];
+              next[selectedRefineIndex] = newId;
+              return next;
+            });
+          }
           setRefinementText('');
           setIsRefining(false);
           queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
@@ -322,6 +357,7 @@ export default function StudioPage() {
     setImageCount(1);
     setRefinementText('');
     setIsRefining(false);
+    setSelectedRefineIndex(0);
     setResetKey((k) => k + 1);
     createRender.reset();
   };
@@ -469,9 +505,9 @@ export default function StudioPage() {
                 </div>
               </section>
 
-              {/* Step 3: Number of Images */}
+              {/* Step 3: Shoot Type */}
               <section className="space-y-3">
-                <StepLabel number={3} title="Number of Images" />
+                <StepLabel number={3} title="Shoot Type" />
                 <div className="grid grid-cols-3 gap-2">
                   {IMAGE_COUNT_OPTIONS.map((opt) => {
                     const isSelected = imageCount === opt.value;
@@ -516,14 +552,20 @@ export default function StudioPage() {
                   ) : isProcessing ? (
                     <><span className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />Creating…</>
                   ) : (
-                    <><Camera className="w-4 h-4" />Create</>
+                    <><Camera className="w-4 h-4" />Create {SHOOT_TYPE_LABEL[imageCount]}</>
                   )}
                 </Button>
 
-                {!usageLoading && usage?.tier === 'free' && (
-                  <p className="text-center text-xs text-muted-foreground font-mono">
-                    Free trial — {usage.used} of {usage.limit} renders used
-                  </p>
+                {!usageLoading && usage && (
+                  (usage as { isAdmin?: boolean }).isAdmin ? (
+                    <p className="text-center text-xs text-muted-foreground font-mono">
+                      Admin Mode — Unlimited renders
+                    </p>
+                  ) : usage.tier === 'free' ? (
+                    <p className="text-center text-xs text-muted-foreground font-mono">
+                      Free trial — {usage.used} of {usage.limit} renders used
+                    </p>
+                  ) : null
                 )}
 
                 {limitBlocked && (
@@ -612,15 +654,34 @@ export default function StudioPage() {
                         {status === 'failed' && (
                           <p className="text-xs text-muted-foreground font-mono text-center px-3">Generation failed</p>
                         )}
-                        {/* Per-image download button */}
+                        {/* Per-image action bar — Refine + Download */}
                         {status === 'completed' && url && (
-                          <button
-                            onClick={() => handleDownloadSingle(url, i)}
-                            className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-background/80 backdrop-blur flex items-center justify-center hover:bg-background transition-colors"
-                            title="Download this image"
-                          >
-                            <Download className="w-3.5 h-3.5 text-foreground" />
-                          </button>
+                          <div className="absolute bottom-0 left-0 right-0 flex gap-1.5 p-2 bg-gradient-to-t from-black/30 to-transparent">
+                            <button
+                              onClick={() => {
+                                setSelectedRefineIndex(i);
+                                setTimeout(() => {
+                                  document.getElementById('refine-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                }, 50);
+                              }}
+                              className={`flex-1 h-7 text-[10px] font-medium rounded flex items-center justify-center gap-1 transition-colors border ${
+                                selectedRefineIndex === i
+                                  ? 'bg-foreground text-background border-foreground'
+                                  : 'bg-background/90 backdrop-blur border-border text-foreground hover:bg-background'
+                              }`}
+                              title="Refine this image"
+                            >
+                              <Wand2 className="w-3 h-3" />
+                              {selectedRefineIndex === i ? 'Selected' : 'Refine'}
+                            </button>
+                            <button
+                              onClick={() => handleDownloadSingle(url, i)}
+                              className="w-7 h-7 rounded bg-background/90 backdrop-blur border border-border flex items-center justify-center hover:bg-background transition-colors"
+                              title="Download this image"
+                            >
+                              <Download className="w-3 h-3 text-foreground" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     );
@@ -657,10 +718,15 @@ export default function StudioPage() {
 
               {/* ✨ Refine Image panel — shown after generation */}
               {hasOutput && !isProcessing && (
-                <div className="border border-border rounded bg-card p-4 space-y-3">
+                <div id="refine-panel" className="border border-border rounded bg-card p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <Wand2 className="w-3.5 h-3.5 text-muted-foreground" />
                     <p className="text-xs font-semibold text-foreground">Refine Image</p>
+                    {activeRenderIds.length > 1 && (
+                      <span className="ml-auto text-[10px] text-muted-foreground font-mono bg-muted px-2 py-0.5 rounded">
+                        Image {selectedRefineIndex + 1} of {activeRenderIds.length}
+                      </span>
+                    )}
                   </div>
 
                   <Textarea

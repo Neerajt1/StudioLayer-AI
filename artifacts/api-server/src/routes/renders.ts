@@ -38,10 +38,11 @@ router.get("/renders/usage", async (req, res): Promise<void> => {
 
   const used = result?.count ?? 0;
   const tier = user.subscriptionTier;
-  const limit = TIER_LIMITS[tier] ?? null;
+  // Admin users always have unlimited renders regardless of tier.
+  const limit = user.isAdmin ? null : (TIER_LIMITS[tier] ?? null);
   const canRender = limit === null || used < limit;
 
-  res.json({ used, limit, tier, canRender });
+  res.json({ used, limit, tier, canRender, isAdmin: user.isAdmin });
 });
 
 router.get("/renders", async (req, res): Promise<void> => {
@@ -84,7 +85,8 @@ router.post("/renders", async (req, res): Promise<void> => {
   }
 
   const tier = user.subscriptionTier;
-  const limit = TIER_LIMITS[tier] ?? null;
+  // Admin users bypass all render limits.
+  const limit = user.isAdmin ? null : (TIER_LIMITS[tier] ?? null);
 
   const {
     sourceImageUrl,

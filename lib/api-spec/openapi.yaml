@@ -14,6 +14,8 @@ tags:
     description: Authentication operations
   - name: renders
     description: Render job operations
+  - name: identities
+    description: Model identity library
   - name: support
     description: Support ticket operations
 paths:
@@ -192,6 +194,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /identities:
+    get:
+      operationId: getIdentities
+      tags: [identities]
+      summary: List all model identities in the identity library
+      responses:
+        "200":
+          description: Array of identities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Identity"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /renders/usage:
     get:
       operationId: getRenderUsage
@@ -316,6 +339,30 @@ components:
       required:
         - error
 
+    Identity:
+      type: object
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        gender:
+          type: string
+          enum: [womens, mens, kids]
+        ethnicity:
+          type: string
+        ageGroup:
+          type: string
+        imageUrl:
+          type: string
+      required:
+        - id
+        - displayName
+        - gender
+        - ethnicity
+        - ageGroup
+        - imageUrl
+
     User:
       type: object
       properties:
@@ -330,6 +377,8 @@ components:
           enum: [free, pro, enterprise]
         hasCompletedOnboarding:
           type: boolean
+        isAdmin:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -339,6 +388,7 @@ components:
         - name
         - subscriptionTier
         - hasCompletedOnboarding
+        - isAdmin
         - createdAt
 
     RegisterInput:
@@ -491,11 +541,14 @@ components:
           enum: [free, pro, enterprise]
         canRender:
           type: boolean
+        isAdmin:
+          type: boolean
       required:
         - used
         - limit
         - tier
         - canRender
+        - isAdmin
 
     SupportTicketInput:
       type: object

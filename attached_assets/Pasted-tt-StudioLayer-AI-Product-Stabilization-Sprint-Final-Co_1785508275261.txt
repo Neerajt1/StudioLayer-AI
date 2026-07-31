@@ -1,0 +1,393 @@
+tt
+
+StudioLayer AI – Product Stabilization Sprint (Final Core Workflow Before Moving to Other Pages)
+
+IMPORTANT
+
+Do not mark this task as complete until every item in the "Definition of Done" section has been manually verified.
+
+We are now entering the final stabilization phase for the core StudioLayer AI workflow.
+
+The objective of this sprint is NOT to introduce new features.
+
+The objective is to make the entire generation and refinement workflow production-ready.
+
+Once this sprint is complete, we will stop working on this page and move to the remaining application pages.
+
+Please complete the following.
+
+--------------------------------------------------------
+1. Create Admin / QA Mode (Highest Priority)
+--------------------------------------------------------
+
+The product owner must be able to test the application without subscription limitations.
+
+Please create an Admin/Test Mode.
+
+For admin accounts only:
+
+• Unlimited renders
+• Unlimited Hero generations
+• Unlimited Campaign generations
+• Unlimited Editorial generations
+• Unlimited refinements
+• Credits disabled
+• Billing restrictions bypassed
+• Credit counter hidden or marked as Unlimited
+
+This must only apply to admin accounts.
+
+Production users must continue using the normal credit system.
+
+This will dramatically improve QA efficiency.
+
+--------------------------------------------------------
+2. Verify Hero / Campaign / Editorial Generation
+--------------------------------------------------------
+
+The generation workflow should now be:
+
+Upload Garment
+
+↓
+
+Choose Model
+
+↓
+
+Select
+
+• Hero
+(1 Editorial Image)
+
+• Campaign
+(2 Editorial Images)
+
+• Editorial
+(4 Editorial Images)
+
+↓
+
+Create
+
+Please ensure:
+
+• Hero always produces 1 image.
+• Campaign always produces 2 images.
+• Editorial always produces 4 images.
+
+If Editorial currently fails only because of plan limits, verify it under Admin Mode.
+
+--------------------------------------------------------
+3. Treat Every Image as an Independent Asset
+--------------------------------------------------------
+
+This is a critical architectural requirement.
+
+Example:
+
+Campaign
+
+Image 1
+
+Image 2
+
+Each image must become its own object.
+
+Each image must have:
+
+• Download
+• Refine
+• Delete
+• Future Version History
+
+Never treat a Campaign as one image.
+
+Every generated image is an independent creative asset.
+
+--------------------------------------------------------
+4. Refinement Must Edit — Never Regenerate
+--------------------------------------------------------
+
+This is now the highest AI priority.
+
+Current behaviour:
+
+User selects:
+
+Change Background
+
+↓
+
+Entire garment changes.
+
+Dress length changes.
+
+Pose changes.
+
+Garment changes.
+
+This is incorrect.
+
+Correct behaviour:
+
+Refinement must preserve:
+
+• Uploaded garment
+• Garment colour
+• Fabric
+• Texture
+• Stitching
+• Construction
+• Garment length
+• Model identity
+• Face
+• Hairstyle
+• Pose
+• Expression
+• Camera angle
+• Lighting
+
+unless explicitly requested.
+
+Only the requested element should change.
+
+Example:
+
+User:
+
+Change Background
+
+Result:
+
+Everything remains identical.
+
+Only background changes.
+
+StudioLayer AI should behave like an image editor, not an image generator, during refinement.
+
+--------------------------------------------------------
+5. Introduce Locked Editing Philosophy
+--------------------------------------------------------
+
+Internally treat every generated image as a locked state.
+
+Example:
+
+Image
+
+↓
+
+Lock:
+
+✓ Garment
+
+✓ Model
+
+✓ Pose
+
+✓ Lighting
+
+✓ Camera
+
+✓ Expression
+
+↓
+
+Unlock only requested edits.
+
+This should become the foundation of the refinement engine.
+
+--------------------------------------------------------
+6. Preserve Garment Fidelity
+--------------------------------------------------------
+
+The uploaded garment remains the source of truth.
+
+Never modify:
+
+• Orientation
+• Collar
+• Sleeves
+• Buttons
+• Pockets
+• Embroidery
+• Print placement
+• Garment length
+• Silhouette
+• Fabric behaviour
+• Construction
+
+The AI may style the remaining outfit,
+
+but must never redesign the uploaded garment.
+
+--------------------------------------------------------
+7. Assets Page Must Become Reliable
+--------------------------------------------------------
+
+Every generated image must always exist inside Assets.
+
+Every Asset must always provide:
+
+• View
+• Download
+• Refine
+• Delete
+
+No image should become inaccessible after refinement.
+
+Assets become the permanent source of truth.
+
+--------------------------------------------------------
+8. Preserve Multi-Image Workflow
+--------------------------------------------------------
+
+If the user generates:
+
+Campaign
+
+↓
+
+2 Images
+
+Each image must remain separately accessible.
+
+Refining Image 1 must never hide Image 2.
+
+Refining Image 2 must never affect Image 1.
+
+The same principle applies to Editorial.
+
+--------------------------------------------------------
+9. Verify Download Workflow
+--------------------------------------------------------
+
+Every generated image should be downloadable from:
+
+• Generation page
+• Assets page
+
+Every refined image should also be downloadable.
+
+ZIP download should continue functioning correctly.
+
+--------------------------------------------------------
+10. Maintain Prompt Quality
+--------------------------------------------------------
+
+Do not modify the rendering architecture.
+
+Keep:
+
+Preprocessing
+
+↓
+
+Intelligence Engine
+
+↓
+
+OpenRouter
+
+↓
+
+Generation
+
+The rendering quality achieved during recent improvements should be preserved.
+
+--------------------------------------------------------
+11. UI Improvements
+--------------------------------------------------------
+
+Without redesigning the application:
+
+Improve polish.
+
+Requirements:
+
+• Use Hero / Campaign / Editorial terminology consistently.
+
+• Improve spacing.
+
+• Improve visual hierarchy.
+
+• Keep the generated image as the primary focus.
+
+• Buttons should feel premium.
+
+• Loading states should be elegant.
+
+• Empty states should be polished.
+
+• Success messages should be consistent.
+
+• Improve alignment and spacing throughout the page.
+
+• Remove any visual clutter.
+
+• Maintain the premium editorial aesthetic across the entire workflow.
+
+--------------------------------------------------------
+12. Definition of Done
+--------------------------------------------------------
+
+This sprint is complete only when ALL of the following are true:
+
+✅ Admin Mode works.
+
+✅ Hero generates correctly.
+
+✅ Campaign generates correctly.
+
+✅ Editorial generates correctly.
+
+✅ Every generated image can be downloaded.
+
+✅ Every generated image appears inside Assets.
+
+✅ Every Asset can be downloaded.
+
+✅ Every image can be refined.
+
+✅ Refinement edits the existing image instead of generating a new interpretation.
+
+✅ Background changes preserve garments.
+
+✅ Multi-image workflows never lose images.
+
+✅ No broken buttons.
+
+✅ No disappearing images.
+
+✅ No credit-related interruptions during Admin testing.
+
+--------------------------------------------------------
+IMPORTANT
+--------------------------------------------------------
+
+Do not introduce additional features in this sprint.
+
+Do not redesign the application.
+
+Do not change the rendering pipeline.
+
+The objective is to freeze the core workflow.
+
+Once this sprint is complete and validated, we will consider the generation/refinement experience production-ready and move on to the remaining pages:
+
+Dashboard
+
+Assets enhancements
+
+Garments
+
+Models
+
+Billing
+
+Settings
+
+Authentication
+
+Launch polish

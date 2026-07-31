@@ -108,15 +108,31 @@ Generate a premium commercial fashion photograph suitable for an ecommerce cloth
  */
 export function buildRefinementInstruction(refinementPrompt: string): string {
   return `
-REFINEMENT MODE — Reference Image 3 is the previously generated output image.
+REFINEMENT MODE — TARGETED EDIT ONLY.
 
-The user has requested the following specific change: "${refinementPrompt}"
+Reference Image 3 is the exact current state of the image. You are editing this existing image — not creating a new one. Treat this like a Photoshop layer operation: touch only the pixels that must change.
 
-INSTRUCTIONS:
-- Apply ONLY the change described above.
-- Keep every other element of the image identical to Reference Image 3.
-- The uploaded garment from Reference Image 1 must remain completely unchanged unless the user has explicitly asked to modify it.
-- Do not change the garment's neckline, straps, collar, sleeves, length, silhouette, colour, fabric, or any construction detail.
-- Do not change the model identity.
-- Only change what was explicitly requested.`;
+THE REQUESTED CHANGE IS: "${refinementPrompt}"
+
+LOCKED — THESE ELEMENTS ARE COMPLETELY FROZEN AND MUST NOT CHANGE UNDER ANY CIRCUMSTANCES:
+✗ Model face, skin tone, hair colour, and hairstyle
+✗ Model pose, body position, limb placement
+✗ Camera angle, framing, and composition
+✗ The uploaded garment (Reference Image 1) — every detail: neckline, straps, collar, sleeves, hem length, silhouette, colour, fabric, texture, print, embroidery, buttons, and construction
+✗ All complementary outfit items not mentioned in the request
+✗ Background (unless the request explicitly asks to change the background)
+✗ Overall lighting direction and quality (unless the request explicitly asks to change lighting)
+✗ Expression and gaze direction
+
+CHANGE ONLY:
+Apply the minimum change necessary to fulfil the request. If ambiguous, choose the most conservative interpretation.
+
+EXAMPLES OF CORRECT BEHAVIOUR:
+• Request "Change Background" → only background pixels change; model, garment, pose, lighting are untouched
+• Request "Replace Shoes" → only footwear changes; everything else is pixel-identical to Reference Image 3
+• Request "Change Lighting" → only light direction/quality changes; garment and model are untouched
+• Request "Add Accessories" → add only accessories; nothing else changes
+• Request "Replace Shirt" → only the complementary shirt (not the uploaded garment) changes
+
+IMPORTANT: The output must look like Reference Image 3 with one specific element swapped. If the output looks like a new generation, you have failed. The model's face must be recognisably identical to Reference Image 3.`;
 }

@@ -14,4 +14,7 @@ export const RenderInputModelPersona = {
   high_fashion: 'high_fashion',
   athletic: 'athletic',
   minimalist: 'minimalist',
+  high_fashion_editorial: 'high_fashion_editorial',
+  natural_smile: 'natural_smile',
+  confident_commercial: 'confident_commercial',
 } as const;

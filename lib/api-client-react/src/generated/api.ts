@@ -22,8 +22,8 @@ import type {
 import type {
   ErrorResponse,
   HealthStatus,
+  Identity,
   LoginInput,
-  ModelIdentity,
   RegisterInput,
   Render,
   RenderInput,
@@ -647,6 +647,83 @@ export const useCreateRender = <TError = ErrorType<ErrorResponse>,
       return useMutation(getCreateRenderMutationOptions(options));
     }
 
+export const getGetIdentitiesUrl = () => {
+
+
+
+
+  return `/api/identities`
+}
+
+/**
+ * @summary List all model identities in the identity library
+ */
+export const getIdentities = async ( options?: Parameters<typeof customFetch>[1]): Promise<Identity[]> => {
+
+  return customFetch<Identity[]>(getGetIdentitiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetIdentitiesQueryKey = () => {
+    return [
+    `/api/identities`
+    ] as const;
+    }
+
+
+export const getGetIdentitiesQueryOptions = <TData = Awaited<ReturnType<typeof getIdentities>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIdentities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetIdentitiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getIdentities>>> = ({ signal }) => getIdentities({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getIdentities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetIdentitiesQueryResult = NonNullable<Awaited<ReturnType<typeof getIdentities>>>
+export type GetIdentitiesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List all model identities in the identity library
+ */
+
+export function useGetIdentities<TData = Awaited<ReturnType<typeof getIdentities>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getIdentities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetIdentitiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetRenderUsageUrl = () => {
 
 
@@ -723,6 +800,77 @@ export function useGetRenderUsage<TData = Awaited<ReturnType<typeof getRenderUsa
 
 
 
+
+export const getDeleteRenderUrl = (id: number,) => {
+
+
+
+
+  return `/api/renders/${id}`
+}
+
+/**
+ * @summary Delete a render job by ID
+ */
+export const deleteRender = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteRenderUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteRenderMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRender>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRender>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteRender'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRender>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteRender(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRenderMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRender>>>
+
+    export type DeleteRenderMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Delete a render job by ID
+ */
+export const useDeleteRender = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRender>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRender>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteRenderMutationOptions(options));
+    }
 
 export const getGetRenderUrl = (id: number,) => {
 
@@ -801,56 +949,6 @@ export function useGetRender<TData = Awaited<ReturnType<typeof getRender>>, TErr
 
 
 
-export const getDeleteRenderUrl = (id: number) => {
-  return `/api/renders/${id}`
-}
-
-/**
- * @summary Delete a render job by ID
- */
-export const deleteRender = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
-  return customFetch<void>(getDeleteRenderUrl(id), {
-    ...options,
-    method: 'DELETE',
-  });
-}
-
-export const getDeleteRenderMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteRender>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof customFetch> }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteRender>>, TError, { id: number }, TContext> => {
-
-const mutationKey = ['deleteRender'];
-const { mutation: mutationOptions, request: requestOptions } = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-      : { mutation: { mutationKey }, request: undefined };
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRender>>, { id: number }> = (props) => {
-          const { id } = props ?? {};
-          return deleteRender(id, requestOptions);
-        }
-
-  return { mutationFn, ...mutationOptions };
-}
-
-export type DeleteRenderMutationResult = Awaited<ReturnType<typeof deleteRender>>
-export type DeleteRenderMutationError = ErrorType<ErrorResponse>
-
-/**
- * @summary Delete a render job by ID
- */
-export const useDeleteRender = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteRender>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof customFetch> }
- ): UseMutationResult<
-        Awaited<ReturnType<typeof deleteRender>>,
-        TError,
-        { id: number },
-        TContext
-      > => {
-      return useMutation(getDeleteRenderMutationOptions(options));
-    }
-
 export const getCreateSupportTicketUrl = () => {
 
 
@@ -921,41 +1019,4 @@ export const useCreateSupportTicket = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getCreateSupportTicketMutationOptions(options));
     }
-
-
-// ---------------------------------------------------------------------------
-// Identity Library — GET /identities
-// ---------------------------------------------------------------------------
-
-export const getGetIdentitiesUrl = () => `/api/identities`
-
-export const getIdentities = async (options?: Parameters<typeof customFetch>[1]): Promise<ModelIdentity[]> => {
-  return customFetch<ModelIdentity[]>(getGetIdentitiesUrl(), {
-    ...options,
-    method: 'GET',
-  });
-}
-
-export const getGetIdentitiesQueryKey = () => [`/api/identities`] as const;
-
-export const getGetIdentitiesQueryOptions = <TData = Awaited<ReturnType<typeof getIdentities>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getIdentities>>, TError, TData>, request?: SecondParameter<typeof customFetch> }
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
-  const queryKey = queryOptions?.queryKey ?? getGetIdentitiesQueryKey();
-  const queryFn: QueryFunction<Awaited<ReturnType<typeof getIdentities>>> = ({ signal }) =>
-    getIdentities({ signal, ...requestOptions });
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<Awaited<ReturnType<typeof getIdentities>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetIdentitiesQueryResult = NonNullable<Awaited<ReturnType<typeof getIdentities>>>
-export type GetIdentitiesQueryError = ErrorType<ErrorResponse>
-
-export function useGetIdentities<TData = Awaited<ReturnType<typeof getIdentities>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?: UseQueryOptions<Awaited<ReturnType<typeof getIdentities>>, TError, TData>, request?: SecondParameter<typeof customFetch> }
-): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetIdentitiesQueryOptions(options)
-  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & { queryKey: QueryKey };
-  return withQueryKey(query, queryOptions.queryKey);
-}
 

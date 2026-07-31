@@ -15,6 +15,7 @@ function mapUser(user: typeof usersTable.$inferSelect) {
     name: user.name,
     subscriptionTier: user.subscriptionTier,
     hasCompletedOnboarding: user.hasCompletedOnboarding,
+    isAdmin: user.isAdmin,
     createdAt: user.createdAt,
   };
 }

@@ -13,5 +13,6 @@ export interface User {
   name: string;
   subscriptionTier: UserSubscriptionTier;
   hasCompletedOnboarding: boolean;
+  isAdmin: boolean;
   createdAt: Date;
 }

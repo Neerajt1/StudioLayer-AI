@@ -37,6 +37,7 @@ export const RegisterResponse = zod.object({
   "name": zod.string(),
   "subscriptionTier": zod.enum(['free', 'pro', 'enterprise']),
   "hasCompletedOnboarding": zod.boolean(),
+  "isAdmin": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -55,6 +56,7 @@ export const LoginResponse = zod.object({
   "name": zod.string(),
   "subscriptionTier": zod.enum(['free', 'pro', 'enterprise']),
   "hasCompletedOnboarding": zod.boolean(),
+  "isAdmin": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -74,6 +76,7 @@ export const GetMeResponse = zod.object({
   "name": zod.string(),
   "subscriptionTier": zod.enum(['free', 'pro', 'enterprise']),
   "hasCompletedOnboarding": zod.boolean(),
+  "isAdmin": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -87,6 +90,7 @@ export const CompleteOnboardingResponse = zod.object({
   "name": zod.string(),
   "subscriptionTier": zod.enum(['free', 'pro', 'enterprise']),
   "hasCompletedOnboarding": zod.boolean(),
+  "isAdmin": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 
@@ -104,7 +108,7 @@ export const ListRendersResponseItem = zod.object({
   "status": zod.enum(['pending', 'processing', 'completed', 'failed']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
-  "parentRenderId": zod.number().nullable().optional()
+  "parentRenderId": zod.number().nullish().describe('ID of the parent render this was refined from. Null for original (non-refinement) renders.\n')
 })
 export const ListRendersResponse = zod.array(ListRendersResponseItem)
 
@@ -125,10 +129,10 @@ export const CreateRenderBody = zod.object({
   "cameraFraming": zod.enum(['full_body', 'mid_shot', 'close_up']).optional(),
   "garmentPlacement": zod.enum(['upper_body', 'lower_body', 'full_body']).optional(),
   "modelIdentityId": zod.string().optional(),
-  "outfitStyle": zod.string().optional(),
-  "imageCount": zod.union([zod.literal(1), zod.literal(2), zod.literal(4)]).optional(),
-  "refinementPrompt": zod.string().optional(),
-  "parentRenderId": zod.number().optional()
+  "outfitStyle": zod.string().optional().describe('Complete the Look selection from the UI. One of: ai_recommended, formal, business_casual, casual, denim, streetwear, ethnic, sportswear, none. When present and not \"none\", the PromptComposer uses the externally computed outfit specification instead of its own recommendation.\n'),
+  "imageCount": zod.union([zod.literal(1),zod.literal(2),zod.literal(4)]).optional().describe('Number of output images to generate (1, 2, or 4). Each image is an independently generated shot with a natural fashion pose. Defaults to 1.\n'),
+  "refinementPrompt": zod.string().optional().describe('Natural language instruction for refining a previously generated image. When present, the AI applies only this specific change while preserving the uploaded garment and all other elements of the previous output.\n'),
+  "parentRenderId": zod.number().optional().describe('ID of the render being refined. When set, the pipeline loads the parent\'s output image as context (Reference Image 3) and treats this request as a refinement rather than a fresh generation. Creates a new render row linked to the parent for version history.\n')
 })
 
 export const CreateRenderResponseItem = zod.object({
@@ -141,9 +145,23 @@ export const CreateRenderResponseItem = zod.object({
   "status": zod.enum(['pending', 'processing', 'completed', 'failed']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
-  "parentRenderId": zod.number().nullable().optional()
+  "parentRenderId": zod.number().nullish().describe('ID of the parent render this was refined from. Null for original (non-refinement) renders.\n')
 })
 export const CreateRenderResponse = zod.array(CreateRenderResponseItem)
+
+
+/**
+ * @summary List all model identities in the identity library
+ */
+export const GetIdentitiesResponseItem = zod.object({
+  "id": zod.string(),
+  "displayName": zod.string(),
+  "gender": zod.enum(['womens', 'mens', 'kids']),
+  "ethnicity": zod.string(),
+  "ageGroup": zod.string(),
+  "imageUrl": zod.string()
+})
+export const GetIdentitiesResponse = zod.array(GetIdentitiesResponseItem)
 
 
 /**
@@ -153,8 +171,19 @@ export const GetRenderUsageResponse = zod.object({
   "used": zod.number(),
   "limit": zod.number().nullable(),
   "tier": zod.enum(['free', 'pro', 'enterprise']),
-  "canRender": zod.boolean()
+  "canRender": zod.boolean(),
+  "isAdmin": zod.boolean()
 })
+
+
+/**
+ * @summary Delete a render job by ID
+ */
+export const DeleteRenderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteRenderResponse = zod.void()
 
 
 /**
@@ -174,7 +203,7 @@ export const GetRenderResponse = zod.object({
   "status": zod.enum(['pending', 'processing', 'completed', 'failed']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
-  "parentRenderId": zod.number().nullable().optional()
+  "parentRenderId": zod.number().nullish().describe('ID of the parent render this was refined from. Null for original (non-refinement) renders.\n')
 })
 
 
