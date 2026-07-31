@@ -2,3 +2,4 @@
 - [Session cookie fetch](session-cookie-fetch.md) — credentials: 'include' must be in customFetch for session auth to work
 - [SL-017 Render Orchestrator](sl017-render-orchestrator.md) — all rendering routes through getOrchestrator(); new strategies/providers in rendering/ only
 - [SL-018B Pipeline Integration](sl018b-pipeline-integration.md) — outfitStyle threads full pipeline; api-zod dist must be rebuilt after editing generated/api.ts
+- [OpenRouter image response shape](openrouter-image-response.md) — images in message.images[], not message.content; uses OPENROUTER_API_KEY directly (not Replit integration)

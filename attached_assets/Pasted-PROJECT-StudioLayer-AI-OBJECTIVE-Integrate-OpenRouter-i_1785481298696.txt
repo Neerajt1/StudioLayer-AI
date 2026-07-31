@@ -1,0 +1,259 @@
+PROJECT: StudioLayer AI
+
+OBJECTIVE
+
+Integrate OpenRouter into the existing application WITHOUT breaking any current functionality.
+
+IMPORTANT
+
+DO NOT remove the existing FAL implementation.
+
+DO NOT modify any existing UI.
+
+DO NOT change business logic.
+
+DO NOT change routing.
+
+DO NOT remove any working code.
+
+Only ADD a new rendering layer.
+
+====================================================
+
+STEP 1
+
+Create a new folder:
+
+src/services/rendering/
+
+Inside create:
+
+RenderingEngine.ts
+
+rendering.config.ts
+
+types.ts
+
+providers/
+
+OpenRouterProvider.ts
+
+====================================================
+
+STEP 2
+
+Create a provider-based architecture.
+
+The application should NEVER call OpenRouter directly.
+
+Everything must go through:
+
+RenderingEngine
+
+↓
+
+Provider
+
+↓
+
+OpenRouter
+
+====================================================
+
+STEP 3
+
+Read API key from:
+
+process.env.OPENROUTER_API_KEY
+
+Never hardcode the key.
+
+====================================================
+
+STEP 4
+
+Create rendering.config.ts
+
+Example structure:
+
+provider
+
+defaultModel
+
+timeout
+
+retryCount
+
+Do not hardcode values inside the provider.
+
+Everything configurable.
+
+====================================================
+
+STEP 5
+
+Create OpenRouterProvider.
+
+Responsibilities:
+
+• Authenticate with OpenRouter.
+
+• Accept:
+
+- Garment Image
+
+- Model Image
+
+- User Prompt
+
+- Number of Outputs
+
+• Return generated image URLs.
+
+• Handle API errors gracefully.
+
+• Retry once on transient failure.
+
+• Log request duration.
+
+====================================================
+
+STEP 6
+
+Create RenderingEngine.
+
+Expose one function:
+
+generatePhotoshoot()
+
+Inputs:
+
+Garment Image
+
+Model Image
+
+Prompt
+
+Shots
+
+Outputs:
+
+Array<Image>
+
+The UI should only interact with RenderingEngine.
+
+====================================================
+
+STEP 7
+
+Support:
+
+1 Shot
+
+2 Shots
+
+4 Shots
+
+8 Shots
+
+If the selected model supports multiple images in one request:
+
+Use that.
+
+Otherwise:
+
+Automatically generate multiple requests.
+
+Return one array.
+
+====================================================
+
+STEP 8
+
+Prompt Strategy
+
+DO NOT create large hidden prompts.
+
+Pass the user's prompt almost exactly.
+
+Append only:
+
+"Preserve garment colour."
+
+"Preserve garment texture."
+
+"Preserve garment construction."
+
+"Commercial fashion photography."
+
+Nothing else.
+
+====================================================
+
+STEP 9
+
+Logging
+
+Log:
+
+Provider
+
+Model
+
+Generation time
+
+Number of images
+
+Errors
+
+====================================================
+
+STEP 10
+
+Do NOT expose provider names in the UI.
+
+The rendering engine should internally use OpenRouter.
+
+The UI must remain provider-independent.
+
+====================================================
+
+STEP 11
+
+Do NOT integrate with existing pages yet.
+
+Instead create a temporary internal test endpoint or service that can be called to verify OpenRouter image generation.
+
+The purpose is only to validate:
+
+• Authentication
+
+• Image generation
+
+• Returned image URLs
+
+No UI redesign.
+
+====================================================
+
+STEP 12
+
+When implementation is complete provide:
+
+1. Files created
+
+2. Files modified
+
+3. Architecture diagram
+
+4. Any environment variables required
+
+5. Confirmation that no existing rendering functionality was removed
+
+6. Whether OpenRouter image generation has been successfully tested
+
+7. Any API limitations discovered during implementation
+
+Do not proceed with additional refactoring.
+
+Stop after completing this integration.
