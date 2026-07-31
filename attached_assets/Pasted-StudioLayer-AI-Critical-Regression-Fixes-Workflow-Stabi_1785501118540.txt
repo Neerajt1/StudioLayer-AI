@@ -1,0 +1,102 @@
+StudioLayer AI – Critical Regression Fixes & Workflow Stabilization (P0)
+The recent workflow redesign is moving in the right direction, but several regressions and blocking issues were introduced.
+Please address only the following items. Do not redesign the UI further or introduce new features.
+1. Restore the Number of Images Selector (Regression)
+The UI previously allowed users to choose:
+1 Image
+2 Images
+4 Images
+After removing the style presets, this selector has disappeared.
+This was not intended.
+Please restore it.
+The generation workflow should now be:
+Upload Garment
+↓
+Choose Model
+↓
+Number of Images (1 | 2 | 4)
+↓
+Create
+Nothing else.
+2. Make All Refine Image Actions Functional
+The new Refine Image UI has been added successfully.
+However, every refinement action currently throws an error.
+Please implement the complete refinement workflow.
+Every refinement request should:
+Take the selected generated image as input
+Accept the refinement instruction
+Generate an updated version
+Return the refined image successfully
+No button should produce an error.
+3. Hide Any Incomplete Features
+If any refinement capability is not yet implemented,
+do not expose broken buttons.
+Either:
+make them functional
+OR
+temporarily hide them
+The production UI must never expose non-functional controls.
+4. Reinstate Credit Validation
+During testing, image generation continued even after all free renders had been exhausted.
+This should never happen.
+Please verify the entire credit validation flow.
+Credit validation must occur before rendering begins.
+This includes:
+Create
+Refine Image
+Future render endpoints
+No request should bypass the credit system.
+5. Strengthen Garment Fidelity
+Several regressions were observed.
+The uploaded garment must always remain the source of truth.
+The AI must preserve:
+Left/right orientation
+Button direction
+Collar design
+Sleeve construction
+Embroidery placement
+Print placement
+Fabric texture
+Colour
+Garment silhouette
+Construction details
+The AI should never redesign the uploaded garment.
+It should only style the remaining outfit.
+6. Preserve Garment Orientation
+During testing, the uploaded shirt became mirrored.
+The embroidery moved to the opposite side.
+This is unacceptable.
+The rendering pipeline must preserve the original garment orientation exactly as uploaded.
+No horizontal flipping should occur unless explicitly requested by the user.
+7. Preserve Collar Construction
+The uploaded collar design changed significantly during rendering.
+This should never happen.
+Collars, cuffs, hems and construction details are part of garment fidelity and must remain unchanged.
+8. Improve AI Outfit Completion
+The AI continues to repeatedly introduce a plain grey T-shirt underneath garments.
+This often produces weaker styling.
+Instead, the AI should intelligently complete the outfit using complementary fashion styling.
+Avoid repeatedly defaulting to:
+plain grey T-shirts
+generic filler clothing
+unless the uploaded garment genuinely requires an inner layer.
+The AI should behave like an experienced fashion stylist.
+9. Verify Prompt Integrity
+Overall output quality appears lower than before the redesign.
+Please verify that the workflow redesign has not unintentionally altered:
+rendering prompts
+preprocessing
+orchestration logic
+garment preservation instructions
+The UI redesign should not negatively affect rendering quality.
+IMPORTANT
+Do not implement new features in this task.
+Do not redesign the interface.
+Do not change the rendering architecture.
+Focus only on:
+fixing regressions
+restoring missing functionality
+improving garment fidelity
+ensuring production stability
+Once these issues are resolved, we will move on to the next major priority:
+Multi-Image Diversity, where 2-image and 4-image generations produce genuinely different editorial shots rather than near-duplicate images.

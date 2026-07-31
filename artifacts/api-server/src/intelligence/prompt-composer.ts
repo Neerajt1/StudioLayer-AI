@@ -95,6 +95,8 @@ export function composeRenderPrompt(params: PromptComposerParams): string {
     "The uploaded garment is the primary visual focal point.",
     "Complementary items are neutral, secondary, and must not distract from the hero garment.",
     "Avoid oversized accessories or brightly patterned supporting garments.",
+    "Never use a plain grey T-shirt, plain white undershirt, or generic filler clothing as a complementary item — choose intentional, fashion-forward pieces that create a cohesive, commercially presentable look.",
+    "Do not add any inner layer beneath the uploaded top or shirt unless the garment is explicitly a structured jacket, coat, or blazer that requires one.",
   ].join(" ");
 
   // Part 4 — garment protection

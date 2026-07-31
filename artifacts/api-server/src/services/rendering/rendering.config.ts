@@ -74,6 +74,10 @@ WHAT MUST NEVER CHANGE:
 - Do not change the sleeve length or type.
 - Do not alter the silhouette or overall shape.
 
+ORIENTATION — Reproduce the garment in its exact original left/right orientation as shown in Reference Image 1. Do not flip, mirror, or horizontally reverse the garment for any reason. All asymmetric details — embroidery, prints, logos, button plackets, chest pockets, side slits, off-shoulder drops, and any embellishments — must remain on the same side as the original. If the garment has a logo on the left chest, it must appear on the left chest in the output.
+
+OUTFIT COMPLETION — When generating complementary clothing to complete the outfit around the uploaded garment, select intentional, fashion-forward pieces that a professional fashion stylist would choose. Never default to a plain grey T-shirt, plain white undershirt, or any generic filler garment as an inner layer or companion piece unless the uploaded garment is structured outerwear (a tailored blazer, coat, or jacket) that physically requires an inner layer. For tops, shirts, and blouses, complete the outfit with styled bottoms and footwear only — do not add any inner layer beneath the uploaded garment.
+
 WHAT MAY VARY NATURALLY:
 - Model pose and body position
 - Facial expression

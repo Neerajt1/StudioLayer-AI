@@ -65,6 +65,12 @@ const REFINEMENT_CHIPS = [
   'Add Accessories',
 ];
 
+const IMAGE_COUNT_OPTIONS = [
+  { value: 1 as const, label: '1 Image',  sub: 'Single shot' },
+  { value: 2 as const, label: '2 Images', sub: 'Two variants' },
+  { value: 4 as const, label: '4 Images', sub: 'Full set' },
+];
+
 const FAQ_ITEMS = [
   {
     q: 'Who legally owns the copyright of the final rendered fashion assets?',
@@ -120,6 +126,9 @@ export default function StudioPage() {
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const [resetKey, setResetKey]                 = useState(0);
 
+  // ── Image count state ──────────────────────────────────────────────────────
+  const [imageCount, setImageCount] = useState<1 | 2 | 4>(1);
+
   // ── Refinement state ───────────────────────────────────────────────────────
   const [refinementText, setRefinementText] = useState('');
   const [isRefining, setIsRefining]         = useState(false);
@@ -173,6 +182,17 @@ export default function StudioPage() {
     return null;
   })();
 
+  // All output URLs indexed by slot — used for the multi-image grid.
+  const allOutputUrls: (string | null)[] = allRenderData.map((render) => {
+    if (!render) return null;
+    const r = render as unknown as Record<string, unknown>;
+    for (const key of ['outputImageUrl', 'outputUrl', 'url', 'image_url']) {
+      const v = r[key];
+      if (typeof v === 'string' && v.startsWith('http')) return v;
+    }
+    return null;
+  });
+
   const hasOutput    = allRenderData.some((r) => r?.status === 'completed') && !!resolvedOutputUrl;
   const hasImage     = sourceImages.length > 0 && !!sourceImages[0];
   const limitBlocked = usage !== undefined && !usage.canRender;
@@ -185,6 +205,14 @@ export default function StudioPage() {
     if (!url) { setSourceImages([]); return; }
     setSourceImages([url]);
     setShowValidation(false);
+  };
+
+  /** Extract a human-readable message from an ApiError or any thrown value. */
+  const extractErrorMsg = (error: unknown): string => {
+    if (!error) return 'Please try again.';
+    // ApiError shape: { data: { error?: string }, message: string }
+    const e = error as { data?: { error?: string }; message?: string };
+    return e?.data?.error ?? e?.message ?? 'Please try again.';
   };
 
   const handleRender = () => {
@@ -217,6 +245,7 @@ export default function StudioPage() {
       modelAgeRange:       selectedIdentity?.ageGroup as never,
       smartLighting:       true,
       imageDimensions:     'portrait_45'            as never,
+      imageCount:          imageCount,
     };
 
     createRender.mutate(
@@ -231,8 +260,7 @@ export default function StudioPage() {
           toast({ title: 'Creating your image…', description: 'The AI is styling your garment.' });
         },
         onError: (error: unknown) => {
-          const msg = (error as { error?: string })?.error ?? 'Please try again.';
-          toast({ title: 'Could not create image', description: msg, variant: 'destructive' });
+          toast({ title: 'Could not create image', description: extractErrorMsg(error), variant: 'destructive' });
         },
       },
     );
@@ -243,6 +271,10 @@ export default function StudioPage() {
     const currentRenderId = activeRenderIds[0];
     if (!refinementText.trim() || !currentRenderId || !primary) return;
     if (isRefining || isProcessing) return;
+    if (limitBlocked) {
+      toast({ title: 'Render limit reached', description: 'Upgrade your plan to refine images.', variant: 'destructive' });
+      return;
+    }
 
     const selectedIdentity = (identities as { id: string; gender?: string; ageGroup?: string }[])
       .find((i) => i.id === selectedIdentityId);
@@ -275,8 +307,7 @@ export default function StudioPage() {
         },
         onError: (error: unknown) => {
           setIsRefining(false);
-          const msg = (error as { error?: string })?.error ?? 'Please try again.';
-          toast({ title: 'Refinement failed', description: msg, variant: 'destructive' });
+          toast({ title: 'Refinement failed', description: extractErrorMsg(error), variant: 'destructive' });
         },
       },
     );
@@ -288,6 +319,7 @@ export default function StudioPage() {
     setSelectedIdentityId('');
     setActiveRenderIds([]);
     setShowValidation(false);
+    setImageCount(1);
     setRefinementText('');
     setIsRefining(false);
     setResetKey((k) => k + 1);
@@ -437,6 +469,40 @@ export default function StudioPage() {
                 </div>
               </section>
 
+              {/* Step 3: Number of Images */}
+              <section className="space-y-3">
+                <StepLabel number={3} title="Number of Images" />
+                <div className="grid grid-cols-3 gap-2">
+                  {IMAGE_COUNT_OPTIONS.map((opt) => {
+                    const isSelected = imageCount === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setImageCount(opt.value)}
+                        disabled={createRender.isPending || isProcessing}
+                        className={cn(
+                          'rounded border px-2 py-2.5 text-center transition-all duration-150 select-none',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          isSelected
+                            ? 'border-foreground bg-foreground text-background'
+                            : 'border-border bg-card text-foreground hover:border-foreground/40',
+                          (createRender.isPending || isProcessing) && 'opacity-50 pointer-events-none',
+                        )}
+                      >
+                        <p className="text-xs font-semibold">{opt.label}</p>
+                        <p className={cn(
+                          'text-[10px] font-mono mt-0.5 leading-tight',
+                          isSelected ? 'text-background/70' : 'text-muted-foreground',
+                        )}>
+                          {opt.sub}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
               {/* Create CTA */}
               <div className="space-y-3 pt-1">
                 <Button
@@ -473,53 +539,94 @@ export default function StudioPage() {
             {/* ── RIGHT PANEL — Output ────────────────────────────────── */}
             <div className="space-y-4">
 
-              {/* Image canvas */}
-              <div
-                className="relative w-full rounded border border-border bg-card overflow-hidden flex items-center justify-center"
-                style={{ aspectRatio: '4 / 5' }}
-              >
-                {/* Processing state */}
-                {isProcessing && (
-                  <div className="flex flex-col items-center gap-4 p-8 text-center">
-                    <div className="relative w-14 h-14">
-                      <div className="absolute inset-0 border-2 border-border rounded-full" />
-                      <div className="absolute inset-0 border-2 border-t-foreground border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
-                      <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-muted-foreground animate-pulse" />
+              {/* Image canvas — single or multi-image grid */}
+              {activeRenderIds.length <= 1 ? (
+                /* ── Single image canvas ── */
+                <div
+                  className="relative w-full rounded border border-border bg-card overflow-hidden flex items-center justify-center"
+                  style={{ aspectRatio: '4 / 5' }}
+                >
+                  {isProcessing && (
+                    <div className="flex flex-col items-center gap-4 p-8 text-center">
+                      <div className="relative w-14 h-14">
+                        <div className="absolute inset-0 border-2 border-border rounded-full" />
+                        <div className="absolute inset-0 border-2 border-t-foreground border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
+                        <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-muted-foreground animate-pulse" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {isRefining ? 'Applying your changes…' : 'Creating your image…'}
+                        </p>
+                        <p className="text-xs text-muted-foreground font-mono mt-1">This usually takes 20–40 seconds</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {isRefining ? 'Applying your changes…' : 'Creating your image…'}
-                      </p>
-                      <p className="text-xs text-muted-foreground font-mono mt-1">This usually takes 20–40 seconds</p>
+                  )}
+                  {hasOutput && !isProcessing && (
+                    <img
+                      src={resolvedOutputUrl!}
+                      alt="Generated fashion image"
+                      className="w-full h-full object-cover animate-in fade-in duration-500"
+                      data-testid="img-render-output"
+                    />
+                  )}
+                  {!isProcessing && !hasOutput && (
+                    <div className="flex flex-col items-center gap-3 p-8 text-center">
+                      <div className="w-12 h-12 rounded-full border border-dashed border-border flex items-center justify-center">
+                        <Camera className="w-5 h-5 text-muted-foreground/50" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Your image will appear here</p>
+                        <p className="text-xs text-muted-foreground font-mono mt-1">
+                          Complete the steps on the left to get started
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Generated image */}
-                {hasOutput && !isProcessing && (
-                  <img
-                    src={resolvedOutputUrl!}
-                    alt="Generated fashion image"
-                    className="w-full h-full object-cover animate-in fade-in duration-500"
-                    data-testid="img-render-output"
-                  />
-                )}
-
-                {/* Empty state */}
-                {!isProcessing && !hasOutput && (
-                  <div className="flex flex-col items-center gap-3 p-8 text-center">
-                    <div className="w-12 h-12 rounded-full border border-dashed border-border flex items-center justify-center">
-                      <Camera className="w-5 h-5 text-muted-foreground/50" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">Your image will appear here</p>
-                      <p className="text-xs text-muted-foreground font-mono mt-1">
-                        Complete the steps on the left to get started
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              ) : (
+                /* ── Multi-image grid (2 or 4 images) ── */
+                <div className="grid grid-cols-2 gap-3">
+                  {activeRenderIds.map((id, i) => {
+                    const render = allRenderData[i];
+                    const url    = allOutputUrls[i];
+                    const status = render?.status ?? 'pending';
+                    return (
+                      <div
+                        key={id}
+                        className="relative rounded border border-border bg-card overflow-hidden flex items-center justify-center"
+                        style={{ aspectRatio: '4 / 5' }}
+                      >
+                        {(status === 'processing' || status === 'pending') && (
+                          <div className="flex flex-col items-center gap-2 p-4 text-center">
+                            <span className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" />
+                            <p className="text-[10px] text-muted-foreground font-mono">Creating…</p>
+                          </div>
+                        )}
+                        {status === 'completed' && url && (
+                          <img
+                            src={url}
+                            alt={`Fashion image ${i + 1}`}
+                            className="w-full h-full object-cover animate-in fade-in duration-500"
+                          />
+                        )}
+                        {status === 'failed' && (
+                          <p className="text-xs text-muted-foreground font-mono text-center px-3">Generation failed</p>
+                        )}
+                        {/* Per-image download button */}
+                        {status === 'completed' && url && (
+                          <button
+                            onClick={() => handleDownloadSingle(url, i)}
+                            className="absolute bottom-2 right-2 w-7 h-7 rounded-full bg-background/80 backdrop-blur flex items-center justify-center hover:bg-background transition-colors"
+                            title="Download this image"
+                          >
+                            <Download className="w-3.5 h-3.5 text-foreground" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Download + New — shown after generation */}
               {hasOutput && !isProcessing && (
@@ -586,9 +693,15 @@ export default function StudioPage() {
                     ))}
                   </div>
 
+                  {limitBlocked && (
+                    <p className="text-xs text-destructive font-mono">
+                      Render limit reached — upgrade to refine images.
+                    </p>
+                  )}
+
                   <Button
                     onClick={handleRefine}
-                    disabled={!refinementText.trim() || isRefining || isProcessing}
+                    disabled={!refinementText.trim() || isRefining || isProcessing || limitBlocked}
                     className="w-full gap-2"
                     size="sm"
                   >
