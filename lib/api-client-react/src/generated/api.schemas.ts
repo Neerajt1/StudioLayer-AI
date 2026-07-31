@@ -236,6 +236,8 @@ export interface RenderInput {
   refinementPrompt?: string;
   /** ID of the render being refined. When set, the pipeline loads the parent's output image as context (Reference Image 3) and treats this request as a refinement rather than a fresh generation. Creates a new render row linked to the parent for version history. */
   parentRenderId?: number;
+  /** Camera Angle Director session memory. List of camera angle names already used in this session (e.g. ["Straight Front Editorial", "Three-Quarter Left"]). When provided, the Camera Angle Director deterministically selects the first unused angle from the 12-angle canonical library. When absent, the AI visually inspects the reference image and selects a different angle. Only relevant when refinementPrompt is a camera angle change request. */
+  usedCameraAngles?: string[];
 }
 
 export type RenderUsageTier = typeof RenderUsageTier[keyof typeof RenderUsageTier];

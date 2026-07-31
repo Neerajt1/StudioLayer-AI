@@ -87,6 +87,14 @@ export async function runAIPipeline(params: {
    */
   refinementPrompt?:   string | null;
   /**
+   * Camera Angle Director session memory.
+   * List of camera angle names already used in this session.
+   * When provided, the Camera Angle Director deterministically selects
+   * the first unused angle from the canonical 12-angle library.
+   * When absent, the AI visually inspects Reference Image 3 (visual fallback).
+   */
+  usedCameraAngles?:   string[];
+  /**
    * Called once per successfully generated image.
    * imageIndex is 0-based within this generation batch.
    */
@@ -110,6 +118,7 @@ export async function runAIPipeline(params: {
     shots = 1,
     previousOutputUrl,
     refinementPrompt,
+    usedCameraAngles,
   } = params;
 
   // ── AI Router: classify task + select provider ─────────────────────────────
@@ -150,12 +159,13 @@ export async function runAIPipeline(params: {
     // locked elements.  Replaces the generic buildRefinementInstruction().
     //
     // For initial renders: no refinement instruction needed.
-    const refinementInstruction = refinementPrompt
-      ? buildCreativeBrief(refinementPrompt, intelligenceResult.profile).instruction
+    const creativeBrief = refinementPrompt
+      ? buildCreativeBrief(refinementPrompt, intelligenceResult.profile, { usedCameraAngles })
       : undefined;
+    const refinementInstruction = creativeBrief?.instruction;
 
-    if (refinementPrompt) {
-      const brief = buildCreativeBrief(refinementPrompt, intelligenceResult.profile);
+    if (refinementPrompt && creativeBrief) {
+      const brief = creativeBrief;
       logger.info(
         {
           renderId,

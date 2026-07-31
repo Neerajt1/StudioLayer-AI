@@ -279,135 +279,150 @@ OUTPUT REQUIREMENT: The output must look like Reference Image 3 with the backgro
 }
 
 // ---------------------------------------------------------------------------
-// Camera Angle Director
+// Camera Angle Director V2 (Deterministic)
 // ---------------------------------------------------------------------------
 //
-// Implements the StudioLayer Camera Angle Director spec.
+// Implements the StudioLayer Camera Angle Director V2 spec.
 //
-// The 12-angle library is the canonical set — no other angles are permitted.
+// CANONICAL LIBRARY — 12 named angles, no others permitted.
 //
-// Session memory: Since the backend is stateless, the instruction directs the
-// AI model to visually examine Reference Image 3 (the previous generated
-// output), identify which camera angle it represents, and then select a
-// DIFFERENT angle from the library. This leverages the model's visual
-// comprehension to enforce the no-repeat rule without requiring frontend state.
+// SESSION MEMORY — two modes:
+//   • When usedCameraAngles is provided: deterministic selection — the
+//     director picks the first unused angle from the canonical library and
+//     instructs the AI to execute THAT EXACT ANGLE. No AI creativity in angle
+//     selection. The frontend maintains the list and increments it after each
+//     successful camera refinement.
+//   • When usedCameraAngles is absent: visual fallback — the AI examines
+//     Reference Image 3, identifies the current angle, and selects a different
+//     one from the library.
 //
 // ABSOLUTE RULE (from spec):
 //   The ONLY thing allowed to change is the CAMERA POSITION.
-//   Imagine a photographer walking around the model while everything else
-//   remains unchanged.
+//   Imagine a professional fashion photographer physically walking around the
+//   model while absolutely everything else remains frozen.
 // ---------------------------------------------------------------------------
 
-const CAMERA_ANGLE_LIBRARY = `
-CAMERA ANGLE LIBRARY — 12 PROFESSIONAL ANGLES
+/**
+ * Canonical camera angle library — V2.
+ * Exported so the frontend can mirror this list for deterministic session tracking.
+ * Order is the selection priority when the AI picks sequentially.
+ */
+export const CANONICAL_CAMERA_ANGLES = [
+  "Straight Front Editorial",
+  "Three-Quarter Left",
+  "Three-Quarter Right",
+  "Full Left Profile",
+  "Full Right Profile",
+  "Rear Three-Quarter Left",
+  "Rear Three-Quarter Right",
+  "Full Back View",
+  "Low Angle Fashion",
+  "High Angle Editorial",
+  "Walking Towards Camera",
+  "Walking Away From Camera",
+] as const;
 
-1. Straight Front Editorial
-   • Eye-level, camera directly in front
-   • Full-body, symmetrical composition
-   • Classic ecommerce hero framing
+export type CameraAngle = typeof CANONICAL_CAMERA_ANGLES[number];
 
-2. Three-Quarter Left
-   • Camera 45° to the model's left
-   • Full-body, model slightly facing camera
-   • Natural off-axis editorial composition
+const CAMERA_ANGLE_DESCRIPTIONS: Record<CameraAngle, string> = {
+  "Straight Front Editorial":
+    "Eye-level. Camera positioned directly in front of the model. Full-body, perfectly symmetrical composition. The model faces the camera squarely. Classic ecommerce hero framing.",
+  "Three-Quarter Left":
+    "Camera positioned 45° to the model's left. Full-body. The model's body is angled slightly toward the camera. Natural off-axis editorial composition showing both the front and left side of the garment.",
+  "Three-Quarter Right":
+    "Camera positioned 45° to the model's right. Full-body. The model's body is angled slightly toward the camera. Natural off-axis editorial composition showing both the front and right side of the garment.",
+  "Full Left Profile":
+    "Camera positioned exactly 90° to the model's left. Full-body. Pure side view. The model faces fully to the right. Strong garment silhouette, drape, and hem length clearly visible from a side perspective.",
+  "Full Right Profile":
+    "Camera positioned exactly 90° to the model's right. Full-body. Pure side view. The model faces fully to the left. Strong garment silhouette, drape, and hem length clearly visible from a side perspective.",
+  "Rear Three-Quarter Left":
+    "Camera positioned approximately 135° behind and to the model's left. The model looks back over their left shoulder toward the camera. Showcases the rear garment construction, back detailing, back neckline, and hem from behind.",
+  "Rear Three-Quarter Right":
+    "Camera positioned approximately 135° behind and to the model's right. The model looks back over their right shoulder toward the camera. Showcases the rear garment construction, back detailing, back neckline, and hem from behind.",
+  "Full Back View":
+    "Camera positioned directly behind the model at 180°. Full-body rear view. The model faces directly away from the camera. Showcases the complete back of the garment — rear seams, back neckline, back construction, hem.",
+  "Low Angle Fashion":
+    "Camera positioned below waist level, angled upward toward the model. Full-body from a low perspective. The model appears tall and commanding against the background. Premium luxury fashion editorial look.",
+  "High Angle Editorial":
+    "Camera positioned above eye level, angled slightly downward toward the model. Full-body or three-quarter body from an elevated perspective. Elegant editorial framing with strong background presence.",
+  "Walking Towards Camera":
+    "Eye-level. The model walks directly toward the camera with a natural stride. Dynamic garment movement. Full-body, energy of forward motion. Fashion editorial movement.",
+  "Walking Away From Camera":
+    "Eye-level. The model walks directly away from the camera. Full-body rear walking view. Showcases the back of the garment in motion, garment hem movement, and rear construction during a natural stride.",
+};
 
-3. Three-Quarter Right
-   • Camera 45° to the model's right
-   • Full-body, model slightly facing camera
-   • Natural off-axis editorial composition
+/**
+ * Select the next camera angle not already used in this session.
+ * When usedCameraAngles is provided, picks the first unused angle from
+ * the canonical library (deterministic). Returns undefined only if all
+ * 12 angles have been exhausted (very edge case).
+ */
+function selectNextCameraAngle(usedCameraAngles: string[]): CameraAngle | undefined {
+  const usedSet = new Set(usedCameraAngles.map((a) => a.toLowerCase()));
+  return CANONICAL_CAMERA_ANGLES.find(
+    (angle) => !usedSet.has(angle.toLowerCase()),
+  );
+}
 
-4. Left Side Profile
-   • Camera exactly 90° to the model's left
-   • Full-body, strong garment silhouette visible
-   • Architectural fashion composition
+function buildCameraBrief(
+  _profile: GarmentProfile,
+  usedCameraAngles?: string[],
+): CreativeBrief {
+  const hasSessionMemory = Array.isArray(usedCameraAngles) && usedCameraAngles.length >= 0;
 
-5. Right Side Profile
-   • Camera exactly 90° to the model's right
-   • Full-body, strong garment silhouette visible
-   • Architectural fashion composition
+  if (hasSessionMemory) {
+    // ── Deterministic mode: pick the exact next angle ─────────────────────
+    const selectedAngle = selectNextCameraAngle(usedCameraAngles!);
 
-6. Rear Three-Quarter
-   • Camera approximately 135° behind the model
-   • Model looking back over shoulder toward camera
-   • Showcases rear garment details, back construction, hem
+    if (!selectedAngle) {
+      // All 12 angles exhausted — reset by falling back to visual inspection
+      return buildCameraBriefVisualFallback();
+    }
 
-7. Walking Towards Camera
-   • Eye-level, model walking directly toward the lens
-   • Natural walking stride, full-body, dynamic garment movement
-   • Energy of motion, approaching editorial
+    const description = CAMERA_ANGLE_DESCRIPTIONS[selectedAngle];
 
-8. Walking Across Frame
-   • Left-to-right walking motion across the frame
-   • Editorial movement, full-body
-   • Street editorial energy, garment in motion
-
-9. Low Angle Fashion
-   • Camera positioned below waist level, angled upward
-   • Full-body from low perspective
-   • Premium luxury fashion editorial — commanding, elevated look
-
-10. High Angle Editorial
-    • Camera above eye level, angled slightly downward
-    • Elegant editorial perspective
-    • Flattering downward crop, strong background presence
-
-11. Waist-Up Portrait
-    • Crop from waist upward
-    • Emphasis on upper garment details, collar, neckline
-    • Editorial portrait framing
-
-12. Close Editorial Portrait
-    • Chest-up crop
-    • Luxury fashion magazine look
-    • Focus on garment surface details, texture, and facial expression
-`.trim();
-
-function buildCameraBrief(_profile: GarmentProfile): CreativeBrief {
-  const instruction = `CAMERA ANGLE DIRECTOR — PROFESSIONAL PHOTOSHOOT SIMULATION.
+    const instruction = `CAMERA ANGLE DIRECTOR V2 — DETERMINISTIC PHOTOSHOOT SIMULATION.
 
 Reference Image 3 is the exact current state of the image.
 
-Your responsibility is to simulate a professional fashion photographer physically moving around the SAME model during the SAME photoshoot.
-
-Do NOT interpret this request creatively. Do NOT change anything except the camera position.
+Your responsibility is to simulate a professional fashion photographer physically moving to a new position around the SAME model during the SAME photoshoot.
 
 ========================
-STEP 1 — READ REFERENCE IMAGE 3
+YOUR ASSIGNED CAMERA ANGLE
 ========================
 
-Examine Reference Image 3 carefully. Identify which camera angle from the library below is currently being used (angle number and name).
+You MUST execute EXACTLY this camera angle — no other angle is permitted:
 
-========================
-STEP 2 — SELECT A DIFFERENT ANGLE
-========================
+ANGLE: ${selectedAngle}
+DIRECTION: ${description}
 
-${CAMERA_ANGLE_LIBRARY}
-
-Choose EXACTLY ONE angle from the library above that is DIFFERENT from the angle currently shown in Reference Image 3.
-
-Apply that angle precisely as specified. Do not blend or combine angles.
+Execute this camera position precisely as described. Do not blend with any other angle. Do not improvise. Move the camera ONLY to this exact position.
 
 ========================
 WHAT MUST CHANGE
 ========================
 
-✓ Camera position and angle only
-✓ Framing and crop only (adjusting naturally to the new viewpoint)
-✓ The model's body orientation may adjust naturally to face the new camera position
-✓ Depth of field and perspective may shift naturally with the new angle
+✓ Camera position — to the angle described above, and only that angle
+✓ Model body orientation may adjust minimally and naturally to physically face the camera from this new position
+✓ Depth of field and perspective shift naturally with the new angle
 
 ========================
 WHAT IS COMPLETELY FROZEN — IDENTICAL TO REFERENCE IMAGE 3
 ========================
 
-✗ Same person — identical facial identity, ethnicity, age
-✗ Same hairstyle — not even a strand moves
-✗ Same expression — unless a natural adjustment is physically required by the pose
+✗ Same person — identical facial identity, same ethnicity, same age
+✗ Same hairstyle — not even a strand changes
+✗ Same facial expression — unless physically impossible to maintain from this angle
 ✗ Same body proportions
-✗ Same garment — identical fit, drape, texture, colour, every construction detail
-✗ Same accessories — every piece, unchanged
+✗ Same garment — identical fit, drape, garment construction, stitching, texture, fabric behaviour, colour, wrinkles
+✗ Same accessories — every piece, completely unchanged
 ✗ Same footwear — unchanged
-✗ Same background — identical environment, lighting direction, and quality
+✗ Same background — identical environment, unchanged
+✗ Same lighting direction — unchanged
+✗ Same lighting quality — unchanged
+✗ Same exposure — unchanged
+✗ Same colour grading — unchanged
+✗ Same image quality — unchanged
 ✗ Same styling — nothing about the look changes
 
 ========================
@@ -416,16 +431,88 @@ ABSOLUTE RULE
 
 The ONLY thing allowed to change is the CAMERA POSITION.
 
-Imagine a photographer walking around the model while everything else remains unchanged.
+Imagine a professional fashion photographer physically walking to the position described above while absolutely everything else remains frozen.
 
-The result must look like a different photograph captured during the SAME professional fashion photoshoot — not a different AI-generated person or a new generation.
+The result must look like another photograph taken during the same fashion photoshoot, with the same model, same outfit, same environment, same lighting, and same styling — only from the camera angle: ${selectedAngle}.
 
-If anything other than the camera angle has changed, you have failed.`;
+If anything other than the camera position has changed, you have failed.`;
+
+    return {
+      actionType: "change_camera",
+      instruction,
+      creativeConcept: `Camera → ${selectedAngle}`,
+    };
+  }
+
+  // ── Visual fallback mode: AI inspects Ref Image 3 ────────────────────────
+  return buildCameraBriefVisualFallback();
+}
+
+function buildCameraBriefVisualFallback(): CreativeBrief {
+  const angleList = CANONICAL_CAMERA_ANGLES.map((a, i) => `${i + 1}. ${a}`).join("\n");
+
+  const instruction = `CAMERA ANGLE DIRECTOR V2 — PHOTOSHOOT SIMULATION.
+
+Reference Image 3 is the exact current state of the image.
+
+Your responsibility is to simulate a professional fashion photographer physically moving around the SAME model during the SAME photoshoot.
+
+========================
+STEP 1 — IDENTIFY THE CURRENT ANGLE
+========================
+
+Examine Reference Image 3 carefully. Identify which of the following twelve camera angles it most closely represents:
+
+${angleList}
+
+========================
+STEP 2 — SELECT A DIFFERENT ANGLE
+========================
+
+Choose EXACTLY ONE angle from the list above that is DIFFERENT from the angle currently shown in Reference Image 3.
+
+Apply that angle precisely. Do not blend or combine angles. Do not choose the same angle as Reference Image 3.
+
+========================
+WHAT MUST CHANGE
+========================
+
+✓ Camera position — to the newly selected angle only
+✓ Model body orientation may adjust minimally and naturally to face the camera from the new position
+✓ Depth of field and perspective shift naturally with the new angle
+
+========================
+WHAT IS COMPLETELY FROZEN — IDENTICAL TO REFERENCE IMAGE 3
+========================
+
+✗ Same person — identical facial identity, same ethnicity, same age
+✗ Same hairstyle — not even a strand changes
+✗ Same facial expression — unless physically impossible to maintain from this angle
+✗ Same body proportions
+✗ Same garment — identical fit, drape, construction, stitching, texture, fabric behaviour, colour, wrinkles
+✗ Same accessories — every piece, completely unchanged
+✗ Same footwear — unchanged
+✗ Same background — identical environment
+✗ Same lighting direction, quality, exposure, and colour grading — unchanged
+✗ Same image quality — unchanged
+✗ Same styling — nothing about the look changes
+
+========================
+ABSOLUTE RULE
+========================
+
+The ONLY thing allowed to change is the CAMERA POSITION.
+
+Imagine a professional fashion photographer physically walking to a new position while absolutely everything else remains frozen.
+
+The result must look like another photograph taken during the same fashion photoshoot, with the same model, same outfit, same environment, same lighting, and same styling — only from a different camera angle.
+
+If anything other than the camera position has changed, you have failed.`;
 
   return {
     actionType: "change_camera",
     instruction,
-    creativeConcept: "Camera Angle Director — professional photoshoot simulation",
+    creativeConcept: "Camera Angle Director V2 — visual fallback",
   };
 }
 
@@ -669,12 +756,22 @@ OUTPUT REQUIREMENT: The output must look like Reference Image 3 with one specifi
 export function buildCreativeBrief(
   refinementPrompt: string,
   profile: GarmentProfile,
+  options?: {
+    /**
+     * List of camera angle names already used in this session.
+     * When provided, the Camera Angle Director deterministically selects
+     * the first unused angle from the canonical library.
+     * When absent, the AI visually inspects Reference Image 3 and picks
+     * a different angle (visual fallback mode).
+     */
+    usedCameraAngles?: string[];
+  },
 ): CreativeBrief {
   const actionType = classifyAction(refinementPrompt);
 
   switch (actionType) {
     case "change_background": return buildBackgroundBrief(profile);
-    case "change_camera":     return buildCameraBrief(profile);
+    case "change_camera":     return buildCameraBrief(profile, options?.usedCameraAngles);
     case "improve_pose":      return buildPoseBrief(profile);
     case "improve_styling":   return buildStylingBrief(profile);
     default:                  return buildCustomBrief(refinementPrompt);

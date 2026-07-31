@@ -65,6 +65,33 @@ const REFINEMENT_CHIPS = [
   'Add Accessories',
 ];
 
+/**
+ * Canonical camera angle library — mirrors the backend CANONICAL_CAMERA_ANGLES.
+ * Order must match the backend exactly: the backend deterministically selects
+ * ANGLES[usedCameraAngles.length] (first unused), so the frontend can predict
+ * which angle was just used and add it to the session memory list.
+ */
+const CANONICAL_CAMERA_ANGLES = [
+  'Straight Front Editorial',
+  'Three-Quarter Left',
+  'Three-Quarter Right',
+  'Full Left Profile',
+  'Full Right Profile',
+  'Rear Three-Quarter Left',
+  'Rear Three-Quarter Right',
+  'Full Back View',
+  'Low Angle Fashion',
+  'High Angle Editorial',
+  'Walking Towards Camera',
+  'Walking Away From Camera',
+] as const;
+
+/** Returns true when the refinement text is a camera angle change request. */
+function isCameraAngleAction(text: string): boolean {
+  const lower = text.toLowerCase();
+  return lower.includes('camera') || lower.includes('angle') || lower.includes('camera angle');
+}
+
 const IMAGE_COUNT_OPTIONS = [
   { value: 1 as const, label: 'Hero',      sub: '1 Editorial Image' },
   { value: 2 as const, label: 'Campaign',  sub: '2 Editorial Images' },
@@ -140,6 +167,13 @@ export default function StudioPage() {
   const [isRefining, setIsRefining]         = useState(false);
   // Which slot (index into activeRenderIds) the Refine panel targets.
   const [selectedRefineIndex, setSelectedRefineIndex] = useState(0);
+  /**
+   * Camera Angle Director session memory.
+   * Tracks which angles from CANONICAL_CAMERA_ANGLES have been used in this
+   * session so the backend can deterministically pick the next unused angle.
+   * Reset whenever a new photoshoot is started.
+   */
+  const [cameraAnglesUsed, setCameraAnglesUsed] = useState<string[]>([]);
 
   // ── "Refine from Gallery" — reads sessionStorage set by gallery.tsx ────────
   useEffect(() => {
@@ -283,6 +317,7 @@ export default function StudioPage() {
           setActiveRenderIds(ids);
           setRefinementText('');
           setIsRefining(false);
+          setCameraAnglesUsed([]);   // new render = fresh camera angle session
           queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
           toast({ title: 'Creating your image…', description: 'The AI is styling your garment.' });
         },
@@ -307,6 +342,9 @@ export default function StudioPage() {
     const selectedIdentity = (identities as { id: string; gender?: string; ageGroup?: string }[])
       .find((i) => i.id === selectedIdentityId);
 
+    // Detect camera angle action so we can track session memory on success.
+    const isCameraAction = isCameraAngleAction(refinementText.trim());
+
     const refineRequest = {
       sourceImageUrl:      primary,
       modelPersona:        'confident_commercial' as never,
@@ -319,6 +357,9 @@ export default function StudioPage() {
       imageDimensions:     'portrait_45'            as never,
       parentRenderId:      currentRenderId,
       refinementPrompt:    refinementText.trim(),
+      // Camera Angle Director session memory — tells the backend which angles
+      // have already been used so it deterministically picks the next unused one.
+      usedCameraAngles:    cameraAnglesUsed,
     };
 
     setIsRefining(true);
@@ -334,6 +375,14 @@ export default function StudioPage() {
               next[selectedRefineIndex] = newId;
               return next;
             });
+          }
+          // If this was a camera angle action, record the angle that was just
+          // selected (backend picks CANONICAL_ANGLES[cameraAnglesUsed.length]).
+          if (isCameraAction) {
+            const nextAngle = CANONICAL_CAMERA_ANGLES[cameraAnglesUsed.length];
+            if (nextAngle) {
+              setCameraAnglesUsed((prev) => [...prev, nextAngle]);
+            }
           }
           setRefinementText('');
           setIsRefining(false);
@@ -358,6 +407,7 @@ export default function StudioPage() {
     setRefinementText('');
     setIsRefining(false);
     setSelectedRefineIndex(0);
+    setCameraAnglesUsed([]);   // reset Camera Angle Director session memory
     setResetKey((k) => k + 1);
     createRender.reset();
   };

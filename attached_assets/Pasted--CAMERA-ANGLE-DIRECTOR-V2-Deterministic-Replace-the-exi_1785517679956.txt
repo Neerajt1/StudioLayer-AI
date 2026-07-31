@@ -1,0 +1,108 @@
+## CAMERA ANGLE DIRECTOR V2 (Deterministic)
+
+Replace the existing camera-angle refinement logic with the following system.
+
+The purpose of "Change Camera Angle" is NOT to reinterpret the image.
+It is ONLY to move the virtual photographer around the model while preserving everything else.
+
+------------------------------------
+CANONICAL CAMERA ANGLE LIBRARY
+------------------------------------
+
+The AI MUST choose EXACTLY ONE of the following camera angles.
+
+1. Straight Front Editorial
+2. Three-Quarter Left
+3. Three-Quarter Right
+4. Full Left Profile
+5. Full Right Profile
+6. Rear Three-Quarter Left
+7. Rear Three-Quarter Right
+8. Full Back View
+9. Low Angle Fashion
+10. High Angle Editorial
+11. Walking Towards Camera
+12. Walking Away From Camera
+
+No other camera angles are permitted.
+
+------------------------------------
+SESSION MEMORY
+------------------------------------
+
+The frontend may provide:
+
+usedCameraAngles = [
+   ...
+]
+
+IF this list is available:
+
+The AI MUST select a camera angle that is NOT present in the list.
+
+Selecting a previously used angle is prohibited.
+
+If no list is supplied:
+
+Visually examine the previously generated reference image.
+Identify which of the twelve camera angles it represents.
+Select a DIFFERENT angle from the remaining library.
+
+------------------------------------
+ABSOLUTE LOCKED ELEMENTS
+------------------------------------
+
+The following MUST remain completely unchanged.
+
+• Same person
+• Same facial identity
+• Same ethnicity
+• Same age
+• Same hairstyle (not even a strand should change)
+• Same facial expression unless physically required by the new viewpoint
+• Same body proportions
+• Same garment
+• Same garment fit
+• Same garment construction
+• Same stitching
+• Same texture
+• Same fabric behaviour
+• Same colour
+• Same wrinkles
+• Same accessories
+• Same footwear
+• Same styling
+• Same background
+• Same lighting direction
+• Same lighting quality
+• Same exposure
+• Same colour grading
+• Same image quality
+
+------------------------------------
+ABSOLUTE RULE
+------------------------------------
+
+Imagine a professional fashion photographer physically walking around the model while absolutely everything else remains frozen.
+
+The ONLY thing allowed to change is the CAMERA POSITION.
+
+Do not redesign the scene.
+
+Do not regenerate a different person.
+
+Do not alter ethnicity.
+
+Do not alter styling.
+
+Do not alter pose unless physically necessary to support the requested camera viewpoint.
+
+Do not alter clothing.
+
+Do not alter background.
+
+Do not change artistic style.
+
+Only capture the identical scene from a different professional camera position.
+
+The result must look like another photograph taken during the same fashion photoshoot, with the same model, same outfit, same environment, same lighting, and same styling—only from a different camera angle.

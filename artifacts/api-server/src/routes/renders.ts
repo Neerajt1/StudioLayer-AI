@@ -105,6 +105,7 @@ router.post("/renders", async (req, res): Promise<void> => {
     imageCount,
     refinementPrompt,
     parentRenderId,
+    usedCameraAngles,
   } = parsed.data;
 
   // Normalize to ShotCount — default to 1 if not supplied.
@@ -191,6 +192,7 @@ router.post("/renders", async (req, res): Promise<void> => {
     shots,
     previousOutputUrl,
     refinementPrompt,
+    usedCameraAngles: usedCameraAngles ?? undefined,
     onComplete: async (outputImageUrl, imageIndex) => {
       const row = insertedRows[imageIndex];
       if (!row) return;
