@@ -94,7 +94,9 @@ async function callOpenRouter(
   garmentImageUrl: string,
   modelImageUrl: string,
   apiKey: string,
-  timeoutMs: number
+  timeoutMs: number,
+  previousOutputUrl?: string,
+  refinementInstruction?: string,
 ): Promise<string[]> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -117,12 +119,16 @@ async function callOpenRouter(
           {
             role: "user",
             content: [
-              // ── Part 1: garment instruction ──────────────────────────────
+              // ── Part 1: garment instruction (+ optional refinement block) ─
               // References "Reference Image 1" (garment) and "Reference Image 2"
-              // (model) — order must match the two image_url parts below.
+              // (model) — order must match the image_url parts below.
+              // In refinement mode, the instruction also references Reference
+              // Image 3 (the previously generated output).
               {
                 type: "text",
-                text: OPENROUTER_RENDERING_CONFIG.garmentInstruction,
+                text: refinementInstruction
+                  ? `${OPENROUTER_RENDERING_CONFIG.garmentInstruction}\n\n${refinementInstruction}`
+                  : OPENROUTER_RENDERING_CONFIG.garmentInstruction,
               },
               // ── Part 2: Reference Image 1 — garment ─────────────────────
               {
@@ -140,9 +146,19 @@ async function callOpenRouter(
                   detail: "high",
                 },
               },
-              // ── Part 4: optional additional creative direction ───────────
-              // If the caller provides extra context (e.g. location, style
-              // brief) it is appended here without overriding the instruction.
+              // ── Part 4 (refinement only): Reference Image 3 — previous output
+              // Provides the model with the prior generation as visual context
+              // so it can apply targeted changes rather than generating from scratch.
+              ...(previousOutputUrl
+                ? [{
+                    type: "image_url" as const,
+                    image_url: {
+                      url: previousOutputUrl,
+                      detail: "high" as const,
+                    },
+                  }]
+                : []),
+              // ── Part 5: optional additional creative direction ───────────
               ...(prompt
                 ? [{ type: "text" as const, text: prompt }]
                 : []),
@@ -175,7 +191,9 @@ async function generateSingleShot(
   garmentImageUrl: string,
   modelImageUrl: string,
   apiKey: string,
-  shotIndex: number
+  shotIndex: number,
+  previousOutputUrl?: string,
+  refinementInstruction?: string,
 ): Promise<string | null> {
   const { timeoutMs, retryCount } = OPENROUTER_RENDERING_CONFIG;
   let lastError: Error | undefined;
@@ -190,7 +208,9 @@ async function generateSingleShot(
         garmentImageUrl,
         modelImageUrl,
         apiKey,
-        timeoutMs
+        timeoutMs,
+        previousOutputUrl,
+        refinementInstruction,
       );
       const durationMs = Date.now() - t0;
 
@@ -267,13 +287,21 @@ export class OpenRouterProvider implements RenderingProvider {
    * may be shorter than requested.
    */
   async generate(input: ProviderInput): Promise<GeneratedImage[]> {
-    const { garmentImageUrl, modelImageUrl, prompt, shots } = input;
+    const {
+      garmentImageUrl,
+      modelImageUrl,
+      prompt,
+      shots,
+      previousOutputUrl,
+      refinementInstruction,
+    } = input;
 
     logger.info(
       {
         provider: this.name,
         model: this.model,
         shots,
+        isRefinement: !!previousOutputUrl,
       },
       "OpenRouterProvider: starting generation"
     );
@@ -294,6 +322,8 @@ export class OpenRouterProvider implements RenderingProvider {
                 modelImageUrl,
                 this.apiKey,
                 i,
+                previousOutputUrl,
+                refinementInstruction,
               )
                 .then(resolve)
                 .catch(() => resolve(null)),

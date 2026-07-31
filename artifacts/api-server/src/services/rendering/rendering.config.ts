@@ -95,3 +95,24 @@ Generate a premium commercial fashion photograph suitable for an ecommerce cloth
    */
   baseUrl: "https://openrouter.ai/api/v1",
 } as const;
+
+/**
+ * Build the refinement instruction block appended to the garment instruction
+ * when the user requests a change to an already-generated image.
+ *
+ * Reference Image 3 = previous generated output (provided by the caller).
+ */
+export function buildRefinementInstruction(refinementPrompt: string): string {
+  return `
+REFINEMENT MODE — Reference Image 3 is the previously generated output image.
+
+The user has requested the following specific change: "${refinementPrompt}"
+
+INSTRUCTIONS:
+- Apply ONLY the change described above.
+- Keep every other element of the image identical to Reference Image 3.
+- The uploaded garment from Reference Image 1 must remain completely unchanged unless the user has explicitly asked to modify it.
+- Do not change the garment's neckline, straps, collar, sleeves, length, silhouette, colour, fabric, or any construction detail.
+- Do not change the model identity.
+- Only change what was explicitly requested.`;
+}

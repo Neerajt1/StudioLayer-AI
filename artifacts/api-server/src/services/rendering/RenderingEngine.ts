@@ -96,6 +96,8 @@ export class RenderingEngine {
       modelImageUrl,
       prompt: finalPrompt,
       shots,
+      previousOutputUrl: input.previousOutputUrl,
+      refinementInstruction: input.refinementInstruction,
     });
 
     const durationMs = Date.now() - t0;

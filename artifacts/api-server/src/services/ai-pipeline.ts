@@ -36,6 +36,7 @@ import {
 import { mapToFashnCategory }        from "../rendering/types";
 import { uploadBase64Image }         from "../rendering/image-storage";
 import { getRenderingEngine }        from "./rendering/RenderingEngine";
+import { buildRefinementInstruction } from "./rendering/rendering.config";
 import type { ShotCount }            from "./rendering/types";
 
 // ---------------------------------------------------------------------------
@@ -65,6 +66,17 @@ export async function runAIPipeline(params: {
    */
   shots?:              ShotCount;
   /**
+   * URL of the previously generated output image (refinement mode).
+   * When set, the provider includes it as Reference Image 3.
+   */
+  previousOutputUrl?:  string | null;
+  /**
+   * Natural language description of the change the user wants to make.
+   * When set, the pipeline builds a refinement instruction block and passes
+   * it alongside previousOutputUrl to the rendering provider.
+   */
+  refinementPrompt?:   string | null;
+  /**
    * Called once per successfully generated image.
    * imageIndex is 0-based within this generation batch.
    */
@@ -86,7 +98,13 @@ export async function runAIPipeline(params: {
     modelIdentityId,
     outfitStyle,
     shots = 1,
+    previousOutputUrl,
+    refinementPrompt,
   } = params;
+
+  // Build refinement instruction once when the user has requested a targeted change.
+  const refinementInstruction =
+    refinementPrompt ? buildRefinementInstruction(refinementPrompt) : undefined;
 
   try {
     const pipelineStart = Date.now();
@@ -143,6 +161,8 @@ export async function runAIPipeline(params: {
       modelImageUrl,
       prompt: creativePrompt,
       shots,
+      previousOutputUrl: previousOutputUrl ?? undefined,
+      refinementInstruction,
     });
 
     if (photoshootResult.images.length === 0) {

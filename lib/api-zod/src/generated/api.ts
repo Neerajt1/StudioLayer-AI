@@ -103,7 +103,8 @@ export const ListRendersResponseItem = zod.object({
   "locationEnvironment": zod.enum(['photo_studio', 'urban_street', 'luxury_interior', 'nature']),
   "status": zod.enum(['pending', 'processing', 'completed', 'failed']),
   "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "parentRenderId": zod.number().nullable().optional()
 })
 export const ListRendersResponse = zod.array(ListRendersResponseItem)
 
@@ -125,7 +126,9 @@ export const CreateRenderBody = zod.object({
   "garmentPlacement": zod.enum(['upper_body', 'lower_body', 'full_body']).optional(),
   "modelIdentityId": zod.string().optional(),
   "outfitStyle": zod.string().optional(),
-  "imageCount": zod.union([zod.literal(1), zod.literal(2), zod.literal(4)]).optional()
+  "imageCount": zod.union([zod.literal(1), zod.literal(2), zod.literal(4)]).optional(),
+  "refinementPrompt": zod.string().optional(),
+  "parentRenderId": zod.number().optional()
 })
 
 export const CreateRenderResponseItem = zod.object({
@@ -137,7 +140,8 @@ export const CreateRenderResponseItem = zod.object({
   "locationEnvironment": zod.enum(['photo_studio', 'urban_street', 'luxury_interior', 'nature']),
   "status": zod.enum(['pending', 'processing', 'completed', 'failed']),
   "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "parentRenderId": zod.number().nullable().optional()
 })
 export const CreateRenderResponse = zod.array(CreateRenderResponseItem)
 
@@ -169,7 +173,8 @@ export const GetRenderResponse = zod.object({
   "locationEnvironment": zod.enum(['photo_studio', 'urban_street', 'luxury_interior', 'nature']),
   "status": zod.enum(['pending', 'processing', 'completed', 'failed']),
   "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "parentRenderId": zod.number().nullable().optional()
 })
 
 

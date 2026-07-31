@@ -18,6 +18,16 @@ export interface PhotoshootInput {
   prompt: string;
   /** How many distinct output images to produce. */
   shots: ShotCount;
+  /**
+   * URL of the previously generated output image (refinement mode).
+   * When set, the provider includes it as Reference Image 3 for visual context.
+   */
+  previousOutputUrl?: string;
+  /**
+   * Pre-built refinement instruction to append to the garment instruction.
+   * Tells the model exactly what the user wants changed, while preserving everything else.
+   */
+  refinementInstruction?: string;
 }
 
 /** A single generated image returned by the engine. */
@@ -50,6 +60,10 @@ export interface ProviderInput {
   /** Final prompt — already includes the fixed quality suffix. */
   prompt: string;
   shots: ShotCount;
+  /** Previous output image URL for refinement (Reference Image 3). */
+  previousOutputUrl?: string;
+  /** Pre-built refinement instruction appended to the garment instruction. */
+  refinementInstruction?: string;
 }
 
 /** Contract every rendering provider must satisfy. */

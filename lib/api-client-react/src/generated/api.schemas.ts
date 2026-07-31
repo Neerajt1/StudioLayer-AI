@@ -86,6 +86,8 @@ export interface Render {
   status: RenderStatus;
   createdAt: string;
   updatedAt: string;
+  /** ID of the parent render this was refined from. Null for original renders. */
+  parentRenderId?: number | null;
 }
 
 export type RenderInputModelPersona = typeof RenderInputModelPersona[keyof typeof RenderInputModelPersona];
@@ -193,6 +195,10 @@ export interface RenderInput {
   outfitStyle?: string;
   /** Number of output images to generate: 1, 2, or 4. Defaults to 1. */
   imageCount?: 1 | 2 | 4;
+  /** Natural language instruction for refining a previously generated image. */
+  refinementPrompt?: string;
+  /** ID of the parent render being refined (links this row for version history). */
+  parentRenderId?: number;
 }
 
 /** A single entry from the Identity Library catalogue. */

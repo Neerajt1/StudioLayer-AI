@@ -101,10 +101,13 @@ router.post("/renders", async (req, res): Promise<void> => {
     modelIdentityId,
     outfitStyle,
     imageCount,
+    refinementPrompt,
+    parentRenderId,
   } = parsed.data;
 
   // Normalize to ShotCount — default to 1 if not supplied.
-  const shots = (imageCount ?? 1) as 1 | 2 | 4;
+  // Refinement always produces exactly 1 image.
+  const shots = (refinementPrompt ? 1 : (imageCount ?? 1)) as 1 | 2 | 4;
 
   if (limit !== null) {
     const [result] = await db
@@ -121,6 +124,22 @@ router.post("/renders", async (req, res): Promise<void> => {
     }
   }
 
+  // When this is a refinement, load the parent render to obtain the previous
+  // output image URL that will be passed to the rendering engine.
+  let previousOutputUrl: string | null = null;
+  if (parentRenderId) {
+    const [parentRender] = await db
+      .select()
+      .from(rendersTable)
+      .where(and(eq(rendersTable.id, parentRenderId), eq(rendersTable.userId, userId)));
+
+    if (!parentRender) {
+      res.status(404).json({ error: "Parent render not found" });
+      return;
+    }
+    previousOutputUrl = parentRender.outputImageUrl ?? null;
+  }
+
   // Create one DB row per requested image — all start as "pending".
   const insertedRows = await Promise.all(
     Array.from({ length: shots }, () =>
@@ -132,6 +151,7 @@ router.post("/renders", async (req, res): Promise<void> => {
           modelPersona,
           locationEnvironment,
           status: "pending",
+          parentRenderId: parentRenderId ?? null,
         })
         .returning()
         .then(([row]) => row!),
@@ -167,6 +187,8 @@ router.post("/renders", async (req, res): Promise<void> => {
     modelIdentityId,
     outfitStyle,
     shots,
+    previousOutputUrl,
+    refinementPrompt,
     onComplete: async (outputImageUrl, imageIndex) => {
       const row = insertedRows[imageIndex];
       if (!row) return;

@@ -394,6 +394,11 @@ components:
         updatedAt:
           type: string
           format: date-time
+        parentRenderId:
+          type: ["number", "null"]
+          description: >
+            ID of the parent render this was refined from.
+            Null for original (non-refinement) renders.
       required:
         - id
         - userId
@@ -456,6 +461,19 @@ components:
             Number of output images to generate (1, 2, or 4).
             Each image is an independently generated shot with a natural fashion pose.
             Defaults to 1.
+        refinementPrompt:
+          type: string
+          description: >
+            Natural language instruction for refining a previously generated image.
+            When present, the AI applies only this specific change while preserving
+            the uploaded garment and all other elements of the previous output.
+        parentRenderId:
+          type: number
+          description: >
+            ID of the render being refined. When set, the pipeline loads the parent's
+            output image as context (Reference Image 3) and treats this request as a
+            refinement rather than a fresh generation. Creates a new render row linked
+            to the parent for version history.
       required:
         - sourceImageUrl
         - modelPersona
