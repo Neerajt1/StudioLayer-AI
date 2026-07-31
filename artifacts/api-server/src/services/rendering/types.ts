@@ -19,6 +19,17 @@ export interface PhotoshootInput {
   /** How many distinct output images to produce. */
   shots: ShotCount;
   /**
+   * Optional per-shot creative prompts for editorial diversity.
+   *
+   * When provided (and length === shots), each shot uses perShotPrompts[i]
+   * instead of the shared `prompt`.  This enables Editorial mode (shots=4)
+   * to generate genuinely different fashion photographs rather than four
+   * non-deterministic variations of the same brief.
+   *
+   * When absent, all shots share the same `prompt` (existing behaviour).
+   */
+  perShotPrompts?: string[];
+  /**
    * URL of the previously generated output image (refinement mode).
    * When set, the provider includes it as Reference Image 3 for visual context.
    */
@@ -60,6 +71,11 @@ export interface ProviderInput {
   /** Final prompt — already includes the fixed quality suffix. */
   prompt: string;
   shots: ShotCount;
+  /**
+   * Optional per-shot creative prompts for editorial diversity.
+   * When provided and length === shots, shot[i] uses perShotPrompts[i].
+   */
+  perShotPrompts?: string[];
   /** Previous output image URL for refinement (Reference Image 3). */
   previousOutputUrl?: string;
   /** Pre-built refinement instruction appended to the garment instruction. */

@@ -1,0 +1,457 @@
+TT
+
+StudioLayer AI – Creative Intelligence & AI Routing Sprint
+
+IMPORTANT
+
+The core workflow is now stable.
+
+Do NOT redesign the UI.
+
+Do NOT modify the credit system.
+
+Do NOT change the Hero / Campaign / Editorial workflow.
+
+Do NOT integrate additional AI providers in this sprint.
+
+Continue using the current rendering provider for all production requests.
+
+The objective of this sprint is to make StudioLayer AI think like a Fashion Creative Director instead of simply forwarding user prompts to an AI model.
+
+The second objective is to prepare the architecture for future multi-model AI routing without changing the frontend or user experience.
+
+========================================================
+1. Build the StudioLayer Intelligence Engine
+========================================================
+
+Before any rendering request reaches an AI model, it must first pass through a StudioLayer Intelligence Engine.
+
+The Intelligence Engine becomes the decision-maker.
+
+Responsibilities:
+
+• Understand user intent.
+• Detect garment category.
+• Detect fashion category.
+• Detect occasion.
+• Detect photography objective.
+• Detect refinement objective.
+• Build a complete creative brief.
+• Decide what should happen.
+• Forward the optimized request to the AI Router.
+
+The rendering model should receive a complete creative brief instead of short button text.
+
+========================================================
+2. Build an AI Router (Future Multi-Model Architecture)
+========================================================
+
+Do NOT integrate additional rendering providers in this sprint.
+
+Instead build an AI Router architecture.
+
+Every request should follow this pipeline:
+
+User Action
+
+↓
+
+StudioLayer Intelligence Engine
+
+↓
+
+Intent Analysis
+
+↓
+
+Task Classification
+
+↓
+
+AI Router
+
+↓
+
+Selected Rendering Provider
+
+↓
+
+Result
+
+The frontend must NEVER know which rendering provider executes the task.
+
+For this sprint ALL tasks may continue using the existing rendering provider.
+
+However the architecture must allow future routing without changing frontend code.
+
+Future routing examples:
+
+Fashion Generation
+
+↓
+
+Provider A
+
+Image Refinement
+
+↓
+
+Provider B
+
+Background Removal
+
+↓
+
+Provider C
+
+Segmentation
+
+↓
+
+Provider D
+
+Upscaling
+
+↓
+
+Provider E
+
+Face Restoration
+
+↓
+
+Provider F
+
+The rendering provider should become an implementation detail.
+
+StudioLayer AI should automatically choose the most appropriate provider in future versions.
+
+========================================================
+3. Replace Generic Button Prompts with Intelligent Creative Briefs
+========================================================
+
+Buttons such as
+
+• Change Background
+
+• Change Camera Angle
+
+• Improve Pose
+
+• Improve Styling
+
+must NEVER send those words directly to the AI.
+
+Instead every button should automatically generate a detailed creative brief.
+
+The user clicks one button.
+
+StudioLayer AI decides how to professionally execute that request.
+
+========================================================
+4. Intelligent Background Selection
+========================================================
+
+Current behaviour:
+
+User clicks
+
+Change Background
+
+AI simply changes something in the background.
+
+This is not acceptable.
+
+Instead StudioLayer AI should analyze:
+
+• Garment category
+• Fashion category
+• Occasion
+• Target audience
+• Photography style
+• Existing composition
+
+Then automatically choose a premium commercial location.
+
+Wedding Dress
+
+Possible
+
+• Luxury bridal studio
+• Palace
+• Botanical garden
+• Cathedral
+• Elegant ballroom
+• Lakeside
+• Luxury hotel
+
+Never
+
+• Coffee shop
+• Gym
+• Corporate office
+• Construction site
+• Shopping mall
+
+Business Suit
+
+Possible
+
+• Boardroom
+• Executive office
+• Luxury hotel
+• Modern architecture
+• City skyline
+
+Never
+
+• Beach
+• Kids playground
+
+Sportswear
+
+Possible
+
+• Gym
+• Running track
+• Sports arena
+• Outdoor fitness
+
+Never
+
+• Wedding venue
+
+Kidswear
+
+Possible
+
+• Park
+• Playground
+• School
+• Birthday party
+
+Never
+
+• Corporate office
+
+The AI should choose environments that improve the commercial presentation of the garment.
+
+========================================================
+5. Intelligent Camera Direction
+========================================================
+
+Current behaviour:
+
+Change Camera Angle
+
+↓
+
+Minor crop movement.
+
+This is incorrect.
+
+Instead StudioLayer AI should select a professional fashion photography viewpoint.
+
+Possible viewpoints:
+
+• Eye level
+• Low angle
+• High angle
+• Three-quarter
+• Side profile
+• Walking perspective
+• Editorial close crop
+• Dynamic fashion framing
+
+The selected viewpoint must improve garment presentation while maintaining maximum garment visibility.
+
+========================================================
+6. Intelligent Pose Direction
+========================================================
+
+Improve Pose should analyze:
+
+• Garment type
+• Garment length
+• Silhouette
+• Fit
+• Category
+• Fashion style
+
+Then intelligently select an appropriate pose.
+
+Examples:
+
+Long Dress
+
+• Elegant standing
+• Walking
+• Twirl
+
+Coat
+
+• Hands in pocket
+• Walking
+• Looking sideways
+
+Casual Shirt
+
+• Relaxed stance
+• Movement
+• Crossed arms
+
+Every pose must improve the presentation of the garment.
+
+========================================================
+7. Intelligent Styling
+========================================================
+
+Improve Styling must NEVER modify the uploaded garment.
+
+Only improve:
+
+• Footwear
+• Accessories
+• Jewellery
+• Hairstyle
+• Makeup
+• Watch
+• Handbag
+• Complementary clothing where appropriate
+
+Everything should match the garment category and fashion style.
+
+========================================================
+8. Editorial Diversity
+========================================================
+
+Editorial currently produces multiple versions of the same photograph.
+
+This is not an editorial campaign.
+
+Generate four genuinely different fashion photographs.
+
+Example:
+
+Image 1
+
+Hero
+
+Front
+
+Eye contact
+
+Image 2
+
+Walking
+
+Three-quarter
+
+Image 3
+
+Side profile
+
+Image 4
+
+Magazine close-up
+
+The uploaded garment must remain identical.
+
+Only photography, pose, framing and camera direction should change.
+
+========================================================
+9. Improve Garment Replacement
+========================================================
+
+Current issue:
+
+Jeans and trousers sometimes appear pasted onto the model.
+
+StudioLayer AI must completely replace existing garments.
+
+Pay special attention to:
+
+• Waistbands
+• Collars
+• Sleeves
+• Cuffs
+• Necklines
+• Hems
+
+No remnants of previous garments should remain visible.
+
+Garments should naturally wrap around the body.
+
+========================================================
+10. Prepare Transparent PNG Architecture
+========================================================
+
+Do NOT build this feature yet.
+
+Prepare the architecture.
+
+Future download options:
+
+• JPEG
+• PNG
+• Transparent PNG
+
+Transparent PNG should eventually use a dedicated segmentation/background-removal pipeline instead of the image-generation model.
+
+========================================================
+11. Extensible Creative Engine
+========================================================
+
+The Intelligence Engine must be designed so future creative actions can be added easily.
+
+Examples:
+
+• Replace Model
+• Luxury Editorial
+• Holiday Campaign
+• Summer Campaign
+• Instagram Campaign
+• White Background
+• Lifestyle Photography
+• Luxury Lighting
+• Product Photography
+
+Every future action should automatically generate a complete creative brief before reaching the AI Router.
+
+========================================================
+Definition of Done
+========================================================
+
+This sprint is complete only when:
+
+✅ StudioLayer AI understands user intent before calling an AI model.
+
+✅ An AI Router exists and supports future multi-provider routing without frontend changes.
+
+✅ Refinement buttons generate detailed creative briefs instead of generic prompts.
+
+✅ Background changes become context-aware and commercially appropriate.
+
+✅ Camera changes produce professional fashion photography viewpoints.
+
+✅ Pose improvements intelligently showcase garments.
+
+✅ Styling improves while keeping the uploaded garment untouched.
+
+✅ Editorial generates genuinely different fashion photographs.
+
+✅ Garment replacement becomes more natural, especially for jeans and trousers.
+
+✅ Transparent PNG architecture is prepared for a future implementation.
+
+IMPORTANT
+
+StudioLayer AI is no longer just an AI image generator.
+
+It is becoming an AI Fashion Creative Director.
+
+The Intelligence Engine should decide WHAT should happen.
+
+The AI Router should decide WHICH provider should execute it.
+
+The rendering provider should simply execute the creative brief.

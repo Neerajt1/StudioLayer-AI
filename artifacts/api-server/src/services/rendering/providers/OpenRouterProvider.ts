@@ -292,9 +292,13 @@ export class OpenRouterProvider implements RenderingProvider {
       modelImageUrl,
       prompt,
       shots,
+      perShotPrompts,
       previousOutputUrl,
       refinementInstruction,
     } = input;
+
+    const hasPerShotPrompts =
+      Array.isArray(perShotPrompts) && perShotPrompts.length === shots;
 
     logger.info(
       {
@@ -302,6 +306,7 @@ export class OpenRouterProvider implements RenderingProvider {
         model: this.model,
         shots,
         isRefinement: !!previousOutputUrl,
+        editorialDiversity: hasPerShotPrompts,
       },
       "OpenRouterProvider: starting generation"
     );
@@ -310,14 +315,20 @@ export class OpenRouterProvider implements RenderingProvider {
 
     // Fan out N parallel shot requests with a small stagger (150 ms apart)
     // to avoid hitting OpenRouter rate limits with burst simultaneous calls.
+    //
+    // Editorial diversity: when perShotPrompts is provided, each shot uses
+    // its own distinct creative brief instead of the shared prompt.
     const STAGGER_MS = 150;
     const results = await Promise.all(
-      Array.from({ length: shots }, (_, i) =>
-        new Promise<string | null>((resolve) => {
+      Array.from({ length: shots }, (_, i) => {
+        // Each editorial shot gets its own brief; all other modes share prompt.
+        const shotPrompt = hasPerShotPrompts ? (perShotPrompts[i] ?? prompt) : prompt;
+
+        return new Promise<string | null>((resolve) => {
           setTimeout(
             () =>
               generateSingleShot(
-                prompt,
+                shotPrompt,
                 garmentImageUrl,
                 modelImageUrl,
                 this.apiKey,
@@ -329,8 +340,8 @@ export class OpenRouterProvider implements RenderingProvider {
                 .catch(() => resolve(null)),
             i * STAGGER_MS,
           );
-        }),
-      ),
+        });
+      }),
     );
 
     const durationMs = Date.now() - t0;

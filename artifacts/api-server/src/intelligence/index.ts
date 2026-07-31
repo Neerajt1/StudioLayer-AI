@@ -9,6 +9,9 @@
 export { runIntelligenceAnalysis } from "./decision-engine";
 export type { IntelligenceParams, IntelligenceResult } from "./decision-engine";
 
+export { buildCreativeBrief, buildEditorialShotPrompts } from "./creative-director";
+export type { ActionType, CreativeBrief } from "./creative-director";
+
 export { composeRenderPrompt }      from "./prompt-composer";
 export type { PromptComposerParams } from "./prompt-composer";
 

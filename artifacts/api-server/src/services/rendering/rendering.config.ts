@@ -76,6 +76,15 @@ WHAT MUST NEVER CHANGE:
 
 ORIENTATION — Reproduce the garment in its exact original left/right orientation as shown in Reference Image 1. Do not flip, mirror, or horizontally reverse the garment for any reason. All asymmetric details — embroidery, prints, logos, button plackets, chest pockets, side slits, off-shoulder drops, and any embellishments — must remain on the same side as the original. If the garment has a logo on the left chest, it must appear on the left chest in the output.
 
+COMPLETE GARMENT REPLACEMENT — CRITICAL FOR BOTTOMS:
+When the uploaded garment is jeans, trousers, chinos, shorts, a skirt, or any lower-body garment, you must COMPLETELY replace the corresponding garment on the model. This means:
+- The entire waistband must be replaced — no remnants of any previous waistband remain visible.
+- The full trouser legs or skirt panels must be replaced from hip to hem — no previous fabric bleeds through.
+- Cuffs and hems must be naturally rendered at the correct position.
+- The fabric must wrap naturally around the body — it should never appear pasted, composited, or floating.
+- Seams along the inner leg, outer leg, crotch, and waistband must read as continuous, natural clothing.
+- If the result looks like the garment was digitally pasted onto a different pair of trousers, you have failed.
+
 OUTFIT COMPLETION — When generating complementary clothing to complete the outfit around the uploaded garment, select intentional, fashion-forward pieces that a professional fashion stylist would choose. Never default to a plain grey T-shirt, plain white undershirt, or any generic filler garment as an inner layer or companion piece unless the uploaded garment is structured outerwear (a tailored blazer, coat, or jacket) that physically requires an inner layer. For tops, shirts, and blouses, complete the outfit with styled bottoms and footwear only — do not add any inner layer beneath the uploaded garment.
 
 WHAT MAY VARY NATURALLY:

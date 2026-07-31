@@ -10,6 +10,8 @@
 //   src/services/rendering/providers/       — OpenRouterProvider
 //   src/services/rendering/rendering.config — garmentInstruction, model, timeouts
 //   src/intelligence/                       — garment analysis + prompt composition
+//   src/intelligence/creative-director.ts   — action intelligence + editorial diversity
+//   src/router/ai-router.ts                 — task classification + provider routing
 //
 // History:
 //   SL-011A — FASHN V1.6 compliance + FASHN_CONFIG
@@ -24,10 +26,18 @@
 //             Public signature of runAIPipeline() is unchanged.
 //   SL-020  — Multi-image support: shots parameter (1/2/4) + indexed onComplete.
 //             All shots share one preprocessing pass; results distributed by index.
+//   SL-021  — Creative Intelligence & AI Routing sprint.
+//             • Creative Director: classifies refinement actions + builds rich
+//               creative briefs (background/camera/pose/styling each get distinct
+//               locked-element sets and intelligent content selections).
+//             • AI Router: classifies tasks and routes to providers.
+//             • Editorial diversity: shots=4 generates 4 genuinely different
+//               shot briefs (hero front, walking, side profile, magazine crop).
+//             • Garment replacement improvements in rendering.config.
 // ---------------------------------------------------------------------------
 
 import { logger }                    from "../lib/logger";
-import { runIntelligenceAnalysis }   from "../intelligence";
+import { runIntelligenceAnalysis, buildCreativeBrief, buildEditorialShotPrompts } from "../intelligence";
 import {
   prepareGarmentImage,
   resolveModelImage,
@@ -36,8 +46,8 @@ import {
 import { mapToFashnCategory }        from "../rendering/types";
 import { uploadBase64Image }         from "../rendering/image-storage";
 import { getRenderingEngine }        from "./rendering/RenderingEngine";
-import { buildRefinementInstruction } from "./rendering/rendering.config";
 import type { ShotCount }            from "./rendering/types";
+import { classifyTask, routeTask }   from "../router/ai-router";
 
 // ---------------------------------------------------------------------------
 // runAIPipeline — public API
@@ -61,7 +71,7 @@ export async function runAIPipeline(params: {
   outfitStyle?:        string | null;
   /**
    * Number of images to generate (SL-020).
-   * Each shot is an independent OpenRouter call producing a naturally varied pose.
+   * Each shot is an independent OpenRouter call.
    * Defaults to 1.
    */
   shots?:              ShotCount;
@@ -72,8 +82,8 @@ export async function runAIPipeline(params: {
   previousOutputUrl?:  string | null;
   /**
    * Natural language description of the change the user wants to make.
-   * When set, the pipeline builds a refinement instruction block and passes
-   * it alongside previousOutputUrl to the rendering provider.
+   * When set, the Creative Director classifies the action type and builds
+   * a rich, context-aware creative brief instead of a generic wrapper.
    */
   refinementPrompt?:   string | null;
   /**
@@ -102,9 +112,9 @@ export async function runAIPipeline(params: {
     refinementPrompt,
   } = params;
 
-  // Build refinement instruction once when the user has requested a targeted change.
-  const refinementInstruction =
-    refinementPrompt ? buildRefinementInstruction(refinementPrompt) : undefined;
+  // ── AI Router: classify task + select provider ─────────────────────────────
+  const taskType    = classifyTask({ isRefinement: !!refinementPrompt, shots });
+  const routeDecision = routeTask(taskType, renderId);
 
   try {
     const pipelineStart = Date.now();
@@ -133,6 +143,30 @@ export async function runAIPipeline(params: {
       renderId,
     );
 
+    // ── Step 3: Creative Director — build action-specific creative brief ────────
+    //
+    // For refinements: classify the raw button text into an ActionType and
+    // build a rich, garment-aware creative brief with action-specific
+    // locked elements.  Replaces the generic buildRefinementInstruction().
+    //
+    // For initial renders: no refinement instruction needed.
+    const refinementInstruction = refinementPrompt
+      ? buildCreativeBrief(refinementPrompt, intelligenceResult.profile).instruction
+      : undefined;
+
+    if (refinementPrompt) {
+      const brief = buildCreativeBrief(refinementPrompt, intelligenceResult.profile);
+      logger.info(
+        {
+          renderId,
+          actionType:      brief.actionType,
+          creativeConcept: brief.creativeConcept,
+          refinementPrompt,
+        },
+        "Creative Director: refinement brief built",
+      );
+    }
+
     logger.info(
       {
         renderId,
@@ -143,24 +177,46 @@ export async function runAIPipeline(params: {
         category,
         styleTemplate,
         shots,
+        taskType,
+        provider:        routeDecision.provider,
+        editorialDiversity: routeDecision.supportsPerShotPrompts && shots > 1 && !refinementPrompt,
         intelligenceMs:  intelligenceResult.durationMs,
       },
-      "AI pipeline (OpenRouter): preprocessing complete",
+      "AI pipeline: preprocessing complete",
     );
 
-    // ── Step 3: OpenRouter image generation ───────────────────────────────────
+    // ── Step 4: Editorial diversity — build per-shot prompts ──────────────────
     //
-    // shots > 1: OpenRouterProvider fans out `shots` independent API calls,
-    // each with the same prompt. Non-deterministic generation produces naturally
-    // varied poses across images while the same model identity is maintained
-    // (all shots use the same modelImageUrl).
-    const creativePrompt = intelligenceResult.prompt ?? "";
+    // When shots === 4 (Editorial) and this is not a refinement, the Creative
+    // Director generates four genuinely different shot briefs:
+    //   Shot 0: Hero front (eye contact, full body)
+    //   Shot 1: Walking three-quarter (dynamic, editorial)
+    //   Shot 2: Side profile (silhouette, architectural)
+    //   Shot 3: Magazine close crop (intimate, artistic)
+    //
+    // For Hero (1 shot) and Campaign (2 shots), shots share the same prompt
+    // and rely on non-deterministic generation for natural variation.
+    const basePrompt = intelligenceResult.prompt ?? "";
 
+    const perShotPrompts: string[] | undefined =
+      routeDecision.supportsPerShotPrompts && shots === 4 && !refinementPrompt
+        ? buildEditorialShotPrompts(basePrompt, intelligenceResult.profile)
+        : undefined;
+
+    if (perShotPrompts) {
+      logger.info(
+        { renderId, shots, editorialShotCount: perShotPrompts.length },
+        "Creative Director: editorial diversity — 4 distinct shot briefs generated",
+      );
+    }
+
+    // ── Step 5: OpenRouter image generation ───────────────────────────────────
     const photoshootResult = await getRenderingEngine().generatePhotoshoot({
       garmentImageUrl,
       modelImageUrl,
-      prompt: creativePrompt,
+      prompt: basePrompt,
       shots,
+      perShotPrompts,
       previousOutputUrl: previousOutputUrl ?? undefined,
       refinementInstruction,
     });
@@ -178,10 +234,10 @@ export async function runAIPipeline(params: {
         shotsRequested: shots,
         shotsReturned:  photoshootResult.images.length,
       },
-      "AI pipeline (OpenRouter): generation complete",
+      "AI pipeline: generation complete",
     );
 
-    // ── Step 4: Upload each image to fal CDN and invoke onComplete ────────────
+    // ── Step 6: Upload each image to fal CDN and invoke onComplete ────────────
     //
     // Uploads run serially to avoid hammering the CDN, but each completes its
     // DB write immediately so the UI can stream results as they arrive.
@@ -192,22 +248,19 @@ export async function runAIPipeline(params: {
 
       logger.info(
         { renderId, imageIndex: image.index, outputImageUrl },
-        "AI pipeline (OpenRouter): image uploaded",
+        "AI pipeline: image uploaded",
       );
 
       await params.onComplete(outputImageUrl, image.index);
     }
 
-    // ── Step 5: Mark individually failed shots (partial failure) ──────────────
-    //
-    // If some shots failed but others succeeded, mark each failed shot's DB row
-    // as failed so it doesn't stay stuck in "processing" state indefinitely.
+    // ── Step 7: Mark individually failed shots (partial failure) ──────────────
     if (photoshootResult.images.length < shots && params.onShotError) {
       for (let i = 0; i < shots; i++) {
         if (!successfulIndices.has(i)) {
           logger.warn(
             { renderId, shotIndex: i },
-            "AI pipeline (OpenRouter): shot failed — marking row as failed",
+            "AI pipeline: shot failed — marking row as failed",
           );
           await params.onShotError(
             new Error(`Shot ${i} failed to generate`),
@@ -223,16 +276,16 @@ export async function runAIPipeline(params: {
       {
         renderId,
         totalMs,
-        generationMs:  photoshootResult.durationMs,
+        generationMs:    photoshootResult.durationMs,
         imagesDelivered: photoshootResult.images.length,
       },
-      "AI pipeline (OpenRouter): pipeline complete",
+      "AI pipeline: pipeline complete",
     );
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error(
       { renderId, err: err.message },
-      "AI pipeline (OpenRouter): pipeline failed",
+      "AI pipeline: pipeline failed",
     );
     await params.onError(err);
   }

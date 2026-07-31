@@ -96,6 +96,7 @@ export class RenderingEngine {
       modelImageUrl,
       prompt: finalPrompt,
       shots,
+      perShotPrompts: input.perShotPrompts,
       previousOutputUrl: input.previousOutputUrl,
       refinementInstruction: input.refinementInstruction,
     });
