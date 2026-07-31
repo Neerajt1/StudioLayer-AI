@@ -279,99 +279,153 @@ OUTPUT REQUIREMENT: The output must look like Reference Image 3 with the backgro
 }
 
 // ---------------------------------------------------------------------------
-// Camera intelligence — professional photography viewpoint selection
+// Camera Angle Director
+// ---------------------------------------------------------------------------
+//
+// Implements the StudioLayer Camera Angle Director spec.
+//
+// The 12-angle library is the canonical set — no other angles are permitted.
+//
+// Session memory: Since the backend is stateless, the instruction directs the
+// AI model to visually examine Reference Image 3 (the previous generated
+// output), identify which camera angle it represents, and then select a
+// DIFFERENT angle from the library. This leverages the model's visual
+// comprehension to enforce the no-repeat rule without requiring frontend state.
+//
+// ABSOLUTE RULE (from spec):
+//   The ONLY thing allowed to change is the CAMERA POSITION.
+//   Imagine a photographer walking around the model while everything else
+//   remains unchanged.
 // ---------------------------------------------------------------------------
 
-interface CameraViewpoint {
-  name: string;
-  description: string;
-}
+const CAMERA_ANGLE_LIBRARY = `
+CAMERA ANGLE LIBRARY — 12 PROFESSIONAL ANGLES
 
-const CAMERA_VIEWPOINTS: CameraViewpoint[] = [
-  {
-    name: "Three-quarter angle",
-    description: "Camera positioned at a 45-degree angle to the model. Three-quarter body view, slightly off-centre composition. The model's body is angled away from camera while the face turns toward lens. Premium editorial fashion framing.",
-  },
-  {
-    name: "Low angle power shot",
-    description: "Camera positioned slightly below eye level, angled gently upward. Creates a commanding, powerful fashion editorial look. Full-body framing with the model appearing tall and confident against the background.",
-  },
-  {
-    name: "High angle editorial",
-    description: "Camera positioned slightly above, angled gently downward. Clean overhead editorial crop. Background fills cleanly behind the model. Fashion magazine style composition.",
-  },
-  {
-    name: "Side profile",
-    description: "Pure side profile at 90 degrees. Model gazes elegantly away from camera. Emphasises the garment silhouette, drape, and line from collar to hem. Architectural fashion composition.",
-  },
-  {
-    name: "Walking fashion perspective",
-    description: "Dynamic walking shot. Model captured mid-stride, moving toward or across the camera. Natural movement, slight motion energy. Fashion street editorial framing with full garment visibility.",
-  },
-  {
-    name: "Magazine close crop",
-    description: "Intimate three-quarter body close crop. High fashion magazine composition. Model gazes slightly off-camera with editorial expression. Emphasises garment upper half and construction details.",
-  },
-];
+1. Straight Front Editorial
+   • Eye-level, camera directly in front
+   • Full-body, symmetrical composition
+   • Classic ecommerce hero framing
 
-function selectCameraViewpoint(profile: GarmentProfile): CameraViewpoint {
-  const { category, subcategory } = profile;
-  const sub = subcategory.toLowerCase();
+2. Three-Quarter Left
+   • Camera 45° to the model's left
+   • Full-body, model slightly facing camera
+   • Natural off-axis editorial composition
 
-  // Long dresses and gowns — walking and side profile best show the drape
-  if (sub.includes("gown") || sub.includes("maxi") || sub.includes("full length")) {
-    return CAMERA_VIEWPOINTS[3]!; // side profile
-  }
-  // Short or mini garments — three-quarter angle is flattering
-  if (sub.includes("mini") || sub.includes("crop")) {
-    return CAMERA_VIEWPOINTS[0]!; // three-quarter
-  }
-  // Outerwear — walking shot shows movement best
-  if (category === "outerwear") {
-    return CAMERA_VIEWPOINTS[4]!; // walking
-  }
-  // Business / formal — power shot is appropriate
-  if (sub.includes("suit") || sub.includes("blazer")) {
-    return CAMERA_VIEWPOINTS[1]!; // low angle power
-  }
-  // Default — three-quarter editorial is universally flattering
-  return CAMERA_VIEWPOINTS[0]!;
-}
+3. Three-Quarter Right
+   • Camera 45° to the model's right
+   • Full-body, model slightly facing camera
+   • Natural off-axis editorial composition
 
-function buildCameraBrief(profile: GarmentProfile): CreativeBrief {
-  const viewpoint = selectCameraViewpoint(profile);
+4. Left Side Profile
+   • Camera exactly 90° to the model's left
+   • Full-body, strong garment silhouette visible
+   • Architectural fashion composition
 
-  const instruction = `REFINEMENT MODE — CAMERA DIRECTION CHANGE.
+5. Right Side Profile
+   • Camera exactly 90° to the model's right
+   • Full-body, strong garment silhouette visible
+   • Architectural fashion composition
 
-Reference Image 3 is the exact current state of the image. You are changing the camera viewpoint and framing ONLY.
+6. Rear Three-Quarter
+   • Camera approximately 135° behind the model
+   • Model looking back over shoulder toward camera
+   • Showcases rear garment details, back construction, hem
 
-THE REQUESTED CHANGE: Apply a professional fashion photography viewpoint.
+7. Walking Towards Camera
+   • Eye-level, model walking directly toward the lens
+   • Natural walking stride, full-body, dynamic garment movement
+   • Energy of motion, approaching editorial
 
-StudioLayer Creative Director has selected this professional viewpoint:
+8. Walking Across Frame
+   • Left-to-right walking motion across the frame
+   • Editorial movement, full-body
+   • Street editorial energy, garment in motion
 
-SELECTED VIEWPOINT: ${viewpoint.name}
-DIRECTION: ${viewpoint.description}
+9. Low Angle Fashion
+   • Camera positioned below waist level, angled upward
+   • Full-body from low perspective
+   • Premium luxury fashion editorial — commanding, elevated look
 
-The maximum garment visibility must be maintained. Every structural detail of the garment must remain visible and correctly rendered. The new camera angle must improve the commercial presentation of the garment.
+10. High Angle Editorial
+    • Camera above eye level, angled slightly downward
+    • Elegant editorial perspective
+    • Flattering downward crop, strong background presence
 
-WHAT MUST CHANGE:
-✓ Camera angle and viewpoint position
-✓ Composition and framing crop
-✓ Model orientation relative to camera may adjust naturally to suit the new viewpoint
-✓ Background perspective may adjust naturally to match the new angle
+11. Waist-Up Portrait
+    • Crop from waist upward
+    • Emphasis on upper garment details, collar, neckline
+    • Editorial portrait framing
 
-WHAT IS COMPLETELY FROZEN — DO NOT CHANGE UNDER ANY CIRCUMSTANCES:
-✗ Model identity — face, skin tone, hair colour, hairstyle must remain recognisably the same person
-✗ The uploaded garment (Reference Image 1) — every structural detail: neckline, straps, collar, sleeves, hem length, silhouette, colour, fabric, texture, print — must be identical
-✗ All complementary outfit items (shoes, trousers, accessories)
-✗ Background environment and setting (unless reframing naturally changes what is visible)
+12. Close Editorial Portrait
+    • Chest-up crop
+    • Luxury fashion magazine look
+    • Focus on garment surface details, texture, and facial expression
+`.trim();
 
-OUTPUT REQUIREMENT: The output must look like a professional fashion photographer repositioned to the selected viewpoint. Garment must be fully visible and correctly rendered from the new angle. If the garment structure has changed, you have failed.`;
+function buildCameraBrief(_profile: GarmentProfile): CreativeBrief {
+  const instruction = `CAMERA ANGLE DIRECTOR — PROFESSIONAL PHOTOSHOOT SIMULATION.
+
+Reference Image 3 is the exact current state of the image.
+
+Your responsibility is to simulate a professional fashion photographer physically moving around the SAME model during the SAME photoshoot.
+
+Do NOT interpret this request creatively. Do NOT change anything except the camera position.
+
+========================
+STEP 1 — READ REFERENCE IMAGE 3
+========================
+
+Examine Reference Image 3 carefully. Identify which camera angle from the library below is currently being used (angle number and name).
+
+========================
+STEP 2 — SELECT A DIFFERENT ANGLE
+========================
+
+${CAMERA_ANGLE_LIBRARY}
+
+Choose EXACTLY ONE angle from the library above that is DIFFERENT from the angle currently shown in Reference Image 3.
+
+Apply that angle precisely as specified. Do not blend or combine angles.
+
+========================
+WHAT MUST CHANGE
+========================
+
+✓ Camera position and angle only
+✓ Framing and crop only (adjusting naturally to the new viewpoint)
+✓ The model's body orientation may adjust naturally to face the new camera position
+✓ Depth of field and perspective may shift naturally with the new angle
+
+========================
+WHAT IS COMPLETELY FROZEN — IDENTICAL TO REFERENCE IMAGE 3
+========================
+
+✗ Same person — identical facial identity, ethnicity, age
+✗ Same hairstyle — not even a strand moves
+✗ Same expression — unless a natural adjustment is physically required by the pose
+✗ Same body proportions
+✗ Same garment — identical fit, drape, texture, colour, every construction detail
+✗ Same accessories — every piece, unchanged
+✗ Same footwear — unchanged
+✗ Same background — identical environment, lighting direction, and quality
+✗ Same styling — nothing about the look changes
+
+========================
+ABSOLUTE RULE
+========================
+
+The ONLY thing allowed to change is the CAMERA POSITION.
+
+Imagine a photographer walking around the model while everything else remains unchanged.
+
+The result must look like a different photograph captured during the SAME professional fashion photoshoot — not a different AI-generated person or a new generation.
+
+If anything other than the camera angle has changed, you have failed.`;
 
   return {
     actionType: "change_camera",
     instruction,
-    creativeConcept: `Camera → ${viewpoint.name}`,
+    creativeConcept: "Camera Angle Director — professional photoshoot simulation",
   };
 }
 
