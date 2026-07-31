@@ -26,11 +26,6 @@ import type {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-/** Build the prompt that goes to the model — user text + fixed quality suffix. */
-function buildPrompt(userPrompt: string): string {
-  return `${userPrompt.trim()}\n\n${OPENROUTER_RENDERING_CONFIG.promptSuffix}`;
-}
-
 /**
  * Extract image URL(s) from an OpenRouter chat-completion response.
  *
@@ -122,10 +117,14 @@ async function callOpenRouter(
           {
             role: "user",
             content: [
+              // ── Part 1: garment instruction ──────────────────────────────
+              // References "Reference Image 1" (garment) and "Reference Image 2"
+              // (model) — order must match the two image_url parts below.
               {
                 type: "text",
-                text: "You are a professional fashion photographer. Generate a high-quality fashion photoshoot image based on the garment and model references provided.",
+                text: OPENROUTER_RENDERING_CONFIG.garmentInstruction,
               },
+              // ── Part 2: Reference Image 1 — garment ─────────────────────
               {
                 type: "image_url",
                 image_url: {
@@ -133,6 +132,7 @@ async function callOpenRouter(
                   detail: "high",
                 },
               },
+              // ── Part 3: Reference Image 2 — model ───────────────────────
               {
                 type: "image_url",
                 image_url: {
@@ -140,10 +140,12 @@ async function callOpenRouter(
                   detail: "high",
                 },
               },
-              {
-                type: "text",
-                text: prompt,
-              },
+              // ── Part 4: optional additional creative direction ───────────
+              // If the caller provides extra context (e.g. location, style
+              // brief) it is appended here without overriding the instruction.
+              ...(prompt
+                ? [{ type: "text" as const, text: prompt }]
+                : []),
             ],
           },
         ],

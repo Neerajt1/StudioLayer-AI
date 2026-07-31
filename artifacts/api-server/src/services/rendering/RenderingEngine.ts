@@ -72,8 +72,12 @@ export class RenderingEngine {
 
     assertValidShots(shots);
 
-    // Append fixed quality suffix — spec §8 says to add nothing else
-    const finalPrompt = `${prompt.trim()}\n\n${OPENROUTER_RENDERING_CONFIG.promptSuffix}`;
+    // The garmentInstruction in rendering.config.ts is the authoritative
+    // generation instruction — it fully describes the virtual try-on task,
+    // garment preservation, and output quality requirements.
+    // Any caller-supplied prompt is forwarded as optional additional creative
+    // context (e.g. location, mood) appended after the instruction + images.
+    const finalPrompt = prompt.trim();
 
     logger.info(
       {
