@@ -1,0 +1,122 @@
+StudioLayer AI – P0 Launch Polish & Bug Fixes
+We are now in the final launch phase. Please address only the items below. Do not refactor unrelated code or change the rendering architecture.
+1. Fix 4-Image Generation (Critical)
+Current status:
+1 image works.
+2 images work.
+4 images fail with "Could not generate."
+Please investigate and resolve the root cause.
+Verify:
+1-image generation
+2-image generation
+4-image generation
+all work reliably.
+Review:
+OpenRouter responses
+Concurrency handling
+Timeout handling
+Render-row synchronization
+Tier/limit validation
+Error handling
+2. Improve Garment Fidelity
+Overall quality is very good, however the AI is still modifying the garment's structural design.
+Observed issues:
+Neck straps disappear or change.
+Neckline changes.
+Dress length changes.
+The uploaded garment should be treated as the source of truth.
+The following must remain unchanged:
+Neckline
+Straps
+Sleeves
+Collar
+Garment length
+Hemline
+Seam placement
+Silhouette
+Construction details
+Only the following should change:
+Pose
+Facial expression
+Lighting
+Background
+Camera angle
+Styling of the model (without changing the garment)
+The AI should never redesign the uploaded garment.
+3. Download Experience (Critical UX)
+Current behaviour:
+Clicking Download asks the user to choose Image 1 or Image 2.
+A random Replit/debug dialog appears containing internal code.
+This is not production-ready.
+Required behaviour:
+Single Image
+Download immediately.
+Multiple Images (2 or 4)
+Clicking Download should automatically download one ZIP file containing all generated images.
+Do not ask users to choose between images.
+Remove all debug/Replit/internal dialogs completely.
+Keep the individual download icon on each image card for downloading a single image.
+ZIP naming example:
+StudioLayerAI_Photoshoot_YYYYMMDD_HHMM.zip
+4. Premium UI Refinement
+Please perform a UI consistency pass across the application.
+Focus on:
+Buttons
+Simplify all capsule buttons.
+Reduce unnecessary visual weight.
+Maintain consistent sizing.
+Maintain consistent spacing.
+Premium SaaS appearance.
+Typography
+Apply a consistent premium typography system across the application using:
+Primary UI Font
+Inter
+Use Inter throughout the application for:
+Navigation
+Buttons
+Forms
+Labels
+Cards
+Dialogs
+Dashboard
+Settings
+Tables
+Empty states
+Maintain consistent:
+Font hierarchy
+Font weights
+Font sizes
+Line heights
+Letter spacing
+Brand Font
+Use EB Garamond only for branding elements such as:
+Logo
+Marketing hero sections
+Landing page branding
+Do not use EB Garamond inside the application interface.
+5. General UI Polish
+Review the application for any remaining UI elements that feel like development placeholders or template components.
+Examples:
+Debug dialogs
+Generic placeholder graphics
+Inconsistent buttons
+Inconsistent spacing
+Inconsistent typography
+Rough visual edges introduced during development
+The final UI should feel:
+Premium
+Minimal
+Elegant
+Modern
+Professional
+Similar in quality to leading AI SaaS products.
+Important
+Do not change:
+OpenRouter rendering architecture
+Rendering pipeline
+BirefNet preprocessing
+Intelligence Engine
+Model resolution flow
+Do not add new features.
+Focus only on completing these launch-critical improvements.
+Before marking the task complete, please verify that all functionality continues to work correctly.
