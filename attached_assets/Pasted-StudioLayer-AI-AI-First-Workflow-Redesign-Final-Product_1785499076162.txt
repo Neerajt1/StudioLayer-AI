@@ -1,0 +1,107 @@
+StudioLayer AI – AI-First Workflow Redesign (Final Product Direction)
+We have validated the product through extensive testing and have decided to simplify the workflow based on actual user behavior and AI performance.
+The AI Default workflow consistently produces better styling than our current preset buttons. Going forward, StudioLayer AI should position the AI as the stylist.
+Please implement the following changes.
+1. Simplify the Creation Workflow
+Remove the following from the initial generation screen:
+All style preset buttons (Streetwear, Business Casual, Luxury, Editorial, etc.)
+Creative Prompt / Prompt textbox
+The creation workflow should become:
+Upload Garment
+↓
+Choose Model
+↓
+Create
+Nothing else.
+The objective is to make the experience feel effortless, premium and intelligent.
+2. AI Becomes the Stylist
+When the user clicks Create, the AI should automatically make intelligent styling decisions.
+The uploaded garment always remains the source of truth.
+The AI should determine:
+Complementary clothing
+Shoes
+Accessories
+Styling
+Pose
+Camera composition
+Lighting
+Background
+The AI should behave like an experienced fashion stylist creating an editorial-quality look.
+3. Introduce Refine Image
+Once the first image has been generated successfully, replace the current post-generation experience with:
+✨ Refine Image
+This becomes the primary interaction after image creation.
+4. Natural Language Refinement
+Instead of style buttons, provide a single refinement field.
+Placeholder:
+Describe what you'd like to change...
+Examples:
+Replace trousers with blue denim
+Change shoes to white sneakers
+Replace shirt with a black turtleneck
+Change background to a busy London street
+Make the model walk
+Add sunglasses
+Make the lighting cinematic
+Make it look like a luxury campaign
+The AI should understand natural language.
+5. Quick Suggestion Chips
+Below the input field, provide subtle suggestion chips.
+Examples:
+Change Background
+Replace Shirt
+Replace Trousers
+Replace Shoes
+Change Pose
+Change Lighting
+Change Camera Angle
+Add Accessories
+These chips should simply populate the refinement field or trigger an appropriate refinement request.
+Keep them minimal, monochrome and elegant.
+No colourful buttons.
+6. Preserve the Uploaded Garment
+During refinement, the uploaded garment must never change unless the user explicitly requests it.
+If the user asks:
+Replace trousers with blue denim
+Only replace the trousers.
+Do not modify:
+Uploaded garment
+Colour
+Fabric
+Texture
+Fit
+Construction
+7. Prepare for Version History
+Structure the refinement workflow so every refinement creates a new image version instead of overwriting the previous one.
+Example:
+Version 1
+↓
+Version 2
+↓
+Version 3
+↓
+Version 4
+The UI does not need to expose version history yet.
+Only prepare the architecture.
+8. Preserve Existing Preset Logic
+Do not delete the existing preset system.
+Simply remove it from the user interface.
+We may reuse it later for advanced or enterprise workflows.
+9. Premium Product Experience
+The application should feel like an AI Creative Director rather than a settings-heavy image generator.
+The AI should make intelligent decisions first.
+The user should refine afterwards.
+The overall experience should communicate:
+Luxury
+Editorial
+Minimalism
+Confidence
+Professional fashion photography
+10. Replace "Create Photoshoot"
+Replace every user-facing occurrence of:
+Create Photoshoot
+with simply:
+Create
+Similarly, replace any other unnecessarily long labels with shorter, more intuitive alternatives wherever appropriate.
+The interface should feel effortless, modern and premium.
+Think in terms of products like ChatGPT—every action should be obvious without requiring explanation.
