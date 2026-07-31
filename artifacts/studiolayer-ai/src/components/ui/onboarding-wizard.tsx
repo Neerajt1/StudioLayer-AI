@@ -60,7 +60,6 @@ export function OnboardingWizard({ onComplete, onSkip }: OnboardingWizardProps) 
           <div className="text-5xl mb-4">{current.emoji}</div>
           <h2
             className="text-2xl font-semibold text-foreground mb-3"
-            style={{ fontFamily: "'EB Garamond', Georgia, serif" }}
           >
             {current.title}
           </h2>

@@ -23,10 +23,10 @@ export default function BillingPage() {
             <h2
               className="text-foreground mb-2"
               style={{
-                fontFamily: "'EB Garamond', Georgia, serif",
-                fontSize: '28px',
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: '22px',
                 fontWeight: 600,
-                letterSpacing: '0.02em',
+                letterSpacing: '-0.01em',
               }}
             >
               Subscription &amp; Billing
@@ -91,8 +91,7 @@ export default function BillingPage() {
           {showTopUp && (
             <div className="mb-8 p-6 border border-foreground rounded bg-card max-w-2xl">
               <h4
-                className="text-foreground mb-1"
-                style={{ fontFamily: "'EB Garamond', Georgia, serif", fontSize: '20px', fontWeight: 600 }}
+                className="text-foreground mb-1 text-base font-semibold"
               >
                 On-Demand Render Top-Up
               </h4>
@@ -123,13 +122,7 @@ export default function BillingPage() {
               {/* Starter Studio Plan */}
               <div className="border border-border rounded-lg bg-card py-8 px-6 flex flex-col flex-1">
                 <h3
-                  className="text-foreground mb-1"
-                  style={{
-                    fontFamily: "'EB Garamond', Georgia, serif",
-                    fontSize: '24px',
-                    fontWeight: 600,
-                    letterSpacing: '0.02em',
-                  }}
+                  className="text-foreground mb-1 text-lg font-semibold tracking-tight"
                 >
                   Starter Studio Plan
                 </h3>
@@ -176,13 +169,7 @@ export default function BillingPage() {
                 style={{ border: '1px solid #09090B' }}
               >
                 <h3
-                  className="text-foreground mb-1"
-                  style={{
-                    fontFamily: "'EB Garamond', Georgia, serif",
-                    fontSize: '24px',
-                    fontWeight: 600,
-                    letterSpacing: '0.02em',
-                  }}
+                  className="text-foreground mb-1 text-lg font-semibold tracking-tight"
                 >
                   Enterprise Bulk Plan
                 </h3>

@@ -280,12 +280,27 @@ export class OpenRouterProvider implements RenderingProvider {
 
     const t0 = Date.now();
 
-    // Fan out N parallel shot requests
-    const indices: number[] = Array.from({ length: shots }, (_, i) => i);
+    // Fan out N parallel shot requests with a small stagger (150 ms apart)
+    // to avoid hitting OpenRouter rate limits with burst simultaneous calls.
+    const STAGGER_MS = 150;
     const results = await Promise.all(
-      indices.map((i) =>
-        generateSingleShot(prompt, garmentImageUrl, modelImageUrl, this.apiKey, i)
-      )
+      Array.from({ length: shots }, (_, i) =>
+        new Promise<string | null>((resolve) => {
+          setTimeout(
+            () =>
+              generateSingleShot(
+                prompt,
+                garmentImageUrl,
+                modelImageUrl,
+                this.apiKey,
+                i,
+              )
+                .then(resolve)
+                .catch(() => resolve(null)),
+            i * STAGGER_MS,
+          );
+        }),
+      ),
     );
 
     const durationMs = Date.now() - t0;

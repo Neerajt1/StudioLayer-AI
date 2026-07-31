@@ -69,6 +69,11 @@ export async function runAIPipeline(params: {
    * imageIndex is 0-based within this generation batch.
    */
   onComplete:          (outputImageUrl: string, imageIndex: number) => Promise<void>;
+  /**
+   * Called for each individual shot that failed to generate (partial failure).
+   * Not called when ALL shots fail — in that case only onError is called.
+   */
+  onShotError?:        (error: Error, imageIndex: number) => Promise<void>;
   onError:             (error: Error) => Promise<void>;
 }): Promise<void> {
   const {
@@ -160,6 +165,8 @@ export async function runAIPipeline(params: {
     //
     // Uploads run serially to avoid hammering the CDN, but each completes its
     // DB write immediately so the UI can stream results as they arrive.
+    const successfulIndices = new Set(photoshootResult.images.map((img) => img.index));
+
     for (const image of photoshootResult.images) {
       const outputImageUrl = await uploadBase64Image(image.url, renderId);
 
@@ -169,6 +176,25 @@ export async function runAIPipeline(params: {
       );
 
       await params.onComplete(outputImageUrl, image.index);
+    }
+
+    // ── Step 5: Mark individually failed shots (partial failure) ──────────────
+    //
+    // If some shots failed but others succeeded, mark each failed shot's DB row
+    // as failed so it doesn't stay stuck in "processing" state indefinitely.
+    if (photoshootResult.images.length < shots && params.onShotError) {
+      for (let i = 0; i < shots; i++) {
+        if (!successfulIndices.has(i)) {
+          logger.warn(
+            { renderId, shotIndex: i },
+            "AI pipeline (OpenRouter): shot failed — marking row as failed",
+          );
+          await params.onShotError(
+            new Error(`Shot ${i} failed to generate`),
+            i,
+          );
+        }
+      }
     }
 
     const totalMs = Date.now() - pipelineStart;

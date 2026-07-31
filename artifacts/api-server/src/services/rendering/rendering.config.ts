@@ -51,33 +51,36 @@ Reference Image 2 is the human model.
 
 Your task is to dress the person shown in Reference Image 2 using the exact garment shown in Reference Image 1.
 
-The uploaded garment is the primary source of truth.
+The uploaded garment is the single source of truth. It must appear in the output exactly as uploaded.
 
-Preserve the garment exactly as uploaded, including its:
+STRUCTURAL ELEMENTS — YOU MUST PRESERVE EVERY ONE OF THESE EXACTLY:
 
-- colour
-- texture
-- fabric
-- stitching
-- construction
-- silhouette
-- proportions
-- fit
-- collar
-- lapels
-- sleeves
-- cuffs
-- buttons
-- pockets
-- zippers
-- branding
-- logos
-- graphics
-- embroidery
-- prints
-- patterns
+1. Neckline shape — the exact cut and depth of the neckline (V-neck, scoop, square, boat, crew, etc.) must not change in any way.
+2. Straps — every strap must be preserved exactly: count, thickness, placement, and attachment point. Do not add, remove, reposition, or narrow any strap.
+3. Collar — the collar shape, stand height, and lapel style must not be altered.
+4. Sleeves — sleeve type, length, and cut (sleeveless, cap, short, long, balloon, off-shoulder) must be exactly reproduced.
+5. Cuffs — cuff style and length must not change.
+6. Garment length and hemline — the exact hem position relative to the body must be preserved. Do not shorten or lengthen the garment by even a small amount.
+7. Silhouette — the overall outline and drape of the garment (A-line, fitted, relaxed, boxy, flared, etc.) must be maintained.
+8. Seam placement — visible seams, darts, and panel lines must appear in the same position as the original.
+9. Construction details — buttons, pockets, zippers, drawstrings, belts, ties, and trims must appear as shown.
+10. Surface details — colour, fabric texture, prints, patterns, embroidery, logos, graphics, and branding must be reproduced faithfully.
 
-Do not redesign, reinterpret, alter, replace, or restyle the uploaded garment in any way.
+WHAT MUST NEVER CHANGE:
+- Do not redesign, reinterpret, alter, replace, or restyle the uploaded garment in any way.
+- Do not remove straps or change their position.
+- Do not change the neckline depth or shape.
+- Do not shorten or lengthen the garment.
+- Do not change the sleeve length or type.
+- Do not alter the silhouette or overall shape.
+
+WHAT MAY VARY NATURALLY:
+- Model pose and body position
+- Facial expression
+- Lighting and shadows cast by the garment
+- Background and environment
+- Camera angle and framing
+- Complementary clothing items (shoes, trousers, skirt) that complete the outfit around the uploaded garment — these must not cover or obscure the uploaded garment in any way
 
 If the uploaded garment represents only part of an outfit (such as a blazer, jacket, shirt, top, skirt or trousers), intelligently generate the remaining clothing so that it naturally complements the uploaded garment while keeping the uploaded garment completely unchanged.
 

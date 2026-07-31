@@ -36,10 +36,10 @@ export default function AccountPage() {
             <h2
               className="text-foreground mb-2"
               style={{
-                fontFamily: "'EB Garamond', Georgia, serif",
-                fontSize: '28px',
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: '22px',
                 fontWeight: 600,
-                letterSpacing: '0.02em',
+                letterSpacing: '-0.01em',
               }}
             >
               Account Profile
@@ -52,13 +52,7 @@ export default function AccountPage() {
           {/* ── Block 1: Stored Identity Credentials ── */}
           <section className="mb-6 border border-border rounded bg-card p-6">
             <h3
-              className="text-foreground mb-4"
-              style={{
-                fontFamily: "'EB Garamond', Georgia, serif",
-                fontSize: '18px',
-                fontWeight: 600,
-                letterSpacing: '0.02em',
-              }}
+              className="text-foreground mb-4 text-sm font-semibold tracking-tight"
             >
               Identity Credentials
             </h3>
@@ -143,13 +137,7 @@ export default function AccountPage() {
               className="flex items-center justify-between w-full text-left group"
             >
               <h3
-                className="text-foreground"
-                style={{
-                  fontFamily: "'EB Garamond', Georgia, serif",
-                  fontSize: '18px',
-                  fontWeight: 600,
-                  letterSpacing: '0.02em',
-                }}
+                className="text-foreground text-sm font-semibold tracking-tight"
               >
                 Optional Corporate Billing Details
               </h3>
@@ -194,13 +182,7 @@ export default function AccountPage() {
           {/* ── Block 2: Stored Brand Assets ── */}
           <section className="mb-6 border border-border rounded bg-card p-6">
             <h3
-              className="text-foreground mb-1"
-              style={{
-                fontFamily: "'EB Garamond', Georgia, serif",
-                fontSize: '18px',
-                fontWeight: 600,
-                letterSpacing: '0.02em',
-              }}
+              className="text-foreground mb-1 text-sm font-semibold tracking-tight"
             >
               Stored Brand Assets
             </h3>
@@ -253,13 +235,7 @@ export default function AccountPage() {
           {/* ── Block 3: Operational Metric Ring ── */}
           <section className="border border-border rounded bg-card p-6">
             <h3
-              className="text-foreground mb-1"
-              style={{
-                fontFamily: "'EB Garamond', Georgia, serif",
-                fontSize: '18px',
-                fontWeight: 600,
-                letterSpacing: '0.02em',
-              }}
+              className="text-foreground mb-1 text-sm font-semibold tracking-tight"
             >
               Render Credit Usage
             </h3>

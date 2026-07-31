@@ -18,6 +18,7 @@
 // ---------------------------------------------------------------------------
 
 import { useState } from 'react';
+import JSZip from 'jszip';
 import {
   useCreateRender,
   useGetRenderUsage,
@@ -389,23 +390,6 @@ export default function StudioPage() {
       imageCount,
     };
 
-    // ── Pre-render structured log ──────────────────────────────────────────
-    console.group('SL-020 Rendering Request');
-    console.log('Uploaded Garment:         ', garmentPlacement);
-    console.log('Selected Model:           ', selectedIdentity?.displayName ?? selectedIdentityId);
-    console.log('Model Gender:             ', modelGender ?? '(not resolved)');
-    console.log('Complete the Look Style:  ', getStyleLabel(completeTheLook));
-    console.log('Generated Outfit Spec:    ', outfitSpecFormatted);
-    if (outfitPromptAddendum) {
-      console.log('Outfit Prompt Addendum:   ', outfitPromptAddendum);
-    }
-    console.log('Creative Brief:           ', creativeBrief.trim() || '(none)');
-    console.log('Resolved Location:        ', locationEnvironment);
-    console.log('Resolved Persona:         ', modelPersona);
-    console.log('Image Count:              ', imageCount);
-    console.log('Full Rendering Request:   ', renderingRequest);
-    console.groupEnd();
-
     // ── Submit ─────────────────────────────────────────────────────────────
     createRender.mutate(
       { data: renderingRequest },
@@ -466,15 +450,38 @@ export default function StudioPage() {
     }
   };
 
-  const handleDownloadAll = () => {
-    allRenderData.forEach((render, i) => {
-      if (!render || render.status !== 'completed') return;
-      const r = render as unknown as Record<string, unknown>;
-      const url = r['outputImageUrl'] as string | null;
-      if (url?.startsWith('http')) {
-        handleDownloadSingle(url, i);
-      }
-    });
+  const handleDownloadAll = async () => {
+    const zip = new JSZip();
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+    const zipName = `StudioLayerAI_Photoshoot_${ts}.zip`;
+
+    await Promise.all(
+      allRenderData.map(async (render, i) => {
+        if (!render || render.status !== 'completed') return;
+        const r = render as unknown as Record<string, unknown>;
+        const url = r['outputImageUrl'] as string | null;
+        if (!url?.startsWith('http')) return;
+        try {
+          const res = await fetch(url);
+          const blob = await res.blob();
+          zip.file(`image_${i + 1}.png`, blob);
+        } catch {
+          // skip individual fetch failures — other images still zip
+        }
+      }),
+    );
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const objUrl = URL.createObjectURL(content);
+    const link = document.createElement('a');
+    link.href = objUrl;
+    link.download = zipName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(objUrl), 10_000);
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -496,14 +503,7 @@ export default function StudioPage() {
           {/* ── Page header ── */}
           <div className="mb-8">
             <h2
-              className="text-foreground mb-1"
-              style={{
-                fontFamily:    "'EB Garamond', Georgia, serif",
-                fontSize:      '28px',
-                fontWeight:    600,
-                letterSpacing: '0.01em',
-                lineHeight:    1.2,
-              }}
+              className="text-foreground mb-1 text-xl font-semibold tracking-tight"
             >
               Create Photoshoot
             </h2>

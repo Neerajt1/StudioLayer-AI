@@ -175,6 +175,14 @@ router.post("/renders", async (req, res): Promise<void> => {
         .set({ status: "completed", outputImageUrl })
         .where(eq(rendersTable.id, row.id));
     },
+    onShotError: async (_error, imageIndex) => {
+      const row = insertedRows[imageIndex];
+      if (!row) return;
+      await db
+        .update(rendersTable)
+        .set({ status: "failed" })
+        .where(eq(rendersTable.id, row.id));
+    },
     onError: async (error) => {
       logger.error(
         { renderIds: insertedRows.map((r) => r.id), error },
