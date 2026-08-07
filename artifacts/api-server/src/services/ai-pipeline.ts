@@ -4,8 +4,8 @@
 // This file is the bridge between the renders route and the rendering backend.
 // It is intentionally thin — all provider logic lives in:
 //
-//   src/rendering/preprocessing.ts          — BirefNet + model image resolution
-//   src/rendering/image-storage.ts          — base64 → fal CDN upload
+//   src/rendering/preprocessing.ts          — FAL BirefNet garment cutout + model resolution
+//   src/rendering/image-storage.ts          — base64 → Cloudflare R2 upload
 //   src/services/rendering/RenderingEngine  — OpenRouter image generation
 //   src/services/rendering/providers/       — OpenRouterProvider
 //   src/services/rendering/rendering.config — garmentInstruction, model, timeouts
@@ -37,11 +37,26 @@
 // ---------------------------------------------------------------------------
 
 import { logger }                    from "../lib/logger";
-import { runIntelligenceAnalysis, buildCreativeBrief, buildEditorialShotPrompts } from "../intelligence";
+import { traceRenderFailure, traceRenderStage } from "../lib/render-pipeline-trace.js";
+import {
+  logPipelineStage,
+  PipelineExternalProvider,
+  PipelineStage,
+  type PipelineTraceContext,
+} from "../lib/render-pipeline-observability.js";
+import { runIntelligenceAnalysis, buildShotPrompts, imageCountToShootType } from "../intelligence";
+import {
+  buildRefinementBrief,
+  resolveRefinementType,
+  type RefinementType,
+} from "./refinement/refinement-engine.js";
+import { runRemoveBackgroundRefine } from "./refinement/run-remove-background-refine.js";
 import {
   prepareGarmentImage,
   resolveModelImage,
   mapStyleModeToTemplate,
+  isLocalIdentityImageUrl,
+  loadStudioTalentImageAsDataUri,
 }                                    from "../rendering/preprocessing";
 import { mapToFashnCategory }        from "../rendering/types";
 import { uploadBase64Image }         from "../rendering/image-storage";
@@ -66,6 +81,8 @@ export async function runAIPipeline(params: {
   modelAgeRange?:      string | null;
   cameraFraming?:      string | null;
   garmentPlacement?:   string | null;
+  /** Full Outfit length selection — forwarded to Garment Intelligence. */
+  garmentLengthSelection?: string | null;
   modelIdentityId?:    string | null;
   /** Complete the Look selection from the UI (SL-018B). */
   outfitStyle?:        string | null;
@@ -86,6 +103,8 @@ export async function runAIPipeline(params: {
    * a rich, context-aware creative brief instead of a generic wrapper.
    */
   refinementPrompt?:   string | null;
+  /** Batch 21 — reliable refine type (V1). Takes precedence over refinementPrompt. */
+  refinementType?:     RefinementType | string | null;
   /**
    * Camera Angle Director session memory.
    * List of camera angle names already used in this session.
@@ -94,6 +113,14 @@ export async function runAIPipeline(params: {
    * When absent, the AI visually inspects Reference Image 3 (visual fallback).
    */
   usedCameraAngles?:   string[];
+  /**
+   * Pose Director session memory.
+   * List of pose names already used in this session.
+   * When provided, the Pose Director deterministically selects
+   * the first garment-appropriate unused pose from the 30-pose canonical library.
+   * When absent, the AI visually inspects Reference Image 3 (visual fallback).
+   */
+  usedPoses?:          string[];
   /**
    * Called once per successfully generated image.
    * imageIndex is 0-based within this generation batch.
@@ -105,6 +132,8 @@ export async function runAIPipeline(params: {
    */
   onShotError?:        (error: Error, imageIndex: number) => Promise<void>;
   onError:             (error: Error) => Promise<void>;
+  /** Correlated pipeline trace — created at POST /renders entry. */
+  pipelineTrace:       PipelineTraceContext;
 }): Promise<void> {
   const {
     renderId,
@@ -113,31 +142,82 @@ export async function runAIPipeline(params: {
     modelAgeRange,
     modelPose,
     garmentPlacement,
+    garmentLengthSelection,
     modelIdentityId,
     outfitStyle,
     shots = 1,
     previousOutputUrl,
     refinementPrompt,
+    refinementType,
     usedCameraAngles,
+    usedPoses,
+    pipelineTrace,
   } = params;
 
   // ── AI Router: classify task + select provider ─────────────────────────────
-  const taskType    = classifyTask({ isRefinement: !!refinementPrompt, shots });
+  const resolvedRefinementType = (refinementType || refinementPrompt)
+    ? resolveRefinementType({ refinementType, refinementPrompt })
+    : null;
+
+  const taskType    = classifyTask({
+    isRefinement: !!(resolvedRefinementType || refinementPrompt),
+    shots,
+  });
   const routeDecision = routeTask(taskType, renderId);
 
   try {
-    const pipelineStart = Date.now();
+    logPipelineStage(pipelineTrace, PipelineStage.AI_PIPELINE_STARTED, { shots, taskType });
 
-    // ── Step 1: BirefNet garment preprocessing + Intelligence Engine (parallel) ──
+    // ── Batch 21: Remove Background — BirefNet path (no OpenRouter) ──────────
+    if (resolvedRefinementType === "remove_background" && previousOutputUrl) {
+      const transparentUrl = await runRemoveBackgroundRefine({
+        renderId,
+        previousOutputUrl,
+        pipelineTrace,
+      });
+      await params.onComplete(transparentUrl, 0);
+      logPipelineStage(pipelineTrace, PipelineStage.RENDER_COMPLETED, {
+        refinement: "remove_background",
+        imagesDelivered: 1,
+      });
+      return;
+    }
+
+    const garmentStartedAt = Date.now();
+    const intelligenceStartedAt = Date.now();
+
+    logPipelineStage(pipelineTrace, PipelineStage.GARMENT_PREPROCESSING_STARTED, {
+      externalProvider: PipelineExternalProvider.GARMENT_PREPROCESSING,
+    });
+    logPipelineStage(pipelineTrace, PipelineStage.INTELLIGENCE_ANALYSIS_STARTED, {
+      engine: PipelineExternalProvider.INTELLIGENCE_ENGINE,
+    });
+
     const [garmentImageUrl, intelligenceResult] = await Promise.all([
-      prepareGarmentImage(sourceImageUrl, renderId),
+      prepareGarmentImage(sourceImageUrl, renderId).then((url) => {
+        logPipelineStage(pipelineTrace, PipelineStage.GARMENT_PREPROCESSING_COMPLETED, {
+          durationMs: Date.now() - garmentStartedAt,
+          externalProvider: PipelineExternalProvider.GARMENT_PREPROCESSING,
+        });
+        return url;
+      }),
       runIntelligenceAnalysis({
         renderId,
-        garmentImageUrl:  sourceImageUrl,
+        garmentImageUrl: sourceImageUrl,
         garmentPlacement,
+        garmentLengthSelection: garmentLengthSelection as never,
         modelGender,
         modelAgeRange,
         outfitStyle,
+        shots,
+      }).then((result) => {
+        logPipelineStage(pipelineTrace, PipelineStage.INTELLIGENCE_ANALYSIS_COMPLETED, {
+          durationMs: Date.now() - intelligenceStartedAt,
+          intelligenceDurationMs: result.durationMs,
+          engine: PipelineExternalProvider.INTELLIGENCE_ENGINE,
+          usedHardFallback: result.usedHardFallback,
+        });
+        return result;
       }),
     ]);
 
@@ -152,28 +232,27 @@ export async function runAIPipeline(params: {
       renderId,
     );
 
-    // ── Step 3: Creative Director — build action-specific creative brief ────────
-    //
-    // For refinements: classify the raw button text into an ActionType and
-    // build a rich, garment-aware creative brief with action-specific
-    // locked elements.  Replaces the generic buildRefinementInstruction().
-    //
-    // For initial renders: no refinement instruction needed.
-    const creativeBrief = refinementPrompt
-      ? buildCreativeBrief(refinementPrompt, intelligenceResult.profile, { usedCameraAngles })
-      : undefined;
-    const refinementInstruction = creativeBrief?.instruction;
+    const providerModelImageUrl = isLocalIdentityImageUrl(modelImageUrl)
+      ? loadStudioTalentImageAsDataUri(modelImageUrl, renderId)
+      : modelImageUrl;
 
-    if (refinementPrompt && creativeBrief) {
-      const brief = creativeBrief;
+    // ── Step 3: Batch 21/21A/22 — Refine brief + Identity Lock + Contract ────
+    const refinementBrief = resolvedRefinementType
+      ? buildRefinementBrief(resolvedRefinementType)
+      : null;
+    const refinementInstruction = refinementBrief?.usesOpenRouter
+      ? refinementBrief.instruction
+      : undefined;
+
+    if (refinementBrief) {
       logger.info(
         {
           renderId,
-          actionType:      brief.actionType,
-          creativeConcept: brief.creativeConcept,
-          refinementPrompt,
+          refinementType: refinementBrief.type,
+          label:          refinementBrief.label,
+          usesOpenRouter: refinementBrief.usesOpenRouter,
         },
-        "Creative Director: refinement brief built",
+        "Refinement engine: brief built",
       );
     }
 
@@ -181,7 +260,9 @@ export async function runAIPipeline(params: {
       {
         renderId,
         garmentImageUrl,
-        modelImageUrl,
+        modelImageUrl: isLocalIdentityImageUrl(modelImageUrl)
+          ? `${modelImageUrl} (base64 data URI)`
+          : modelImageUrl,
         modelSource:     modelImageContext.source,
         baseModelId:     modelImageContext.baseModelId,
         category,
@@ -189,7 +270,7 @@ export async function runAIPipeline(params: {
         shots,
         taskType,
         provider:        routeDecision.provider,
-        editorialDiversity: routeDecision.supportsPerShotPrompts && shots > 1 && !refinementPrompt,
+        editorialDiversity: routeDecision.supportsPerShotPrompts && shots > 1 && !resolvedRefinementType,
         intelligenceMs:  intelligenceResult.durationMs,
       },
       "AI pipeline: preprocessing complete",
@@ -197,67 +278,92 @@ export async function runAIPipeline(params: {
 
     // ── Step 4: Editorial diversity — build per-shot prompts ──────────────────
     //
-    // When shots === 4 (Editorial) and this is not a refinement, the Creative
-    // Director generates four genuinely different shot briefs:
-    //   Shot 0: Hero front (eye contact, full body)
-    //   Shot 1: Walking three-quarter (dynamic, editorial)
-    //   Shot 2: Side profile (silhouette, architectural)
-    //   Shot 3: Magazine close crop (intimate, artistic)
-    //
-    // For Hero (1 shot) and Campaign (2 shots), shots share the same prompt
-    // and rely on non-deterministic generation for natural variation.
+    // When shots === 1 (Hero), 2 (Campaign), or 4 (Editorial) and this is not
+    // a refinement, the Pose Selection Engine generates distinct per-shot briefs
+    // from the professional pose library.
     const basePrompt = intelligenceResult.prompt ?? "";
 
     const perShotPrompts: string[] | undefined =
-      routeDecision.supportsPerShotPrompts && shots === 4 && !refinementPrompt
-        ? buildEditorialShotPrompts(basePrompt, intelligenceResult.profile)
+      routeDecision.supportsPerShotPrompts && !resolvedRefinementType
+        ? buildShotPrompts(basePrompt, intelligenceResult.profile, {
+            shootType: imageCountToShootType(shots),
+            modelGender,
+          })
         : undefined;
 
     if (perShotPrompts) {
       logger.info(
-        { renderId, shots, editorialShotCount: perShotPrompts.length },
-        "Creative Director: editorial diversity — 4 distinct shot briefs generated",
+        {
+          renderId,
+          generationSessionId: pipelineTrace.generationSessionId,
+          shots,
+          perShotPromptCount: perShotPrompts.length,
+          diversityMode: imageCountToShootType(shots),
+        },
+        "Creative Director: per-shot pose diversity briefs generated",
       );
     }
 
-    // ── Step 5: OpenRouter image generation ───────────────────────────────────
+    logPipelineStage(pipelineTrace, PipelineStage.PROMPT_GENERATION_COMPLETED, {
+      shots,
+      perShotPromptCount: perShotPrompts?.length ?? 1,
+      provider: routeDecision.provider,
+    });
+
     const photoshootResult = await getRenderingEngine().generatePhotoshoot({
       garmentImageUrl,
-      modelImageUrl,
+      modelImageUrl: providerModelImageUrl,
       prompt: basePrompt,
       shots,
       perShotPrompts,
       previousOutputUrl: previousOutputUrl ?? undefined,
       refinementInstruction,
+      pipelineTrace,
     });
 
     if (photoshootResult.images.length === 0) {
       throw new Error("OpenRouter returned zero images");
     }
 
+    logPipelineStage(pipelineTrace, PipelineStage.OPENROUTER_RESPONSE_RECEIVED, {
+      provider: photoshootResult.provider,
+      model: photoshootResult.model,
+      shotsReturned: photoshootResult.images.length,
+      durationMs: photoshootResult.durationMs,
+      openRouterRetryCount: pipelineTrace.openRouterRetryCount,
+    });
+
     logger.info(
       {
         renderId,
-        provider:       photoshootResult.provider,
-        model:          photoshootResult.model,
-        durationMs:     photoshootResult.durationMs,
+        generationSessionId: pipelineTrace.generationSessionId,
+        provider: photoshootResult.provider,
+        model: photoshootResult.model,
+        durationMs: photoshootResult.durationMs,
         shotsRequested: shots,
-        shotsReturned:  photoshootResult.images.length,
+        shotsReturned: photoshootResult.images.length,
       },
       "AI pipeline: generation complete",
     );
 
-    // ── Step 6: Upload each image to fal CDN and invoke onComplete ────────────
-    //
-    // Uploads run serially to avoid hammering the CDN, but each completes its
-    // DB write immediately so the UI can stream results as they arrive.
     const successfulIndices = new Set(photoshootResult.images.map((img) => img.index));
 
     for (const image of photoshootResult.images) {
-      const outputImageUrl = await uploadBase64Image(image.url, renderId);
+      logPipelineStage(pipelineTrace, PipelineStage.R2_UPLOAD_STARTED, {
+        imageIndex: image.index,
+      });
+
+      const outputImageUrl = await uploadBase64Image(image.url, renderId, {
+        pipelineTrace,
+        imageIndex: image.index,
+      });
 
       logger.info(
-        { renderId, imageIndex: image.index, outputImageUrl },
+        {
+          renderId,
+          generationSessionId: pipelineTrace.generationSessionId,
+          imageIndex: image.index,
+        },
         "AI pipeline: image uploaded",
       );
 
@@ -280,21 +386,23 @@ export async function runAIPipeline(params: {
       }
     }
 
-    const totalMs = Date.now() - pipelineStart;
-
-    logger.info(
-      {
-        renderId,
-        totalMs,
-        generationMs:    photoshootResult.durationMs,
-        imagesDelivered: photoshootResult.images.length,
-      },
-      "AI pipeline: pipeline complete",
-    );
+    logPipelineStage(pipelineTrace, PipelineStage.RENDER_COMPLETED, {
+      generationMs: photoshootResult.durationMs,
+      imagesDelivered: photoshootResult.images.length,
+      openRouterRetryCount: pipelineTrace.openRouterRetryCount,
+    });
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
+    traceRenderFailure(PipelineStage.RENDER_FAILED, err, {
+      pipelineTrace,
+      openRouterRetryCount: pipelineTrace.openRouterRetryCount,
+    });
     logger.error(
-      { renderId, err: err.message },
+      {
+        renderId,
+        generationSessionId: pipelineTrace.generationSessionId,
+        err: err.message,
+      },
       "AI pipeline: pipeline failed",
     );
     await params.onError(err);

@@ -5,8 +5,13 @@
  * StudioLayer AI API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { RenderAssetLineage } from './renderAssetLineage';
+import type { RenderAssetType } from './renderAssetType';
+import type { RenderCropPreset } from './renderCropPreset';
+import type { RenderGenerationType } from './renderGenerationType';
 import type { RenderLocationEnvironment } from './renderLocationEnvironment';
 import type { RenderModelPersona } from './renderModelPersona';
+import type { RenderRefinementType } from './renderRefinementType';
 import type { RenderStatus } from './renderStatus';
 
 export interface Render {
@@ -26,4 +31,43 @@ export interface Render {
      * @nullable
      */
   parentRenderId?: number | null;
+  /**
+     * Canonical generation session identifier. All renders from the same Studio generation share this UUID. Refinements inherit the parent session. Gallery Shoot identity is derived from this field.
+     * @nullable
+     */
+  generationSessionId?: string | null;
+  /** Workspace generation type — Hero, Campaign, or Editorial. Inherited from the parent on refinements. */
+  generationType?: RenderGenerationType;
+  /** Studio Credits consumed along the lineage to produce this render. */
+  studioCreditsUsed?: number;
+  /** Refinement steps recorded for this render in the Creative Ledger. */
+  refinementCount?: number;
+  /**
+     * ID of the immutable Master Asset this render belongs to. Master assets reference themselves.
+     * @nullable
+     */
+  masterRenderId?: number | null;
+  /** Immutable version number in the asset lineage. Master Asset = 1; each refinement increments parent version by 1. */
+  assetVersion?: number;
+  /** Explicit asset type — never inferred from filenames or URLs. */
+  assetType?: RenderAssetType;
+  /**
+     * AI refinement that created this asset, when applicable.
+     * @nullable
+     */
+  refinementType?: RenderRefinementType;
+  /**
+     * Version number of the parent asset this was derived from.
+     * @nullable
+     */
+  sourceAssetVersion?: number | null;
+  /**
+     * Crop preset for crop variants. No AI metadata required for crops.
+     * @nullable
+     */
+  cropPreset?: RenderCropPreset;
+  /** Complete auditable lineage record for this asset (Batch 23A). */
+  assetLineage?: RenderAssetLineage;
+  /** Studio workspace identifier. Same as userId in Version 1. */
+  workspaceId?: number;
 }

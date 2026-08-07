@@ -46,6 +46,18 @@ export interface GarmentProfile {
   season: string[];
   /** e.g. ["office", "casual", "evening", "sport"]. */
   occasion: string[];
+  /** True when the garment has visible, usable pockets. Null = infer from category. */
+  hasPockets?: boolean | null;
+  /** True for dresses, maxi skirts, and other flowing silhouettes. */
+  isFlowingGarment?: boolean | null;
+  /** Overall outline — fitted, relaxed, A-line, structured, flowing, boxy. */
+  silhouette?: string;
+  /** How the fabric behaves — structured, flowing, crisp, stretch, natural drape. */
+  fabricBehaviour?: string;
+  /** Movement potential during posing — minimal, moderate, high. */
+  fabricMovementPotential?: "minimal" | "moderate" | "high";
+  /** Human-readable construction summary for prompt preservation. */
+  garmentStructure?: string;
 }
 
 // ── Style Modes ───────────────────────────────────────────────────────────────

@@ -1,0 +1,305 @@
+// ---------------------------------------------------------------------------
+// Gallery Shoots — generation session grouping with legacy fallback
+//
+// Canonical model: one generationSessionId = one Gallery Shoot.
+// Legacy renders without generationSessionId use heuristic batch grouping.
+// ---------------------------------------------------------------------------
+
+import {
+  galleryGenerationCreditLabel,
+  type GenerationType,
+} from '@workspace/studio-credit-engine';
+import {
+  getAncestorChain,
+  type LedgerRender,
+} from '@/lib/creative-ledger';
+import type { CreativeLedgerCardRender } from '@/components/gallery/creative-ledger-card';
+
+/** Images per original generation — extensible for future storyboard / video. */
+export const SHOOT_BATCH_SIZE: Record<GenerationType, number> = {
+  hero: 1,
+  campaign: 2,
+  editorial: 4,
+};
+
+export const SHOOT_TYPE_LABEL: Record<GenerationType, string> = {
+  hero: 'Hero',
+  campaign: 'Campaign',
+  editorial: 'Editorial',
+};
+
+/** Roots created in the same API request fall within this window (legacy only). */
+const BATCH_WINDOW_MS = 120_000;
+
+export interface GalleryShoot {
+  /** Stable id — generationSessionId (canonical) or `shoot-{rootBatchId}` (legacy). */
+  id: string;
+  rootId: number;
+  generationType: GenerationType;
+  createdAt: Date;
+  /** Current completed image(s) — latest tip per original slot. */
+  images: CreativeLedgerCardRender[];
+  sourceImageUrl: string | null;
+  modelPersona?: string;
+  locationEnvironment?: string;
+  /** Studio Credits for the whole Shoot (one generation transaction). */
+  studioCreditsUsed: number;
+  /** Highest refinement depth reached in this Shoot. */
+  refinementCount: number;
+  imageCount: number;
+}
+
+function parseTime(value: string | Date | undefined): number {
+  if (value == null) return 0;
+  return new Date(value).getTime();
+}
+
+function generationTypeOf(render: LedgerRender): GenerationType {
+  return (render.generationType ?? 'hero') as GenerationType;
+}
+
+/** Walk parent chain to the original generation root. */
+export function shootRootForRender<T extends LedgerRender>(
+  allRenders: T[],
+  renderId: number,
+): T | undefined {
+  return getAncestorChain(allRenders, renderId)[0];
+}
+
+/** Latest completed descendant for a root slot (handles refinements). */
+export function tipRenderForRoot<T extends CreativeLedgerCardRender>(
+  rootId: number,
+  allRenders: T[],
+): T | undefined {
+  const byId = new Map(allRenders.map((r) => [r.id, r]));
+  const childrenByParent = new Map<number, T[]>();
+
+  for (const render of allRenders) {
+    if (render.parentRenderId == null) continue;
+    const siblings = childrenByParent.get(render.parentRenderId) ?? [];
+    siblings.push(render);
+    childrenByParent.set(render.parentRenderId, siblings);
+  }
+
+  let current = byId.get(rootId);
+  if (!current) return undefined;
+
+  for (;;) {
+    const children = childrenByParent.get(current.id);
+    if (!children?.length) break;
+    current = [...children].sort(
+      (a, b) => parseTime(b.createdAt) - parseTime(a.createdAt) || b.id - a.id,
+    )[0];
+  }
+
+  if (
+    current.status === 'completed' &&
+    typeof current.outputImageUrl === 'string' &&
+    current.outputImageUrl.length > 0
+  ) {
+    return current;
+  }
+
+  return undefined;
+}
+
+/** Legacy: group root renders from the same generation batch into Shoot batches. */
+export function groupRootRendersIntoBatches(
+  roots: CreativeLedgerCardRender[],
+): CreativeLedgerCardRender[][] {
+  const sorted = [...roots].sort(
+    (a, b) => parseTime(a.createdAt) - parseTime(b.createdAt) || a.id - b.id,
+  );
+
+  const assigned = new Set<number>();
+  const batches: CreativeLedgerCardRender[][] = [];
+
+  for (const root of sorted) {
+    if (assigned.has(root.id)) continue;
+
+    const type = generationTypeOf(root);
+    const expectedSize = SHOOT_BATCH_SIZE[type];
+    const rootTime = parseTime(root.createdAt);
+    const source = root.sourceImageUrl ?? '';
+
+    const cluster = sorted.filter(
+      (candidate) =>
+        !assigned.has(candidate.id) &&
+        candidate.parentRenderId == null &&
+        generationTypeOf(candidate) === type &&
+        (candidate.sourceImageUrl ?? '') === source &&
+        Math.abs(parseTime(candidate.createdAt) - rootTime) < BATCH_WINDOW_MS,
+    );
+
+    cluster.sort((a, b) => a.id - b.id);
+
+    const batchStartIdx = cluster.findIndex((r) => r.id === root.id);
+    const slice = cluster.slice(batchStartIdx, batchStartIdx + expectedSize);
+
+    if (slice.length === expectedSize) {
+      slice.forEach((r) => assigned.add(r.id));
+      batches.push(slice);
+      continue;
+    }
+
+    if (type === 'hero') {
+      assigned.add(root.id);
+      batches.push([root]);
+      continue;
+    }
+
+    cluster.forEach((r) => assigned.add(r.id));
+    batches.push(cluster);
+  }
+
+  return batches;
+}
+
+function studioCreditsForShootBatch(batch: CreativeLedgerCardRender[]): number {
+  const fromRow = batch[0]?.studioCreditsUsed;
+  if (fromRow != null && fromRow > 0) {
+    return fromRow;
+  }
+  return galleryGenerationCreditLabel(generationTypeOf(batch[0]!));
+}
+
+function refinementCountForShoot(
+  shootRootId: number,
+  batchRootIds: Set<number>,
+  allRenders: CreativeLedgerCardRender[],
+): number {
+  let max = 0;
+  for (const render of allRenders) {
+    const root = shootRootForRender(allRenders, render.id);
+    if (!root || !batchRootIds.has(root.id)) continue;
+    if (Math.min(...batchRootIds) !== shootRootId) continue;
+    max = Math.max(max, render.refinementCount ?? 0);
+  }
+  return max;
+}
+
+function refinementCountForSession(
+  sessionId: string,
+  allRenders: CreativeLedgerCardRender[],
+): number {
+  let max = 0;
+  for (const render of allRenders) {
+    if (render.generationSessionId !== sessionId) continue;
+    max = Math.max(max, render.refinementCount ?? 0);
+  }
+  return max;
+}
+
+function buildShootFromRoots(
+  id: string,
+  roots: CreativeLedgerCardRender[],
+  allRenders: CreativeLedgerCardRender[],
+): GalleryShoot | null {
+  const sortedRoots = [...roots].sort((a, b) => a.id - b.id);
+  const batchRootIds = new Set(sortedRoots.map((r) => r.id));
+  const shootRootId = sortedRoots[0]!.id;
+  const images = sortedRoots
+    .map((root) => tipRenderForRoot(root.id, allRenders))
+    .filter((r): r is CreativeLedgerCardRender => r != null);
+
+  if (images.length === 0) return null;
+
+  return {
+    id,
+    rootId: shootRootId,
+    generationType: generationTypeOf(sortedRoots[0]!),
+    createdAt: new Date(sortedRoots[0]!.createdAt ?? Date.now()),
+    images,
+    sourceImageUrl: sortedRoots[0]!.sourceImageUrl ?? null,
+    modelPersona: (sortedRoots[0] as { modelPersona?: string }).modelPersona,
+    locationEnvironment: (sortedRoots[0] as { locationEnvironment?: string })
+      .locationEnvironment,
+    studioCreditsUsed: studioCreditsForShootBatch(sortedRoots),
+    refinementCount: refinementCountForShoot(shootRootId, batchRootIds, allRenders),
+    imageCount: images.length,
+  };
+}
+
+/** Canonical grouping — one generationSessionId per Gallery Shoot. */
+function buildSessionGalleryShoots(
+  allRenders: CreativeLedgerCardRender[],
+): GalleryShoot[] {
+  const sessionIds = new Set<string>();
+  for (const render of allRenders) {
+    if (render.generationSessionId) {
+      sessionIds.add(render.generationSessionId);
+    }
+  }
+
+  const shoots: GalleryShoot[] = [];
+
+  for (const sessionId of sessionIds) {
+    const sessionRenders = allRenders.filter(
+      (r) => r.generationSessionId === sessionId,
+    );
+    const roots = sessionRenders.filter((r) => r.parentRenderId == null);
+    const shoot = buildShootFromRoots(sessionId, roots, allRenders);
+    if (shoot) {
+      shoot.refinementCount = refinementCountForSession(sessionId, allRenders);
+      shoots.push(shoot);
+    }
+  }
+
+  return shoots;
+}
+
+/** Legacy heuristic grouping for renders without generationSessionId. */
+function buildLegacyGalleryShoots(
+  allRenders: CreativeLedgerCardRender[],
+): GalleryShoot[] {
+  const legacyRenders = allRenders.filter((r) => !r.generationSessionId);
+  if (legacyRenders.length === 0) return [];
+
+  const roots = legacyRenders.filter((r) => r.parentRenderId == null);
+  const batches = groupRootRendersIntoBatches(roots);
+
+  return batches
+    .map((batch) => {
+      const shootRootId = Math.min(...batch.map((r) => r.id));
+      return buildShootFromRoots(`shoot-${shootRootId}`, batch, legacyRenders);
+    })
+    .filter((shoot): shoot is GalleryShoot => shoot != null);
+}
+
+/** Build Shoot entities from the flat render list returned by the API. */
+export function buildGalleryShoots(
+  allRenders: CreativeLedgerCardRender[],
+): GalleryShoot[] {
+  if (!Array.isArray(allRenders)) {
+    return [];
+  }
+
+  const sessionShoots = buildSessionGalleryShoots(allRenders);
+  const legacyShoots = buildLegacyGalleryShoots(allRenders);
+
+  return [...sessionShoots, ...legacyShoots].sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+}
+
+/** Completed Shoots ready for Gallery display. */
+export function filterCompletedShoots(shoots: GalleryShoot[]): GalleryShoot[] {
+  return shoots.filter((shoot) => shoot.imageCount > 0);
+}
+
+export function formatShootDate(date: Date): string {
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+export function findShootForRender(
+  shoots: GalleryShoot[],
+  renderId: number,
+): GalleryShoot | undefined {
+  return shoots.find((shoot) => shoot.images.some((img) => img.id === renderId));
+}
+
+export { filterCompletedRenders } from '@/lib/creative-ledger';

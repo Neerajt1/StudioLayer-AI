@@ -4,118 +4,164 @@
 // Simplified AI-first workflow:
 //   1. Upload garment photo
 //   2. Choose model
-//   → Create
+//   → Create → Refine (Batch 21)
 //
-// After generation, a "Refine Image" panel lets users request targeted
-// changes via free-text + suggestion chips. Each refinement creates a new
-// render row linked to the original via parentRenderId (version history).
-//
-// Preset / outfitStyle / completeTheLook / imageCount code is preserved in
-// the codebase but disconnected from this UI — available for enterprise.
+// V1 AI Refinements: Remove Background, Enhance Model Face, Enhance Garment (1 credit each).
+// Free Studio Tools: Crop, Revert, Zoom, Download.
 // ---------------------------------------------------------------------------
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { Link } from 'wouter';
 import JSZip from 'jszip';
 import {
   useCreateRender,
   useGetRenderUsage,
   useGetRender,
-  useCompleteOnboarding,
   useGetMe,
   useGetIdentities,
   getGetRenderUsageQueryKey,
-  getGetMeQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Sidebar } from '@/components/layout/sidebar';
-import { Footer } from '@/components/layout/footer';
+import { withErrorContactHelper } from '@/lib/studio-contact';
+import { formatDownloadPreparingLabel } from '@/lib/download-preparing-label';
+import { useDownloadInFlight } from '@/hooks/use-download-in-flight';
+import { AppShell } from '@/components/layout/app-shell';
 import { FileUpload } from '@/components/ui/file-upload';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Camera, Download, Sparkles, Wand2 } from 'lucide-react';
+import { Camera, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { OnboardingWizard } from '@/components/ui/onboarding-wizard';
-import { ModelGallery } from '@/components/studio/model-gallery';
+import { SelectedTalentSummary } from '@/components/studio/selected-talent-summary';
+import { StudioBrandWatermark } from '@/components/studio/studio-brand-watermark';
+import {
+  StudioEditorialCanvas,
+  StudioEditorialFailedState,
+  StudioEditorialImage,
+  StudioEditorialPlaceholder,
+  StudioEditorialProgressOverlay,
+  StudioResultToolbar,
+} from '@/components/studio/studio-editorial-stage';
+import {
+  StudioImageInspector,
+  type StudioImageInspectionTarget,
+} from '@/components/studio/studio-image-inspector';
+import { ShootTypeSelector } from '@/components/studio/shoot-type-selector';
+import {
+  StudioToggleOption,
+  StudioWorkspaceButton,
+} from '@/components/studio/studio-workspace-controls';
+import { EditorialPageHeader } from '@/components/design-system/editorial-page-header';
+import { AccountStatementDownloadLink } from '@/components/account/account-statement-download-link';
+import type { ModelIdentity } from '@/components/studio/talent/types';
 import { cn } from '@/lib/utils';
+import { fetchEditorialImageBlob } from '@/lib/download-image';
+import { EditorialDownloadMenu } from '@/components/shared/editorial-download-menu';
+import {
+  isComplimentaryCreditExhaustedForUser,
+  isComplimentaryMembershipTier,
+  isPremiumShootTypeLocked,
+  isStudioCreditLimitBlocked,
+  resolveStudioAdminFlag,
+} from '@workspace/studio-credit-engine';
+import { useStudioWorkflow } from '@/context/studio-workflow-context';
+import type { GarmentPlacement } from '@/lib/studio-workflow';
+import {
+  buildGenerationRequest,
+  buildRefinementRequest,
+  canGenerateStudioWorkflow,
+  GARMENT_LENGTH_OPTIONS,
+  validateStudioWorkflow,
+} from '@/lib/studio-workflow';
+import { StudioRefinePanel } from '@/components/studio/studio-refine-panel';
+import type { RefinementType } from '@/lib/refinement-types';
+import {
+  cropImageToPreset,
+  revokeCropObjectUrl,
+  type CropPreset,
+} from '@/lib/studio-crop';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const GARMENT_TYPES = [
-  { value: 'upper_body', label: 'Top',         sub: 'Shirts · Jackets · Knitwear' },
-  { value: 'lower_body', label: 'Bottom',       sub: 'Jeans · Trousers · Skirts' },
-  { value: 'full_body',  label: 'Full Outfit',  sub: 'Dresses · Jumpsuits · Suits' },
+  { value: 'upper_body', label: 'Topwear',     sub: 'Shirts · T-Shirts · Jackets · Knitwear' },
+  { value: 'lower_body', label: 'Bottomwear',  sub: 'Jeans · Trousers · Shorts · Skirts' },
+  { value: 'full_body',  label: 'Full Outfit', sub: 'Dresses · Jumpsuits · Co-ords · Suits' },
 ] as const;
 
-const REFINEMENT_CHIPS = [
-  'Change Background',
-  'Replace Shirt',
-  'Replace Trousers',
-  'Replace Shoes',
-  'Change Pose',
-  'Change Lighting',
-  'Change Camera Angle',
-  'Add Accessories',
-];
-
-/**
- * Canonical camera angle library — mirrors the backend CANONICAL_CAMERA_ANGLES.
- * Order must match the backend exactly: the backend deterministically selects
- * ANGLES[usedCameraAngles.length] (first unused), so the frontend can predict
- * which angle was just used and add it to the session memory list.
- */
-const CANONICAL_CAMERA_ANGLES = [
-  'Straight Front Editorial',
-  'Three-Quarter Left',
-  'Three-Quarter Right',
-  'Full Left Profile',
-  'Full Right Profile',
-  'Rear Three-Quarter Left',
-  'Rear Three-Quarter Right',
-  'Full Back View',
-  'Low Angle Fashion',
-  'High Angle Editorial',
-  'Walking Towards Camera',
-  'Walking Away From Camera',
-] as const;
-
-/** Returns true when the refinement text is a camera angle change request. */
-function isCameraAngleAction(text: string): boolean {
-  const lower = text.toLowerCase();
-  return lower.includes('camera') || lower.includes('angle') || lower.includes('camera angle');
+/** Surface API error detail in development instead of a generic toast only. */
+function renderApiErrorDescription(error: unknown): string {
+  if (import.meta.env.DEV) {
+    const err = error as {
+      message?: string;
+      response?: { data?: { error?: string; details?: { message?: string } } };
+    };
+    const apiMessage =
+      err.response?.data?.details?.message ??
+      err.response?.data?.error ??
+      err.message;
+    if (apiMessage) return apiMessage;
+  }
+  return 'Please try again in a few moments.';
 }
 
 const IMAGE_COUNT_OPTIONS = [
-  { value: 1 as const, label: 'Hero',      sub: '1 Editorial Image' },
-  { value: 2 as const, label: 'Campaign',  sub: '2 Editorial Images' },
-  { value: 4 as const, label: 'Editorial', sub: '4 Editorial Images' },
+  { value: 1 as const, label: 'Hero Shot',             sub: '1 Editorial Image' },
+  { value: 2 as const, label: 'Campaign Collections',  sub: '2 Editorial Images' },
+  { value: 4 as const, label: 'Editorial Portraits',   sub: '4 Editorial Images' },
 ];
 
 const SHOOT_TYPE_LABEL: Record<1 | 2 | 4, string> = {
-  1: 'Hero',
-  2: 'Campaign',
-  4: 'Editorial',
+  1: 'Hero Shot',
+  2: 'Campaign Collections',
+  4: 'Editorial Portraits',
 };
 
 const FAQ_ITEMS = [
   {
-    q: 'Who legally owns the copyright of the final rendered fashion assets?',
-    a: 'You do. Every single image generated inside your dashboard is 100% commercially owned by your brand, completely royalty-free.',
+    q: 'What is StudioLayer AI?',
+    a: 'StudioLayer AI creates professional fashion campaign imagery from a single garment photograph. Simply upload your garment, choose a Studio Talent, and generate premium editorial visuals in minutes—without organizing a traditional photoshoot.',
   },
   {
-    q: 'What style of garment photography yields the best results?',
-    a: 'Clear photos shot under bright, even lighting against a neutral background — flat-lay, hanger, or mannequin — allow our vision engine to isolate textures flawlessly.',
+    q: 'What kind of garment photos work best?',
+    a: 'For the best results, upload a clear photograph of your garment on a plain background. Hanger photographs work best, provided the garment is fully visible, evenly lit, and free from heavy wrinkles or obstructions.',
   },
   {
-    q: 'Can I cancel or alter my subscription tier at any time?',
-    a: 'Yes. You can upgrade, downgrade, or pause your studio access instantly inside your billing tab with zero exit contracts.',
+    q: 'Can I choose my Studio Talent?',
+    a: 'Yes.\n\nStudioLayer AI includes a curated Talent Library featuring multiple ethnicities, age groups, and body types. Once selected, the same Studio Talent remains visually consistent throughout your campaign.',
+  },
+  {
+    q: 'Do I own the images I create?',
+    a: 'Yes.\n\nImages generated for your Studio are yours to download and use in accordance with our Terms of Service across ecommerce, websites, marketplaces, advertising, social media, and marketing campaigns.',
+  },
+  {
+    q: 'Will my garment colour, texture, and details remain accurate?',
+    a: "StudioLayer AI is crafted to faithfully preserve your garment's colour, texture, silhouette, and key construction details while placing it naturally on your selected Studio Talent. Each editorial image is produced with the care and precision expected of premium fashion imagery.",
+  },
+  {
+    q: 'How long does it take to create editorial images?',
+    a: 'Most editorial images are ready within a few minutes. Timing may vary depending on image complexity and current studio demand.',
+  },
+  {
+    q: 'What happens after my complimentary Studio Credit is used?',
+    a: 'Every new Studio receives one complimentary Studio Credit for a Hero Shot.\n\nOnce your complimentary Studio Credit has been used, continue creating with a Studio Membership.',
+  },
+  {
+    q: 'Is my uploaded data secure?',
+    a: 'Yes.\n\nYour uploaded garments and editorial images remain associated with your Studio. We take reasonable measures to protect your content and account information.',
   },
 ];
 
@@ -150,68 +196,63 @@ function makeRefetchInterval(enabled: boolean) {
 // ---------------------------------------------------------------------------
 
 export default function StudioPage() {
-  // ── Form state ─────────────────────────────────────────────────────────────
-  const [sourceImages, setSourceImages]         = useState<string[]>([]);
-  const [garmentPlacement, setGarmentPlacement] = useState('');
-  const [selectedIdentityId, setSelectedIdentityId] = useState('');
+  const {
+    workflow,
+    setSourceImageUrl,
+    setGarmentPlacement,
+    setGarmentLengthSelection,
+    setImageCount,
+    resetWorkflow,
+    patchWorkflow,
+  } = useStudioWorkflow();
+
   const [activeRenderIds, setActiveRenderIds]   = useState<number[]>([]);
+  const [rootRenderIds, setRootRenderIds]       = useState<number[]>([]);
+  const [masterOutputUrls, setMasterOutputUrls] = useState<Record<number, string>>({});
+  const [selectedRefineSlot, setSelectedRefineSlot] = useState(0);
+  const [displayUrlOverrides, setDisplayUrlOverrides] = useState<Record<number, string>>({});
+  const [cropPresets, setCropPresets]           = useState<Record<number, CropPreset>>({});
+  const [refineInFlight, setRefineInFlight]     = useState(false);
+  const [activeRefinement, setActiveRefinement] = useState<RefinementType | null>(null);
   const [showValidation, setShowValidation]     = useState(false);
-  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
-  const [resetKey, setResetKey]                 = useState(0);
 
-  // ── Image count state ──────────────────────────────────────────────────────
-  const [imageCount, setImageCount] = useState<1 | 2 | 4>(1);
+  const [showProRequiredDialog, setShowProRequiredDialog] = useState(false);
+  const [imageInspection, setImageInspection] = useState<StudioImageInspectionTarget | null>(null);
+  const [awaitingResultDisplay, setAwaitingResultDisplay] = useState(false);
+  const [loadedResultUrls, setLoadedResultUrls] = useState<Set<string>>(() => new Set());
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const completionHandledRef = useRef('');
+  const creditSyncBatchRef = useRef('');
 
-  // ── Refinement state ───────────────────────────────────────────────────────
-  const [refinementText, setRefinementText] = useState('');
-  const [isRefining, setIsRefining]         = useState(false);
-  // Which slot (index into activeRenderIds) the Refine panel targets.
-  const [selectedRefineIndex, setSelectedRefineIndex] = useState(0);
-  /**
-   * Camera Angle Director session memory.
-   * Tracks which angles from CANONICAL_CAMERA_ANGLES have been used in this
-   * session so the backend can deterministically pick the next unused angle.
-   * Reset whenever a new photoshoot is started.
-   */
-  const [cameraAnglesUsed, setCameraAnglesUsed] = useState<string[]>([]);
+  const workflowValidation = validateStudioWorkflow(workflow);
 
-  // ── "Refine from Gallery" — reads sessionStorage set by gallery.tsx ────────
+  // ── Gallery → Workspace handoff (sessionStorage) ───────────────────────────
   useEffect(() => {
     const stored = sessionStorage.getItem('studioRefineRender');
     if (!stored) return;
     try {
       const rr = JSON.parse(stored) as { id: number; sourceImageUrl: string; outputImageUrl?: string | null };
       if (rr?.id && rr?.sourceImageUrl) {
-        setSourceImages([rr.sourceImageUrl]);
+        patchWorkflow({ sourceImageUrl: rr.sourceImageUrl });
         setActiveRenderIds([rr.id]);
-        setSelectedRefineIndex(0);
         sessionStorage.removeItem('studioRefineRender');
-        setTimeout(() => {
-          document.getElementById('refine-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 700);
       }
     } catch { /* ignore malformed data */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [patchWorkflow]);
 
   // ── API hooks ──────────────────────────────────────────────────────────────
   const queryClient  = useQueryClient();
   const { toast }    = useToast();
   const { data: user }                            = useGetMe();
-  const { data: usage, isLoading: usageLoading }  = useGetRenderUsage();
+  const { data: usage }  = useGetRenderUsage();
   const { data: identities = [] }                 = useGetIdentities();
   const createRender = useCreateRender();
-
-  // ── Onboarding ─────────────────────────────────────────────────────────────
-  const completeOnboarding = useCompleteOnboarding();
-  const showOnboarding     = !onboardingDismissed && user !== undefined && user.hasCompletedOnboarding === false;
-
-  const handleCompleteOnboarding = () => {
-    setOnboardingDismissed(true);
-    completeOnboarding.mutate(undefined, {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() }),
-    });
-  };
+  const {
+    inFlight: downloadAllInFlight,
+    elapsedSec: downloadAllElapsedSec,
+    run: runDownloadAll,
+  } = useDownloadInFlight();
 
   // ── Multi-render polling — 4 unconditional hooks (Rule of Hooks) ───────────
   const id0 = activeRenderIds[0] ?? 0;
@@ -231,19 +272,6 @@ export default function StudioPage() {
     (r) => r?.status === 'processing' || r?.status === 'pending',
   );
 
-  const resolvedOutputUrl: string | null = (() => {
-    for (const render of allRenderData) {
-      if (!render) continue;
-      const r = render as unknown as Record<string, unknown>;
-      for (const key of ['outputImageUrl', 'outputUrl', 'url', 'image_url']) {
-        const v = r[key];
-        if (typeof v === 'string' && v.startsWith('http')) return v;
-      }
-    }
-    return null;
-  })();
-
-  // All output URLs indexed by slot — used for the multi-image grid.
   const allOutputUrls: (string | null)[] = allRenderData.map((render) => {
     if (!render) return null;
     const r = render as unknown as Record<string, unknown>;
@@ -254,60 +282,178 @@ export default function StudioPage() {
     return null;
   });
 
+  const getSlotDisplayUrl = (slotIndex: number): string | null =>
+    displayUrlOverrides[slotIndex] ?? allOutputUrls[slotIndex] ?? null;
+
+  const resolvedOutputUrl: string | null = getSlotDisplayUrl(selectedRefineSlot)
+    ?? getSlotDisplayUrl(0);
+
   const hasOutput    = allRenderData.some((r) => r?.status === 'completed') && !!resolvedOutputUrl;
-  const hasImage     = sourceImages.length > 0 && !!sourceImages[0];
-  const limitBlocked = usage !== undefined && !usage.canRender;
-  const canRender    = hasImage && !!garmentPlacement && !!selectedIdentityId
-    && !createRender.isPending && !isProcessing && !limitBlocked;
+
+  const completedOutputSlots = activeRenderIds
+    .map((id, index) => ({
+      id,
+      url: allOutputUrls[index],
+      status: allRenderData[index]?.status,
+    }))
+    .filter((slot) => slot.status === 'completed' && typeof slot.url === 'string');
+
+  const allResultsDisplayed =
+    completedOutputSlots.length > 0 &&
+    completedOutputSlots.every((slot) => loadedResultUrls.has(slot.url!));
+
+  const showGenerationProgress = awaitingResultDisplay && !allResultsDisplayed;
+
+  const isGenerationBusy =
+    awaitingResultDisplay || createRender.isPending || isProcessing || refineInFlight;
+
+  const isComplimentaryTier = isComplimentaryMembershipTier(usage);
+  const complimentaryExhausted = isComplimentaryCreditExhaustedForUser(user, usage);
+  const limitBlocked = isStudioCreditLimitBlocked(usage) && !resolveStudioAdminFlag(user, usage);
+  const canCreate    = canGenerateStudioWorkflow(workflow, {
+    limitBlocked,
+    isPending: createRender.isPending,
+    isProcessing: isGenerationBusy,
+  });
+
+  const beginGenerationFeedback = (preloadedUrls: string[] = []) => {
+    setAwaitingResultDisplay(true);
+    setLoadedResultUrls(new Set(preloadedUrls));
+    setGenerationStartedAt(Date.now());
+    setElapsedSec(0);
+  };
+
+  const resetGenerationFeedback = () => {
+    setAwaitingResultDisplay(false);
+    setLoadedResultUrls(new Set());
+    setGenerationStartedAt(null);
+    setElapsedSec(0);
+  };
+
+  const markResultImageLoaded = (url: string) => {
+    setLoadedResultUrls((prev) => {
+      if (prev.has(url)) return prev;
+      const next = new Set(prev);
+      next.add(url);
+      return next;
+    });
+  };
+
+  const bindResultImageRef = (url: string) => (node: HTMLImageElement | null) => {
+    if (node?.complete && node.naturalWidth > 0) {
+      markResultImageLoaded(url);
+    }
+  };
+
+  useEffect(() => {
+    if (isComplimentaryTier && workflow.imageCount !== 1) {
+      setImageCount(1);
+    }
+  }, [isComplimentaryTier, workflow.imageCount, setImageCount]);
+
+  useEffect(() => {
+    if (!awaitingResultDisplay || generationStartedAt == null) return;
+    const tick = () => {
+      setElapsedSec(Math.floor((Date.now() - generationStartedAt) / 1000));
+    };
+    tick();
+    const intervalId = window.setInterval(tick, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [awaitingResultDisplay, generationStartedAt]);
+
+  useEffect(() => {
+    if (!awaitingResultDisplay || activeRenderIds.length === 0) return;
+
+    const statuses = activeRenderIds.map((_, index) => allRenderData[index]?.status);
+    const allSettled = statuses.every(
+      (status) => status === 'completed' || status === 'failed',
+    );
+    if (!allSettled) return;
+
+    const anyCompleted = statuses.some((status) => status === 'completed');
+    if (!anyCompleted) {
+      resetGenerationFeedback();
+    }
+  }, [awaitingResultDisplay, activeRenderIds, allRenderData]);
+
+  // Refresh confirmed balance once a render batch settles (credits completed or restored).
+  useEffect(() => {
+    if (activeRenderIds.length === 0) return;
+
+    const batchKey = activeRenderIds.join(',');
+    const statuses = activeRenderIds.map((_, index) => allRenderData[index]?.status);
+    const allSettled = statuses.every(
+      (status) => status === 'completed' || status === 'failed',
+    );
+    if (!allSettled || creditSyncBatchRef.current === batchKey) return;
+
+    creditSyncBatchRef.current = batchKey;
+    void queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
+  }, [activeRenderIds, allRenderData, queryClient]);
+
+  useEffect(() => {
+    if (!awaitingResultDisplay || !allResultsDisplayed || !resolvedOutputUrl) return;
+    if (!workflow.sourceImageUrl) return;
+
+    const completionKey = `${activeRenderIds.join(',')}:${resolvedOutputUrl}`;
+    if (completionHandledRef.current === completionKey) return;
+    completionHandledRef.current = completionKey;
+
+    // Generation lifecycle complete — reset progress UI only.
+    // Presentation is intentionally silent; completionHandledRef is reserved
+    // for a future subtle completion experience.
+    resetGenerationFeedback();
+  }, [
+    awaitingResultDisplay,
+    allResultsDisplayed,
+    resolvedOutputUrl,
+    workflow.sourceImageUrl,
+    activeRenderIds,
+  ]);
+
+  const handleShootTypeSelect = (value: 1 | 2 | 4) => {
+    if (isGenerationBusy) return;
+    if (isPremiumShootTypeLocked(usage, value)) {
+      setShowProRequiredDialog(true);
+      return;
+    }
+    setImageCount(value);
+  };
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleFileSelect = (url: string) => {
-    if (!url) { setSourceImages([]); return; }
-    setSourceImages([url]);
+    setSourceImageUrl(url);
     setShowValidation(false);
   };
 
-  /** Extract a human-readable message from an ApiError or any thrown value. */
-  const extractErrorMsg = (error: unknown): string => {
-    if (!error) return 'Please try again.';
-    // ApiError shape: { data: { error?: string }, message: string }
-    const e = error as { data?: { error?: string }; message?: string };
-    return e?.data?.error ?? e?.message ?? 'Please try again.';
-  };
 
   const handleRender = () => {
-    const primary = sourceImages[0];
-    if (!primary || !garmentPlacement || !selectedIdentityId) {
+    if (isGenerationBusy) return;
+    if (!workflowValidation.isComplete) {
       setShowValidation(true);
-      const msg = !primary
-        ? 'Upload a garment photo to get started.'
-        : !selectedIdentityId
-          ? 'Choose a model from the gallery.'
-          : 'Select what type of garment this is.';
-      toast({ title: 'Almost there', description: msg, variant: 'destructive' });
+      toast({ title: 'Almost there', description: workflowValidation.message ?? undefined });
       return;
     }
-    if (usage && !usage.canRender) {
-      toast({ title: 'Render limit reached', description: 'Upgrade your plan to create more images.', variant: 'destructive' });
+    if (isStudioCreditLimitBlocked(usage)) {
+      toast({
+        title: 'Studio Credit used',
+        description: 'View Membership to continue creating.',
+      });
       return;
     }
 
     const selectedIdentity = (identities as { id: string; gender?: string; ageGroup?: string }[])
-      .find((i) => i.id === selectedIdentityId);
+      .find((i) => i.id === workflow.talentId);
 
-    const renderingRequest = {
-      sourceImageUrl:      primary,
-      modelPersona:        'confident_commercial' as never,
-      locationEnvironment: 'photo_studio'          as never,
-      garmentPlacement:    garmentPlacement         as never,
-      modelIdentityId:     selectedIdentityId       || undefined,
-      modelGender:         selectedIdentity?.gender as never,
-      modelAgeRange:       selectedIdentity?.ageGroup as never,
-      smartLighting:       true,
-      imageDimensions:     'portrait_45'            as never,
-      imageCount:          imageCount,
-    };
+    const renderingRequest = buildGenerationRequest(workflow, selectedIdentity);
+
+    beginGenerationFeedback();
+    setActiveRenderIds([]);
+    setRootRenderIds([]);
+    setMasterOutputUrls({});
+    completionHandledRef.current = '';
+    creditSyncBatchRef.current = '';
 
     createRender.mutate(
       { data: renderingRequest },
@@ -315,575 +461,550 @@ export default function StudioPage() {
         onSuccess: (renders) => {
           const ids = (renders as unknown as { id: number }[]).map((r) => r.id);
           setActiveRenderIds(ids);
-          setRefinementText('');
-          setIsRefining(false);
-          setCameraAnglesUsed([]);   // new render = fresh camera angle session
-          queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
-          toast({ title: 'Creating your image…', description: 'The AI is styling your garment.' });
         },
         onError: (error: unknown) => {
-          toast({ title: 'Could not create image', description: extractErrorMsg(error), variant: 'destructive' });
+          resetGenerationFeedback();
+          if (process.env.NODE_ENV === 'development') {
+            console.error('[Studio] generate failed', error);
+          }
+          toast({
+            title: "We couldn't complete your request.",
+            description: withErrorContactHelper(renderApiErrorDescription(error)),
+          });
         },
       },
     );
   };
 
-  const handleRefine = () => {
-    const primary         = sourceImages[0];
-    // Target the slot the user selected — never always index 0.
-    const currentRenderId = activeRenderIds[selectedRefineIndex];
-    if (!refinementText.trim() || !currentRenderId || !primary) return;
-    if (isRefining || isProcessing) return;
-    if (limitBlocked) {
-      toast({ title: 'Render limit reached', description: 'Upgrade your plan to refine images.', variant: 'destructive' });
-      return;
-    }
-
-    const selectedIdentity = (identities as { id: string; gender?: string; ageGroup?: string }[])
-      .find((i) => i.id === selectedIdentityId);
-
-    // Detect camera angle action so we can track session memory on success.
-    const isCameraAction = isCameraAngleAction(refinementText.trim());
-
-    const refineRequest = {
-      sourceImageUrl:      primary,
-      modelPersona:        'confident_commercial' as never,
-      locationEnvironment: 'photo_studio'          as never,
-      garmentPlacement:    garmentPlacement         as never,
-      modelIdentityId:     selectedIdentityId       || undefined,
-      modelGender:         selectedIdentity?.gender as never,
-      modelAgeRange:       selectedIdentity?.ageGroup as never,
-      smartLighting:       true,
-      imageDimensions:     'portrait_45'            as never,
-      parentRenderId:      currentRenderId,
-      refinementPrompt:    refinementText.trim(),
-      // Camera Angle Director session memory — tells the backend which angles
-      // have already been used so it deterministically picks the next unused one.
-      usedCameraAngles:    cameraAnglesUsed,
-    };
-
-    setIsRefining(true);
-    createRender.mutate(
-      { data: refineRequest },
-      {
-        onSuccess: (renders) => {
-          const newId = (renders as unknown as { id: number }[])[0]?.id;
-          if (newId) {
-            // Replace only the selected slot — other images remain intact.
-            setActiveRenderIds((prev) => {
-              const next = [...prev];
-              next[selectedRefineIndex] = newId;
-              return next;
-            });
-          }
-          // If this was a camera angle action, record the angle that was just
-          // selected (backend picks CANONICAL_ANGLES[cameraAnglesUsed.length]).
-          if (isCameraAction) {
-            const nextAngle = CANONICAL_CAMERA_ANGLES[cameraAnglesUsed.length];
-            if (nextAngle) {
-              setCameraAnglesUsed((prev) => [...prev, nextAngle]);
-            }
-          }
-          setRefinementText('');
-          setIsRefining(false);
-          queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
-          toast({ title: 'Refining…', description: 'Applying your changes.' });
-        },
-        onError: (error: unknown) => {
-          setIsRefining(false);
-          toast({ title: 'Refinement failed', description: extractErrorMsg(error), variant: 'destructive' });
-        },
-      },
-    );
-  };
 
   const handleNewPhotoshoot = () => {
-    setSourceImages([]);
-    setGarmentPlacement('');
-    setSelectedIdentityId('');
+    Object.values(displayUrlOverrides).forEach((url) => revokeCropObjectUrl(url));
+    resetWorkflow();
     setActiveRenderIds([]);
+    setRootRenderIds([]);
+    setMasterOutputUrls({});
+    setSelectedRefineSlot(0);
+    setDisplayUrlOverrides({});
+    setCropPresets({});
+    setRefineInFlight(false);
+    setActiveRefinement(null);
     setShowValidation(false);
-    setImageCount(1);
-    setRefinementText('');
-    setIsRefining(false);
-    setSelectedRefineIndex(0);
-    setCameraAnglesUsed([]);   // reset Camera Angle Director session memory
-    setResetKey((k) => k + 1);
+    resetGenerationFeedback();
+    completionHandledRef.current = '';
     createRender.reset();
   };
 
-  const handleDownloadSingle = async (url: string, index: number) => {
-    const brandSlug = (user?.name ?? 'studio')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '_')
-      .replace(/^_|_$/g, '');
-    const suffix   = activeRenderIds.length > 1 ? `_${index + 1}` : '';
-    const filename = `${brandSlug}_photoshoot${suffix}.jpg`;
+  const openImageInspection = (target: StudioImageInspectionTarget) => {
+    setImageInspection(target);
+  };
+
+  const handleDownloadError = (message: string) => {
+    toast({
+      title: message,
+      description: withErrorContactHelper('Please try again in a few moments.'),
+    });
+  };
+
+  const handleRefine = (type: RefinementType) => {
+    if (refineInFlight || isGenerationBusy) return;
+
+    if (isStudioCreditLimitBlocked(usage) && !resolveStudioAdminFlag(user, usage)) {
+      toast({
+        title: 'Studio Credit used',
+        description: 'View Membership to continue refining.',
+      });
+      return;
+    }
+
+    const slot = selectedRefineSlot;
+    const parentRenderId = activeRenderIds[slot];
+    if (!parentRenderId) return;
+
+    const selectedIdentity = (identities as { id: string; gender?: string; ageGroup?: string }[])
+      .find((i) => i.id === workflow.talentId);
+
+    setRefineInFlight(true);
+    setActiveRefinement(type);
+
+    createRender.mutate(
+      {
+        data: buildRefinementRequest(workflow, selectedIdentity, {
+          parentRenderId,
+          refinementType: type,
+        }),
+      },
+      {
+        onSuccess: (renders) => {
+          const childId = (renders as unknown as { id: number }[])?.[0]?.id;
+          if (childId) {
+            setActiveRenderIds((prev) => {
+              const next = [...prev];
+              next[slot] = childId;
+              return next;
+            });
+            revokeCropObjectUrl(displayUrlOverrides[slot]);
+            setDisplayUrlOverrides((prev) => {
+              const next = { ...prev };
+              delete next[slot];
+              return next;
+            });
+            setCropPresets((prev) => ({ ...prev, [slot]: 'original' }));
+          }
+          void queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
+        },
+        onError: (error: unknown) => {
+          toast({
+            title: "We couldn't complete this refinement.",
+            description: withErrorContactHelper(renderApiErrorDescription(error)),
+          });
+        },
+        onSettled: () => {
+          setRefineInFlight(false);
+          setActiveRefinement(null);
+        },
+      },
+    );
+  };
+
+  const handleCropPresetChange = async (preset: CropPreset) => {
+    const slot = selectedRefineSlot;
+    const masterUrl = masterOutputUrls[slot];
+    if (!masterUrl) {
+      toast({
+        title: "Master asset unavailable.",
+        description: 'Please wait for the image to finish loading.',
+      });
+      return;
+    }
+
+    setCropPresets((prev) => ({ ...prev, [slot]: preset }));
+
+    if (preset === 'original') {
+      revokeCropObjectUrl(displayUrlOverrides[slot]);
+      setDisplayUrlOverrides((prev) => {
+        const next = { ...prev };
+        delete next[slot];
+        return next;
+      });
+      return;
+    }
+
     try {
-      const res  = await fetch(url);
-      const blob = await res.blob();
-      const obj  = URL.createObjectURL(blob);
-      const a    = Object.assign(document.createElement('a'), { href: obj, download: filename });
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(obj), 10_000);
+      const croppedUrl = await cropImageToPreset(masterUrl, preset);
+      revokeCropObjectUrl(displayUrlOverrides[slot]);
+      setDisplayUrlOverrides((prev) => ({ ...prev, [slot]: croppedUrl }));
     } catch {
-      const a = Object.assign(document.createElement('a'), { href: url, download: filename, target: '_blank', rel: 'noopener noreferrer' });
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      toast({
+        title: "Couldn't crop this image.",
+        description: 'Please try another preset.',
+      });
     }
   };
 
-  const handleDownloadAll = async () => {
-    const zip = new JSZip();
-    const now  = new Date();
-    const pad  = (n: number) => String(n).padStart(2, '0');
-    const ts   = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
-    await Promise.all(
-      allRenderData.map(async (render, i) => {
-        if (!render || render.status !== 'completed') return;
-        const url = (render as unknown as Record<string, unknown>)['outputImageUrl'] as string | undefined;
-        if (!url?.startsWith('http')) return;
-        try {
-          const blob = await (await fetch(url)).blob();
-          zip.file(`image_${i + 1}.png`, blob);
-        } catch { /* skip failed images */ }
-      }),
-    );
-    const blob = await zip.generateAsync({ type: 'blob' });
-    const obj  = URL.createObjectURL(blob);
-    const a    = Object.assign(document.createElement('a'), { href: obj, download: `StudioLayerAI_Photoshoot_${ts}.zip` });
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(obj), 10_000);
+  const handleRevertToOriginal = () => {
+    const slot = selectedRefineSlot;
+    const rootId = rootRenderIds[slot];
+    if (!rootId) return;
+
+    revokeCropObjectUrl(displayUrlOverrides[slot]);
+    setActiveRenderIds((prev) => {
+      const next = [...prev];
+      next[slot] = rootId;
+      return next;
+    });
+    setDisplayUrlOverrides((prev) => {
+      const next = { ...prev };
+      delete next[slot];
+      return next;
+    });
+    setCropPresets((prev) => ({ ...prev, [slot]: 'original' }));
   };
+
+  const handleRefineZoom = () => {
+    const url = getSlotDisplayUrl(selectedRefineSlot);
+    if (!url) return;
+    openImageInspection({
+      imageUrl: url,
+      alt: 'Editorial fashion image',
+      renderId: activeRenderIds[selectedRefineSlot],
+    });
+  };
+
+  const handleDownloadAll = () => {
+    void runDownloadAll(async () => {
+      const zip = new JSZip();
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+      await Promise.all(
+        allRenderData.map(async (render, i) => {
+          if (!render || render.status !== 'completed') return;
+          const url = (render as unknown as Record<string, unknown>)['outputImageUrl'] as string | undefined;
+          const renderId = activeRenderIds[i];
+          if (!url?.startsWith('http')) return;
+          try {
+            const blob = await fetchEditorialImageBlob(url, renderId);
+            if (blob.size === 0) return;
+            zip.file(`image_${i + 1}.png`, blob);
+          } catch { /* skip failed images */ }
+        }),
+      );
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const obj = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), {
+        href: obj,
+        download: `StudioLayerAI_Photoshoot_${ts}.zip`,
+      });
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(obj), 10_000);
+    });
+  };
+
+  const showResultToolbar = hasOutput && allResultsDisplayed && !showGenerationProgress;
+
+  useEffect(() => {
+    if (!showResultToolbar || rootRenderIds.length > 0 || activeRenderIds.length === 0) return;
+
+    const hasAllMasterUrls = activeRenderIds.every((_, i) => typeof allOutputUrls[i] === 'string');
+    if (!hasAllMasterUrls) return;
+
+    setRootRenderIds([...activeRenderIds]);
+    setMasterOutputUrls(
+      Object.fromEntries(
+        activeRenderIds.map((_, i) => [i, allOutputUrls[i] as string]),
+      ),
+    );
+  }, [showResultToolbar, activeRenderIds, rootRenderIds.length, allOutputUrls]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-screen bg-background">
-      {showOnboarding && (
-        <OnboardingWizard
-          onComplete={handleCompleteOnboarding}
-          onSkip={() => setOnboardingDismissed(true)}
-        />
-      )}
+      <AppShell footer>
+          <EditorialPageHeader
+            companion="Workspace"
+            supporting="Garment to Campaign"
+            tagline="Professional fashion photography in minutes"
+            className="sl-page-header--workspace"
+            aside={<AccountStatementDownloadLink variant="header" />}
+          />
 
-      <Sidebar />
+          <div className="relative">
+            <StudioBrandWatermark />
 
-      <main className="flex-1 flex flex-col overflow-auto">
-        <div className="flex-1 p-6 lg:p-8">
+            <div className={cn('relative z-[1]', complimentaryExhausted && 'pointer-events-none select-none')}>
+          {/* Workspace grid — hero result first on mobile */}
+          <div className="sl-studio-workspace-grid mb-10">
 
-          {/* Page header */}
-          <div className="mb-8">
-            <h2 className="text-foreground mb-1 text-xl font-semibold tracking-tight">
-              Create
-            </h2>
-            <p className="text-sm text-muted-foreground font-mono">
-              Professional fashion photography in minutes
-            </p>
-          </div>
-
-          {/* Two-column layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 mb-10">
-
-            {/* ── LEFT PANEL ─────────────────────────────────────────── */}
-            <div className="space-y-8">
-
+            {/* ── LEFT PANEL — Controls ───────────────────────────────── */}
+            <div className={cn('order-2 lg:order-1 space-y-8 transition-opacity duration-300', showGenerationProgress && 'opacity-[0.68]')}>
               {/* Step 1: Upload Outfit */}
               <section className="space-y-3">
                 <StepLabel number={1} title="Upload Outfit" />
 
-                <div className={cn(showValidation && !hasImage && 'rounded ring-2 ring-destructive ring-offset-1')}>
+                <div className={cn(showValidation && !workflowValidation.hasGarment && 'rounded ring-2 ring-destructive ring-offset-1')}>
                   <FileUpload
-                    key={resetKey}
+                    previewUrl={workflow.sourceImageUrl || null}
                     onFileSelect={handleFileSelect}
-                    disabled={createRender.isPending || isProcessing}
+                    disabled={isGenerationBusy}
                   />
                 </div>
-                {showValidation && !hasImage && (
+                {showValidation && !workflowValidation.hasGarment && (
                   <p className="text-xs text-destructive font-mono">Please upload a garment photo.</p>
                 )}
 
                 {/* Garment type selector */}
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-foreground">What type of garment is this?</p>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-foreground">Garment Category</p>
+                    <p className="sl-ui-helper">
+                      Helps StudioLayer AI understand your garment more accurately.
+                    </p>
+                  </div>
                   <div className="grid grid-cols-3 gap-2">
                     {GARMENT_TYPES.map((g) => {
-                      const isSelected = garmentPlacement === g.value;
+                      const isSelected = workflow.garmentPlacement === g.value;
                       return (
-                        <button
+                        <StudioToggleOption
                           key={g.value}
-                          type="button"
-                          onClick={() => { setGarmentPlacement(g.value); setShowValidation(false); }}
-                          disabled={createRender.isPending || isProcessing}
-                          className={cn(
-                            'rounded border px-2 py-2.5 text-center transition-all duration-150 select-none',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                            isSelected
-                              ? 'border-foreground bg-foreground text-background'
-                              : 'border-border bg-card text-foreground hover:border-foreground/40',
-                            (createRender.isPending || isProcessing) && 'opacity-50 pointer-events-none',
-                          )}
+                          selected={isSelected}
+                          disabled={isGenerationBusy}
+                          onClick={() => {
+                            setGarmentPlacement(g.value as GarmentPlacement);
+                            setShowValidation(false);
+                          }}
+                          className="rounded px-2 py-2.5"
                         >
                           <p className="text-xs font-semibold">{g.label}</p>
                           <p className={cn(
                             'text-[10px] font-mono mt-0.5 leading-tight',
-                            isSelected ? 'text-background/70' : 'text-muted-foreground',
+                            isSelected ? 'opacity-75' : 'text-muted-foreground',
                           )}>
                             {g.sub}
                           </p>
-                        </button>
+                        </StudioToggleOption>
                       );
                     })}
                   </div>
-                  {showValidation && !garmentPlacement && (
+                  {showValidation && !workflowValidation.hasCategory && (
                     <p className="text-xs text-destructive font-mono">Please select a garment type.</p>
                   )}
                 </div>
+
+                {workflow.garmentPlacement === 'full_body' && (
+                  <div
+                    className={cn(
+                      'space-y-2 overflow-hidden transition-all duration-200 ease-out',
+                      'animate-in fade-in slide-in-from-top-1',
+                    )}
+                  >
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-foreground">Garment Length</p>
+                      <p className="sl-ui-helper">
+                        Auto Detect reads length from your upload. Override only if needed.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {GARMENT_LENGTH_OPTIONS.map((option) => {
+                        const isSelected = workflow.garmentLengthSelection === option.value;
+                        const isAuto = option.value === 'auto';
+                        return (
+                          <StudioToggleOption
+                            key={option.value}
+                            selected={isSelected}
+                            disabled={isGenerationBusy}
+                            onClick={() => {
+                              setGarmentLengthSelection(option.value);
+                              setShowValidation(false);
+                            }}
+                            className="rounded px-2 py-2"
+                          >
+                            <p className="text-xs font-semibold flex items-center gap-1">
+                              {isAuto && isSelected && (
+                                <Check className="size-3 shrink-0" aria-hidden />
+                              )}
+                              {option.label}
+                            </p>
+                          </StudioToggleOption>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </section>
 
-              {/* Step 2: Choose Model */}
+              {/* Step 2: Select Your Model */}
               <section className="space-y-3">
-                <StepLabel number={2} title="Choose Model" />
-                {showValidation && !selectedIdentityId && (
-                  <p className="text-xs text-destructive font-mono">Please choose a model.</p>
+                <StepLabel number={2} title="Select Your Model" />
+                {showValidation && !workflowValidation.hasTalent && (
+                  <p className="text-xs text-destructive font-mono">Please select your model.</p>
                 )}
-                <div className={cn(showValidation && !selectedIdentityId && 'rounded ring-2 ring-destructive ring-offset-1 p-2')}>
-                  <ModelGallery
-                    identities={identities as never}
-                    selectedId={selectedIdentityId}
-                    onSelect={(id: string) => { setSelectedIdentityId(id); setShowValidation(false); }}
-                    disabled={createRender.isPending || isProcessing}
+                <div className={cn(showValidation && !workflowValidation.hasTalent && 'rounded ring-2 ring-destructive ring-offset-1')}>
+                  <SelectedTalentSummary
+                    talent={(identities as ModelIdentity[]).find((i) => i.id === workflow.talentId) ?? null}
+                    disabled={isGenerationBusy}
                   />
                 </div>
               </section>
 
               {/* Step 3: Shoot Type */}
-              <section className="space-y-3">
+              <section className="space-y-3 pt-1">
                 <StepLabel number={3} title="Shoot Type" />
-                <div className="grid grid-cols-3 gap-2">
-                  {IMAGE_COUNT_OPTIONS.map((opt) => {
-                    const isSelected = imageCount === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setImageCount(opt.value)}
-                        disabled={createRender.isPending || isProcessing}
-                        className={cn(
-                          'rounded border px-2 py-2.5 text-center transition-all duration-150 select-none',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                          isSelected
-                            ? 'border-foreground bg-foreground text-background'
-                            : 'border-border bg-card text-foreground hover:border-foreground/40',
-                          (createRender.isPending || isProcessing) && 'opacity-50 pointer-events-none',
-                        )}
-                      >
-                        <p className="text-xs font-semibold">{opt.label}</p>
-                        <p className={cn(
-                          'text-[10px] font-mono mt-0.5 leading-tight',
-                          isSelected ? 'text-background/70' : 'text-muted-foreground',
-                        )}>
-                          {opt.sub}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
+                <ShootTypeSelector
+                  options={IMAGE_COUNT_OPTIONS}
+                  imageCount={workflow.imageCount}
+                  isPremiumLocked={(value) => isPremiumShootTypeLocked(usage, value)}
+                  disabled={isGenerationBusy}
+                  onSelect={handleShootTypeSelect}
+                />
               </section>
 
               {/* Create CTA */}
               <div className="space-y-3 pt-1">
-                <Button
+                <StudioWorkspaceButton
+                  fullWidth
+                  loading={isGenerationBusy}
                   onClick={handleRender}
-                  disabled={!canRender}
-                  className="w-full h-12 text-sm font-semibold gap-2"
+                  disabled={!canCreate}
+                  className="h-12 text-sm font-semibold"
                   data-testid="button-render"
                 >
-                  {createRender.isPending ? (
-                    <><span className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />Starting…</>
-                  ) : isProcessing ? (
-                    <><span className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />Creating…</>
-                  ) : (
-                    <><Camera className="w-4 h-4" />Create {SHOOT_TYPE_LABEL[imageCount]}</>
-                  )}
-                </Button>
+                  <Camera className="w-4 h-4" />
+                  {isGenerationBusy ? 'Creating…' : `Create ${SHOOT_TYPE_LABEL[workflow.imageCount]}`}
+                </StudioWorkspaceButton>
 
-                {!usageLoading && usage && (
-                  (usage as { isAdmin?: boolean }).isAdmin ? (
-                    <p className="text-center text-xs text-muted-foreground font-mono">
-                      Admin Mode — Unlimited renders
-                    </p>
-                  ) : usage.tier === 'free' ? (
-                    <p className="text-center text-xs text-muted-foreground font-mono">
-                      Free trial — {usage.used} of {usage.limit} renders used
-                    </p>
-                  ) : null
-                )}
-
-                {limitBlocked && (
-                  <div className="rounded border border-destructive/30 bg-destructive/5 px-3 py-2">
-                    <p className="text-xs text-destructive font-mono text-center">
-                      Render limit reached — upgrade your plan to continue.
-                    </p>
-                  </div>
-                )}
+                <p className="mx-auto mt-[18px] mb-[15px] max-w-[390px] text-center text-[11px] font-normal leading-relaxed text-muted-foreground/80">
+                  <span className="font-semibold">Editorial Note:</span>
+                  {' '}
+                  StudioLayer AI creates premium fashion imagery using advanced AI technology. Every render is carefully produced to preserve your garment&apos;s colour, texture, and character. Minor variations are a natural part of the creative rendering process.
+                </p>
               </div>
             </div>
 
-            {/* ── RIGHT PANEL — Output ────────────────────────────────── */}
-            <div className="space-y-4">
-
-              {/* Image canvas — single or multi-image grid */}
+            {/* ── RIGHT PANEL — Editorial hero ─────────────────────────── */}
+            <div className="order-1 lg:order-2 sl-studio-result-stage">
               {activeRenderIds.length <= 1 ? (
-                /* ── Single image canvas ── */
-                <div
-                  className="relative w-full rounded border border-border bg-card overflow-hidden flex items-center justify-center"
-                  style={{ aspectRatio: '4 / 5' }}
-                >
-                  {isProcessing && (
-                    <div className="flex flex-col items-center gap-4 p-8 text-center">
-                      <div className="relative w-14 h-14">
-                        <div className="absolute inset-0 border-2 border-border rounded-full" />
-                        <div className="absolute inset-0 border-2 border-t-foreground border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin" />
-                        <Sparkles className="absolute inset-0 m-auto w-5 h-5 text-muted-foreground animate-pulse" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          {isRefining ? 'Applying your changes…' : 'Creating your image…'}
-                        </p>
-                        <p className="text-xs text-muted-foreground font-mono mt-1">This usually takes 20–40 seconds</p>
-                      </div>
-                    </div>
-                  )}
-                  {hasOutput && !isProcessing && (
-                    <img
-                      src={resolvedOutputUrl!}
-                      alt="Generated fashion image"
-                      className="w-full h-full object-cover animate-in fade-in duration-500"
-                      data-testid="img-render-output"
+                <>
+                  <StudioEditorialCanvas className="relative">
+                    <StudioEditorialProgressOverlay
+                      visible={showGenerationProgress}
+                      label="Creating your image…"
+                      hint="Usually 20–40 seconds"
+                      elapsedSec={elapsedSec}
                     />
-                  )}
-                  {!isProcessing && !hasOutput && (
-                    <div className="flex flex-col items-center gap-3 p-8 text-center">
-                      <div className="w-12 h-12 rounded-full border border-dashed border-border flex items-center justify-center">
-                        <Camera className="w-5 h-5 text-muted-foreground/50" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">Your image will appear here</p>
-                        <p className="text-xs text-muted-foreground font-mono mt-1">
-                          Complete the steps on the left to get started
-                        </p>
-                      </div>
+                    <StudioEditorialPlaceholder
+                      visible={!resolvedOutputUrl && !showGenerationProgress}
+                    />
+                    {resolvedOutputUrl ? (
+                      <StudioEditorialImage
+                        src={resolvedOutputUrl}
+                        alt="Editorial fashion image"
+                        visible={!showGenerationProgress}
+                        onLoad={() => markResultImageLoaded(resolvedOutputUrl)}
+                        imageRef={bindResultImageRef(resolvedOutputUrl)}
+                        testId="img-render-output"
+                        onInspect={() => openImageInspection({
+                          imageUrl: resolvedOutputUrl,
+                          alt: 'Editorial fashion image',
+                          renderId: activeRenderIds[0],
+                        })}
+                      />
+                    ) : null}
+                  </StudioEditorialCanvas>
+
+                  {showResultToolbar && (
+                    <div className="space-y-3">
+                      <StudioResultToolbar
+                        downloadLabel="Download"
+                        renderId={activeRenderIds[selectedRefineSlot]!}
+                        outputImageUrl={resolvedOutputUrl!}
+                        onNewImage={handleNewPhotoshoot}
+                        onDownloadError={handleDownloadError}
+                      />
+                      <StudioRefinePanel
+                        disabled={isGenerationBusy}
+                        refineInFlight={refineInFlight}
+                        activeRefinement={activeRefinement}
+                        cropPreset={cropPresets[selectedRefineSlot] ?? 'original'}
+                        canRevert={
+                          rootRenderIds[selectedRefineSlot] != null
+                          && activeRenderIds[selectedRefineSlot] !== rootRenderIds[selectedRefineSlot]
+                        }
+                        onRefine={handleRefine}
+                        onCropPresetChange={(preset) => void handleCropPresetChange(preset)}
+                        onRevert={handleRevertToOriginal}
+                        onZoom={handleRefineZoom}
+                      />
                     </div>
                   )}
-                </div>
+                </>
               ) : (
-                /* ── Multi-image grid (2 or 4 images) ── */
-                <div className="grid grid-cols-2 gap-3">
-                  {activeRenderIds.map((id, i) => {
-                    const render = allRenderData[i];
-                    const url    = allOutputUrls[i];
-                    const status = render?.status ?? 'pending';
-                    return (
-                      <div
-                        key={id}
-                        className="relative rounded border border-border bg-card overflow-hidden flex items-center justify-center"
-                        style={{ aspectRatio: '4 / 5' }}
-                      >
-                        {(status === 'processing' || status === 'pending') && (
-                          <div className="flex flex-col items-center gap-2 p-4 text-center">
-                            <span className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" />
-                            <p className="text-[10px] text-muted-foreground font-mono">Creating…</p>
-                          </div>
-                        )}
-                        {status === 'completed' && url && (
-                          <img
-                            src={url}
-                            alt={`Fashion image ${i + 1}`}
-                            className="w-full h-full object-cover animate-in fade-in duration-500"
-                          />
-                        )}
-                        {status === 'failed' && (
-                          <p className="text-xs text-muted-foreground font-mono text-center px-3">Generation failed</p>
-                        )}
-                        {/* Per-image action bar — Refine + Download */}
-                        {status === 'completed' && url && (
-                          <div className="absolute bottom-0 left-0 right-0 flex gap-1.5 p-2 bg-gradient-to-t from-black/30 to-transparent">
-                            <button
-                              onClick={() => {
-                                setSelectedRefineIndex(i);
-                                setTimeout(() => {
-                                  document.getElementById('refine-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                                }, 50);
-                              }}
-                              className={`flex-1 h-7 text-[10px] font-medium rounded flex items-center justify-center gap-1 transition-colors border ${
-                                selectedRefineIndex === i
-                                  ? 'bg-foreground text-background border-foreground'
-                                  : 'bg-background/90 backdrop-blur border-border text-foreground hover:bg-background'
-                              }`}
-                              title="Refine this image"
-                            >
-                              <Wand2 className="w-3 h-3" />
-                              {selectedRefineIndex === i ? 'Selected' : 'Refine'}
-                            </button>
-                            <button
-                              onClick={() => handleDownloadSingle(url, i)}
-                              className="w-7 h-7 rounded bg-background/90 backdrop-blur border border-border flex items-center justify-center hover:bg-background transition-colors"
-                              title="Download this image"
-                            >
-                              <Download className="w-3 h-3 text-foreground" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Download + New — shown after generation */}
-              {hasOutput && !isProcessing && (
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() =>
-                      activeRenderIds.length > 1
-                        ? handleDownloadAll()
-                        : handleDownloadSingle(resolvedOutputUrl!, 0)
-                    }
-                    variant="outline"
-                    className="flex-1 gap-2"
-                    data-testid="button-download"
+                <>
+                  <StudioEditorialCanvas
+                    className="sl-studio-editorial-canvas--multi"
+                    minHeightClass="min-h-0"
+                    maxHeightClass="max-h-none"
                   >
-                    <Download className="w-4 h-4" />
-                    {activeRenderIds.length > 1 ? 'Download All' : 'Download'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleNewPhotoshoot}
-                    className="flex-1"
-                    data-testid="button-new-photoshoot"
-                  >
-                    New
-                  </Button>
-                </div>
-              )}
+                    <StudioEditorialProgressOverlay
+                      visible={showGenerationProgress}
+                      label="Creating your images…"
+                      hint="Usually 20–40 seconds"
+                      elapsedSec={elapsedSec}
+                    />
+                    <div className={cn('grid w-full grid-cols-2 gap-3', showGenerationProgress && 'opacity-35')}>
+                      {activeRenderIds.map((id, i) => {
+                        const render = allRenderData[i];
+                        const url = getSlotDisplayUrl(i);
+                        const status = render?.status ?? 'pending';
+                        const imageVisible =
+                          status === 'completed' && !!url && !showGenerationProgress;
+                        const isSelected = selectedRefineSlot === i;
 
-              {/* ✨ Refine Image panel — shown after generation */}
-              {hasOutput && !isProcessing && (
-                <div id="refine-panel" className="border border-border rounded bg-card p-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Wand2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    <p className="text-xs font-semibold text-foreground">Refine Image</p>
-                    {activeRenderIds.length > 1 && (
-                      <span className="ml-auto text-[10px] text-muted-foreground font-mono bg-muted px-2 py-0.5 rounded">
-                        Image {selectedRefineIndex + 1} of {activeRenderIds.length}
-                      </span>
-                    )}
-                  </div>
+                        return (
+                          <div
+                            key={id}
+                            className={cn(
+                              'sl-studio-editorial-cell',
+                              isSelected && showResultToolbar && 'ring-2 ring-foreground/20 rounded',
+                            )}
+                            onClick={() => setSelectedRefineSlot(i)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') setSelectedRefineSlot(i);
+                            }}
+                            role="button"
+                            tabIndex={0}
+                          >
+                            <div className="sl-studio-editorial-cell-inner">
+                              {!url && !showGenerationProgress && status !== 'failed' && (
+                                <StudioEditorialPlaceholder visible compact />
+                              )}
+                              {status === 'completed' && url && (
+                                <StudioEditorialImage
+                                  src={url}
+                                  alt={`Fashion image ${i + 1}`}
+                                  visible={imageVisible}
+                                  maxHeightClass="max-h-[min(calc(50vh-2rem),480px)]"
+                                  onLoad={() => markResultImageLoaded(url)}
+                                  imageRef={bindResultImageRef(url)}
+                                  onInspect={() => openImageInspection({
+                                    imageUrl: url,
+                                    alt: `Fashion image ${i + 1}`,
+                                    renderId: id,
+                                  })}
+                                />
+                              )}
+                              {status === 'failed' && <StudioEditorialFailedState />}
+                            </div>
+                            {status === 'completed' && url && !showGenerationProgress && (
+                              <div className="absolute bottom-0 left-0 right-0 flex justify-end bg-gradient-to-t from-black/25 to-transparent p-2">
+                                <EditorialDownloadMenu
+                                  renderId={id}
+                                  outputImageUrl={url}
+                                  variant="icon"
+                                  onDownloadError={handleDownloadError}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </StudioEditorialCanvas>
 
-                  <Textarea
-                    value={refinementText}
-                    onChange={(e) => setRefinementText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey && refinementText.trim()) {
-                        e.preventDefault();
-                        handleRefine();
-                      }
-                    }}
-                    placeholder="Describe what you'd like to change…"
-                    rows={2}
-                    disabled={isRefining || isProcessing}
-                    className="resize-none text-sm placeholder:text-muted-foreground/50"
-                  />
-
-                  {/* Suggestion chips */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {REFINEMENT_CHIPS.map((chip) => (
-                      <button
-                        key={chip}
-                        type="button"
-                        onClick={() => setRefinementText(chip)}
-                        disabled={isRefining || isProcessing}
-                        className="text-[11px] font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-40 select-none"
-                      >
-                        {chip}
-                      </button>
-                    ))}
-                  </div>
-
-                  {limitBlocked && (
-                    <p className="text-xs text-destructive font-mono">
-                      Render limit reached — upgrade to refine images.
-                    </p>
+                  {showResultToolbar && (
+                    <div className="space-y-3">
+                      <StudioResultToolbar
+                        downloadLabel="Download All"
+                        onDownloadAll={handleDownloadAll}
+                        downloadAllLoading={downloadAllInFlight}
+                        downloadAllPreparingLabel={formatDownloadPreparingLabel(downloadAllElapsedSec)}
+                        onNewImage={handleNewPhotoshoot}
+                      />
+                      <StudioRefinePanel
+                        disabled={isGenerationBusy}
+                        refineInFlight={refineInFlight}
+                        activeRefinement={activeRefinement}
+                        cropPreset={cropPresets[selectedRefineSlot] ?? 'original'}
+                        canRevert={
+                          rootRenderIds[selectedRefineSlot] != null
+                          && activeRenderIds[selectedRefineSlot] !== rootRenderIds[selectedRefineSlot]
+                        }
+                        onRefine={handleRefine}
+                        onCropPresetChange={(preset) => void handleCropPresetChange(preset)}
+                        onRevert={handleRevertToOriginal}
+                        onZoom={handleRefineZoom}
+                      />
+                    </div>
                   )}
-
-                  <Button
-                    onClick={handleRefine}
-                    disabled={!refinementText.trim() || isRefining || isProcessing || limitBlocked}
-                    className="w-full gap-2"
-                    size="sm"
-                  >
-                    {isRefining ? (
-                      <>
-                        <span className="w-3.5 h-3.5 border-2 border-background/30 border-t-background rounded-full animate-spin" />
-                        Refining…
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="w-3.5 h-3.5" />
-                        Refine
-                      </>
-                    )}
-                  </Button>
-                </div>
+                </>
               )}
             </div>
           </div>
 
-          {/* ── Before & After ─────────────────────────────────────────────── */}
-          {(hasImage || hasOutput) && (
-            <div className="border-t border-border pt-6 mb-8">
-              <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-4">
-                Before &amp; After
-              </p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-medium text-foreground mb-2">Garment Photo</p>
-                  <div className="aspect-video border border-border rounded bg-card overflow-hidden flex items-center justify-center">
-                    {sourceImages[0] ? (
-                      <img
-                        src={sourceImages[0]}
-                        alt="Source garment"
-                        className="w-full h-full object-contain"
-                        data-testid="img-source"
-                      />
-                    ) : (
-                      <p className="text-xs text-muted-foreground font-mono">No image uploaded</p>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-foreground mb-2">Generated Image</p>
-                  <div className="aspect-video border border-border rounded bg-card overflow-hidden flex items-center justify-center">
-                    {hasOutput ? (
-                      <img
-                        src={resolvedOutputUrl!}
-                        alt="Generated output"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <p className="text-xs text-muted-foreground font-mono">
-                        {isProcessing ? 'Creating…' : 'Not yet created'}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* ── FAQ ────────────────────────────────────────────────────────── */}
           <div className="border-t border-border pt-6">
             <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-4">
-              Frequently Asked Questions
+              Questions
             </h3>
             <Accordion type="single" collapsible className="space-y-2">
               {FAQ_ITEMS.map((item, i) => (
@@ -895,17 +1016,77 @@ export default function StudioPage() {
                   <AccordionTrigger className="text-sm font-medium text-foreground hover:no-underline py-4">
                     {item.q}
                   </AccordionTrigger>
-                  <AccordionContent className="text-xs text-muted-foreground pb-4 font-mono leading-relaxed">
+                  <AccordionContent className="whitespace-pre-line text-xs text-muted-foreground pb-4 font-mono leading-[1.65]">
                     {item.a}
                   </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
           </div>
+            </div>
+          </div>
 
-        </div>
-        <Footer />
-      </main>
-    </div>
+      <Dialog open={complimentaryExhausted} onOpenChange={() => undefined}>
+        <DialogContent
+          className="sl-complimentary-credit-dialog gap-8 border-0 px-10 py-10 outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 sm:max-w-[36rem] [&>button]:hidden"
+          onPointerDownOutside={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onInteractOutside={(event) => event.preventDefault()}
+        >
+          <DialogHeader className="space-y-4 text-left">
+            <DialogTitle className="text-base font-medium leading-relaxed tracking-normal text-foreground md:whitespace-nowrap">
+              Your complimentary Studio Credit has been used.
+            </DialogTitle>
+            <DialogDescription className="max-w-[30rem] text-sm leading-relaxed">
+              Continue creating with a Studio Membership.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-stretch sm:space-x-0">
+            <Link href="/billing" className="sl-studio-btn sl-studio-btn--primary flex-1 no-underline">
+              View Membership
+            </Link>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <StudioImageInspector
+        target={imageInspection}
+        open={imageInspection != null}
+        onOpenChange={(open) => {
+          if (!open) setImageInspection(null);
+        }}
+      />
+
+      <Dialog open={showProRequiredDialog} onOpenChange={setShowProRequiredDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Studio Membership Required</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 pt-2 text-sm leading-relaxed text-muted-foreground">
+                <p>Your complimentary Studio includes one Hero Shot.</p>
+                <p>
+                  Editorial Portraits and Campaign Collections are available with
+                  Studio Basic or Studio Pro.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Link href="/billing" className="sl-studio-btn sl-studio-btn--primary no-underline">
+              View Membership
+            </Link>
+            <StudioWorkspaceButton
+              onClick={() => {
+                setImageCount(1);
+                setShowProRequiredDialog(false);
+              }}
+            >
+              Continue with Hero Shot
+            </StudioWorkspaceButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      </AppShell>
   );
 }

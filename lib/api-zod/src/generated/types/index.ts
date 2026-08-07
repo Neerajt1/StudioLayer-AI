@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './billingCycleStats';
 export * from './errorResponse';
 export * from './healthStatus';
 export * from './identity';
@@ -13,8 +14,13 @@ export * from './identityGender';
 export * from './loginInput';
 export * from './registerInput';
 export * from './render';
+export * from './renderAssetLineage';
+export * from './renderAssetType';
+export * from './renderCropPreset';
+export * from './renderGenerationType';
 export * from './renderInput';
 export * from './renderInputCameraFraming';
+export * from './renderInputGarmentLengthSelection';
 export * from './renderInputGarmentPlacement';
 export * from './renderInputImageCount';
 export * from './renderInputImageDimensions';
@@ -24,8 +30,10 @@ export * from './renderInputModelDemographics';
 export * from './renderInputModelGender';
 export * from './renderInputModelPersona';
 export * from './renderInputModelPose';
+export * from './renderInputRefinementType';
 export * from './renderLocationEnvironment';
 export * from './renderModelPersona';
+export * from './renderRefinementType';
 export * from './renderStatus';
 export * from './renderUsage';
 export * from './renderUsageTier';

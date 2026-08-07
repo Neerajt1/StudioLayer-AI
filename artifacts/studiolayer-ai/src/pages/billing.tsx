@@ -1,234 +1,289 @@
-import { useState } from 'react';
-import { Sidebar } from '@/components/layout/sidebar';
-import { Footer } from '@/components/layout/footer';
+import { AppShell } from '@/components/layout/app-shell';
 import { useGetMe, useGetRenderUsage } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
+import { EditorialPageHeader } from '@/components/design-system/editorial-page-header';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { cn } from '@/lib/utils';
+import {
+  MembershipCreditAllowances,
+  MembershipDisplayPricing,
+  compactFinishedImagesLabel,
+  creativeStepCreditCopy,
+  finishedImagesOutcomeLabel,
+  formatStudioCredits,
+} from '@workspace/studio-credit-engine';
+import {
+  membershipAllowanceLabel,
+  membershipCreditsRemaining,
+  membershipLabel,
+} from '@/lib/membership';
 
-export default function BillingPage() {
-  const { data: user, isLoading: userLoading } = useGetMe();
-  const { data: usage, isLoading: usageLoading } = useGetRenderUsage();
-  const [showTopUp, setShowTopUp] = useState(false);
+const INTRO_SUPPORTING =
+  'Choose the Studio membership that best supports your creative workflow.';
 
-  const usedPct =
-    usage?.limit != null ? Math.min((usage.used / usage.limit) * 100, 100) : 0;
+const INTRO_TAGLINE =
+  "Every render is fully traceable in your Creative Ledger. Whether you're exploring your first editorial render or producing campaigns at scale, every membership is designed to deliver the same commitment to quality, consistency, and craftsmanship.";
+
+const MEMBERSHIP_TIERS = [
+  {
+    id: 'pro',
+    name: 'Studio Basic',
+    subtitle: 'For growing fashion brands',
+    originalPrice: '$99',
+    price: MembershipDisplayPricing.basicMonthly,
+    credits: formatStudioCredits(MembershipCreditAllowances.basic),
+    outcome: finishedImagesOutcomeLabel(MembershipCreditAllowances.basic),
+    features: [
+      'Hero',
+      'Campaign',
+      'Editorial',
+      'Studio Gallery',
+      'Studio Talent',
+      'Priority Rendering',
+    ],
+    chooseLabel: 'Choose Basic',
+    testId: 'button-choose-basic',
+    recommended: false,
+  },
+  {
+    id: 'enterprise',
+    name: 'Studio Pro',
+    subtitle: 'For creative teams & agencies',
+    originalPrice: '$120',
+    price: MembershipDisplayPricing.proMonthly,
+    credits: formatStudioCredits(MembershipCreditAllowances.pro),
+    outcome: finishedImagesOutcomeLabel(MembershipCreditAllowances.pro),
+    features: [
+      'Hero',
+      'Campaign',
+      'Editorial',
+      'Studio Gallery',
+      'Studio Talent',
+      'Faster Priority Rendering',
+    ],
+    chooseLabel: 'Choose Pro',
+    testId: 'button-choose-pro',
+    recommended: true,
+  },
+] as const;
+
+const MEMBERSHIP_FAQ = [
+  {
+    q: 'What are Studio Credits?',
+    a: 'Studio Credits are your allowance for creating finished fashion imagery. Every creative step — generating or refining an image — uses one Studio Credit. Paid memberships include a monthly balance that resets at the start of each billing period.',
+  },
+  {
+    q: 'Can I see where I spend my Studio Credits?',
+    a: 'Yes. Every image in your Studio Gallery — your Creative Ledger — records exactly how many Studio Credits were used and how many refinements produced the final result. Membership summarizes your allowance; Gallery explains every render.',
+  },
+  {
+    q: 'When do Studio Credits reset?',
+    a: 'Complimentary Studio includes one one-time Studio Credit. Studio Basic and Studio Pro renew monthly. Studio Pass credits are valid for seven days. Your balance is always visible in your Studio Profile and on this page.',
+  },
+];
+
+function isActiveTier(tier: string, cardId: string): boolean {
+  return tier === cardId;
+}
+
+interface MembershipCardProps {
+  tier: (typeof MEMBERSHIP_TIERS)[number];
+  active: boolean;
+  disabled: boolean;
+}
+
+function MembershipCard({ tier, active, disabled }: MembershipCardProps) {
+  return (
+    <div
+      className={cn(
+        'sl-membership-tier-card',
+        tier.recommended && 'sl-membership-tier-card--recommended',
+      )}
+    >
+      {tier.recommended && (
+        <p className="sl-membership-tier-badge">Recommended</p>
+      )}
+      <div className="sl-membership-tier-card-body">
+        <h3 className="sl-membership-tier-title">{tier.name}</h3>
+        <p className="sl-membership-tier-subtitle">{tier.subtitle}</p>
+        <div className="sl-membership-tier-pricing">
+          {'originalPrice' in tier && tier.originalPrice && (
+            <p className="sl-membership-tier-original-price">
+              {tier.originalPrice} / month
+            </p>
+          )}
+          <p className="sl-membership-tier-price">
+            {tier.price}
+            <span>/ month</span>
+          </p>
+          <p className="sl-membership-tier-credits">{tier.credits}</p>
+          <p className="sl-membership-tier-outcome">{tier.outcome}</p>
+        </div>
+        <ul className="sl-membership-tier-features">
+          {tier.features.map((feature) => (
+            <li key={feature}>{feature}</li>
+          ))}
+        </ul>
+      </div>
+      {active ? (
+        <div className="sl-membership-tier-cta-wrap">
+          <Button
+            className="w-full"
+            variant="outline"
+            disabled={disabled}
+            data-testid={tier.testId}
+          >
+            Current Membership
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CurrentMembershipSummary({
+  tier,
+  usage,
+}: {
+  tier: string;
+  usage: { used: number; limit: number | null };
+}) {
+  const isFree = tier === 'free';
+  const remaining = membershipCreditsRemaining(tier, usage.used, usage.limit);
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
+    <div className="sl-membership-current-summary">
+      <p className="sl-membership-info-label">Current Membership</p>
+      <p className="sl-membership-info-name">{membershipLabel(tier)}</p>
 
-      <main className="flex-1 flex flex-col overflow-auto">
-        <div className="flex-1 p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h2
-              className="text-foreground mb-2"
-              style={{
-                fontFamily: "'Inter', system-ui, sans-serif",
-                fontSize: '22px',
-                fontWeight: 600,
-                letterSpacing: '-0.01em',
-              }}
-            >
-              Subscription &amp; Billing
-            </h2>
-            <p className="text-sm text-muted-foreground font-mono">
-              Transparent pricing for professional fashion studios
-            </p>
-          </div>
-
-          {/* Usage summary */}
-          {!userLoading && !usageLoading && user && usage && (
-            <div className="mb-10 p-5 border border-border rounded bg-card max-w-2xl">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    Current Plan:{' '}
-                    <span className="uppercase tracking-wider font-semibold">
-                      {user.subscriptionTier}
-                    </span>
-                  </p>
-                  <p className="text-xs text-muted-foreground font-mono mt-1">
-                    {usage.limit === null
-                      ? `${usage.used} renders used · Unlimited plan`
-                      : `${usage.used} of ${usage.limit} renders used · resets monthly`}
-                  </p>
-                </div>
-                {usage.limit !== null && usage.used >= usage.limit && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowTopUp(true)}
-                    className="text-xs shrink-0"
-                  >
-                    Buy 100 Extra Renders — $25
-                  </Button>
-                )}
-              </div>
-              {usage.limit !== null && (
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-foreground transition-all rounded-full"
-                    style={{ width: `${usedPct}%` }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Top-up exhausted notice */}
-          {usage && usage.limit !== null && usage.used >= usage.limit && !showTopUp && (
-            <div className="mb-6 p-4 border border-border rounded bg-card max-w-2xl">
-              <p className="text-sm text-foreground font-medium mb-1">
-                Monthly render allowance exhausted
-              </p>
-              <p className="text-xs text-muted-foreground font-mono">
-                You've used all {usage.limit} renders for this period. Purchase a top-up pack or upgrade your plan to continue.
-              </p>
-            </div>
-          )}
-
-          {/* Top-up modal */}
-          {showTopUp && (
-            <div className="mb-8 p-6 border border-foreground rounded bg-card max-w-2xl">
-              <h4
-                className="text-foreground mb-1 text-base font-semibold"
-              >
-                On-Demand Render Top-Up
-              </h4>
-              <p className="text-xs text-muted-foreground font-mono mb-4">
-                One-time purchase · Credits active immediately · No subscription change
-              </p>
-              <div className="flex items-center justify-between p-4 border border-border rounded bg-background mb-4">
-                <div>
-                  <p className="text-sm font-medium text-foreground">+ 100 Priority Renders</p>
-                  <p className="text-xs text-muted-foreground font-mono">Added to your current monthly balance</p>
-                </div>
-                <span className="text-xl font-bold text-foreground">$25</span>
-              </div>
-              <div className="flex gap-3">
-                <Button className="flex-1" onClick={() => setShowTopUp(false)}>
-                  Purchase Top-Up
-                </Button>
-                <Button variant="outline" onClick={() => setShowTopUp(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Twin pricing cards — perfectly centred */}
-          <div className="flex items-center justify-center min-h-[70vh]">
-            <div className="flex flex-col lg:flex-row gap-8 w-full max-w-4xl">
-              {/* Starter Studio Plan */}
-              <div className="border border-border rounded-lg bg-card py-8 px-6 flex flex-col flex-1">
-                <h3
-                  className="text-foreground mb-1 text-lg font-semibold tracking-tight"
-                >
-                  Starter Studio Plan
-                </h3>
-                <div className="mb-6">
-                  <span className="text-sm text-muted-foreground line-through font-mono mr-2">
-                    $199 / mo
-                  </span>
-                  <span className="text-3xl font-bold text-foreground">$99</span>
-                  <span className="text-sm text-muted-foreground font-mono ml-1">/ month</span>
-                  <div className="mt-2">
-                    <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded font-mono border border-border">
-                      LAUNCH OFFER
-                    </span>
-                  </div>
-                </div>
-
-                <ul className="space-y-3 flex-1 mb-8">
-                  {[
-                    '400 High-Res AI Studio Renders Per Month',
-                    'Single-Hanger Upload Interface',
-                    'Full Aspect, Demographics, & Expression Selectors',
-                    'Smart Ambient Studio Lighting Matcher',
-                  ].map((f) => (
-                    <li key={f} className="flex items-start gap-3 text-left">
-                      <span className="shrink-0 font-medium text-foreground mt-0.5">✔</span>
-                      <span className="text-sm text-foreground leading-relaxed">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  className="w-full"
-                  variant={user?.subscriptionTier === 'pro' ? 'outline' : 'default'}
-                  disabled={user?.subscriptionTier === 'pro'}
-                  data-testid="button-upgrade-starter"
-                >
-                  {user?.subscriptionTier === 'pro' ? 'Current Plan' : 'Upgrade to Starter'}
-                </Button>
-              </div>
-
-              {/* Enterprise Bulk Plan — sharp midnight-black focus border */}
-              <div
-                className="rounded-lg bg-card py-8 px-6 flex flex-col flex-1"
-                style={{ border: '1px solid #09090B' }}
-              >
-                <h3
-                  className="text-foreground mb-1 text-lg font-semibold tracking-tight"
-                >
-                  Enterprise Bulk Plan
-                </h3>
-                <div className="mb-6">
-                  <span className="text-sm text-muted-foreground line-through font-mono mr-2">
-                    $299 / mo
-                  </span>
-                  <span className="text-3xl font-bold text-foreground">$149</span>
-                  <span className="text-sm text-muted-foreground font-mono ml-1">/ month</span>
-                  <div className="mt-2">
-                    <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded font-mono border border-border">
-                      LAUNCH OFFER
-                    </span>
-                  </div>
-                </div>
-
-                <ul className="space-y-3 flex-1 mb-8">
-                  {[
-                    '800 Priority Bulk Renders Per Month',
-                    '⚡ Bulk Studio Mode (Upload up to 10 concurrent images)',
-                    'Parallel 2×5 Grid Rendering Queue',
-                    'Stored Asset Folder Management',
-                  ].map((f) => (
-                    <li key={f} className="flex items-start gap-3 text-left">
-                      <span className="shrink-0 font-medium text-foreground mt-0.5">✔</span>
-                      <span className="text-sm text-foreground leading-relaxed">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Button
-                  className="w-full"
-                  disabled={user?.subscriptionTier === 'enterprise'}
-                  data-testid="button-upgrade-enterprise"
-                >
-                  {user?.subscriptionTier === 'enterprise'
-                    ? 'Current Plan'
-                    : 'Upgrade to Enterprise'}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Top-up nudge at bottom */}
-          <div className="mt-8 p-5 border border-border rounded bg-card max-w-3xl mx-auto text-center">
-            <p className="text-sm text-muted-foreground font-mono">
-              Need extra capacity mid-month?{' '}
-              <button
-                onClick={() => setShowTopUp(true)}
-                className="text-foreground underline underline-offset-2 hover:opacity-70 transition-opacity"
-              >
-                Buy 100 Extra Renders ($25)
-              </button>
-            </p>
-          </div>
-        </div>
-
-        <Footer />
-      </main>
+      {isFree ? (
+        <>
+          <p className="sl-membership-info-meta">One-Time Studio Credit</p>
+          <p className="sl-membership-info-usage">
+            {usage.used} of {MembershipCreditAllowances.complimentary} used
+          </p>
+          <p className="sl-membership-info-footnote">Never resets.</p>
+        </>
+      ) : (
+        <>
+          <p className="sl-membership-info-credits">{membershipAllowanceLabel(tier)}</p>
+          <p className="sl-membership-info-remaining">{remaining} remaining</p>
+          <p className="sl-membership-info-footnote">Renews monthly</p>
+        </>
+      )}
     </div>
+  );
+}
+
+function StudioPassCompact() {
+  return (
+    <div className="sl-membership-pass-compact">
+      <div className="sl-membership-pass-compact-copy">
+        <h3 className="sl-membership-pass-compact-title">Studio Pass</h3>
+        <p className="sl-membership-pass-compact-subtitle">One-time creative access</p>
+        <p className="sl-membership-pass-compact-line">
+          {MembershipDisplayPricing.studioPass}
+          {' • '}
+          {formatStudioCredits(MembershipCreditAllowances.studioPass)}
+        </p>
+        <p className="sl-membership-pass-compact-line">
+          {compactFinishedImagesLabel(MembershipCreditAllowances.studioPass)}
+        </p>
+        <p className="sl-membership-pass-compact-meta">
+          Valid 7 Days • No Subscription
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function StudioTopUpCompact() {
+  return (
+    <div className="sl-membership-topup-compact">
+      <div className="sl-membership-topup-compact-copy">
+        <h3 className="sl-membership-topup-compact-title">Studio Top-Up</h3>
+        <p className="sl-membership-topup-compact-line">
+          {formatStudioCredits(MembershipCreditAllowances.topUp)}
+        </p>
+        <p className="sl-membership-topup-compact-price">
+          {MembershipDisplayPricing.topUp}
+        </p>
+        <p className="sl-membership-topup-compact-meta">For active Studio Members</p>
+      </div>
+    </div>
+  );
+}
+
+export default function BillingPage() {
+  const { data: user } = useGetMe();
+  const { data: usage } = useGetRenderUsage();
+
+  const tier = user?.subscriptionTier ?? 'free';
+  const usageData = { used: usage?.used ?? 0, limit: usage?.limit ?? null };
+
+  return (
+    <AppShell footer>
+      <EditorialPageHeader
+        companion="Membership"
+        supporting={INTRO_SUPPORTING}
+        tagline={INTRO_TAGLINE}
+        className="sl-page-header--membership"
+      />
+
+      <CurrentMembershipSummary tier={tier} usage={usageData} />
+
+      <div className="sl-membership-page">
+        <section className="sl-membership-plans-section">
+          <h2 className="sl-membership-plans-heading">Choose Your Membership</h2>
+          <div className="sl-membership-plans-row">
+            {MEMBERSHIP_TIERS.map((membershipTier) => {
+              const active = isActiveTier(tier, membershipTier.id);
+              return (
+                <MembershipCard
+                  key={membershipTier.id}
+                  tier={membershipTier}
+                  active={active}
+                  disabled={active}
+                />
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="sl-membership-credits-note">
+          <h3 className="sl-membership-credits-note-heading">Understanding Studio Credits</h3>
+          <p className="sl-membership-credits-note-body">
+            {creativeStepCreditCopy()} Most creators refine each image up to three times.
+            Fewer refinements allow you to create even more finished images.
+          </p>
+        </section>
+
+        <section className="sl-membership-secondary-offers">
+          <StudioPassCompact />
+          <StudioTopUpCompact />
+        </section>
+
+        <section className="sl-membership-faq-section max-w-3xl mx-auto">
+          <h2 className="sl-section-label sl-membership-faq-title text-center">Membership FAQ</h2>
+          <Accordion type="single" collapsible className="w-full">
+            {MEMBERSHIP_FAQ.map((item, index) => (
+              <AccordionItem key={item.q} value={`faq-${index}`}>
+                <AccordionTrigger className="text-sm text-foreground hover:no-underline">
+                  {item.q}
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground leading-relaxed">
+                  {item.a}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </section>
+      </div>
+    </AppShell>
   );
 }

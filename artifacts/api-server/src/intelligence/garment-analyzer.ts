@@ -36,6 +36,8 @@ function fallbackProfile(
     texture:         "smooth",
     season:          ["spring", "autumn"],
     occasion:        ["casual"],
+    hasPockets:      null,
+    isFlowingGarment: null,
   };
 }
 
@@ -62,9 +64,17 @@ const SYSTEM_PROMPT = `You are a professional fashion analyst. Analyse the garme
   "texture": string,             // "smooth" | "textured" | "knit" | "woven" | "sheer"
   "season": string[],            // any of: "spring" | "summer" | "autumn" | "winter"
   "occasion": string[]           // any of: "casual" | "office" | "evening" | "sport" | "formal" | "festive"
+  "hasPockets": boolean | null,  // true ONLY if clearly visible usable pockets exist
+  "isFlowingGarment": boolean | null, // true for dresses, maxi skirts, flowing capes
+  "silhouette": string | null,   // e.g. "fitted" | "relaxed" | "A-line" | "structured" | "flowing" | "boxy"
+  "fabricBehaviour": string | null, // e.g. "structured" | "flowing" | "crisp" | "stretch" | "natural drape"
+  "fabricMovementPotential": "minimal" | "moderate" | "high" | null,
+  "garmentStructure": string | null // brief construction summary: neckline, sleeves, hemline
 }
 
 RULES:
+- For full-length dresses and gowns, garmentLength must reflect the visible hem (mini, knee, midi, mid-calf, maxi, full-length).
+- silhouette, fabricBehaviour, and garmentStructure must describe what is visible — do not invent details.
 - Focus ONLY on the garment, ignore hangers, backgrounds, mannequins.
 - Respond with ONLY valid JSON, no markdown, no explanation.
 - If unsure about a nullable field, set it to null.`;
@@ -80,8 +90,17 @@ RULES:
 export async function analyzeGarment(params: {
   imageUrl: string;
   garmentPlacement?: string | null;
+  garmentLengthSelection?: string | null;
 }): Promise<GarmentProfile> {
-  const { imageUrl, garmentPlacement } = params;
+  const { imageUrl, garmentPlacement, garmentLengthSelection } = params;
+
+  const placementHint = garmentPlacement
+    ? `User indicated garment category placement: ${garmentPlacement.replace("_", " ")}. Use as context but verify from the image.`
+    : "Analyse the garment in this image.";
+  const lengthHint =
+    garmentLengthSelection && garmentLengthSelection !== "auto"
+      ? ` User selected garment length: ${garmentLengthSelection.replace(/_/g, " ")} — confirm or refine from the image.`
+      : "";
 
   try {
     const response = await openai.chat.completions.create({
@@ -91,6 +110,7 @@ export async function analyzeGarment(params: {
         {
           role: "user",
           content: [
+            { type: "text", text: placementHint + lengthHint },
             { type: "image_url", image_url: { url: imageUrl, detail: "low" } },
           ],
         },
@@ -124,6 +144,12 @@ export async function analyzeGarment(params: {
       texture:       parsed.texture       ?? "smooth",
       season:        Array.isArray(parsed.season)   ? parsed.season   : ["spring"],
       occasion:      Array.isArray(parsed.occasion) ? parsed.occasion : ["casual"],
+      hasPockets:    parsed.hasPockets ?? null,
+      isFlowingGarment: parsed.isFlowingGarment ?? null,
+      silhouette:       parsed.silhouette ?? undefined,
+      fabricBehaviour:  parsed.fabricBehaviour ?? undefined,
+      fabricMovementPotential: parsed.fabricMovementPotential ?? undefined,
+      garmentStructure: parsed.garmentStructure ?? undefined,
     };
   } catch {
     return fallbackProfile(garmentPlacement);

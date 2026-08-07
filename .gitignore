@@ -47,3 +47,31 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+# =========================
+# Environment & Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# Cursor
+.cursor/
+
+# PNPM
+.pnpm-store/
+
+# Build / Cache
+.cache/
+dist/
+coverage/
+
+# Temporary sprint folders
+.sprint-*/
+.audit-pdf/
+.pdf-analysis/
+
+# Logs
+*.log
+
+# Conversation attachments
+attached_assets/

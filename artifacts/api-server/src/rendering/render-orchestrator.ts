@@ -236,6 +236,7 @@ export class RenderOrchestrator {
         renderId,
         garmentImageUrl:  request.sourceImageUrl,
         garmentPlacement: request.garmentPlacement,
+        garmentLengthSelection: request.garmentLengthSelection as never,
         modelGender:      request.modelGender,
         modelAgeRange:    request.modelAgeRange,
         // SL-018B: forward Complete the Look selection so the PromptComposer

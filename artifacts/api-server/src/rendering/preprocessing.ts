@@ -17,8 +17,13 @@
 // by callers in the OpenRouter path.
 // ---------------------------------------------------------------------------
 
+import { readFileSync, existsSync }     from "node:fs";
+import path                            from "node:path";
+import { fileURLToPath }               from "node:url";
 import { fal }                       from "@fal-ai/client";
 import { logger }                    from "../lib/logger";
+import { PipelineStage } from "../lib/render-pipeline-observability.js";
+import { traceRenderFailure, traceRenderStage } from "../lib/render-pipeline-trace.js";
 import { findIdentityById }          from "../data/identity-library";
 import {
   selectBaseModel,
@@ -42,6 +47,73 @@ fal.config({ credentials: process.env["FAL_KEY"] });
 // ---------------------------------------------------------------------------
 export { mapStyleModeToTemplate };
 
+function resolveIdentitiesPublicDir(): string {
+  const candidates = [
+    path.resolve(process.cwd(), "../studiolayer-ai/public/identities"),
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../studiolayer-ai/public/identities"),
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../studiolayer-ai/public/identities"),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+
+  return candidates[0]!;
+}
+
+function mimeTypeForIdentityFile(filename: string): string {
+  switch (path.extname(filename).slice(1).toLowerCase()) {
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "webp":
+      return "image/webp";
+    case "gif":
+      return "image/gif";
+    default:
+      return "image/png";
+  }
+}
+
+/** True when the URL is a local Studio Talent asset served from the frontend public folder. */
+export function isLocalIdentityImageUrl(imageUrl: string): boolean {
+  return imageUrl.startsWith("/identities/");
+}
+
+/**
+ * Loads a Studio Talent image from the local public assets folder and returns
+ * a base64 data URI suitable for OpenRouter (no localhost / public URL needed).
+ */
+export function loadStudioTalentImageAsDataUri(
+  relativePath: string,
+  renderId?: number,
+): string {
+  const filename = path.basename(relativePath);
+  const filePath = path.join(resolveIdentitiesPublicDir(), filename);
+
+  let buffer: Buffer;
+  try {
+    buffer = readFileSync(filePath);
+  } catch (error) {
+    const err = new Error(
+      `preprocessing: Studio Talent image not found on disk — ${relativePath}`,
+      { cause: error },
+    );
+    traceRenderFailure("Studio Talent image load", err, { renderId, relativePath, filePath });
+    throw err;
+  }
+
+  const mimeType = mimeTypeForIdentityFile(filename);
+  const dataUri = `data:${mimeType};base64,${buffer.toString("base64")}`;
+
+  logger.info(
+    { renderId, relativePath, sizeBytes: buffer.length, mimeType },
+    "preprocessing: loaded Studio Talent image as base64 data URI",
+  );
+
+  return dataUri;
+}
+
 // ---------------------------------------------------------------------------
 // BirefNet garment preprocessing
 // ---------------------------------------------------------------------------
@@ -58,8 +130,8 @@ export async function prepareGarmentImage(
 ): Promise<string> {
   try {
     logger.info(
-      { renderId, sourceImageUrl },
-      "preprocessing: garment BirefNet background removal",
+      { renderId, externalProvider: "fal-ai/birefnet" },
+      "preprocessing: garment background removal started",
     );
 
     const result = await fal.subscribe("fal-ai/birefnet", {
@@ -83,17 +155,25 @@ export async function prepareGarmentImage(
 
     for (const c of candidates) {
       if (typeof c === "string" && c.startsWith("http")) {
+        traceRenderStage(PipelineStage.GARMENT_PREPROCESSING_COMPLETED, {
+          renderId,
+          externalProvider: "fal-ai/birefnet",
+        });
         logger.info(
-          { renderId, preprocessedGarmentUrl: c },
+          { renderId, externalProvider: "fal-ai/birefnet" },
           "preprocessing: garment background removed",
         );
         return c;
       }
     }
 
-    logger.warn({ renderId }, "preprocessing: BirefNet returned no URL — using original");
+    logger.warn({ renderId, externalProvider: "fal-ai/birefnet" }, "preprocessing: BirefNet returned no URL — using original");
     return sourceImageUrl;
   } catch (err) {
+    traceRenderFailure(PipelineStage.GARMENT_PREPROCESSING_COMPLETED, err, {
+      renderId,
+      externalProvider: "fal-ai/birefnet",
+    });
     logger.warn(
       { renderId, err },
       "preprocessing: BirefNet failed — using original garment image",
@@ -112,13 +192,18 @@ export async function prepareGarmentImage(
  */
 export interface ModelResolutionResult {
   modelImageContext: ModelImageContext;
-  /** Absolute HTTPS URL, ready to send to any rendering provider. */
+  /**
+   * Resolved model reference for the active provider.
+   * Identity Library entries remain root-relative paths (/identities/...).
+   * Base-model / fallback entries remain public HTTPS URLs.
+   */
   modelImageUrl: string;
 }
 
 /**
- * Resolves the model image URL using the SL-016 4-branch priority chain and
- * converts any relative path to an absolute URL.
+ * Resolves the model image reference using the SL-016 4-branch priority chain.
+ * Identity Library paths stay root-relative; the OpenRouter pipeline loads them
+ * from disk as base64 before calling the provider.
  *
  * Branch A: modelIdentityId supplied + found in Identity Library (user override)
  * Branch B: modelIdentityId supplied but not found → Base Model Selector
@@ -212,21 +297,7 @@ export function resolveModelImage(
     selectionDurationMs,
   };
 
-  // ── Resolve root-relative paths to absolute URLs ─────────────────────────
-  let modelImageUrl = imageUrl;
-  if (modelImageUrl.startsWith("/")) {
-    const domain = process.env["REPLIT_DEV_DOMAIN"];
-    modelImageUrl = domain
-      ? `https://${domain}${modelImageUrl}`
-      : `http://localhost:25562${modelImageUrl}`;
-
-    logger.info(
-      { renderId, resolvedModelImageUrl: modelImageUrl },
-      "preprocessing: resolved relative identity imageUrl to absolute URL",
-    );
-  }
-
-  return { modelImageContext: { ...modelImageContext, imageUrl: modelImageUrl }, modelImageUrl };
+  return { modelImageContext, modelImageUrl: imageUrl };
 }
 
 // ---------------------------------------------------------------------------

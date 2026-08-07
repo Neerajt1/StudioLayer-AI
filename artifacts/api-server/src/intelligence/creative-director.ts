@@ -31,6 +31,28 @@
 // ---------------------------------------------------------------------------
 
 import type { GarmentProfile } from "./types";
+import {
+  CANONICAL_POSES,
+  type PoseName,
+} from "./pose-library";
+import {
+  selectNextPose,
+  getPoseDescriptionForName as getPoseDescription,
+  buildShotPrompts,
+  buildCampaignShotPrompts,
+  buildEditorialShotPrompts,
+  buildHeroShotPrompt,
+  neutralizeBasePromptPose,
+} from "./pose-selection-engine";
+
+export { CANONICAL_POSES, type PoseName, selectNextPose };
+export {
+  buildShotPrompts,
+  buildCampaignShotPrompts,
+  buildEditorialShotPrompts,
+  buildHeroShotPrompt,
+  neutralizeBasePromptPose,
+};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -517,110 +539,149 @@ If anything other than the camera position has changed, you have failed.`;
 }
 
 // ---------------------------------------------------------------------------
-// Pose intelligence — garment-appropriate pose selection
+// Pose Director — selection delegated to pose-selection-engine (Batch 17)
 // ---------------------------------------------------------------------------
 
-interface PoseOption {
-  name: string;
-  direction: string;
-}
+function buildPoseBrief(
+  profile: GarmentProfile,
+  usedPoses?: string[],
+  modelGender?: string | null,
+): CreativeBrief {
+  const hasSessionMemory = Array.isArray(usedPoses) && usedPoses.length >= 0;
 
-function selectPose(profile: GarmentProfile): PoseOption {
-  const { category, subcategory, fit } = profile;
-  const sub = subcategory.toLowerCase();
+  if (hasSessionMemory) {
+    const selectedPose = selectNextPose(profile, usedPoses!, { modelGender });
 
-  // Long dresses, gowns, maxi skirts
-  if (sub.includes("gown") || sub.includes("maxi") || sub.includes("full length") || sub.includes("evening dress")) {
-    const poses: PoseOption[] = [
-      { name: "Elegant standing with hem lift", direction: "Model stands tall and elegant, one hand gently lifting the hem slightly. Full-length garment is completely visible. Weight shifted naturally to one side. Shoulders relaxed and confident." },
-      { name: "Slow twirl", direction: "Model captured mid-twirl, skirt flowing outward with natural movement. Hair has slight movement. The full garment length and silhouette is clearly visible. Joyful, editorial energy." },
-      { name: "Walking slowly forward", direction: "Model walks elegantly toward the camera, weight shifting with each step. The hem moves naturally. Full-length garment silhouette is clearly visible from shoulder to floor." },
-    ];
-    return poses[Math.floor(Math.random() * poses.length)]!;
-  }
+    if (!selectedPose) {
+      return buildPoseBriefVisualFallback();
+    }
 
-  // Coats, jackets, blazers — outerwear
-  if (category === "outerwear" || sub.includes("coat") || sub.includes("jacket") || sub.includes("blazer")) {
-    const poses: PoseOption[] = [
-      { name: "Hands in pockets", direction: "Model stands confidently with hands in jacket/coat pockets. Coat slightly open to show the garment beneath. Relaxed, effortless commercial pose. Weight shifted to one side." },
-      { name: "Walking forward", direction: "Model strides forward with natural confidence. Coat or jacket slightly open, moving naturally with the stride. Purposeful fashion editorial energy." },
-      { name: "Looking sideways", direction: "Model stands facing slightly away from camera, head turned to look elegantly sideways. Coat collar and construction are clearly visible. Thoughtful, editorial pose." },
-    ];
-    return poses[Math.floor(Math.random() * poses.length)]!;
-  }
+    const description = getPoseDescription(selectedPose);
 
-  // Casual shirts, blouses, tops
-  if (category === "tops") {
-    const poses: PoseOption[] = [
-      { name: "Relaxed effortless stance", direction: "Model stands with a natural, relaxed stance and slight hip shift. Weight on one leg. Arms loosely at sides or one hand in pocket. Approachable, modern ecommerce energy." },
-      { name: "Movement — hand through hair", direction: "Model captured with hand running through hair in a candid, editorial movement. Eyes looking slightly off-camera. Natural, lifestyle energy." },
-      { name: "Crossed arms with confidence", direction: "Model stands with arms loosely crossed, confident and composed. Direct eye contact with camera. Modern ecommerce pose that showcases the top's fit and construction." },
-    ];
-    return poses[Math.floor(Math.random() * poses.length)]!;
-  }
+    const instruction = `POSE DIRECTOR — DETERMINISTIC PHOTOSHOOT DIRECTION.
 
-  // Trousers, jeans, skirts, shorts — bottoms
-  if (category === "bottoms") {
-    const poses: PoseOption[] = [
-      { name: "Walking stride", direction: "Model mid-stride, walking naturally. One leg forward, weight shifting. The full length of the trouser/skirt from waistband to hem is clearly visible. Street editorial energy." },
-      { name: "Standing with slight hip lean", direction: "Model stands with weight shifted to one hip, creating a natural S-curve silhouette. One hand rests casually at the waistband. The full garment length is clearly visible." },
-      { name: "Sitting on edge", direction: "Model sits on the edge of a surface (step, ledge, or stool), legs at a natural angle. The trouser/skirt drape and length are clearly visible from waist to hem." },
-    ];
-    return poses[Math.floor(Math.random() * poses.length)]!;
-  }
+Reference Image 3 is the exact current state of the image.
 
-  // One-pieces, jumpsuits, rompers
-  if (category === "one-pieces") {
-    const poses: PoseOption[] = [
-      { name: "Confident standing pose", direction: "Model stands tall with confident posture, slight hip shift. One hand on hip, the other at side. Full-body garment is completely visible from neckline to hem." },
-      { name: "Walking editorial", direction: "Model walks forward with energy and purpose. The one-piece silhouette is fully visible in motion. Editorial fashion energy." },
-    ];
-    return poses[Math.floor(Math.random() * poses.length)]!;
-  }
+Imagine a professional fashion photographer asking the same model to perform a different pose during the same photoshoot. Everything remains identical except the body pose.
 
-  // Default — universally appropriate
-  const defaultPoses: PoseOption[] = [
-    { name: "Confident standing", direction: "Model stands with natural confidence, slight hip shift, weight balanced. Direct eye contact with camera. Clean ecommerce pose that showcases the garment fully." },
-    { name: "Three-quarter turn walk", direction: "Model walks forward at a slight angle to the camera. Natural stride, effortless movement. Full garment visible." },
-  ];
-  return defaultPoses[Math.floor(Math.random() * defaultPoses.length)]!;
-}
+========================
+YOUR ASSIGNED POSE
+========================
 
-function buildPoseBrief(profile: GarmentProfile): CreativeBrief {
-  const pose = selectPose(profile);
+You MUST execute EXACTLY this pose — no other pose is permitted:
 
-  const instruction = `REFINEMENT MODE — POSE DIRECTION.
+POSE: ${selectedPose}
+DIRECTION: ${description}
 
-Reference Image 3 is the exact current state of the image. You are changing the model's pose ONLY to better showcase the uploaded garment.
+Execute this pose precisely as described. Do not improvise or blend with other poses.
 
-THE REQUESTED CHANGE: Apply a professionally directed fashion pose that improves garment presentation.
+========================
+WHAT MUST CHANGE
+========================
 
-StudioLayer Creative Director has selected this pose:
-
-SELECTED POSE: ${pose.name}
-POSE DIRECTION: ${pose.direction}
-
-The pose must improve the commercial presentation of the garment. Maximum garment visibility is required — no part of the uploaded garment should be obscured by the pose change.
-
-WHAT MUST CHANGE:
 ✓ Model body position, stance, and limb placement
 ✓ Weight distribution and overall pose energy
 ✓ Facial expression may adjust naturally to match the new pose energy
-✓ Lighting and shadows may adjust naturally to the new body position
+✓ Lighting and shadows may shift subtly with the new body position
 
-WHAT IS COMPLETELY FROZEN — DO NOT CHANGE UNDER ANY CIRCUMSTANCES:
-✗ Model identity — face, skin tone, hair colour, and hairstyle must remain recognisably the same person
-✗ The uploaded garment (Reference Image 1) — every structural detail: neckline, straps, collar, sleeves, hem length, silhouette, colour, fabric, texture, print — must be identical
-✗ All complementary outfit items (shoes, trousers, accessories) must remain the same
-✗ Camera angle and framing — composition stays the same
-✗ Background environment and setting
+========================
+WHAT IS COMPLETELY FROZEN — IDENTICAL TO REFERENCE IMAGE 3
+========================
 
-OUTPUT REQUIREMENT: The output must look like the same model wearing the same garment in a new, professionally directed pose. If the garment has changed, you have failed.`;
+✗ Same person — identical facial identity, same ethnicity, same age
+✗ Same hairstyle — not even a strand changes
+✗ Same garment — identical fit, drape, garment construction, texture, colour, fabric behaviour
+✗ Same accessories — every piece, completely unchanged
+✗ Same footwear — unchanged
+✗ Same background — identical environment, unchanged
+✗ Same camera angle — the camera does not move
+✗ Same lighting — direction, quality, and colour grading unchanged
+✗ Same styling — nothing about the look changes
+
+========================
+ABSOLUTE RULE
+========================
+
+The ONLY thing allowed to change is the BODY POSE.
+
+Imagine a fashion photographer directing: "Now try ${selectedPose}." The model performs the new pose while everything else on set remains exactly the same.
+
+The result must look like another photograph from the same photoshoot — same model, same garment, same environment, same lighting, same camera position — only the pose is different.
+
+If anything other than the body pose has changed, you have failed.`;
+
+    return {
+      actionType: "improve_pose",
+      instruction,
+      creativeConcept: `Pose → ${selectedPose}`,
+    };
+  }
+
+  // ── Visual fallback mode ──────────────────────────────────────────────────
+  return buildPoseBriefVisualFallback();
+}
+
+function buildPoseBriefVisualFallback(): CreativeBrief {
+  const poseList = CANONICAL_POSES.map((p, i) => `${i + 1}. ${p}`).join("\n");
+
+  const instruction = `POSE DIRECTOR — PHOTOSHOOT DIRECTION.
+
+Reference Image 3 is the exact current state of the image.
+
+Imagine a professional fashion photographer asking the same model to perform a different pose during the same photoshoot. Everything remains identical except the body pose.
+
+========================
+STEP 1 — IDENTIFY THE CURRENT POSE
+========================
+
+Examine Reference Image 3 carefully. Identify which of the following thirty poses is currently being used:
+
+${poseList}
+
+========================
+STEP 2 — SELECT A DIFFERENT POSE
+========================
+
+Choose EXACTLY ONE pose from the list above that is:
+• DIFFERENT from the pose currently shown in Reference Image 3
+• Appropriate for the garment shown — it must not obscure the garment or impede its presentation
+
+Apply that pose precisely as described. Do not blend or combine poses.
+
+========================
+WHAT MUST CHANGE
+========================
+
+✓ Model body position, stance, and limb placement
+✓ Weight distribution and overall pose energy
+✓ Facial expression may adjust naturally to match the new pose energy
+
+========================
+WHAT IS COMPLETELY FROZEN — IDENTICAL TO REFERENCE IMAGE 3
+========================
+
+✗ Same person — identical facial identity, same ethnicity, same age
+✗ Same hairstyle — not even a strand changes
+✗ Same garment — identical fit, drape, construction, texture, colour, fabric behaviour
+✗ Same accessories — every piece, completely unchanged
+✗ Same footwear — unchanged
+✗ Same background — identical environment
+✗ Same camera angle — the camera does not move
+✗ Same lighting — direction, quality, and colour grading unchanged
+✗ Same styling — nothing about the look changes
+
+========================
+ABSOLUTE RULE
+========================
+
+The ONLY thing allowed to change is the BODY POSE.
+
+If anything other than the body pose has changed, you have failed.`;
 
   return {
     actionType: "improve_pose",
     instruction,
-    creativeConcept: `Pose → ${pose.name}`,
+    creativeConcept: "Pose Director — visual fallback",
   };
 }
 
@@ -757,14 +818,9 @@ export function buildCreativeBrief(
   refinementPrompt: string,
   profile: GarmentProfile,
   options?: {
-    /**
-     * List of camera angle names already used in this session.
-     * When provided, the Camera Angle Director deterministically selects
-     * the first unused angle from the canonical library.
-     * When absent, the AI visually inspects Reference Image 3 and picks
-     * a different angle (visual fallback mode).
-     */
     usedCameraAngles?: string[];
+    usedPoses?: string[];
+    modelGender?: string | null;
   },
 ): CreativeBrief {
   const actionType = classifyAction(refinementPrompt);
@@ -772,72 +828,8 @@ export function buildCreativeBrief(
   switch (actionType) {
     case "change_background": return buildBackgroundBrief(profile);
     case "change_camera":     return buildCameraBrief(profile, options?.usedCameraAngles);
-    case "improve_pose":      return buildPoseBrief(profile);
+    case "improve_pose":      return buildPoseBrief(profile, options?.usedPoses, options?.modelGender);
     case "improve_styling":   return buildStylingBrief(profile);
     default:                  return buildCustomBrief(refinementPrompt);
   }
-}
-
-// ---------------------------------------------------------------------------
-// Editorial shot diversity — generates 4 genuinely different shot briefs
-// ---------------------------------------------------------------------------
-
-/**
- * Generate four distinct editorial shot prompts for a Campaign/Editorial
- * multi-image request.
- *
- * Each shot receives a unique camera direction, pose, and framing brief
- * appended to the base creative prompt.  The garment and outfit context
- * from the base prompt are preserved — only the photographic direction varies.
- *
- * @param basePrompt  The initial creative prompt from the Intelligence Engine.
- * @param profile     GarmentProfile used to select garment-appropriate shots.
- * @returns           Array of four complete shot prompts (index 0–3).
- */
-export function buildEditorialShotPrompts(
-  basePrompt: string,
-  profile: GarmentProfile,
-): [string, string, string, string] {
-  const { category, subcategory } = profile;
-  const sub = subcategory.toLowerCase();
-  const isLongGarment = sub.includes("gown") || sub.includes("maxi") || sub.includes("full length");
-  const isOuterwear = category === "outerwear";
-
-  // Shot 0 — Hero front: direct, confident, eye contact
-  const shot0 = `${basePrompt}
-
-SHOT DIRECTION — HERO FRONT:
-Camera position: Eye level, directly facing the model. Full-body framing from head to feet.
-Pose: Model stands tall and confident, shoulders squared to camera. Slight, natural weight shift. Direct eye contact with the lens.
-Energy: Premium commercial ecommerce hero shot. Strong, confident presence.
-Composition: Model centred with equal space on both sides. Clean, uncluttered framing.`;
-
-  // Shot 1 — Walking three-quarter: movement, dynamic, street editorial
-  const shot1 = `${basePrompt}
-
-SHOT DIRECTION — WALKING THREE-QUARTER:
-Camera position: Three-quarter angle, 45 degrees to the model. Full-body framing.
-Pose: Model walks confidently forward and slightly toward the camera. Natural mid-stride energy. Hair has slight natural movement.${isLongGarment ? " Skirt or hem flows with movement." : ""}
-Energy: Fashion street editorial. Dynamic, purposeful movement. Aspirational lifestyle energy.
-Composition: Slightly asymmetric framing, model entering from one side. Background leads the eye.`;
-
-  // Shot 2 — Side profile: silhouette, architectural, elegant
-  const shot2 = `${basePrompt}
-
-SHOT DIRECTION — SIDE PROFILE:
-Camera position: Pure side profile at 90 degrees to the model. Full-body or three-quarter body framing.
-Pose: Model stands elegantly sideways, chin slightly lifted, gaze directed away from camera.${isOuterwear ? " Coat or jacket collar clearly visible." : ""}${isLongGarment ? " Full garment silhouette from shoulder to hem visible." : ""}
-Energy: Architectural, high fashion editorial. Emphasises garment silhouette, drape, and line.
-Composition: Model placed on the left or right third of the frame. Strong negative space on the opposite side.`;
-
-  // Shot 3 — Magazine close crop: intimate, editorial, artistic
-  const shot3 = `${basePrompt}
-
-SHOT DIRECTION — MAGAZINE CLOSE CROP:
-Camera position: Slightly high angle, three-quarter body crop from mid-thigh upward. Editorial composition.
-Pose: Model gazes slightly off-camera — upward and to the right or left — with a thoughtful, editorial expression. One hand may rest on collar, waist, or be in pocket.
-Energy: High fashion magazine cover. Artistic, intimate, premium editorial quality.
-Composition: Face and upper garment fill the frame. Background is soft and atmospheric. Strong fashion editorial lighting.`;
-
-  return [shot0, shot1, shot2, shot3];
 }

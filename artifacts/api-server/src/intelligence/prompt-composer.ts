@@ -15,6 +15,7 @@
 // ---------------------------------------------------------------------------
 
 import type { GarmentProfile, OutfitRecommendation } from "./types";
+import { buildGarmentIntelligencePrompt } from "./garment-intelligence";
 
 // ---------------------------------------------------------------------------
 // Human-readable field formatters
@@ -49,6 +50,8 @@ export interface PromptComposerParams {
   modelGender?: string | null;
   /** Override age group from the selected model identity (optional). */
   modelAgeGroup?: string | null;
+  /** Context-aware accessory guidance appended to the prompt. */
+  accessoryGuidance?: string;
 }
 
 /**
@@ -60,7 +63,7 @@ export interface PromptComposerParams {
  * always included.
  */
 export function composeRenderPrompt(params: PromptComposerParams): string {
-  const { profile, recommendation, modelGender, modelAgeGroup } = params;
+  const { profile, recommendation, modelGender, modelAgeGroup, accessoryGuidance } = params;
   const { recommendedOutfit } = recommendation;
 
   // Model descriptor — prefer identity override over detected profile
@@ -103,16 +106,33 @@ export function composeRenderPrompt(params: PromptComposerParams): string {
   const protection = [
     "Preserve every detail of the uploaded garment exactly as photographed:",
     "precise colour, fabric texture, stitching, logos, branding, pockets, buttons, zippers, prints, and embroidery.",
+    "Preserve original material properties — matte or glossy finish, natural sheen, weave, surface reflectivity, and fabric-specific optical characteristics.",
+    "Never reinterpret the material into a different fabric appearance.",
     "Complementary garments adapt around the uploaded product — never replace or obscure it.",
   ].join(" ");
 
-  // Part 6 — commercial photography
+  // Part 6 — commercial photography, wearability (Batch 19), white studio (Batch 20)
   const photography = [
     "Natural standing pose, balanced posture, neutral expression.",
     "Full body visible head to foot.",
+    "Pure white seamless studio background — clean, uniform, no gradients, no environmental objects, no lifestyle scenery.",
+    "Professional fashion photography studio with neutral white lighting, accurate white balance, natural skin tones, and faithful garment colour reproduction.",
+    "Preserve the garment's original colours exactly as uploaded — prints, logos, embroidery, patterns, trims, and textures without distortion or colour shift.",
+    "The white background must remain colour-neutral and must never influence garment appearance.",
+    "Subtle realistic grounding shadow beneath the feet.",
+    "Luxury through lighting, pose, and styling only — never through decorative backgrounds.",
     "Professional catalogue lighting, accurate garment draping, realistic footwear placement, natural shadows.",
-    "Clean white seamless studio background, premium fashion catalogue quality.",
+    "The garment must appear physically worn — naturally conforming to body anatomy with realistic gravity, fabric tension, and folds.",
+    "Avoid any composited or pasted appearance; preserve authentic construction, texture, and stitching.",
+    "Premium fashion catalogue quality suitable for e-commerce, lookbooks, and marketplaces.",
+    "Output exactly 3200 × 4000 pixels (4:5 aspect ratio) — the StudioLayer AI platform master asset standard.",
   ].join(" ");
 
-  return [opening, hero, composition, protection, photography].join(" ");
+  const accessoryClause = accessoryGuidance
+    ? accessoryGuidance
+    : "Accessories must enhance styling without obscuring the hero garment.";
+
+  const garmentIntelligence = buildGarmentIntelligencePrompt(profile);
+
+  return [opening, hero, composition, protection, garmentIntelligence, accessoryClause, photography].join(" ");
 }

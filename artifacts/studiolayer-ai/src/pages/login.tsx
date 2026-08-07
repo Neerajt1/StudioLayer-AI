@@ -1,13 +1,20 @@
 import { useState } from 'react';
-import { useLocation, Link } from 'wouter';
 import { useLogin } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { AuthPageShell } from '@/components/layout/auth-page-shell';
+import {
+  AUTH_FORM_MAX_WIDTH,
+  AUTH_FORM_STACK,
+  AuthField,
+  AuthFormHeader,
+  AuthInput,
+  AuthPageFrame,
+  AuthSecondaryNav,
+  AuthTextLink,
+} from '@/components/auth/auth-editorial';
 
 export default function LoginPage() {
-  const [, setLocation] = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const loginMutation = useLogin();
@@ -19,42 +26,30 @@ export default function LoginPage() {
       { data: { email, password } },
       {
         onSuccess: () => {
-          setLocation('/studio');
+          // TODO(dev-workaround): Remove full page reload once SelectedTalentProvider
+          // synchronizes selectedTalentId correctly across logout/login without remount.
+          const appBase = import.meta.env.BASE_URL.replace(/\/$/, '');
+          window.location.assign(`${appBase}/studio`);
         },
-        onError: (error: any) => {
+        onError: () => {
           toast({
-            title: 'Login failed',
-            description: error?.error || 'Invalid credentials',
-            variant: 'destructive',
+            title: "We couldn't complete your request.",
+            description: 'Please try again in a few moments.',
           });
         },
-      }
+      },
     );
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">
-            StudioLayer AI
-          </h1>
-          <p className="text-sm text-muted-foreground font-mono">
-            Professional Editorial Render Engine
-          </p>
-        </div>
+    <AuthPageShell>
+      <AuthPageFrame>
+        <div className={AUTH_FORM_MAX_WIDTH}>
+          <AuthFormHeader title="Sign In" />
 
-        <div className="border border-border rounded bg-card p-8">
-          <h2 className="text-xl font-semibold mb-6 text-foreground">
-            Sign In
-          </h2>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
-                Email
-              </Label>
-              <Input
+          <form onSubmit={handleSubmit} className={AUTH_FORM_STACK}>
+            <AuthField id="email" label="Business Email">
+              <AuthInput
                 id="email"
                 type="email"
                 value={email}
@@ -62,30 +57,33 @@ export default function LoginPage() {
                 placeholder="creative@studio.com"
                 required
                 disabled={loginMutation.isPending}
-                className="font-mono text-sm"
+                autoComplete="email"
                 data-testid="input-email"
               />
-            </div>
+            </AuthField>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">
-                Password
-              </Label>
-              <Input
+            <AuthField id="password" label="Password">
+              <AuthInput
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loginMutation.isPending}
-                className="font-mono text-sm"
+                autoComplete="current-password"
                 data-testid="input-password"
               />
+            </AuthField>
+
+            <div className="flex justify-end pt-1">
+              <AuthTextLink href="/forgot-password" className="text-sm font-normal text-muted-foreground">
+                Forgot Password?
+              </AuthTextLink>
             </div>
 
             <Button
               type="submit"
-              className="w-full"
+              className="h-11 w-full rounded-none border-foreground bg-foreground text-background hover:bg-foreground/90"
               disabled={loginMutation.isPending}
               data-testid="button-login"
             >
@@ -93,20 +91,14 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Don't have an account?{' '}
-              <Link
-                href="/register"
-                className="text-accent hover:underline font-medium"
-                data-testid="link-register"
-              >
-                Create account
-              </Link>
-            </p>
-          </div>
+          <AuthSecondaryNav
+            prompt="Don't have a Studio?"
+            linkHref="/register"
+            linkLabel="Create Studio"
+            linkTestId="link-register"
+          />
         </div>
-      </div>
-    </div>
+      </AuthPageFrame>
+    </AuthPageShell>
   );
 }

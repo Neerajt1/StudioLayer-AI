@@ -499,6 +499,78 @@ export const useCompleteOnboarding = <TError = ErrorType<ErrorResponse>,
       return useMutation(getCompleteOnboardingMutationOptions(options));
     }
 
+export const getDeleteStudioUrl = () => {
+
+
+
+
+  return `/api/auth/studio`
+}
+
+/**
+ * Cancels any active subscription, removes Studio data, deletes the account, and destroys the session.
+ * @summary Permanently delete the authenticated user's Studio
+ */
+export const deleteStudio = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteStudioUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteStudioMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStudio>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteStudio>>, TError,void, TContext> => {
+
+const mutationKey = ['deleteStudio'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteStudio>>, void> = () => {
+
+
+          return  deleteStudio(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteStudioMutationResult = NonNullable<Awaited<ReturnType<typeof deleteStudio>>>
+
+    export type DeleteStudioMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Permanently delete the authenticated user's Studio
+ */
+export const useDeleteStudio = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteStudio>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteStudio>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDeleteStudioMutationOptions(options));
+    }
+
 export const getListRendersUrl = () => {
 
 

@@ -23,9 +23,8 @@ export function SupportModal({ open, onOpenChange }: SupportModalProps) {
   const handleSubmit = () => {
     if (message.trim().length < 10) {
       toast({
-        title: 'Message too short',
-        description: 'Please describe your issue in at least 10 characters.',
-        variant: 'destructive',
+        title: 'Please add a little more detail.',
+        description: 'Describe your issue in at least ten characters.',
       });
       return;
     }
@@ -43,9 +42,8 @@ export function SupportModal({ open, onOpenChange }: SupportModalProps) {
         },
         onError: () => {
           toast({
-            title: 'Submission failed',
-            description: 'Could not submit your ticket. Please try again.',
-            variant: 'destructive',
+            title: "We couldn't complete your request.",
+            description: 'Please try again in a few moments.',
           });
         },
       },
@@ -56,13 +54,13 @@ export function SupportModal({ open, onOpenChange }: SupportModalProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-md bg-card border-border">
         <SheetHeader className="mb-6">
-          <SheetTitle className="text-foreground font-sans">
-            ✉ Contact Studio Support
+          <SheetTitle className="sl-page-subheading">
+            Contact Studio Support
           </SheetTitle>
-          <p className="text-sm text-muted-foreground font-mono">
+          <p className="text-sm text-muted-foreground">
             Our team typically responds within 24 hours.
           </p>
-          <p className="text-xs text-muted-foreground font-mono mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Tickets route to{' '}
             <span className="text-foreground">info@studiolayerai.com</span>
           </p>
@@ -87,7 +85,7 @@ export function SupportModal({ open, onOpenChange }: SupportModalProps) {
           <Button
             onClick={handleSubmit}
             disabled={createTicket.isPending || message.trim().length < 10}
-            className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+            className="w-full"
           >
             {createTicket.isPending ? 'Submitting...' : 'Submit Ticket'}
           </Button>

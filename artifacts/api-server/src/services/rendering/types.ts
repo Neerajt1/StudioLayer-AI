@@ -39,6 +39,8 @@ export interface PhotoshootInput {
    * Tells the model exactly what the user wants changed, while preserving everything else.
    */
   refinementInstruction?: string;
+  /** Pipeline observability context — diagnostics only, no behavior change. */
+  pipelineTrace?: import("../../lib/render-pipeline-observability.js").PipelineTraceContext;
 }
 
 /** A single generated image returned by the engine. */
@@ -80,6 +82,8 @@ export interface ProviderInput {
   previousOutputUrl?: string;
   /** Pre-built refinement instruction appended to the garment instruction. */
   refinementInstruction?: string;
+  /** Pipeline observability context — diagnostics only, no behavior change. */
+  pipelineTrace?: import("../../lib/render-pipeline-observability.js").PipelineTraceContext;
 }
 
 /** Contract every rendering provider must satisfy. */

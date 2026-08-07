@@ -14,6 +14,12 @@
 // ---------------------------------------------------------------------------
 
 import { logger } from "../../../lib/logger.js";
+import {
+  logOpenRouterRequest,
+  PipelineStage,
+  type PipelineTraceContext,
+} from "../../../lib/render-pipeline-observability.js";
+import { traceRenderFailure } from "../../../lib/render-pipeline-trace.js";
 import { OPENROUTER_RENDERING_CONFIG } from "../rendering.config.js";
 import type {
   RenderingProvider,
@@ -95,9 +101,28 @@ async function callOpenRouter(
   modelImageUrl: string,
   apiKey: string,
   timeoutMs: number,
+  shotIndex: number,
+  attempt: number,
+  pipelineTrace: PipelineTraceContext | undefined,
   previousOutputUrl?: string,
   refinementInstruction?: string,
-): Promise<string[]> {
+): Promise<{ urls: string[]; httpStatus: number; fetchDurationMs: number; parseDurationMs: number }> {
+  const provider = OPENROUTER_RENDERING_CONFIG.provider;
+  const model = OPENROUTER_RENDERING_CONFIG.defaultModel;
+  const fetchStartedAt = Date.now();
+
+  if (pipelineTrace) {
+    logOpenRouterRequest(pipelineTrace, "started", {
+      shotIndex,
+      attempt,
+      model,
+      provider,
+      durationMs: 0,
+      timeoutMs,
+      success: true,
+    });
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -109,7 +134,6 @@ async function callOpenRouter(
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        // OpenRouter recommends these headers for routing and analytics
         "HTTP-Referer": "https://studiolayer.ai",
         "X-Title": "StudioLayer AI",
       },
@@ -119,18 +143,12 @@ async function callOpenRouter(
           {
             role: "user",
             content: [
-              // ── Part 1: garment instruction (+ optional refinement block) ─
-              // References "Reference Image 1" (garment) and "Reference Image 2"
-              // (model) — order must match the image_url parts below.
-              // In refinement mode, the instruction also references Reference
-              // Image 3 (the previously generated output).
               {
                 type: "text",
                 text: refinementInstruction
                   ? `${OPENROUTER_RENDERING_CONFIG.garmentInstruction}\n\n${refinementInstruction}`
                   : OPENROUTER_RENDERING_CONFIG.garmentInstruction,
               },
-              // ── Part 2: Reference Image 1 — garment ─────────────────────
               {
                 type: "image_url",
                 image_url: {
@@ -138,7 +156,6 @@ async function callOpenRouter(
                   detail: "high",
                 },
               },
-              // ── Part 3: Reference Image 2 — model ───────────────────────
               {
                 type: "image_url",
                 image_url: {
@@ -146,9 +163,6 @@ async function callOpenRouter(
                   detail: "high",
                 },
               },
-              // ── Part 4 (refinement only): Reference Image 3 — previous output
-              // Provides the model with the prior generation as visual context
-              // so it can apply targeted changes rather than generating from scratch.
               ...(previousOutputUrl
                 ? [{
                     type: "image_url" as const,
@@ -158,7 +172,6 @@ async function callOpenRouter(
                     },
                   }]
                 : []),
-              // ── Part 5: optional additional creative direction ───────────
               ...(prompt
                 ? [{ type: "text" as const, text: prompt }]
                 : []),
@@ -171,16 +184,73 @@ async function callOpenRouter(
     clearTimeout(timer);
   }
 
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => "(unreadable)");
-    throw new Error(
-      `OpenRouter API error: HTTP ${response.status} — ${errorBody}`
-    );
+  const fetchDurationMs = Date.now() - fetchStartedAt;
+
+  if (pipelineTrace) {
+    logOpenRouterRequest(pipelineTrace, "response_received", {
+      shotIndex,
+      attempt,
+      model,
+      provider,
+      durationMs: fetchDurationMs,
+      timeoutMs,
+      httpStatus: response.status,
+      success: response.ok,
+    });
   }
 
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "(unreadable)");
+    const err = new Error(
+      `OpenRouter API error: HTTP ${response.status}`,
+    );
+    if (pipelineTrace) {
+      logOpenRouterRequest(pipelineTrace, "attempt_failed", {
+        shotIndex,
+        attempt,
+        model,
+        provider,
+        durationMs: fetchDurationMs,
+        timeoutMs,
+        httpStatus: response.status,
+        success: false,
+        errorMessage: err.message,
+      });
+    }
+    traceRenderFailure(PipelineStage.OPENROUTER_RESPONSE_RECEIVED, err, {
+      pipelineTrace,
+      shotIndex,
+      attempt,
+      httpStatus: response.status,
+      providerErrorLength: errorBody.length,
+    });
+    throw err;
+  }
+
+  const parseStartedAt = Date.now();
   const data: unknown = await response.json();
   const urls = extractImageUrls(data);
-  return urls;
+  const parseDurationMs = Date.now() - parseStartedAt;
+
+  if (pipelineTrace) {
+    logOpenRouterRequest(pipelineTrace, "image_download_completed", {
+      shotIndex,
+      attempt,
+      model,
+      provider,
+      durationMs: parseDurationMs,
+      timeoutMs,
+      httpStatus: response.status,
+      success: urls.length > 0,
+    });
+  }
+
+  return {
+    urls,
+    httpStatus: response.status,
+    fetchDurationMs,
+    parseDurationMs,
+  };
 }
 
 /**
@@ -192,23 +262,28 @@ async function generateSingleShot(
   modelImageUrl: string,
   apiKey: string,
   shotIndex: number,
+  pipelineTrace: PipelineTraceContext | undefined,
   previousOutputUrl?: string,
   refinementInstruction?: string,
 ): Promise<string | null> {
   const { timeoutMs, retryCount } = OPENROUTER_RENDERING_CONFIG;
+  const provider = OPENROUTER_RENDERING_CONFIG.provider;
+  const model = OPENROUTER_RENDERING_CONFIG.defaultModel;
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= retryCount; attempt++) {
-    const attemptLabel = attempt === 0 ? "initial" : `retry ${attempt}`;
     const t0 = Date.now();
 
     try {
-      const urls = await callOpenRouter(
+      const result = await callOpenRouter(
         prompt,
         garmentImageUrl,
         modelImageUrl,
         apiKey,
         timeoutMs,
+        shotIndex,
+        attempt,
+        pipelineTrace,
         previousOutputUrl,
         refinementInstruction,
       );
@@ -216,43 +291,86 @@ async function generateSingleShot(
 
       logger.info(
         {
-          provider: OPENROUTER_RENDERING_CONFIG.provider,
-          model: OPENROUTER_RENDERING_CONFIG.defaultModel,
+          provider,
+          model,
           shotIndex,
-          attempt: attemptLabel,
+          attempt,
           durationMs,
-          urlsReturned: urls.length,
+          urlsReturned: result.urls.length,
+          ...(pipelineTrace
+            ? {
+                generationSessionId: pipelineTrace.generationSessionId,
+                renderId: pipelineTrace.primaryRenderId,
+              }
+            : {}),
         },
-        "OpenRouterProvider: shot generated"
+        "OpenRouterProvider: shot generated",
       );
 
-      if (urls.length > 0) return urls[0]!;
+      if (result.urls.length > 0) return result.urls[0]!;
 
-      // No URLs extracted — treat as a soft failure and retry
       lastError = new Error("No image URLs in OpenRouter response");
+      if (pipelineTrace) {
+        logOpenRouterRequest(pipelineTrace, "attempt_failed", {
+          shotIndex,
+          attempt,
+          model,
+          provider,
+          durationMs,
+          timeoutMs,
+          httpStatus: result.httpStatus,
+          success: false,
+          errorMessage: lastError.message,
+        });
+      }
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
+      const durationMs = Date.now() - t0;
+      if (pipelineTrace) {
+        logOpenRouterRequest(pipelineTrace, "attempt_failed", {
+          shotIndex,
+          attempt,
+          model,
+          provider,
+          durationMs,
+          timeoutMs,
+          success: false,
+          errorMessage: lastError.message,
+        });
+      }
+      traceRenderFailure(PipelineStage.OPENROUTER_REQUEST_STARTED, lastError, {
+        pipelineTrace,
+        shotIndex,
+        attempt,
+      });
       logger.warn(
         {
-          provider: OPENROUTER_RENDERING_CONFIG.provider,
-          model: OPENROUTER_RENDERING_CONFIG.defaultModel,
+          provider,
+          model,
           shotIndex,
-          attempt: attemptLabel,
+          attempt,
           error: lastError.message,
         },
-        "OpenRouterProvider: attempt failed"
+        "OpenRouterProvider: attempt failed",
       );
     }
   }
 
   logger.error(
     {
-      provider: OPENROUTER_RENDERING_CONFIG.provider,
-      model: OPENROUTER_RENDERING_CONFIG.defaultModel,
+      provider,
+      model,
       shotIndex,
       error: lastError?.message,
+      ...(pipelineTrace
+        ? {
+            generationSessionId: pipelineTrace.generationSessionId,
+            renderId: pipelineTrace.primaryRenderId,
+            retryCount: pipelineTrace.openRouterRetryCount,
+          }
+        : {}),
     },
-    "OpenRouterProvider: all attempts exhausted for shot"
+    "OpenRouterProvider: all attempts exhausted for shot",
   );
   return null;
 }
@@ -295,6 +413,7 @@ export class OpenRouterProvider implements RenderingProvider {
       perShotPrompts,
       previousOutputUrl,
       refinementInstruction,
+      pipelineTrace,
     } = input;
 
     const hasPerShotPrompts =
@@ -333,6 +452,7 @@ export class OpenRouterProvider implements RenderingProvider {
                 modelImageUrl,
                 this.apiKey,
                 i,
+                pipelineTrace,
                 previousOutputUrl,
                 refinementInstruction,
               )

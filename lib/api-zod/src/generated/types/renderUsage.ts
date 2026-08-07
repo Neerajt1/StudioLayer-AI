@@ -5,13 +5,24 @@
  * StudioLayer AI API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { BillingCycleStats } from './billingCycleStats';
 import type { RenderUsageTier } from './renderUsageTier';
 
 export interface RenderUsage {
+  /** Studio Credits consumed in the current billing period (or lifetime for complimentary tier) */
   used: number;
-  /** @nullable */
+  /**
+     * Studio Credit allowance for the current membership
+     * @nullable
+     */
   limit: number | null;
   tier: RenderUsageTier;
   canRender: boolean;
   isAdmin: boolean;
+  /**
+     * Studio Credits remaining in the current billing period
+     * @nullable
+     */
+  remaining?: number | null;
+  cycleStats?: BillingCycleStats;
 }

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { RenderInputCameraFraming } from './renderInputCameraFraming';
+import type { RenderInputGarmentLengthSelection } from './renderInputGarmentLengthSelection';
 import type { RenderInputGarmentPlacement } from './renderInputGarmentPlacement';
 import type { RenderInputImageCount } from './renderInputImageCount';
 import type { RenderInputImageDimensions } from './renderInputImageDimensions';
@@ -15,6 +16,7 @@ import type { RenderInputModelDemographics } from './renderInputModelDemographic
 import type { RenderInputModelGender } from './renderInputModelGender';
 import type { RenderInputModelPersona } from './renderInputModelPersona';
 import type { RenderInputModelPose } from './renderInputModelPose';
+import type { RenderInputRefinementType } from './renderInputRefinementType';
 
 export interface RenderInput {
   sourceImageUrl: string;
@@ -28,15 +30,21 @@ export interface RenderInput {
   modelAgeRange?: RenderInputModelAgeRange;
   cameraFraming?: RenderInputCameraFraming;
   garmentPlacement?: RenderInputGarmentPlacement;
+  /** Garment length for Full Outfit uploads only. "auto" (default) uses AI detection from the uploaded image. Manual selection overrides auto detection and becomes part of rendering instructions. */
+  garmentLengthSelection?: RenderInputGarmentLengthSelection;
   modelIdentityId?: string;
   /** Complete the Look selection from the UI. One of: ai_recommended, formal, business_casual, casual, denim, streetwear, ethnic, sportswear, none. When present and not "none", the PromptComposer uses the externally computed outfit specification instead of its own recommendation. */
   outfitStyle?: string;
   /** Number of output images to generate (1, 2, or 4). Each image is an independently generated shot with a natural fashion pose. Defaults to 1. */
   imageCount?: RenderInputImageCount;
-  /** Natural language instruction for refining a previously generated image. When present, the AI applies only this specific change while preserving the uploaded garment and all other elements of the previous output. */
+  /** Deprecated — use refinementType. Legacy button-label mapping still accepted for V1 refinements only. */
   refinementPrompt?: string;
+  /** Batch 21 reliable refine selection. Requires parentRenderId. Each refinement consumes exactly 1 Studio Credit. */
+  refinementType?: RenderInputRefinementType;
   /** ID of the render being refined. When set, the pipeline loads the parent's output image as context (Reference Image 3) and treats this request as a refinement rather than a fresh generation. Creates a new render row linked to the parent for version history. */
   parentRenderId?: number;
   /** Camera Angle Director session memory. List of camera angle names already used in this session (e.g. ["Straight Front Editorial", "Three-Quarter Left"]). When provided, the Camera Angle Director deterministically selects the first unused angle from the 12-angle canonical library. When absent, the AI visually inspects the reference image and selects a different angle. Only relevant when refinementPrompt is a camera angle change request. */
   usedCameraAngles?: string[];
+  /** Pose Director session memory. List of pose names already used in this session (e.g. ["Fashion Power Pose", "Walking Towards Camera"]). When provided, the Pose Director deterministically selects the first garment-appropriate unused pose from the 30-pose canonical library. When absent, the AI visually inspects the reference image and selects a different pose. Only relevant when refinementPrompt is a pose change request. */
+  usedPoses?: string[];
 }

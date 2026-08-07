@@ -136,6 +136,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/studio:
+    delete:
+      operationId: deleteStudio
+      tags: [auth]
+      summary: Permanently delete the authenticated user's Studio
+      description: Cancels any active subscription, removes Studio data, deletes the account, and destroys the session.
+      responses:
+        "204":
+          description: Studio deleted
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Deletion could not be completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /renders:
     get:
       operationId: listRenders
@@ -449,6 +471,94 @@ components:
           description: >
             ID of the parent render this was refined from.
             Null for original (non-refinement) renders.
+        generationSessionId:
+          type: ["string", "null"]
+          format: uuid
+          description: >
+            Canonical generation session identifier. All renders from the same
+            Studio generation share this UUID. Refinements inherit the parent
+            session. Gallery Shoot identity is derived from this field.
+        generationType:
+          type: string
+          enum: [hero, campaign, editorial]
+          description: >
+            Workspace generation type — Hero, Campaign, or Editorial.
+            Inherited from the parent on refinements.
+        studioCreditsUsed:
+          type: integer
+          description: >
+            Studio Credits consumed along the lineage to produce this render.
+        refinementCount:
+          type: integer
+          description: >
+            Refinement steps recorded for this render in the Creative Ledger.
+        masterRenderId:
+          type: ["number", "null"]
+          description: >
+            ID of the immutable Master Asset this render belongs to.
+            Master assets reference themselves.
+        assetVersion:
+          type: integer
+          description: >
+            Immutable version number in the asset lineage. Master Asset = 1;
+            each refinement increments parent version by 1.
+        assetType:
+          type: string
+          enum:
+            - master
+            - crop
+            - face_enhanced
+            - garment_enhanced
+            - background_removed
+            - upscale
+            - colour_corrected
+            - print_export
+            - story_export
+            - legacy_refinement
+          description: >
+            Explicit asset type — never inferred from filenames or URLs.
+        refinementType:
+          type: ["string", "null"]
+          enum: [remove_background, enhance_model_face, enhance_garment, null]
+          description: >
+            AI refinement that created this asset, when applicable.
+        sourceAssetVersion:
+          type: ["integer", "null"]
+          description: >
+            Version number of the parent asset this was derived from.
+        cropPreset:
+          type: ["string", "null"]
+          enum: [original, portrait, full_body, square, story, landscape, banner, null]
+          description: >
+            Crop preset for crop variants. No AI metadata required for crops.
+        assetLineage:
+          type: object
+          description: >
+            Complete auditable lineage record for this asset (Batch 23A).
+          properties:
+            masterAssetId:
+              type: integer
+            parentAssetId:
+              type: ["integer", "null"]
+            assetVersion:
+              type: integer
+            assetType:
+              type: string
+            refinementType:
+              type: ["string", "null"]
+            sourceAssetVersion:
+              type: ["integer", "null"]
+            cropPreset:
+              type: ["string", "null"]
+            createdAt:
+              type: ["string", "null"]
+              format: date-time
+            studioCreditsUsed:
+              type: integer
+        workspaceId:
+          type: number
+          description: >
+            Studio workspace identifier. Same as userId in Version 1.
       required:
         - id
         - userId
@@ -494,6 +604,13 @@ components:
         garmentPlacement:
           type: string
           enum: [upper_body, lower_body, full_body]
+        garmentLengthSelection:
+          type: string
+          enum: [auto, mini, above_knee, knee, midi, mid_calf, maxi, floor]
+          description: >
+            Garment length for Full Outfit uploads only.
+            "auto" (default) uses AI detection from the uploaded image.
+            Manual selection overrides auto detection and becomes part of rendering instructions.
         modelIdentityId:
           type: string
         outfitStyle:
@@ -514,9 +631,14 @@ components:
         refinementPrompt:
           type: string
           description: >
-            Natural language instruction for refining a previously generated image.
-            When present, the AI applies only this specific change while preserving
-            the uploaded garment and all other elements of the previous output.
+            Deprecated — use refinementType. Legacy button-label mapping still
+            accepted for V1 refinements only.
+        refinementType:
+          type: string
+          enum: [remove_background, enhance_model_face, enhance_garment]
+          description: >
+            Batch 21 reliable refine selection. Requires parentRenderId.
+            Each refinement consumes exactly 1 Studio Credit.
         parentRenderId:
           type: number
           description: >
@@ -537,6 +659,19 @@ components:
             When absent, the AI visually inspects the reference image and
             selects a different angle. Only relevant when refinementPrompt
             is a camera angle change request.
+        usedPoses:
+          type: array
+          items:
+            type: string
+          description: >
+            Pose Director session memory.
+            List of pose names already used in this session
+            (e.g. ["Fashion Power Pose", "Walking Towards Camera"]).
+            When provided, the Pose Director deterministically selects the
+            first garment-appropriate unused pose from the 30-pose canonical
+            library. When absent, the AI visually inspects the reference
+            image and selects a different pose. Only relevant when
+            refinementPrompt is a pose change request.
       required:
         - sourceImageUrl
         - modelPersona
@@ -547,8 +682,10 @@ components:
       properties:
         used:
           type: number
+          description: Studio Credits consumed in the current billing period (or lifetime for complimentary tier)
         limit:
           type: ["number", "null"]
+          description: Studio Credit allowance for the current membership
         tier:
           type: string
           enum: [free, pro, enterprise]
@@ -556,12 +693,31 @@ components:
           type: boolean
         isAdmin:
           type: boolean
+        remaining:
+          type: ["number", "null"]
+          description: Studio Credits remaining in the current billing period
+        cycleStats:
+          $ref: "#/components/schemas/BillingCycleStats"
       required:
         - used
         - limit
         - tier
         - canRender
         - isAdmin
+
+    BillingCycleStats:
+      type: object
+      properties:
+        studioCreditsUsed:
+          type: number
+        imagesCreated:
+          type: number
+        averageRefinementsPerImage:
+          type: number
+      required:
+        - studioCreditsUsed
+        - imagesCreated
+        - averageRefinementsPerImage
 
     SupportTicketInput:
       type: object

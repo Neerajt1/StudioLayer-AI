@@ -96,6 +96,13 @@ export const CompleteOnboardingResponse = zod.object({
 
 
 /**
+ * Cancels any active subscription, removes Studio data, deletes the account, and destroys the session.
+ * @summary Permanently delete the authenticated user's Studio
+ */
+export const DeleteStudioResponse = zod.void()
+
+
+/**
  * @summary List user's render jobs
  */
 export const ListRendersResponseItem = zod.object({
@@ -108,7 +115,29 @@ export const ListRendersResponseItem = zod.object({
   "status": zod.enum(['pending', 'processing', 'completed', 'failed']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
-  "parentRenderId": zod.number().nullish().describe('ID of the parent render this was refined from. Null for original (non-refinement) renders.\n')
+  "parentRenderId": zod.number().nullish().describe('ID of the parent render this was refined from. Null for original (non-refinement) renders.\n'),
+  "generationSessionId": zod.string().uuid().nullish().describe('Canonical generation session identifier. All renders from the same Studio generation share this UUID. Refinements inherit the parent session. Gallery Shoot identity is derived from this field.\n'),
+  "generationType": zod.enum(['hero', 'campaign', 'editorial']).optional().describe('Workspace generation type — Hero, Campaign, or Editorial. Inherited from the parent on refinements.\n'),
+  "studioCreditsUsed": zod.number().int().optional().describe('Studio Credits consumed along the lineage to produce this render.\n'),
+  "refinementCount": zod.number().int().optional().describe('Refinement steps recorded for this render in the Creative Ledger.\n'),
+  "masterRenderId": zod.number().nullish().describe('ID of the immutable Master Asset this render belongs to. Master assets reference themselves.\n'),
+  "assetVersion": zod.number().int().optional().describe('Immutable version number in the asset lineage. Master Asset = 1; each refinement increments parent version by 1.\n'),
+  "assetType": zod.enum(['master', 'crop', 'face_enhanced', 'garment_enhanced', 'background_removed', 'upscale', 'colour_corrected', 'print_export', 'story_export', 'legacy_refinement']).optional().describe('Explicit asset type — never inferred from filenames or URLs.\n'),
+  "refinementType": zod.union([zod.literal('remove_background'),zod.literal('enhance_model_face'),zod.literal('enhance_garment'),zod.literal(null)]).nullish().describe('AI refinement that created this asset, when applicable.\n'),
+  "sourceAssetVersion": zod.number().int().nullish().describe('Version number of the parent asset this was derived from.\n'),
+  "cropPreset": zod.union([zod.literal('original'),zod.literal('portrait'),zod.literal('full_body'),zod.literal('square'),zod.literal('story'),zod.literal('landscape'),zod.literal('banner'),zod.literal(null)]).nullish().describe('Crop preset for crop variants. No AI metadata required for crops.\n'),
+  "assetLineage": zod.object({
+  "masterAssetId": zod.number().int().optional(),
+  "parentAssetId": zod.number().int().nullish(),
+  "assetVersion": zod.number().int().optional(),
+  "assetType": zod.string().optional(),
+  "refinementType": zod.string().nullish(),
+  "sourceAssetVersion": zod.number().int().nullish(),
+  "cropPreset": zod.string().nullish(),
+  "createdAt": zod.coerce.date().nullish(),
+  "studioCreditsUsed": zod.number().int().optional()
+}).optional().describe('Complete auditable lineage record for this asset (Batch 23A).\n'),
+  "workspaceId": zod.number().optional().describe('Studio workspace identifier. Same as userId in Version 1.\n')
 })
 export const ListRendersResponse = zod.array(ListRendersResponseItem)
 
@@ -128,12 +157,15 @@ export const CreateRenderBody = zod.object({
   "modelAgeRange": zod.enum(['young_child', 'teen_youth', 'young_adult', 'classic_mid_age', 'mature_executive']).optional(),
   "cameraFraming": zod.enum(['full_body', 'mid_shot', 'close_up']).optional(),
   "garmentPlacement": zod.enum(['upper_body', 'lower_body', 'full_body']).optional(),
+  "garmentLengthSelection": zod.enum(['auto', 'mini', 'above_knee', 'knee', 'midi', 'mid_calf', 'maxi', 'floor']).optional().describe('Garment length for Full Outfit uploads only. \"auto\" (default) uses AI detection from the uploaded image. Manual selection overrides auto detection and becomes part of rendering instructions.\n'),
   "modelIdentityId": zod.string().optional(),
   "outfitStyle": zod.string().optional().describe('Complete the Look selection from the UI. One of: ai_recommended, formal, business_casual, casual, denim, streetwear, ethnic, sportswear, none. When present and not \"none\", the PromptComposer uses the externally computed outfit specification instead of its own recommendation.\n'),
   "imageCount": zod.union([zod.literal(1),zod.literal(2),zod.literal(4)]).optional().describe('Number of output images to generate (1, 2, or 4). Each image is an independently generated shot with a natural fashion pose. Defaults to 1.\n'),
-  "refinementPrompt": zod.string().optional().describe('Natural language instruction for refining a previously generated image. When present, the AI applies only this specific change while preserving the uploaded garment and all other elements of the previous output.\n'),
+  "refinementPrompt": zod.string().optional().describe('Deprecated — use refinementType. Legacy button-label mapping still accepted for V1 refinements only.\n'),
+  "refinementType": zod.enum(['remove_background', 'enhance_model_face', 'enhance_garment']).optional().describe('Batch 21 reliable refine selection. Requires parentRenderId. Each refinement consumes exactly 1 Studio Credit.\n'),
   "parentRenderId": zod.number().optional().describe('ID of the render being refined. When set, the pipeline loads the parent\'s output image as context (Reference Image 3) and treats this request as a refinement rather than a fresh generation. Creates a new render row linked to the parent for version history.\n'),
-  "usedCameraAngles": zod.array(zod.string()).optional().describe('Camera Angle Director session memory. List of camera angle names already used in this session (e.g. [\"Straight Front Editorial\", \"Three-Quarter Left\"]). When provided, the Camera Angle Director deterministically selects the first unused angle from the 12-angle canonical library. When absent, the AI visually inspects the reference image and selects a different angle. Only relevant when refinementPrompt is a camera angle change request.\n')
+  "usedCameraAngles": zod.array(zod.string()).optional().describe('Camera Angle Director session memory. List of camera angle names already used in this session (e.g. [\"Straight Front Editorial\", \"Three-Quarter Left\"]). When provided, the Camera Angle Director deterministically selects the first unused angle from the 12-angle canonical library. When absent, the AI visually inspects the reference image and selects a different angle. Only relevant when refinementPrompt is a camera angle change request.\n'),
+  "usedPoses": zod.array(zod.string()).optional().describe('Pose Director session memory. List of pose names already used in this session (e.g. [\"Fashion Power Pose\", \"Walking Towards Camera\"]). When provided, the Pose Director deterministically selects the first garment-appropriate unused pose from the 30-pose canonical library. When absent, the AI visually inspects the reference image and selects a different pose. Only relevant when refinementPrompt is a pose change request.\n')
 })
 
 export const CreateRenderResponseItem = zod.object({
@@ -146,7 +178,29 @@ export const CreateRenderResponseItem = zod.object({
   "status": zod.enum(['pending', 'processing', 'completed', 'failed']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
-  "parentRenderId": zod.number().nullish().describe('ID of the parent render this was refined from. Null for original (non-refinement) renders.\n')
+  "parentRenderId": zod.number().nullish().describe('ID of the parent render this was refined from. Null for original (non-refinement) renders.\n'),
+  "generationSessionId": zod.string().uuid().nullish().describe('Canonical generation session identifier. All renders from the same Studio generation share this UUID. Refinements inherit the parent session. Gallery Shoot identity is derived from this field.\n'),
+  "generationType": zod.enum(['hero', 'campaign', 'editorial']).optional().describe('Workspace generation type — Hero, Campaign, or Editorial. Inherited from the parent on refinements.\n'),
+  "studioCreditsUsed": zod.number().int().optional().describe('Studio Credits consumed along the lineage to produce this render.\n'),
+  "refinementCount": zod.number().int().optional().describe('Refinement steps recorded for this render in the Creative Ledger.\n'),
+  "masterRenderId": zod.number().nullish().describe('ID of the immutable Master Asset this render belongs to. Master assets reference themselves.\n'),
+  "assetVersion": zod.number().int().optional().describe('Immutable version number in the asset lineage. Master Asset = 1; each refinement increments parent version by 1.\n'),
+  "assetType": zod.enum(['master', 'crop', 'face_enhanced', 'garment_enhanced', 'background_removed', 'upscale', 'colour_corrected', 'print_export', 'story_export', 'legacy_refinement']).optional().describe('Explicit asset type — never inferred from filenames or URLs.\n'),
+  "refinementType": zod.union([zod.literal('remove_background'),zod.literal('enhance_model_face'),zod.literal('enhance_garment'),zod.literal(null)]).nullish().describe('AI refinement that created this asset, when applicable.\n'),
+  "sourceAssetVersion": zod.number().int().nullish().describe('Version number of the parent asset this was derived from.\n'),
+  "cropPreset": zod.union([zod.literal('original'),zod.literal('portrait'),zod.literal('full_body'),zod.literal('square'),zod.literal('story'),zod.literal('landscape'),zod.literal('banner'),zod.literal(null)]).nullish().describe('Crop preset for crop variants. No AI metadata required for crops.\n'),
+  "assetLineage": zod.object({
+  "masterAssetId": zod.number().int().optional(),
+  "parentAssetId": zod.number().int().nullish(),
+  "assetVersion": zod.number().int().optional(),
+  "assetType": zod.string().optional(),
+  "refinementType": zod.string().nullish(),
+  "sourceAssetVersion": zod.number().int().nullish(),
+  "cropPreset": zod.string().nullish(),
+  "createdAt": zod.coerce.date().nullish(),
+  "studioCreditsUsed": zod.number().int().optional()
+}).optional().describe('Complete auditable lineage record for this asset (Batch 23A).\n'),
+  "workspaceId": zod.number().optional().describe('Studio workspace identifier. Same as userId in Version 1.\n')
 })
 export const CreateRenderResponse = zod.array(CreateRenderResponseItem)
 
@@ -169,11 +223,17 @@ export const GetIdentitiesResponse = zod.array(GetIdentitiesResponseItem)
  * @summary Get render usage stats for the current user
  */
 export const GetRenderUsageResponse = zod.object({
-  "used": zod.number(),
-  "limit": zod.number().nullable(),
+  "used": zod.number().describe('Studio Credits consumed in the current billing period (or lifetime for complimentary tier)'),
+  "limit": zod.number().nullable().describe('Studio Credit allowance for the current membership'),
   "tier": zod.enum(['free', 'pro', 'enterprise']),
   "canRender": zod.boolean(),
-  "isAdmin": zod.boolean()
+  "isAdmin": zod.boolean(),
+  "remaining": zod.number().nullish().describe('Studio Credits remaining in the current billing period'),
+  "cycleStats": zod.object({
+  "studioCreditsUsed": zod.number(),
+  "imagesCreated": zod.number(),
+  "averageRefinementsPerImage": zod.number()
+}).optional()
 })
 
 
@@ -204,7 +264,29 @@ export const GetRenderResponse = zod.object({
   "status": zod.enum(['pending', 'processing', 'completed', 'failed']),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date(),
-  "parentRenderId": zod.number().nullish().describe('ID of the parent render this was refined from. Null for original (non-refinement) renders.\n')
+  "parentRenderId": zod.number().nullish().describe('ID of the parent render this was refined from. Null for original (non-refinement) renders.\n'),
+  "generationSessionId": zod.string().uuid().nullish().describe('Canonical generation session identifier. All renders from the same Studio generation share this UUID. Refinements inherit the parent session. Gallery Shoot identity is derived from this field.\n'),
+  "generationType": zod.enum(['hero', 'campaign', 'editorial']).optional().describe('Workspace generation type — Hero, Campaign, or Editorial. Inherited from the parent on refinements.\n'),
+  "studioCreditsUsed": zod.number().int().optional().describe('Studio Credits consumed along the lineage to produce this render.\n'),
+  "refinementCount": zod.number().int().optional().describe('Refinement steps recorded for this render in the Creative Ledger.\n'),
+  "masterRenderId": zod.number().nullish().describe('ID of the immutable Master Asset this render belongs to. Master assets reference themselves.\n'),
+  "assetVersion": zod.number().int().optional().describe('Immutable version number in the asset lineage. Master Asset = 1; each refinement increments parent version by 1.\n'),
+  "assetType": zod.enum(['master', 'crop', 'face_enhanced', 'garment_enhanced', 'background_removed', 'upscale', 'colour_corrected', 'print_export', 'story_export', 'legacy_refinement']).optional().describe('Explicit asset type — never inferred from filenames or URLs.\n'),
+  "refinementType": zod.union([zod.literal('remove_background'),zod.literal('enhance_model_face'),zod.literal('enhance_garment'),zod.literal(null)]).nullish().describe('AI refinement that created this asset, when applicable.\n'),
+  "sourceAssetVersion": zod.number().int().nullish().describe('Version number of the parent asset this was derived from.\n'),
+  "cropPreset": zod.union([zod.literal('original'),zod.literal('portrait'),zod.literal('full_body'),zod.literal('square'),zod.literal('story'),zod.literal('landscape'),zod.literal('banner'),zod.literal(null)]).nullish().describe('Crop preset for crop variants. No AI metadata required for crops.\n'),
+  "assetLineage": zod.object({
+  "masterAssetId": zod.number().int().optional(),
+  "parentAssetId": zod.number().int().nullish(),
+  "assetVersion": zod.number().int().optional(),
+  "assetType": zod.string().optional(),
+  "refinementType": zod.string().nullish(),
+  "sourceAssetVersion": zod.number().int().nullish(),
+  "cropPreset": zod.string().nullish(),
+  "createdAt": zod.coerce.date().nullish(),
+  "studioCreditsUsed": zod.number().int().optional()
+}).optional().describe('Complete auditable lineage record for this asset (Batch 23A).\n'),
+  "workspaceId": zod.number().optional().describe('Studio workspace identifier. Same as userId in Version 1.\n')
 })
 
 

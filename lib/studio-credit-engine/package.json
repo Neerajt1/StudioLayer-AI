@@ -1,0 +1,21 @@
+{
+  "name": "@workspace/studio-credit-engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test src/billing-cycle-stats.test.ts src/billing-cycle.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "catalog:"
+  }
+}

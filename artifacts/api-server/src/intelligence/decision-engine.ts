@@ -3,6 +3,7 @@
 //
 // Orchestrates the full intelligence pipeline:
 //   1. GarmentAnalyzer     → GarmentProfile
+//   1b. GarmentIntelligence → length override, silhouette, fabric behaviour
 //   2. StyleEngine         → StyleMode
 //   3. WardrobeCompletion  → which slots to fill
 //   4. Rule Engine         → FashionKnowledgeBase match (deterministic, first)
@@ -22,11 +23,17 @@
 import OpenAI from "openai";
 import { logger } from "../lib/logger";
 import { analyzeGarment } from "./garment-analyzer";
+import { applyGarmentIntelligence } from "./garment-intelligence";
+import type { GarmentLengthSelection } from "./garment-intelligence";
 import { FashionKnowledgeBase } from "./fashion-knowledge-base";
 import { selectStyleMode, describeStyleMode } from "./style-engine";
 import { getCompletionPlan, filterRecommendationsToSlots } from "./wardrobe-completion";
 import { composeRenderPrompt } from "./prompt-composer";
 import { resolveOutfitOverride } from "./outfit-style-override";
+import {
+  applyContextAwareAccessories,
+  accessoryPromptGuidance,
+} from "./accessory-intelligence";
 import type {
   GarmentCategory,
   GarmentProfile,
@@ -133,6 +140,7 @@ Rules:
 - NEVER recommend another ${profile.category} garment.
 - The uploaded garment is the hero product — all recommendations must be neutral and secondary.
 - Avoid highly patterned or brightly coloured complementary items.
+- Accessories MUST match model gender (${profile.gender}) and age (${profile.ageGroup}). Never recommend feminine jewellery for male models or mature luxury accessories for child models.
 - Use specific, product-style descriptions (e.g. "White Slim Chinos" not "pants").
 - Respond with ONLY valid JSON.`;
 
@@ -198,6 +206,8 @@ export interface IntelligenceParams {
   renderId: number;
   garmentImageUrl: string;
   garmentPlacement?: string | null;
+  /** Full Outfit length selection — "auto" uses vision detection; manual values override. */
+  garmentLengthSelection?: GarmentLengthSelection | null;
   modelGender?: string | null;
   modelAgeRange?: string | null;
   region?: string;
@@ -209,6 +219,8 @@ export interface IntelligenceParams {
    * "none" means: let the Intelligence Engine decide (no override applied).
    */
   outfitStyle?: string | null;
+  /** Number of images being generated — used for context-aware accessories. */
+  shots?: 1 | 2 | 4 | 8;
 }
 
 /**
@@ -228,9 +240,11 @@ export async function runIntelligenceAnalysis(
     renderId,
     garmentImageUrl,
     garmentPlacement,
+    garmentLengthSelection,
     modelGender,
     modelAgeRange,
     outfitStyle,
+    shots = 1,
     region = "default",
   } = params;
 
@@ -238,8 +252,15 @@ export async function runIntelligenceAnalysis(
   let usedHardFallback = false;
 
   // 1. Analyse garment ───────────────────────────────────────────────────────
-  const profile: GarmentProfile = await analyzeGarment({
+  const rawProfile: GarmentProfile = await analyzeGarment({
     imageUrl: garmentImageUrl,
+    garmentPlacement,
+    garmentLengthSelection,
+  });
+
+  // 1b. Garment Intelligence — length override, silhouette, fabric behaviour
+  const profile = applyGarmentIntelligence(rawProfile, {
+    garmentLengthSelection: garmentLengthSelection ?? "auto",
     garmentPlacement,
   });
 
@@ -320,12 +341,17 @@ export async function runIntelligenceAnalysis(
     outfitOverrideApplied          = true;
   }
 
+  // 7b. Context-aware accessories (Batch 3.2) ───────────────────────────────
+  outfit = applyContextAwareAccessories(outfit, profile, modelGender, shots);
+  recommendation.recommendedOutfit = outfit;
+
   // 8. Compose render prompt ─────────────────────────────────────────────────
   const prompt = composeRenderPrompt({
     profile,
     recommendation,
     modelGender,
     modelAgeGroup: modelAgeRange,
+    accessoryGuidance: accessoryPromptGuidance(profile, modelGender, shots),
   });
 
   const durationMs = Date.now() - startMs;
@@ -345,6 +371,11 @@ export async function runIntelligenceAnalysis(
           pattern:       profile.pattern,
           occasion:      profile.occasion,
           season:        profile.season,
+          garmentLength: profile.garmentLength,
+          silhouette:    profile.silhouette,
+          fabricBehaviour: profile.fabricBehaviour,
+          fabricMovementPotential: profile.fabricMovementPotential,
+          garmentStructure: profile.garmentStructure,
         },
         detectedStyle:      describeStyleMode(styleMode),
         selectedStyleMode:  styleMode,

@@ -3,10 +3,14 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
+import { MembershipCreditAllowances } from "@workspace/studio-credit-engine";
+import { deleteStudioAccount, StudioDeletionError } from "../services/delete-studio.js";
+import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
 
-export const FREE_TIER_LIMIT = 3;
+/** Complimentary tier allowance — sourced from Studio Credit Engine. */
+export const FREE_TIER_LIMIT = MembershipCreditAllowances.complimentary;
 
 function mapUser(user: typeof usersTable.$inferSelect) {
   return {
@@ -125,6 +129,70 @@ router.patch("/auth/complete-onboarding", async (req, res): Promise<void> => {
   }
 
   res.json(mapUser(user));
+});
+
+router.delete("/auth/studio", async (req, res): Promise<void> => {
+  const requestLog = logger.child({ route: "DELETE /auth/studio" });
+
+  requestLog.info({ step: "request_received" }, "Studio deletion request received");
+
+  const userId = req.session?.userId;
+  if (!userId) {
+    requestLog.warn({ step: "authentication" }, "Studio deletion rejected — not authenticated");
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  requestLog.info({ userId, step: "authentication" }, "User authenticated");
+
+  try {
+    await deleteStudioAccount(userId, requestLog);
+  } catch (error) {
+    const step = error instanceof StudioDeletionError ? error.step : "unknown";
+    requestLog.error(
+      {
+        err: error,
+        userId,
+        step,
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+      "Studio deletion failed",
+    );
+
+    res.status(503).json({
+      error:
+        "We couldn't complete your Studio deletion at this time. Please try again in a few moments.",
+    });
+    return;
+  }
+
+  requestLog.info({ userId, step: "session_destroy" }, "Destroying session");
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      req.session!.destroy((destroyError) => {
+        if (destroyError) {
+          reject(destroyError);
+          return;
+        }
+        resolve();
+      });
+    });
+    requestLog.info({ userId, step: "session_destroy" }, "Session destroyed");
+  } catch (destroyError) {
+    requestLog.error(
+      {
+        err: destroyError,
+        userId,
+        step: "session_destroy",
+        stack: destroyError instanceof Error ? destroyError.stack : undefined,
+      },
+      "Session destroy failed after successful Studio deletion — account already removed",
+    );
+  }
+
+  requestLog.info({ userId, step: "success_response" }, "Studio deletion complete — success response returned");
+  res.sendStatus(204);
 });
 
 export default router;

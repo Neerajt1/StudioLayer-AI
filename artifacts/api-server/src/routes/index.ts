@@ -4,6 +4,8 @@ import authRouter from "./auth";
 import rendersRouter from "./renders";
 import supportRouter from "./support";
 import identitiesRouter from "./identities";
+import accountStatementRouter from "./account-statement";
+import adminCommercialRouter from "./admin-commercial";
 import testOpenRouterRouter from "./test-openrouter";
 
 const router: IRouter = Router();
@@ -11,6 +13,8 @@ const router: IRouter = Router();
 router.use(healthRouter);
 router.use(authRouter);
 router.use(rendersRouter);
+router.use(accountStatementRouter);
+router.use(adminCommercialRouter);
 router.use(supportRouter);
 router.use(identitiesRouter);
 // Internal test route — OpenRouter rendering validation (spec §11)

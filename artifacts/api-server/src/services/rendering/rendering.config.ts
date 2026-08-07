@@ -11,6 +11,13 @@
 //   OR_RENDER_RETRY_COUNT       Override retry count. Default 1.
 // ---------------------------------------------------------------------------
 
+import { RENDERING_REALISM_INSTRUCTION } from "./rendering-realism.js";
+import { RENDERING_BACKGROUND_INSTRUCTION } from "./rendering-background.js";
+import { RENDERING_COLOR_FIDELITY_INSTRUCTION } from "./rendering-color-fidelity.js";
+import {
+  PLATFORM_IMAGE_STANDARD_INSTRUCTION,
+} from "../image-architecture/master-asset.js";
+
 export const OPENROUTER_RENDERING_CONFIG = {
   /** Provider label — internal only, never surfaced in UI. */
   provider: "openrouter" as const,
@@ -53,6 +60,23 @@ Your task is to dress the person shown in Reference Image 2 using the exact garm
 
 The uploaded garment is the single source of truth. It must appear in the output exactly as uploaded.
 
+TECHNICAL REFERENCE — NOT INSPIRATION:
+Reference Image 1 is a technical garment reference, not a creative mood board. Treat it like a production spec sheet. Reproduce only what is visibly present — never infer, extend, or embellish missing details.
+
+GARMENT FIDELITY — NON-NEGOTIABLE:
+- Preserve every garment construction detail exactly as visible in Reference Image 1.
+- Preserve embroidery locations exactly. If embroidery appears only on the chest, it must appear only on the chest — never on sleeves, cuffs, hem, or back unless already present there.
+- Do not invent embroidery anywhere it does not exist in Reference Image 1.
+- Do not invent prints, patterns, logos, or graphics on any part of the garment.
+- Do not invent pockets, buttons, zippers, plackets, collars, or collar stands.
+- Do not invent sleeve detailing — no added cuffs, embroidery, piping, or embellishment on sleeves unless clearly visible in Reference Image 1.
+- Do not invent stitching, topstitching, decorative seams, or contrast thread.
+- Do not invent borders, trims, piping, fringe, beads, sequins, appliqués, or embellishments.
+- Do not invent seams, panels, or hardware.
+- Do not invent textures or weaves.
+- If an area is plain, solid, or unembellished in Reference Image 1, it must remain plain in the output.
+- Do not "complete" or "balance" the design by adding symmetric details on the opposite side unless they already exist in Reference Image 1.
+
 STRUCTURAL ELEMENTS — YOU MUST PRESERVE EVERY ONE OF THESE EXACTLY:
 
 1. Neckline shape — the exact cut and depth of the neckline (V-neck, scoop, square, boat, crew, etc.) must not change in any way.
@@ -68,11 +92,14 @@ STRUCTURAL ELEMENTS — YOU MUST PRESERVE EVERY ONE OF THESE EXACTLY:
 
 WHAT MUST NEVER CHANGE:
 - Do not redesign, reinterpret, alter, replace, or restyle the uploaded garment in any way.
+- Do not reinterpret the garment's dimensions, scale, or proportions — they must remain identical to Reference Image 1 in every output.
 - Do not remove straps or change their position.
 - Do not change the neckline depth or shape.
 - Do not shorten or lengthen the garment.
 - Do not change the sleeve length or type.
-- Do not alter the silhouette or overall shape.
+- Do not alter the silhouette, overall shape, or relative measurements (waist position, hem height, shoulder width, body coverage).
+
+BATCH CONSISTENCY — when multiple images are generated from the same upload, every image must show the identical garment with identical proportions and dimensions. Never vary garment length, silhouette, or scale between shots.
 
 ORIENTATION — Reproduce the garment in its exact original left/right orientation as shown in Reference Image 1. Do not flip, mirror, or horizontally reverse the garment for any reason. All asymmetric details — embroidery, prints, logos, button plackets, chest pockets, side slits, off-shoulder drops, and any embellishments — must remain on the same side as the original. If the garment has a logo on the left chest, it must appear on the left chest in the output.
 
@@ -89,17 +116,19 @@ OUTFIT COMPLETION — When generating complementary clothing to complete the out
 
 WHAT MAY VARY NATURALLY:
 - Model pose and body position
-- Facial expression
-- Lighting and shadows cast by the garment
-- Background and environment
 - Camera angle and framing
+- Lighting and shadows cast by the garment (within soft studio lighting — background remains pure white)
+- Complementary styling (footwear, accessories, and outfit-completion pieces around the hero garment)
+- Facial expression
 - Complementary clothing items (shoes, trousers, skirt) that complete the outfit around the uploaded garment — these must not cover or obscure the uploaded garment in any way
+
+BACKGROUND IS FIXED — pure white seamless studio in every output. Never vary the background between shots or introduce environmental scenery.
 
 If the uploaded garment represents only part of an outfit (such as a blazer, jacket, shirt, top, skirt or trousers), intelligently generate the remaining clothing so that it naturally complements the uploaded garment while keeping the uploaded garment completely unchanged.
 
 Ignore the hanger, background and any non-garment objects present in Reference Image 1. Use only the garment itself for dressing the model.
 
-Generate a premium commercial fashion photograph suitable for an ecommerce clothing brand with realistic lighting, natural body proportions, accurate garment draping, and a clean professional studio appearance.`,
+Generate a premium commercial fashion photograph suitable for an ecommerce clothing brand with realistic lighting, natural body proportions, accurate garment draping, and a clean professional studio appearance.${PLATFORM_IMAGE_STANDARD_INSTRUCTION}${RENDERING_REALISM_INSTRUCTION}${RENDERING_BACKGROUND_INSTRUCTION}${RENDERING_COLOR_FIDELITY_INSTRUCTION}`,
 
   /**
    * OpenRouter API base URL.

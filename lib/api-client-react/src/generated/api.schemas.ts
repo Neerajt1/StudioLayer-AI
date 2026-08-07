@@ -93,6 +93,87 @@ export const RenderStatus = {
   failed: 'failed',
 } as const;
 
+/**
+ * Workspace generation type — Hero, Campaign, or Editorial. Inherited from the parent on refinements.
+ */
+export type RenderGenerationType = typeof RenderGenerationType[keyof typeof RenderGenerationType];
+
+
+export const RenderGenerationType = {
+  hero: 'hero',
+  campaign: 'campaign',
+  editorial: 'editorial',
+} as const;
+
+/**
+ * Explicit asset type — never inferred from filenames or URLs.
+ */
+export type RenderAssetType = typeof RenderAssetType[keyof typeof RenderAssetType];
+
+
+export const RenderAssetType = {
+  master: 'master',
+  crop: 'crop',
+  face_enhanced: 'face_enhanced',
+  garment_enhanced: 'garment_enhanced',
+  background_removed: 'background_removed',
+  upscale: 'upscale',
+  colour_corrected: 'colour_corrected',
+  print_export: 'print_export',
+  story_export: 'story_export',
+  legacy_refinement: 'legacy_refinement',
+} as const;
+
+/**
+ * AI refinement that created this asset, when applicable.
+ * @nullable
+ */
+export type RenderRefinementType = typeof RenderRefinementType[keyof typeof RenderRefinementType] | null;
+
+
+export const RenderRefinementType = {
+  remove_background: 'remove_background',
+  enhance_model_face: 'enhance_model_face',
+  enhance_garment: 'enhance_garment',
+} as const;
+
+/**
+ * Crop preset for crop variants. No AI metadata required for crops.
+ * @nullable
+ */
+export type RenderCropPreset = typeof RenderCropPreset[keyof typeof RenderCropPreset] | null;
+
+
+export const RenderCropPreset = {
+  original: 'original',
+  portrait: 'portrait',
+  full_body: 'full_body',
+  square: 'square',
+  story: 'story',
+  landscape: 'landscape',
+  banner: 'banner',
+} as const;
+
+/**
+ * Complete auditable lineage record for this asset (Batch 23A).
+ */
+export type RenderAssetLineage = {
+  masterAssetId?: number;
+  /** @nullable */
+  parentAssetId?: number | null;
+  assetVersion?: number;
+  assetType?: string;
+  /** @nullable */
+  refinementType?: string | null;
+  /** @nullable */
+  sourceAssetVersion?: number | null;
+  /** @nullable */
+  cropPreset?: string | null;
+  /** @nullable */
+  createdAt?: string | null;
+  studioCreditsUsed?: number;
+};
+
 export interface Render {
   id: number;
   userId: number;
@@ -110,6 +191,45 @@ export interface Render {
      * @nullable
      */
   parentRenderId?: number | null;
+  /**
+     * Canonical generation session identifier. All renders from the same Studio generation share this UUID. Refinements inherit the parent session. Gallery Shoot identity is derived from this field.
+     * @nullable
+     */
+  generationSessionId?: string | null;
+  /** Workspace generation type — Hero, Campaign, or Editorial. Inherited from the parent on refinements. */
+  generationType?: RenderGenerationType;
+  /** Studio Credits consumed along the lineage to produce this render. */
+  studioCreditsUsed?: number;
+  /** Refinement steps recorded for this render in the Creative Ledger. */
+  refinementCount?: number;
+  /**
+     * ID of the immutable Master Asset this render belongs to. Master assets reference themselves.
+     * @nullable
+     */
+  masterRenderId?: number | null;
+  /** Immutable version number in the asset lineage. Master Asset = 1; each refinement increments parent version by 1. */
+  assetVersion?: number;
+  /** Explicit asset type — never inferred from filenames or URLs. */
+  assetType?: RenderAssetType;
+  /**
+     * AI refinement that created this asset, when applicable.
+     * @nullable
+     */
+  refinementType?: RenderRefinementType;
+  /**
+     * Version number of the parent asset this was derived from.
+     * @nullable
+     */
+  sourceAssetVersion?: number | null;
+  /**
+     * Crop preset for crop variants. No AI metadata required for crops.
+     * @nullable
+     */
+  cropPreset?: RenderCropPreset;
+  /** Complete auditable lineage record for this asset (Batch 23A). */
+  assetLineage?: RenderAssetLineage;
+  /** Studio workspace identifier. Same as userId in Version 1. */
+  workspaceId?: number;
 }
 
 export type RenderInputModelPersona = typeof RenderInputModelPersona[keyof typeof RenderInputModelPersona];
@@ -204,6 +324,23 @@ export const RenderInputGarmentPlacement = {
 } as const;
 
 /**
+ * Garment length for Full Outfit uploads only. "auto" (default) uses AI detection from the uploaded image. Manual selection overrides auto detection and becomes part of rendering instructions.
+ */
+export type RenderInputGarmentLengthSelection = typeof RenderInputGarmentLengthSelection[keyof typeof RenderInputGarmentLengthSelection];
+
+
+export const RenderInputGarmentLengthSelection = {
+  auto: 'auto',
+  mini: 'mini',
+  above_knee: 'above_knee',
+  knee: 'knee',
+  midi: 'midi',
+  mid_calf: 'mid_calf',
+  maxi: 'maxi',
+  floor: 'floor',
+} as const;
+
+/**
  * Number of output images to generate (1, 2, or 4). Each image is an independently generated shot with a natural fashion pose. Defaults to 1.
  */
 export type RenderInputImageCount = typeof RenderInputImageCount[keyof typeof RenderInputImageCount];
@@ -213,6 +350,18 @@ export const RenderInputImageCount = {
   NUMBER_1: 1,
   NUMBER_2: 2,
   NUMBER_4: 4,
+} as const;
+
+/**
+ * Batch 21 reliable refine selection. Requires parentRenderId. Each refinement consumes exactly 1 Studio Credit.
+ */
+export type RenderInputRefinementType = typeof RenderInputRefinementType[keyof typeof RenderInputRefinementType];
+
+
+export const RenderInputRefinementType = {
+  remove_background: 'remove_background',
+  enhance_model_face: 'enhance_model_face',
+  enhance_garment: 'enhance_garment',
 } as const;
 
 export interface RenderInput {
@@ -227,17 +376,23 @@ export interface RenderInput {
   modelAgeRange?: RenderInputModelAgeRange;
   cameraFraming?: RenderInputCameraFraming;
   garmentPlacement?: RenderInputGarmentPlacement;
+  /** Garment length for Full Outfit uploads only. "auto" (default) uses AI detection from the uploaded image. Manual selection overrides auto detection and becomes part of rendering instructions. */
+  garmentLengthSelection?: RenderInputGarmentLengthSelection;
   modelIdentityId?: string;
   /** Complete the Look selection from the UI. One of: ai_recommended, formal, business_casual, casual, denim, streetwear, ethnic, sportswear, none. When present and not "none", the PromptComposer uses the externally computed outfit specification instead of its own recommendation. */
   outfitStyle?: string;
   /** Number of output images to generate (1, 2, or 4). Each image is an independently generated shot with a natural fashion pose. Defaults to 1. */
   imageCount?: RenderInputImageCount;
-  /** Natural language instruction for refining a previously generated image. When present, the AI applies only this specific change while preserving the uploaded garment and all other elements of the previous output. */
+  /** Deprecated — use refinementType. Legacy button-label mapping still accepted for V1 refinements only. */
   refinementPrompt?: string;
+  /** Batch 21 reliable refine selection. Requires parentRenderId. Each refinement consumes exactly 1 Studio Credit. */
+  refinementType?: RenderInputRefinementType;
   /** ID of the render being refined. When set, the pipeline loads the parent's output image as context (Reference Image 3) and treats this request as a refinement rather than a fresh generation. Creates a new render row linked to the parent for version history. */
   parentRenderId?: number;
   /** Camera Angle Director session memory. List of camera angle names already used in this session (e.g. ["Straight Front Editorial", "Three-Quarter Left"]). When provided, the Camera Angle Director deterministically selects the first unused angle from the 12-angle canonical library. When absent, the AI visually inspects the reference image and selects a different angle. Only relevant when refinementPrompt is a camera angle change request. */
   usedCameraAngles?: string[];
+  /** Pose Director session memory. List of pose names already used in this session (e.g. ["Fashion Power Pose", "Walking Towards Camera"]). When provided, the Pose Director deterministically selects the first garment-appropriate unused pose from the 30-pose canonical library. When absent, the AI visually inspects the reference image and selects a different pose. Only relevant when refinementPrompt is a pose change request. */
+  usedPoses?: string[];
 }
 
 export type RenderUsageTier = typeof RenderUsageTier[keyof typeof RenderUsageTier];
@@ -249,13 +404,29 @@ export const RenderUsageTier = {
   enterprise: 'enterprise',
 } as const;
 
+export interface BillingCycleStats {
+  studioCreditsUsed: number;
+  imagesCreated: number;
+  averageRefinementsPerImage: number;
+}
+
 export interface RenderUsage {
+  /** Studio Credits consumed in the current billing period (or lifetime for complimentary tier) */
   used: number;
-  /** @nullable */
+  /**
+     * Studio Credit allowance for the current membership
+     * @nullable
+     */
   limit: number | null;
   tier: RenderUsageTier;
   canRender: boolean;
   isAdmin: boolean;
+  /**
+     * Studio Credits remaining in the current billing period
+     * @nullable
+     */
+  remaining?: number | null;
+  cycleStats?: BillingCycleStats;
 }
 
 export interface SupportTicketInput {

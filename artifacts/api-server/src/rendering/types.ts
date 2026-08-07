@@ -53,6 +53,8 @@ export interface RenderingRequest {
   modelAgeRange?: string | null;
   modelPose?: string | null;
   garmentPlacement?: string | null;
+  /** Full Outfit length selection — "auto" or manual override. */
+  garmentLengthSelection?: string | null;
   modelIdentityId?: string | null;
   /** Optional override of the global RENDERING_CONFIG.renderMode. */
   renderMode?: RenderMode;

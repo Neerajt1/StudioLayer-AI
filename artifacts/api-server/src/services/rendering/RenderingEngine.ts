@@ -74,7 +74,8 @@ export class RenderingEngine {
 
     // The garmentInstruction in rendering.config.ts is the authoritative
     // generation instruction — it fully describes the virtual try-on task,
-    // garment preservation, and output quality requirements.
+    // garment preservation, realism (Batch 19), and white studio background
+    // standard (Batch 20). Future background modules resolve via rendering-background.ts.
     // Any caller-supplied prompt is forwarded as optional additional creative
     // context (e.g. location, mood) appended after the instruction + images.
     const finalPrompt = prompt.trim();
@@ -99,6 +100,7 @@ export class RenderingEngine {
       perShotPrompts: input.perShotPrompts,
       previousOutputUrl: input.previousOutputUrl,
       refinementInstruction: input.refinementInstruction,
+      pipelineTrace: input.pipelineTrace,
     });
 
     const durationMs = Date.now() - t0;

@@ -1,0 +1,243 @@
+// ---------------------------------------------------------------------------
+// Studio workflow — single source of truth for the creation pipeline
+// ---------------------------------------------------------------------------
+
+export type GarmentPlacement = 'upper_body' | 'lower_body' | 'full_body' | '';
+export type GarmentLengthSelection =
+  | 'auto'
+  | 'mini'
+  | 'above_knee'
+  | 'knee'
+  | 'midi'
+  | 'mid_calf'
+  | 'maxi'
+  | 'floor';
+export type ShootType = 1 | 2 | 4;
+
+export interface StudioWorkflow {
+  sourceImageUrl: string;
+  garmentPlacement: GarmentPlacement;
+  garmentLengthSelection: GarmentLengthSelection;
+  talentId: string;
+  imageCount: ShootType;
+}
+
+export const EMPTY_STUDIO_WORKFLOW: StudioWorkflow = {
+  sourceImageUrl: '',
+  garmentPlacement: '',
+  garmentLengthSelection: 'auto',
+  talentId: '',
+  imageCount: 1,
+};
+
+export const GARMENT_LENGTH_OPTIONS: ReadonlyArray<{
+  value: GarmentLengthSelection;
+  label: string;
+}> = [
+  { value: 'auto', label: 'Auto Detect' },
+  { value: 'mini', label: 'Mini' },
+  { value: 'above_knee', label: 'Above Knee' },
+  { value: 'knee', label: 'Knee Length' },
+  { value: 'midi', label: 'Midi' },
+  { value: 'mid_calf', label: 'Mid-Calf' },
+  { value: 'maxi', label: 'Maxi' },
+  { value: 'floor', label: 'Floor Length' },
+];
+
+export type WorkflowMissingField = 'garment' | 'category' | 'talent';
+
+export interface StudioWorkflowValidation {
+  hasGarment: boolean;
+  hasCategory: boolean;
+  hasTalent: boolean;
+  isComplete: boolean;
+  firstMissing: WorkflowMissingField | null;
+  message: string | null;
+}
+
+export interface StudioGenerateGate {
+  limitBlocked: boolean;
+  isPending: boolean;
+  isProcessing: boolean;
+}
+
+export interface StudioIdentityPayload {
+  id: string;
+  gender?: string;
+  ageGroup?: string;
+}
+
+const STORAGE_KEY_PREFIX = 'studiolayer:studio-workflow';
+const LEGACY_TALENT_KEY_PREFIX = 'studiolayer:selected-talent-id';
+const LEGACY_DRAFT_KEY_PREFIX = 'studiolayer:studio-workflow-draft';
+/** Pre-isolation global talent key */
+const LEGACY_GLOBAL_TALENT_KEY = 'studiolayer:selected-talent-id';
+
+function isShootType(value: unknown): value is ShootType {
+  return value === 1 || value === 2 || value === 4;
+}
+
+function isGarmentPlacement(value: unknown): value is GarmentPlacement {
+  return value === 'upper_body' || value === 'lower_body' || value === 'full_body' || value === '';
+}
+
+function isGarmentLengthSelection(value: unknown): value is GarmentLengthSelection {
+  return (
+    value === 'auto'
+    || value === 'mini'
+    || value === 'above_knee'
+    || value === 'knee'
+    || value === 'midi'
+    || value === 'mid_calf'
+    || value === 'maxi'
+    || value === 'floor'
+  );
+}
+
+export function normalizeStudioWorkflow(raw: Partial<StudioWorkflow> | null | undefined): StudioWorkflow {
+  return {
+    sourceImageUrl: typeof raw?.sourceImageUrl === 'string' ? raw.sourceImageUrl : '',
+    garmentPlacement: isGarmentPlacement(raw?.garmentPlacement) ? raw.garmentPlacement : '',
+    garmentLengthSelection: isGarmentLengthSelection(raw?.garmentLengthSelection)
+      ? raw.garmentLengthSelection
+      : 'auto',
+    talentId: typeof raw?.talentId === 'string' ? raw.talentId : '',
+    imageCount: isShootType(raw?.imageCount) ? raw.imageCount : 1,
+  };
+}
+
+export function validateStudioWorkflow(workflow: StudioWorkflow): StudioWorkflowValidation {
+  const hasGarment = Boolean(workflow.sourceImageUrl);
+  const hasCategory = Boolean(workflow.garmentPlacement);
+  const hasTalent = Boolean(workflow.talentId);
+  const isComplete = hasGarment && hasCategory && hasTalent;
+
+  if (!hasGarment) {
+    return {
+      hasGarment,
+      hasCategory,
+      hasTalent,
+      isComplete,
+      firstMissing: 'garment',
+      message: 'Upload a garment photo to begin creating.',
+    };
+  }
+
+  if (!hasTalent) {
+    return {
+      hasGarment,
+      hasCategory,
+      hasTalent,
+      isComplete,
+      firstMissing: 'talent',
+      message: 'Select Your Model from the library.',
+    };
+  }
+
+  if (!hasCategory) {
+    return {
+      hasGarment,
+      hasCategory,
+      hasTalent,
+      isComplete,
+      firstMissing: 'category',
+      message: 'Select what type of garment this is.',
+    };
+  }
+
+  return {
+    hasGarment,
+    hasCategory,
+    hasTalent,
+    isComplete,
+    firstMissing: null,
+    message: null,
+  };
+}
+
+export function canGenerateStudioWorkflow(
+  workflow: StudioWorkflow,
+  gate: StudioGenerateGate,
+): boolean {
+  return validateStudioWorkflow(workflow).isComplete
+    && !gate.limitBlocked
+    && !gate.isPending
+    && !gate.isProcessing;
+}
+
+export function buildGenerationRequest(
+  workflow: StudioWorkflow,
+  identity: StudioIdentityPayload | undefined,
+) {
+  return {
+    sourceImageUrl: workflow.sourceImageUrl,
+    modelPersona: 'confident_commercial' as const,
+    locationEnvironment: 'photo_studio' as const,
+    garmentPlacement: workflow.garmentPlacement as never,
+    ...(workflow.garmentPlacement === 'full_body'
+      ? { garmentLengthSelection: workflow.garmentLengthSelection as never }
+      : {}),
+    modelIdentityId: workflow.talentId || undefined,
+    modelGender: identity?.gender as never,
+    modelAgeRange: identity?.ageGroup as never,
+    smartLighting: true,
+    imageDimensions: 'portrait_45' as const,
+    imageCount: workflow.imageCount,
+  };
+}
+
+export function buildRefinementRequest(
+  workflow: StudioWorkflow,
+  identity: StudioIdentityPayload | undefined,
+  input: {
+    parentRenderId: number;
+    refinementType: 'remove_background' | 'enhance_model_face' | 'enhance_garment';
+  },
+) {
+  return {
+    ...buildGenerationRequest(workflow, identity),
+    parentRenderId: input.parentRenderId,
+    refinementType: input.refinementType,
+  };
+}
+
+function storageKey(userId: number): string {
+  return `${STORAGE_KEY_PREFIX}:${userId}`;
+}
+
+function clearLegacyKeysForUser(userId: number): void {
+  try {
+    sessionStorage.removeItem(`${LEGACY_TALENT_KEY_PREFIX}:${userId}`);
+    sessionStorage.removeItem(`${LEGACY_DRAFT_KEY_PREFIX}:${userId}`);
+  } catch {
+    /* sessionStorage unavailable */
+  }
+}
+
+export function clearStoredStudioWorkflow(userId: number | null): void {
+  if (userId == null) return;
+
+  try {
+    sessionStorage.removeItem(storageKey(userId));
+  } catch {
+    /* sessionStorage unavailable */
+  }
+}
+
+/** Remove pre-isolation keys so workflow state cannot leak across Studios */
+export function clearLegacyStudioWorkflowStorage(): void {
+  try {
+    sessionStorage.removeItem(LEGACY_GLOBAL_TALENT_KEY);
+  } catch {
+    /* sessionStorage unavailable */
+  }
+}
+
+/** Destroy persisted draft and legacy keys for a Studio (logout / new photoshoot). */
+export function destroyStoredStudioWorkflow(userId: number | null): void {
+  clearStoredStudioWorkflow(userId);
+  if (userId != null) {
+    clearLegacyKeysForUser(userId);
+  }
+  clearLegacyStudioWorkflowStorage();
+}

@@ -1,12 +1,7 @@
 // ---------------------------------------------------------------------------
 // StudioLayer AI — FileUpload Component (SL-018 improved)
 //
-// Improvements over the previous version:
-//   - Richer drag-over visual: border thickens, background shifts, scale pulse
-//   - File size validation (max 20 MB) with inline error message
-//   - Smooth upload success transition with fade-in preview
-//   - Cleaner empty-state copy focused on the user's goal
-//   - Accessible: role="button" + keyboard trigger
+// Preview is controlled by `previewUrl` from the Studio workflow object.
 // ---------------------------------------------------------------------------
 
 import { useRef, useState } from 'react';
@@ -14,6 +9,8 @@ import { X, ImageIcon, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FileUploadProps {
+  /** Controlled preview — must match workflow.sourceImageUrl */
+  previewUrl?: string | null;
   onFileSelect: (url: string) => void;
   accept?: string;
   className?: string;
@@ -22,11 +19,10 @@ interface FileUploadProps {
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
 
-// Single authoritative reference showing ideal garment photography standard
-const REFERENCE_IMAGE =
-  'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80&fit=crop&crop=center';
+const REFERENCE_IMAGE = '/images/ideal-garment-reference.webp';
 
 export function FileUpload({
+  previewUrl = null,
   onFileSelect,
   accept = 'image/*',
   className,
@@ -34,7 +30,6 @@ export function FileUpload({
 }: FileUploadProps) {
   const inputRef   = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging]   = useState(false);
-  const [preview,    setPreview]      = useState<string | null>(null);
   const [fileName,   setFileName]     = useState<string | null>(null);
   const [sizeError,  setSizeError]    = useState<string | null>(null);
 
@@ -47,7 +42,6 @@ export function FileUpload({
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
-      setPreview(result);
       setFileName(file.name);
       onFileSelect(result);
     };
@@ -70,7 +64,6 @@ export function FileUpload({
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setPreview(null);
     setFileName(null);
     setSizeError(null);
     onFileSelect('');
@@ -81,7 +74,7 @@ export function FileUpload({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!preview && (e.key === 'Enter' || e.key === ' ')) {
+    if (!previewUrl && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
       triggerInput();
     }
@@ -95,14 +88,10 @@ export function FileUpload({
         aria-label="Upload garment image"
         className={cn(
           'border border-dashed rounded bg-card transition-all duration-200 cursor-pointer overflow-hidden',
-          // Default
           'border-border',
-          // Drag active — stronger border + tinted background
           isDragging && 'border-foreground bg-muted scale-[1.01] shadow-md',
-          // Disabled
           disabled && 'opacity-50 cursor-not-allowed',
-          // Has preview — switch to solid border
-          preview && 'border-border border-solid',
+          previewUrl && 'border-border border-solid',
         )}
         onDragOver={(e) => {
           e.preventDefault();
@@ -110,7 +99,7 @@ export function FileUpload({
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        onClick={preview ? undefined : triggerInput}
+        onClick={previewUrl ? undefined : triggerInput}
         onKeyDown={handleKeyDown}
         data-testid="file-upload-zone"
       >
@@ -124,23 +113,21 @@ export function FileUpload({
           data-testid="file-upload-input"
         />
 
-        {preview ? (
-          /* ── Uploaded state ── */
+        {previewUrl ? (
           <div className="relative group animate-in fade-in duration-300">
             <img
-              src={preview}
+              src={previewUrl}
               alt="Garment preview"
               className="w-full h-52 object-contain bg-white"
             />
-            {/* File info + actions */}
             <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border bg-card">
               <div className="flex items-center gap-2 min-w-0">
                 <ImageIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 <span
                   className="text-xs text-foreground font-mono truncate"
-                  title={fileName ?? ''}
+                  title={fileName ?? 'Garment photo'}
                 >
-                  {fileName}
+                  {fileName ?? 'Garment photo'}
                 </span>
               </div>
               <div className="flex items-center gap-3 shrink-0">
@@ -165,36 +152,37 @@ export function FileUpload({
             </div>
           </div>
         ) : (
-          /* ── Empty / drag state ── */
-          <div className="flex flex-col items-center py-6 px-4 gap-4">
-            {/* Reference photo */}
+          <div className="flex flex-col items-center px-4 py-7 gap-4">
             <div className="flex flex-col items-center gap-1.5">
               <p
                 className="text-muted-foreground font-mono self-center mb-1"
                 style={{ fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase' }}
               >
-                Ideal upload standard
+                Ideal garment photo
               </p>
               <div
-                className="overflow-hidden rounded border border-border bg-muted"
-                style={{ width: 80, aspectRatio: '3/4' }}
+                className="overflow-hidden rounded border border-border bg-white p-1.5"
+                style={{ width: 160, height: 160 }}
               >
                 <img
                   src={REFERENCE_IMAGE}
-                  alt="Garment on hanger — plain background"
-                  className="w-full h-full object-cover"
+                  alt="Luxury garment on hanger — plain white background"
+                  className="h-full w-full object-contain"
+                  width={1024}
+                  height={1024}
                   draggable={false}
+                  loading="lazy"
+                  decoding="async"
                   onError={(e) => {
                     (e.currentTarget as HTMLImageElement).style.display = 'none';
                   }}
                 />
               </div>
               <p className="text-[9px] text-muted-foreground font-mono">
-                Hanger or flat-lay · plain background
+                Plain background · Hanger or Flat-lay · Entire garment visible
               </p>
             </div>
 
-            {/* Upload CTA */}
             <div className="text-center">
               <div
                 className={cn(
@@ -214,7 +202,6 @@ export function FileUpload({
         )}
       </div>
 
-      {/* File size validation error */}
       {sizeError && (
         <p className="text-xs text-destructive font-mono mt-0.5">{sizeError}</p>
       )}

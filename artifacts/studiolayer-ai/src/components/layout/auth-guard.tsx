@@ -21,8 +21,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
       <div className="min-h-screen w-full flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="mt-4 text-sm text-muted-foreground font-mono">
-            Authenticating...
+          <p className="mt-4 text-sm text-muted-foreground">
+            Authenticating…
           </p>
         </div>
       </div>

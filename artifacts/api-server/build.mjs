@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { build as esbuild } from "esbuild";
+import * as esbuild from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
 import { rm } from "node:fs/promises";
 
@@ -9,19 +9,16 @@ import { rm } from "node:fs/promises";
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
+const watch = process.argv.includes("--watch");
 
-async function buildAll() {
-  const distDir = path.resolve(artifactDir, "dist");
-  await rm(distDir, { recursive: true, force: true });
-
-  await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
-    platform: "node",
-    bundle: true,
-    format: "esm",
-    outdir: distDir,
-    outExtension: { ".js": ".mjs" },
-    logLevel: "info",
+const buildOptions = {
+  entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+  platform: "node",
+  bundle: true,
+  format: "esm",
+  outdir: path.resolve(artifactDir, "dist"),
+  outExtension: { ".js": ".mjs" },
+  logLevel: "info",
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
     // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
     // Examples of unbundleable packages:
@@ -100,6 +97,8 @@ async function buildAll() {
       "puppeteer",
       "puppeteer-core",
       "electron",
+      "exceljs",
+      "pino-pretty",
     ],
     sourcemap: "linked",
     plugins: [
@@ -116,8 +115,22 @@ globalThis.require = __bannerCrReq(import.meta.url);
 globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
-    },
-  });
+  },
+};
+
+async function buildAll() {
+  const distDir = path.resolve(artifactDir, "dist");
+
+  if (watch) {
+    const ctx = await esbuild.context(buildOptions);
+    await ctx.watch();
+    console.log("[api-server] watching for source changes...");
+    await new Promise(() => {});
+    return;
+  }
+
+  await rm(distDir, { recursive: true, force: true });
+  await esbuild.build(buildOptions);
 }
 
 buildAll().catch((err) => {

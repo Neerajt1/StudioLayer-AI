@@ -20,8 +20,8 @@ export default function HomePage() {
     <div className="min-h-screen w-full flex items-center justify-center bg-background">
       <div className="text-center">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-sm text-muted-foreground font-mono">
-          Loading StudioLayer AI...
+        <p className="text-sm text-muted-foreground">
+          Loading StudioLayer AI…
         </p>
       </div>
     </div>
