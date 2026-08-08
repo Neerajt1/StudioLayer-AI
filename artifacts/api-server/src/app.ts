@@ -35,6 +35,7 @@ app.use(cors({ origin: true, credentials: true }));
 // which can easily reach 5–15 MB before compression.
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+app.set('trust proxy', 1);
 
 app.use(
   session({
