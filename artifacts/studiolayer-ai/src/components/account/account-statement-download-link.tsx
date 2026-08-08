@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiUrl } from '@/lib/api-base-url';
 import { cn } from '@/lib/utils';
 import { STUDIO_ERROR_CONTACT_HELPER } from '@/lib/studio-contact';
 import { formatDownloadPreparingLabel } from '@/lib/download-preparing-label';
@@ -47,7 +48,7 @@ export function AccountStatementDownloadLink({
       setError(null);
 
       try {
-        const response = await fetch('/api/account/statement/download', {
+        const response = await fetch(apiUrl('/api/account/statement/download'), {
           credentials: 'include',
         });
 

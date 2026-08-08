@@ -2,6 +2,8 @@
 // Editorial image download — authenticated API proxy + R2 public URL fallbacks
 // ---------------------------------------------------------------------------
 
+import { apiUrl } from '@/lib/api-base-url';
+
 const REVOKE_OBJECT_URL_MS = 60_000;
 const DOWNLOAD_DEBUG = import.meta.env.DEV;
 
@@ -84,7 +86,7 @@ async function fetchTransparentBlobViaApiProxy(
   renderId: number,
 ): Promise<{ blob: Blob; creditsUsed: boolean }> {
   logDownload('transparent-api-proxy:start', { renderId });
-  const response = await fetch(`/api/renders/${renderId}/download/transparent`, {
+  const response = await fetch(apiUrl(`/api/renders/${renderId}/download/transparent`), {
     method: 'GET',
     credentials: 'include',
     cache: 'no-store',
@@ -121,7 +123,7 @@ async function fetchTransparentBlobViaApiProxy(
 
 async function fetchImageBlobViaApiProxy(renderId: number): Promise<Blob> {
   logDownload('api-proxy:start', { renderId });
-  const response = await fetch(`/api/renders/${renderId}/download`, {
+  const response = await fetch(apiUrl(`/api/renders/${renderId}/download`), {
     method: 'GET',
     credentials: 'include',
     cache: 'no-store',
