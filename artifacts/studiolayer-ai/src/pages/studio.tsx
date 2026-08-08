@@ -20,6 +20,7 @@ import {
   useGetMe,
   useGetIdentities,
   getGetRenderUsageQueryKey,
+  getListRendersQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { withErrorContactHelper } from '@/lib/studio-contact';
@@ -38,6 +39,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SelectedTalentSummary } from '@/components/studio/selected-talent-summary';
 import { StudioBrandWatermark } from '@/components/studio/studio-brand-watermark';
 import {
+  EditorialImageActions,
   StudioEditorialCanvas,
   StudioEditorialFailedState,
   StudioEditorialImage,
@@ -59,7 +61,6 @@ import { AccountStatementDownloadLink } from '@/components/account/account-state
 import type { ModelIdentity } from '@/components/studio/talent/types';
 import { cn } from '@/lib/utils';
 import { fetchEditorialImageBlob } from '@/lib/download-image';
-import { EditorialDownloadMenu } from '@/components/shared/editorial-download-menu';
 import {
   isComplimentaryCreditExhaustedForUser,
   isComplimentaryMembershipTier,
@@ -79,10 +80,12 @@ import {
 import { StudioRefinePanel } from '@/components/studio/studio-refine-panel';
 import type { RefinementType } from '@/lib/refinement-types';
 import {
-  cropImageToPreset,
+  cropImageBlobToRect,
   revokeCropObjectUrl,
-  type CropPreset,
+  type CropAspectMode,
+  type NormalizedCropRect,
 } from '@/lib/studio-crop';
+import { StudioCustomCropDialog } from '@/components/studio/studio-custom-crop-dialog';
 import {
   Dialog,
   DialogContent,
@@ -191,6 +194,17 @@ function makeRefetchInterval(enabled: boolean) {
   };
 }
 
+
+function extractRenderOutputUrl(render: unknown): string | null {
+  if (!render || typeof render !== 'object') return null;
+  const record = render as Record<string, unknown>;
+  for (const key of ['outputImageUrl', 'outputUrl', 'url', 'image_url']) {
+    const value = record[key];
+    if (typeof value === 'string' && value.startsWith('http')) return value;
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // StudioPage
 // ---------------------------------------------------------------------------
@@ -198,22 +212,38 @@ function makeRefetchInterval(enabled: boolean) {
 export default function StudioPage() {
   const {
     workflow,
+    workspace,
     setSourceImageUrl,
     setGarmentPlacement,
     setGarmentLengthSelection,
     setImageCount,
-    resetWorkflow,
+    resetStudioSession,
     patchWorkflow,
+    setActiveRenderIds,
+    setRootRenderIds,
+    setMasterOutputUrls,
+    setRefinementPending,
+    setGenerationInFlight,
+    patchWorkspace,
   } = useStudioWorkflow();
 
-  const [activeRenderIds, setActiveRenderIds]   = useState<number[]>([]);
-  const [rootRenderIds, setRootRenderIds]       = useState<number[]>([]);
-  const [masterOutputUrls, setMasterOutputUrls] = useState<Record<number, string>>({});
-  const [selectedRefineSlot, setSelectedRefineSlot] = useState(0);
+  const {
+    activeRenderIds,
+    rootRenderIds,
+    masterOutputUrls,
+    customCropRects,
+    customCropAspects,
+    refinementPending,
+    generationInFlight,
+  } = workspace;
+
+  const [refinePanelSlot, setRefinePanelSlot] = useState<number | null>(null);
   const [displayUrlOverrides, setDisplayUrlOverrides] = useState<Record<number, string>>({});
-  const [cropPresets, setCropPresets]           = useState<Record<number, CropPreset>>({});
-  const [refineInFlight, setRefineInFlight]     = useState(false);
-  const [activeRefinement, setActiveRefinement] = useState<RefinementType | null>(null);
+  const [customCropDialogOpen, setCustomCropDialogOpen] = useState(false);
+  const [refineInFlight, setRefineInFlight] = useState(() => refinementPending != null);
+  const [activeRefinement, setActiveRefinement] = useState<RefinementType | null>(
+    () => refinementPending?.refinementType ?? null,
+  );
   const [showValidation, setShowValidation]     = useState(false);
 
   const [showProRequiredDialog, setShowProRequiredDialog] = useState(false);
@@ -224,6 +254,7 @@ export default function StudioPage() {
   const [elapsedSec, setElapsedSec] = useState(0);
   const completionHandledRef = useRef('');
   const creditSyncBatchRef = useRef('');
+  const refinementHandledRef = useRef<number | null>(null);
 
   const workflowValidation = validateStudioWorkflow(workflow);
 
@@ -265,6 +296,14 @@ export default function StudioPage() {
   const { data: render2 } = useGetRender(id2, { query: { enabled: !!activeRenderIds[2], refetchInterval: makeRefetchInterval(!!activeRenderIds[2]) } } as never);
   const { data: render3 } = useGetRender(id3, { query: { enabled: !!activeRenderIds[3], refetchInterval: makeRefetchInterval(!!activeRenderIds[3]) } } as never);
 
+  const pendingChildId = refinementPending?.childRenderId ?? 0;
+  const { data: pendingRefinementRender } = useGetRender(pendingChildId, {
+    query: {
+      enabled: pendingChildId > 0,
+      refetchInterval: makeRefetchInterval(pendingChildId > 0),
+    },
+  } as never);
+
   const allRenderData = [render0, render1, render2, render3].slice(0, Math.max(activeRenderIds.length, 1));
 
   // ── Derived state ──────────────────────────────────────────────────────────
@@ -285,7 +324,9 @@ export default function StudioPage() {
   const getSlotDisplayUrl = (slotIndex: number): string | null =>
     displayUrlOverrides[slotIndex] ?? allOutputUrls[slotIndex] ?? null;
 
-  const resolvedOutputUrl: string | null = getSlotDisplayUrl(selectedRefineSlot)
+  const activeRefineSlot = refinePanelSlot ?? 0;
+
+  const resolvedOutputUrl: string | null = getSlotDisplayUrl(activeRefineSlot)
     ?? getSlotDisplayUrl(0);
 
   const hasOutput    = allRenderData.some((r) => r?.status === 'completed') && !!resolvedOutputUrl;
@@ -304,8 +345,20 @@ export default function StudioPage() {
 
   const showGenerationProgress = awaitingResultDisplay && !allResultsDisplayed;
 
+  const isRefinementProcessing =
+    refinementPending != null &&
+    (!pendingRefinementRender ||
+      pendingRefinementRender.status === 'processing' ||
+      pendingRefinementRender.status === 'pending');
+
+  const showRefinementProgress = isRefinementProcessing;
+
   const isGenerationBusy =
-    awaitingResultDisplay || createRender.isPending || isProcessing || refineInFlight;
+    awaitingResultDisplay ||
+    createRender.isPending ||
+    isProcessing ||
+    refineInFlight ||
+    refinementPending != null;
 
   const isComplimentaryTier = isComplimentaryMembershipTier(usage);
   const complimentaryExhausted = isComplimentaryCreditExhaustedForUser(user, usage);
@@ -318,6 +371,7 @@ export default function StudioPage() {
 
   const beginGenerationFeedback = (preloadedUrls: string[] = []) => {
     setAwaitingResultDisplay(true);
+    setGenerationInFlight(true);
     setLoadedResultUrls(new Set(preloadedUrls));
     setGenerationStartedAt(Date.now());
     setElapsedSec(0);
@@ -325,6 +379,7 @@ export default function StudioPage() {
 
   const resetGenerationFeedback = () => {
     setAwaitingResultDisplay(false);
+    setGenerationInFlight(false);
     setLoadedResultUrls(new Set());
     setGenerationStartedAt(null);
     setElapsedSec(0);
@@ -390,6 +445,68 @@ export default function StudioPage() {
     creditSyncBatchRef.current = batchKey;
     void queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
   }, [activeRenderIds, allRenderData, queryClient]);
+
+  // Finalize refinement only after the child render settles — keep parent visible until then.
+  useEffect(() => {
+    if (!refinementPending || !pendingRefinementRender) return;
+
+    const { status } = pendingRefinementRender;
+    if (status !== 'completed' && status !== 'failed') return;
+
+    const { childRenderId, slot, parentRenderId } = refinementPending;
+    if (refinementHandledRef.current === childRenderId) return;
+    refinementHandledRef.current = childRenderId;
+
+    const outputUrl = extractRenderOutputUrl(pendingRefinementRender);
+    const refinementSucceeded = status === 'completed' && outputUrl != null;
+
+    if (refinementSucceeded) {
+      setActiveRenderIds((prev) => {
+        const next = [...prev];
+        next[slot] = childRenderId;
+        return next;
+      });
+      revokeCropObjectUrl(displayUrlOverrides[slot]);
+      setDisplayUrlOverrides((prev) => {
+        const next = { ...prev };
+        delete next[slot];
+        return next;
+      });
+      patchWorkspace({
+        customCropRects: Object.fromEntries(
+          Object.entries(customCropRects).filter(([key]) => Number(key) !== slot),
+        ),
+        customCropAspects: Object.fromEntries(
+          Object.entries(customCropAspects).filter(([key]) => Number(key) !== slot),
+        ),
+      });
+    } else {
+      if (activeRenderIds[slot] !== parentRenderId) {
+        setActiveRenderIds((prev) => {
+          const next = [...prev];
+          next[slot] = parentRenderId;
+          return next;
+        });
+      }
+      toast({
+        title: "We couldn't complete this refinement.",
+        description: withErrorContactHelper('Your original image is unchanged. Please try again.'),
+      });
+    }
+
+    setRefinementPending(null);
+    setRefineInFlight(false);
+    setActiveRefinement(null);
+    void queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
+    void queryClient.invalidateQueries({ queryKey: getListRendersQueryKey() });
+  }, [
+    refinementPending,
+    pendingRefinementRender,
+    activeRenderIds,
+    displayUrlOverrides,
+    queryClient,
+    toast,
+  ]);
 
   useEffect(() => {
     if (!awaitingResultDisplay || !allResultsDisplayed || !resolvedOutputUrl) return;
@@ -479,15 +596,12 @@ export default function StudioPage() {
 
   const handleNewPhotoshoot = () => {
     Object.values(displayUrlOverrides).forEach((url) => revokeCropObjectUrl(url));
-    resetWorkflow();
-    setActiveRenderIds([]);
-    setRootRenderIds([]);
-    setMasterOutputUrls({});
-    setSelectedRefineSlot(0);
+    resetStudioSession();
+    setRefinePanelSlot(null);
     setDisplayUrlOverrides({});
-    setCropPresets({});
     setRefineInFlight(false);
     setActiveRefinement(null);
+    refinementHandledRef.current = null;
     setShowValidation(false);
     resetGenerationFeedback();
     completionHandledRef.current = '';
@@ -505,8 +619,14 @@ export default function StudioPage() {
     });
   };
 
-  const handleRefine = (type: RefinementType) => {
-    if (refineInFlight || isGenerationBusy) return;
+  const handleOpenRefine = (slot: number) => {
+    if (refinementPending != null && refinementPending.slot === slot && isRefinementProcessing) return;
+    setRefinePanelSlot(slot);
+  };
+
+  const handleRefine = (type: RefinementType, slot: number) => {
+    if (refineInFlight || awaitingResultDisplay || createRender.isPending || isProcessing) return;
+    if (refinementPending != null && refinementPending.slot === slot && isRefinementProcessing) return;
 
     if (isStudioCreditLimitBlocked(usage) && !resolveStudioAdminFlag(user, usage)) {
       toast({
@@ -516,13 +636,13 @@ export default function StudioPage() {
       return;
     }
 
-    const slot = selectedRefineSlot;
     const parentRenderId = activeRenderIds[slot];
     if (!parentRenderId) return;
 
     const selectedIdentity = (identities as { id: string; gender?: string; ageGroup?: string }[])
       .find((i) => i.id === workflow.talentId);
 
+    setRefinePanelSlot(slot);
     setRefineInFlight(true);
     setActiveRefinement(type);
 
@@ -536,73 +656,105 @@ export default function StudioPage() {
       {
         onSuccess: (renders) => {
           const childId = (renders as unknown as { id: number }[])?.[0]?.id;
-          if (childId) {
-            setActiveRenderIds((prev) => {
-              const next = [...prev];
-              next[slot] = childId;
-              return next;
+          if (!childId) {
+            setRefineInFlight(false);
+            setActiveRefinement(null);
+            toast({
+              title: "We couldn't complete this refinement.",
+              description: withErrorContactHelper('Please try again in a few moments.'),
             });
-            revokeCropObjectUrl(displayUrlOverrides[slot]);
-            setDisplayUrlOverrides((prev) => {
-              const next = { ...prev };
-              delete next[slot];
-              return next;
-            });
-            setCropPresets((prev) => ({ ...prev, [slot]: 'original' }));
+            return;
           }
-          void queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
+
+          refinementHandledRef.current = null;
+          setRefinementPending({
+            slot,
+            parentRenderId,
+            childRenderId: childId,
+            refinementType: type,
+          });
         },
         onError: (error: unknown) => {
+          setRefineInFlight(false);
+          setActiveRefinement(null);
+          setRefinementPending(null);
           toast({
             title: "We couldn't complete this refinement.",
             description: withErrorContactHelper(renderApiErrorDescription(error)),
           });
         },
-        onSettled: () => {
-          setRefineInFlight(false);
-          setActiveRefinement(null);
-        },
       },
     );
   };
 
-  const handleCropPresetChange = async (preset: CropPreset) => {
-    const slot = selectedRefineSlot;
-    const masterUrl = masterOutputUrls[slot];
-    if (!masterUrl) {
+  const handleOpenCrop = () => {
+    const slot = refinePanelSlot ?? 0;
+    const sourceUrl = masterOutputUrls[slot] ?? allOutputUrls[slot];
+    const renderId = activeRenderIds[slot];
+    if (!sourceUrl || !renderId) {
       toast({
         title: "Master asset unavailable.",
         description: 'Please wait for the image to finish loading.',
       });
       return;
     }
+    setCustomCropDialogOpen(true);
+  };
 
-    setCropPresets((prev) => ({ ...prev, [slot]: preset }));
+  const handleCustomCropApply = async (
+    rect: NormalizedCropRect,
+    aspect: CropAspectMode,
+  ) => {
+    const slot = refinePanelSlot ?? 0;
+    const sourceUrl = masterOutputUrls[slot] ?? allOutputUrls[slot];
+    const renderId = activeRenderIds[slot];
+    if (!sourceUrl || !renderId) return;
 
-    if (preset === 'original') {
-      revokeCropObjectUrl(displayUrlOverrides[slot]);
-      setDisplayUrlOverrides((prev) => {
-        const next = { ...prev };
-        delete next[slot];
-        return next;
-      });
-      return;
-    }
+    const previousRect = customCropRects[slot];
+    const previousAspect = customCropAspects[slot];
+    const previousDisplayUrl = displayUrlOverrides[slot];
+
+    patchWorkspace({
+      customCropRects: { ...customCropRects, [slot]: rect },
+      customCropAspects: { ...customCropAspects, [slot]: aspect },
+    });
 
     try {
-      const croppedUrl = await cropImageToPreset(masterUrl, preset);
+      const sourceBlob = await fetchEditorialImageBlob(sourceUrl, renderId);
+      const croppedUrl = await cropImageBlobToRect(sourceBlob, rect);
       revokeCropObjectUrl(displayUrlOverrides[slot]);
       setDisplayUrlOverrides((prev) => ({ ...prev, [slot]: croppedUrl }));
     } catch {
+      patchWorkspace({
+        customCropRects: previousRect
+          ? { ...customCropRects, [slot]: previousRect }
+          : Object.fromEntries(
+            Object.entries(customCropRects).filter(([key]) => Number(key) !== slot),
+          ),
+        customCropAspects: previousAspect
+          ? { ...customCropAspects, [slot]: previousAspect }
+          : Object.fromEntries(
+            Object.entries(customCropAspects).filter(([key]) => Number(key) !== slot),
+          ),
+      });
+      if (previousDisplayUrl) {
+        setDisplayUrlOverrides((prev) => ({ ...prev, [slot]: previousDisplayUrl }));
+      } else {
+        setDisplayUrlOverrides((prev) => {
+          const next = { ...prev };
+          delete next[slot];
+          return next;
+        });
+      }
       toast({
-        title: "Couldn't crop this image.",
-        description: 'Please try another preset.',
+        title: "Couldn't apply crop.",
+        description: 'Please try again.',
       });
     }
   };
 
   const handleRevertToOriginal = () => {
-    const slot = selectedRefineSlot;
+    const slot = refinePanelSlot ?? 0;
     const rootId = rootRenderIds[slot];
     if (!rootId) return;
 
@@ -617,16 +769,24 @@ export default function StudioPage() {
       delete next[slot];
       return next;
     });
-    setCropPresets((prev) => ({ ...prev, [slot]: 'original' }));
+    patchWorkspace({
+      customCropRects: Object.fromEntries(
+        Object.entries(customCropRects).filter(([key]) => Number(key) !== slot),
+      ),
+      customCropAspects: Object.fromEntries(
+        Object.entries(customCropAspects).filter(([key]) => Number(key) !== slot),
+      ),
+    });
   };
 
   const handleRefineZoom = () => {
-    const url = getSlotDisplayUrl(selectedRefineSlot);
+    const slot = refinePanelSlot ?? 0;
+    const url = getSlotDisplayUrl(slot);
     if (!url) return;
     openImageInspection({
       imageUrl: url,
       alt: 'Editorial fashion image',
-      renderId: activeRenderIds[selectedRefineSlot],
+      renderId: activeRenderIds[slot],
     });
   };
 
@@ -662,7 +822,19 @@ export default function StudioPage() {
     });
   };
 
-  const showResultToolbar = hasOutput && allResultsDisplayed && !showGenerationProgress;
+  const showResultToolbar = hasOutput && allResultsDisplayed && !showGenerationProgress && !showRefinementProgress;
+
+  const refinePanelImageLabel =
+    activeRenderIds.length > 1 && refinePanelSlot != null
+      ? `Image ${refinePanelSlot + 1}`
+      : undefined;
+
+  const isSlotRefining = (slotIndex: number) =>
+    refinementPending != null
+    && refinementPending.slot === slotIndex
+    && isRefinementProcessing;
+
+  const showRefinePanel = refinePanelSlot != null && showResultToolbar;
 
   useEffect(() => {
     if (!showResultToolbar || rootRenderIds.length > 0 || activeRenderIds.length === 0) return;
@@ -676,7 +848,63 @@ export default function StudioPage() {
         activeRenderIds.map((_, i) => [i, allOutputUrls[i] as string]),
       ),
     );
-  }, [showResultToolbar, activeRenderIds, rootRenderIds.length, allOutputUrls]);
+  }, [showResultToolbar, activeRenderIds, rootRenderIds.length, allOutputUrls, setRootRenderIds, setMasterOutputUrls]);
+
+  // Restore crop display overrides after route return or sessionStorage hydration.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restoreCropOverrides() {
+      for (const [slotKey, rect] of Object.entries(customCropRects)) {
+        const slot = Number(slotKey);
+        if (!Number.isInteger(slot)) continue;
+        if (displayUrlOverrides[slot]) continue;
+
+        const sourceUrl = masterOutputUrls[slot] ?? allOutputUrls[slot];
+        const renderId = activeRenderIds[slot];
+        if (!sourceUrl || !renderId) continue;
+
+        try {
+          const sourceBlob = await fetchEditorialImageBlob(sourceUrl, renderId);
+          const croppedUrl = await cropImageBlobToRect(sourceBlob, rect);
+          if (!cancelled) {
+            setDisplayUrlOverrides((prev) => ({ ...prev, [slot]: croppedUrl }));
+          }
+        } catch {
+          /* crop restore is best-effort */
+        }
+      }
+    }
+
+    void restoreCropOverrides();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeRenderIds, allOutputUrls, customCropRects, displayUrlOverrides, masterOutputUrls]);
+
+  // Resume in-progress generation UI after route return — never restart generation.
+  useEffect(() => {
+    if (!generationInFlight || activeRenderIds.length === 0) return;
+
+    const statuses = activeRenderIds.map((_, index) => allRenderData[index]?.status);
+    const stillProcessing = statuses.some(
+      (status) => status === 'processing' || status === 'pending' || status === undefined,
+    );
+    const allSettled = statuses.every(
+      (status) => status === 'completed' || status === 'failed',
+    );
+
+    if (stillProcessing) {
+      setAwaitingResultDisplay(true);
+      setGenerationStartedAt((prev) => prev ?? Date.now());
+      return;
+    }
+
+    if (allSettled) {
+      setGenerationInFlight(false);
+      setAwaitingResultDisplay(false);
+    }
+  }, [generationInFlight, activeRenderIds, allRenderData, setGenerationInFlight]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -697,7 +925,7 @@ export default function StudioPage() {
           <div className="sl-studio-workspace-grid mb-10">
 
             {/* ── LEFT PANEL — Controls ───────────────────────────────── */}
-            <div className={cn('order-2 lg:order-1 space-y-8 transition-opacity duration-300', showGenerationProgress && 'opacity-[0.68]')}>
+            <div className={cn('order-2 lg:order-1 space-y-8 transition-opacity duration-300', (showGenerationProgress || showRefinementProgress) && 'opacity-[0.68]')}>
               {/* Step 1: Upload Outfit */}
               <section className="space-y-3">
                 <StepLabel number={1} title="Upload Outfit" />
@@ -838,19 +1066,18 @@ export default function StudioPage() {
                 <>
                   <StudioEditorialCanvas className="relative">
                     <StudioEditorialProgressOverlay
-                      visible={showGenerationProgress}
-                      label="Creating your image…"
-                      hint="Usually 20–40 seconds"
+                      visible={showGenerationProgress || showRefinementProgress}
+                      label={showRefinementProgress ? 'Applying refinement…' : 'Creating your image…'}
                       elapsedSec={elapsedSec}
                     />
                     <StudioEditorialPlaceholder
-                      visible={!resolvedOutputUrl && !showGenerationProgress}
+                      visible={!resolvedOutputUrl && !showGenerationProgress && !showRefinementProgress}
                     />
                     {resolvedOutputUrl ? (
                       <StudioEditorialImage
                         src={resolvedOutputUrl}
                         alt="Editorial fashion image"
-                        visible={!showGenerationProgress}
+                        visible={!showGenerationProgress && !showRefinementProgress}
                         onLoad={() => markResultImageLoaded(resolvedOutputUrl)}
                         imageRef={bindResultImageRef(resolvedOutputUrl)}
                         testId="img-render-output"
@@ -861,31 +1088,42 @@ export default function StudioPage() {
                         })}
                       />
                     ) : null}
+                    {resolvedOutputUrl && showResultToolbar && (
+                      <div className="absolute bottom-0 left-0 right-0 flex justify-end bg-gradient-to-t from-black/25 to-transparent p-3">
+                        <EditorialImageActions
+                          renderId={activeRenderIds[0]!}
+                          outputImageUrl={resolvedOutputUrl}
+                          refineDisabled={isSlotRefining(0)}
+                          refineActive={refinePanelSlot === 0}
+                          onRefine={() => handleOpenRefine(0)}
+                          onDownloadError={handleDownloadError}
+                        />
+                      </div>
+                    )}
                   </StudioEditorialCanvas>
 
                   {showResultToolbar && (
                     <div className="space-y-3">
                       <StudioResultToolbar
-                        downloadLabel="Download"
-                        renderId={activeRenderIds[selectedRefineSlot]!}
-                        outputImageUrl={resolvedOutputUrl!}
                         onNewImage={handleNewPhotoshoot}
-                        onDownloadError={handleDownloadError}
                       />
-                      <StudioRefinePanel
-                        disabled={isGenerationBusy}
-                        refineInFlight={refineInFlight}
-                        activeRefinement={activeRefinement}
-                        cropPreset={cropPresets[selectedRefineSlot] ?? 'original'}
-                        canRevert={
-                          rootRenderIds[selectedRefineSlot] != null
-                          && activeRenderIds[selectedRefineSlot] !== rootRenderIds[selectedRefineSlot]
-                        }
-                        onRefine={handleRefine}
-                        onCropPresetChange={(preset) => void handleCropPresetChange(preset)}
-                        onRevert={handleRevertToOriginal}
-                        onZoom={handleRefineZoom}
-                      />
+                      {showRefinePanel && refinePanelSlot != null && (
+                        <StudioRefinePanel
+                          disabled={isGenerationBusy}
+                          refineInFlight={refineInFlight}
+                          activeRefinement={activeRefinement}
+                          imageLabel={refinePanelImageLabel}
+                          hasCropApplied={displayUrlOverrides[refinePanelSlot] != null}
+                          canRevert={
+                            rootRenderIds[refinePanelSlot] != null
+                            && activeRenderIds[refinePanelSlot] !== rootRenderIds[refinePanelSlot]
+                          }
+                          onRefine={(type) => handleRefine(type, refinePanelSlot)}
+                          onOpenCrop={handleOpenCrop}
+                          onRevert={handleRevertToOriginal}
+                          onZoom={handleRefineZoom}
+                        />
+                      )}
                     </div>
                   )}
                 </>
@@ -897,36 +1135,29 @@ export default function StudioPage() {
                     maxHeightClass="max-h-none"
                   >
                     <StudioEditorialProgressOverlay
-                      visible={showGenerationProgress}
-                      label="Creating your images…"
-                      hint="Usually 20–40 seconds"
+                      visible={showGenerationProgress || showRefinementProgress}
+                      label={showRefinementProgress ? 'Applying refinement…' : 'Creating your images…'}
                       elapsedSec={elapsedSec}
                     />
-                    <div className={cn('grid w-full grid-cols-2 gap-3', showGenerationProgress && 'opacity-35')}>
+                    <div className={cn('grid w-full grid-cols-2 gap-3', (showGenerationProgress || showRefinementProgress) && 'opacity-35')}>
                       {activeRenderIds.map((id, i) => {
                         const render = allRenderData[i];
                         const url = getSlotDisplayUrl(i);
                         const status = render?.status ?? 'pending';
                         const imageVisible =
-                          status === 'completed' && !!url && !showGenerationProgress;
-                        const isSelected = selectedRefineSlot === i;
+                          status === 'completed' && !!url && !showGenerationProgress && !showRefinementProgress;
+                        const isRefineTarget = refinePanelSlot === i;
 
                         return (
                           <div
                             key={id}
                             className={cn(
                               'sl-studio-editorial-cell',
-                              isSelected && showResultToolbar && 'ring-2 ring-foreground/20 rounded',
+                              isRefineTarget && showResultToolbar && 'ring-2 ring-foreground/20 rounded',
                             )}
-                            onClick={() => setSelectedRefineSlot(i)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') setSelectedRefineSlot(i);
-                            }}
-                            role="button"
-                            tabIndex={0}
                           >
                             <div className="sl-studio-editorial-cell-inner">
-                              {!url && !showGenerationProgress && status !== 'failed' && (
+                              {!url && !showGenerationProgress && !showRefinementProgress && status !== 'failed' && (
                                 <StudioEditorialPlaceholder visible compact />
                               )}
                               {status === 'completed' && url && (
@@ -946,12 +1177,14 @@ export default function StudioPage() {
                               )}
                               {status === 'failed' && <StudioEditorialFailedState />}
                             </div>
-                            {status === 'completed' && url && !showGenerationProgress && (
+                            {status === 'completed' && url && !showGenerationProgress && !showRefinementProgress && (
                               <div className="absolute bottom-0 left-0 right-0 flex justify-end bg-gradient-to-t from-black/25 to-transparent p-2">
-                                <EditorialDownloadMenu
+                                <EditorialImageActions
                                   renderId={id}
                                   outputImageUrl={url}
-                                  variant="icon"
+                                  refineDisabled={isSlotRefining(i)}
+                                  refineActive={isRefineTarget}
+                                  onRefine={() => handleOpenRefine(i)}
                                   onDownloadError={handleDownloadError}
                                 />
                               </div>
@@ -971,20 +1204,23 @@ export default function StudioPage() {
                         downloadAllPreparingLabel={formatDownloadPreparingLabel(downloadAllElapsedSec)}
                         onNewImage={handleNewPhotoshoot}
                       />
-                      <StudioRefinePanel
-                        disabled={isGenerationBusy}
-                        refineInFlight={refineInFlight}
-                        activeRefinement={activeRefinement}
-                        cropPreset={cropPresets[selectedRefineSlot] ?? 'original'}
-                        canRevert={
-                          rootRenderIds[selectedRefineSlot] != null
-                          && activeRenderIds[selectedRefineSlot] !== rootRenderIds[selectedRefineSlot]
-                        }
-                        onRefine={handleRefine}
-                        onCropPresetChange={(preset) => void handleCropPresetChange(preset)}
-                        onRevert={handleRevertToOriginal}
-                        onZoom={handleRefineZoom}
-                      />
+                      {showRefinePanel && refinePanelSlot != null && (
+                        <StudioRefinePanel
+                          disabled={isGenerationBusy}
+                          refineInFlight={refineInFlight}
+                          activeRefinement={activeRefinement}
+                          imageLabel={refinePanelImageLabel}
+                          hasCropApplied={displayUrlOverrides[refinePanelSlot] != null}
+                          canRevert={
+                            rootRenderIds[refinePanelSlot] != null
+                            && activeRenderIds[refinePanelSlot] !== rootRenderIds[refinePanelSlot]
+                          }
+                          onRefine={(type) => handleRefine(type, refinePanelSlot)}
+                          onOpenCrop={handleOpenCrop}
+                          onRevert={handleRevertToOriginal}
+                          onZoom={handleRefineZoom}
+                        />
+                      )}
                     </div>
                   )}
                 </>
@@ -1077,6 +1313,25 @@ export default function StudioPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <StudioCustomCropDialog
+        open={customCropDialogOpen}
+        onOpenChange={setCustomCropDialogOpen}
+        imageUrl={
+          refinePanelSlot != null
+            ? (masterOutputUrls[refinePanelSlot]
+              ?? allOutputUrls[refinePanelSlot]
+              ?? null)
+            : null
+        }
+        initialRect={
+          refinePanelSlot != null ? customCropRects[refinePanelSlot] : undefined
+        }
+        initialAspect={
+          refinePanelSlot != null ? customCropAspects[refinePanelSlot] : undefined
+        }
+        onApply={(rect, aspect) => void handleCustomCropApply(rect, aspect)}
+      />
 
       </AppShell>
   );

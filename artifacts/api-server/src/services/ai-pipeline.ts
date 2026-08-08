@@ -313,7 +313,7 @@ export async function runAIPipeline(params: {
     const photoshootResult = await getRenderingEngine().generatePhotoshoot({
       garmentImageUrl,
       modelImageUrl: providerModelImageUrl,
-      prompt: basePrompt,
+      prompt: resolvedRefinementType ? "" : basePrompt,
       shots,
       perShotPrompts,
       previousOutputUrl: previousOutputUrl ?? undefined,

@@ -28,7 +28,7 @@ export const REFINEMENT_MASTER_ASSET_PRESERVATION = `
 MASTER ASSET PRESERVATION — REFINEMENT (MANDATORY):
 
 Preserve exact resolution (${PLATFORM_MASTER_WIDTH} × ${PLATFORM_MASTER_HEIGHT}), aspect ratio (${PLATFORM_ASPECT_LABEL}),
-and image framing from Reference Image 3 unless explicitly performing Remove Background.
+and image framing from Reference Image 2 unless explicitly performing Remove Background.
 Do not accidentally resize, distort, re-crop, or change composition.
 The refinement creates a child variant — the Master Asset remains immutable and is never overwritten.
 Preserve colours, garment, identity, background (except Remove Background), and metadata lineage.`;

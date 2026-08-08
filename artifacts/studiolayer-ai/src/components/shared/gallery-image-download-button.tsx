@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { formatDownloadPreparingLabel } from '@/lib/download-preparing-label';
 import { useDownloadInFlight } from '@/hooks/use-download-in-flight';
-import { triggerImageDownload } from '@/lib/download-image';
+import { triggerImageDownload, buildHeroDownloadFilename, downloadBlobDirect } from '@/lib/download-image';
 import { useStudioPressFeedback } from '@/components/studio/studio-workspace-controls';
 
 export interface GalleryImageDownloadButtonProps {
@@ -27,6 +27,11 @@ export function GalleryImageDownloadButton({
   const handleClick = () => {
     void run(async () => {
       try {
+        if (outputImageUrl.startsWith('blob:')) {
+          const blob = await fetch(outputImageUrl).then((response) => response.blob());
+          downloadBlobDirect(blob, buildHeroDownloadFilename(outputImageUrl, blob));
+          return;
+        }
         await triggerImageDownload(outputImageUrl, { renderId });
       } catch {
         onDownloadError?.("We couldn't download this image.");

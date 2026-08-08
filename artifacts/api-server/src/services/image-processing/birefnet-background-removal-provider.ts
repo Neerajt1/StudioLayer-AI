@@ -2,7 +2,7 @@
 // BirefNet Background Removal — editorial output cutout (Batch 21)
 //
 // Removes the studio background from a generated fashion image.
-// Used by Remove Background refinement and transparent download cache.
+// V1: used ONLY by Remove Background refinement — not normal generation.
 // ---------------------------------------------------------------------------
 
 import { fal } from "@fal-ai/client";
@@ -11,6 +11,31 @@ import type { BackgroundRemovalProvider } from "./background-removal-provider.js
 import type { BackgroundRemovalInput, BackgroundRemovalResult } from "./types.js";
 
 fal.config({ credentials: process.env["FAL_KEY"] });
+
+/** BirefNet subscribe deadline — prevents indefinite hangs (live V1: ~5s typical). */
+export const FAL_BIREFNET_TIMEOUT_MS = Number(
+  process.env["FAL_BIREFNET_TIMEOUT_MS"] ?? 120_000,
+);
+
+function withAsyncTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
 
 function extractResultUrl(data: Record<string, unknown> | undefined): string | null {
   const candidates: unknown[] = [
@@ -37,20 +62,24 @@ export class BirefNetBackgroundRemovalProvider implements BackgroundRemovalProvi
     const { sourceImageUrl, renderId, purpose } = input;
 
     logger.info(
-      { renderId, purpose, provider: this.name },
+      { renderId, purpose, provider: this.name, timeoutMs: FAL_BIREFNET_TIMEOUT_MS },
       "background-removal: BirefNet started",
     );
 
-    const result = await fal.subscribe("fal-ai/birefnet", {
-      input: {
-        image_url:         sourceImageUrl,
-        model:             "General Use (Light)",
-        output_format:     "png",
-        operating_resolution: "2048x2048",
-        refine_foreground: true,
-      },
-      logs: false,
-    });
+    const result = await withAsyncTimeout(
+      fal.subscribe("fal-ai/birefnet", {
+        input: {
+          image_url: sourceImageUrl,
+          model: "General Use (Light)",
+          output_format: "png",
+          operating_resolution: "2048x2048",
+          refine_foreground: true,
+        },
+        logs: false,
+      }),
+      FAL_BIREFNET_TIMEOUT_MS,
+      `background-removal: BirefNet timed out after ${FAL_BIREFNET_TIMEOUT_MS}ms`,
+    );
 
     const url = extractResultUrl(result.data as Record<string, unknown> | undefined);
     if (!url) {

@@ -63,7 +63,15 @@ export async function completeStudioCreditTransaction(
   await db
     .update(studioCreditTransactionsTable)
     .set({ status: StudioCreditTransactionStatus.COMPLETED })
-    .where(eq(studioCreditTransactionsTable.transactionId, transactionId));
+    .where(
+      and(
+        eq(studioCreditTransactionsTable.transactionId, transactionId),
+        eq(
+          studioCreditTransactionsTable.status,
+          StudioCreditTransactionStatus.PENDING,
+        ),
+      ),
+    );
 }
 
 export async function failStudioCreditTransaction(
@@ -75,7 +83,42 @@ export async function failStudioCreditTransaction(
       status: StudioCreditTransactionStatus.FAILED,
       amount: 0,
     })
-    .where(eq(studioCreditTransactionsTable.transactionId, transactionId));
+    .where(
+      and(
+        eq(studioCreditTransactionsTable.transactionId, transactionId),
+        eq(
+          studioCreditTransactionsTable.status,
+          StudioCreditTransactionStatus.PENDING,
+        ),
+      ),
+    );
+}
+
+/**
+ * Server-side reconciliation only — reverses completed charges when every render
+ * in the linked generation session failed (orphan/legacy billing inconsistency).
+ */
+export async function reverseOrphanCompletedStudioCreditTransaction(
+  transactionId: string,
+): Promise<boolean> {
+  const rows = await db
+    .update(studioCreditTransactionsTable)
+    .set({
+      status: StudioCreditTransactionStatus.FAILED,
+      amount: 0,
+    })
+    .where(
+      and(
+        eq(studioCreditTransactionsTable.transactionId, transactionId),
+        eq(
+          studioCreditTransactionsTable.status,
+          StudioCreditTransactionStatus.COMPLETED,
+        ),
+      ),
+    )
+    .returning({ transactionId: studioCreditTransactionsTable.transactionId });
+
+  return rows.length > 0;
 }
 
 /** Sum completed consumption transactions only. */

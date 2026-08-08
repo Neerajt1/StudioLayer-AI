@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 import {
   db,
   pool,
@@ -6,21 +6,119 @@ import {
   studioCreditTransactionsTable,
   type Render,
 } from "@workspace/db";
-import { StudioCreditTransactionStatus } from "@workspace/studio-credit-engine";
-import { failStudioCreditTransaction } from "./studio-credit-service.js";
+import {
+  STUDIO_CREDIT_USAGE_REASON_CODES,
+  StudioCreditTransactionStatus,
+} from "@workspace/studio-credit-engine";
+import {
+  failStudioCreditTransaction,
+  reverseOrphanCompletedStudioCreditTransaction,
+} from "./studio-credit-service.js";
 import { logger } from "../lib/logger.js";
 
 const ACTIVE_RENDER_STATUSES = ["pending", "processing"] as const;
 
 /** Renders older than this in pending/processing are treated as abandoned (crash/timeout). */
-const STALE_GENERATION_TTL_MS = 20 * 60 * 1000;
+export const STALE_GENERATION_TTL_MS = 20 * 60 * 1000;
+
+/** Refinements are single-shot — shorter TTL than multi-shot generations. */
+export const STALE_REFINEMENT_TTL_MS = 5 * 60 * 1000;
+
+export interface StaleReconcileResult {
+  staleRenderIds: number[];
+  failedTransactionIds: string[];
+  reversedOrphanTransactionIds: string[];
+}
+
+/**
+ * Reverses completed usage charges when every render in the session failed.
+ * Server-side reconciliation only — repairs legacy/orphan billing inconsistencies.
+ */
+export async function reconcileFailedSessionOrphanCharges(
+  userId: number,
+): Promise<string[]> {
+  const completedUsage = await db
+    .select({
+      transactionId: studioCreditTransactionsTable.transactionId,
+      renderId: studioCreditTransactionsTable.renderId,
+    })
+    .from(studioCreditTransactionsTable)
+    .where(
+      and(
+        eq(studioCreditTransactionsTable.userId, userId),
+        eq(
+          studioCreditTransactionsTable.status,
+          StudioCreditTransactionStatus.COMPLETED,
+        ),
+        inArray(
+          studioCreditTransactionsTable.reasonCode,
+          STUDIO_CREDIT_USAGE_REASON_CODES as unknown as string[],
+        ),
+      ),
+    );
+
+  const reversed: string[] = [];
+
+  for (const tx of completedUsage) {
+    if (tx.renderId == null) continue;
+
+    const [anchorRender] = await db
+      .select({
+        generationSessionId: rendersTable.generationSessionId,
+      })
+      .from(rendersTable)
+      .where(
+        and(eq(rendersTable.id, tx.renderId), eq(rendersTable.userId, userId)),
+      );
+
+    if (!anchorRender?.generationSessionId) continue;
+
+    const sessionRenders = await db
+      .select({ status: rendersTable.status })
+      .from(rendersTable)
+      .where(
+        and(
+          eq(rendersTable.userId, userId),
+          eq(rendersTable.generationSessionId, anchorRender.generationSessionId),
+        ),
+      );
+
+    if (sessionRenders.length === 0) continue;
+
+    const allFailed = sessionRenders.every((row) => row.status === "failed");
+    if (!allFailed) continue;
+
+    const didReverse = await reverseOrphanCompletedStudioCreditTransaction(
+      tx.transactionId,
+    );
+    if (didReverse) {
+      reversed.push(tx.transactionId);
+    }
+  }
+
+  if (reversed.length > 0) {
+    logger.warn(
+      { userId, count: reversed.length, transactionIds: reversed },
+      "commercial-reconcile: reversed orphan completed charges for failed sessions",
+    );
+  }
+
+  return reversed;
+}
 
 /**
  * Reconciles stuck generations and orphan pending credit transactions.
  * Prevents users from being permanently blocked after process crashes.
+ *
+ * Idempotent: only pending/processing renders and pending credit transactions
+ * are modified; completed charges and failed zero-amount rows are untouched.
  */
-export async function reconcileStaleCommercialState(userId: number): Promise<void> {
-  const cutoff = new Date(Date.now() - STALE_GENERATION_TTL_MS);
+export async function reconcileStaleCommercialState(
+  userId: number,
+): Promise<StaleReconcileResult> {
+  const generationCutoff = new Date(Date.now() - STALE_GENERATION_TTL_MS);
+  const refinementCutoff = new Date(Date.now() - STALE_REFINEMENT_TTL_MS);
+  const failedTransactionIds: string[] = [];
 
   const staleRenders = await db
     .select({ id: rendersTable.id })
@@ -29,17 +127,31 @@ export async function reconcileStaleCommercialState(userId: number): Promise<voi
       and(
         eq(rendersTable.userId, userId),
         inArray(rendersTable.status, [...ACTIVE_RENDER_STATUSES]),
-        lt(rendersTable.updatedAt, cutoff),
+        or(
+          and(
+            isNotNull(rendersTable.parentRenderId),
+            lt(rendersTable.updatedAt, refinementCutoff),
+          ),
+          and(
+            isNull(rendersTable.parentRenderId),
+            lt(rendersTable.updatedAt, generationCutoff),
+          ),
+        ),
       ),
     );
 
-  if (staleRenders.length > 0) {
-    const staleIds = staleRenders.map((row) => row.id);
+  const staleIds = staleRenders.map((row) => row.id);
 
+  if (staleIds.length > 0) {
     await db
       .update(rendersTable)
       .set({ status: "failed" })
-      .where(inArray(rendersTable.id, staleIds));
+      .where(
+        and(
+          inArray(rendersTable.id, staleIds),
+          inArray(rendersTable.status, [...ACTIVE_RENDER_STATUSES]),
+        ),
+      );
 
     const linkedPending = await db
       .select({ transactionId: studioCreditTransactionsTable.transactionId })
@@ -57,6 +169,7 @@ export async function reconcileStaleCommercialState(userId: number): Promise<voi
 
     for (const tx of linkedPending) {
       await failStudioCreditTransaction(tx.transactionId);
+      failedTransactionIds.push(tx.transactionId);
     }
 
     logger.warn(
@@ -75,12 +188,13 @@ export async function reconcileStaleCommercialState(userId: number): Promise<voi
           studioCreditTransactionsTable.status,
           StudioCreditTransactionStatus.PENDING,
         ),
-        lt(studioCreditTransactionsTable.createdAt, cutoff),
+        lt(studioCreditTransactionsTable.createdAt, refinementCutoff),
       ),
     );
 
   for (const tx of orphanPending) {
     await failStudioCreditTransaction(tx.transactionId);
+    failedTransactionIds.push(tx.transactionId);
   }
 
   if (orphanPending.length > 0) {
@@ -89,6 +203,15 @@ export async function reconcileStaleCommercialState(userId: number): Promise<voi
       "commercial-reconcile: failed orphan pending credit transactions",
     );
   }
+
+  const reversedOrphanTransactionIds =
+    await reconcileFailedSessionOrphanCharges(userId);
+
+  return {
+    staleRenderIds: staleIds,
+    failedTransactionIds: [...new Set(failedTransactionIds)],
+    reversedOrphanTransactionIds,
+  };
 }
 
 /**

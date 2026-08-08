@@ -22,6 +22,7 @@ import {
   getBillingCycleLedgerStats,
   getStudioCreditBalance,
 } from "../studio-credit-service.js";
+import { reconcileStaleCommercialState } from "../generation-idempotency.js";
 import {
   formatMonthKey,
   isGenerationReasonCode,
@@ -79,6 +80,8 @@ export async function loadAccountStatementContext(
     .where(eq(usersTable.id, userId));
 
   if (!user) return null;
+
+  await reconcileStaleCommercialState(userId);
 
   const generatedAt = new Date();
   const cycleStart = billingCycleStart(generatedAt);
@@ -296,6 +299,12 @@ export function computeCreativeActivityRows(
   const renderById = new Map(ctx.renders.map((render) => [render.id, render]));
   const sessionIds = new Set<string>();
 
+  const sessionIdForRender = (render: Render): string =>
+    render.generationSessionId ?? `session-render-${render.id}`;
+
+  const rendersForSession = (sessionId: string): Render[] =>
+    ctx.renders.filter((render) => sessionIdForRender(render) === sessionId);
+
   for (const render of ctx.renders) {
     if (render.generationSessionId) {
       sessionIds.add(render.generationSessionId);
@@ -335,8 +344,7 @@ export function computeCreativeActivityRows(
   };
 
   for (const render of ctx.renders) {
-    const sessionId =
-      render.generationSessionId ?? `session-render-${render.id}`;
+    const sessionId = sessionIdForRender(render);
     sessionIds.add(sessionId);
     const meta = ensureSession(sessionId);
     if (render.createdAt < meta.dateTime) {
@@ -361,6 +369,14 @@ export function computeCreativeActivityRows(
       (tx.renderId != null ? `session-render-${tx.renderId}` : `session-tx-${tx.id}`);
 
     sessionIds.add(sessionId);
+    const sessionRenders = rendersForSession(sessionId);
+    const sessionAllFailed =
+      sessionRenders.length > 0
+      && sessionRenders.every((row) => row.status === "failed");
+    if (sessionAllFailed) {
+      continue;
+    }
+
     const meta = ensureSession(sessionId);
 
     if (tx.createdAt < meta.dateTime) {
@@ -382,6 +398,19 @@ export function computeCreativeActivityRows(
   return [...sessionIds]
     .map((sessionId) => {
       const meta = ensureSession(sessionId);
+      const sessionRenders = rendersForSession(sessionId);
+      const sessionAllFailed =
+        sessionRenders.length > 0
+        && sessionRenders.every((row) => row.status === "failed");
+      const sessionAnyCompleted = sessionRenders.some(
+        (row) => row.status === "completed",
+      );
+
+      if (sessionAllFailed || (!sessionAnyCompleted && meta.status === "Failed")) {
+        meta.creditsUsed = 0;
+        meta.status = "Failed";
+      }
+
       return {
         sessionId,
         dateTime: meta.dateTime,

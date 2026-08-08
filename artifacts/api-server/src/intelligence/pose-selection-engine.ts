@@ -147,32 +147,40 @@ export function garmentHasUsablePockets(profile: GarmentProfile): boolean {
   if (profile.hasPockets === true) return true;
   if (profile.hasPockets === false) return false;
 
+  // Vision inconclusive — do NOT assume pockets. Pocket poses require confirmed
+  // pockets or strong subcategory evidence (Predictability Contract §9).
   const sub = profile.subcategory.toLowerCase();
   const { category } = profile;
 
   if (category === "bottoms") {
-    return !sub.includes("legging") && !sub.includes("tight");
+    if (
+      sub.includes("jean") ||
+      sub.includes("denim") ||
+      sub.includes("trouser") ||
+      sub.includes("pant") ||
+      sub.includes("short") ||
+      sub.includes("cargo")
+    ) {
+      return !sub.includes("legging") && !sub.includes("tight");
+    }
+    return false;
   }
-  if (category === "outerwear") return true;
 
-  if (
-    sub.includes("jean") ||
-    sub.includes("trouser") ||
-    sub.includes("pant") ||
-    sub.includes("short") ||
-    sub.includes("cargo") ||
-    sub.includes("hoodie") ||
-    sub.includes("jacket") ||
-    sub.includes("blazer") ||
-    sub.includes("coat")
-  ) {
-    return true;
+  if (category === "outerwear") {
+    if (
+      sub.includes("jacket") ||
+      sub.includes("blazer") ||
+      sub.includes("coat") ||
+      sub.includes("hoodie") ||
+      sub.includes("cargo")
+    ) {
+      return true;
+    }
+    return false;
   }
 
   if (category === "one-pieces") {
-    if (sub.includes("dress") || sub.includes("gown") || sub.includes("jumpsuit")) {
-      return sub.includes("cargo") || sub.includes("utility");
-    }
+    return sub.includes("cargo") || sub.includes("utility");
   }
 
   return false;
@@ -192,10 +200,9 @@ export function inferGarmentTags(profile: GarmentProfile): Set<string> {
     }
   }
   if (category === "bottoms") {
-    tags.add("jeans");
-    tags.add("trousers");
     if (sub.includes("jean") || sub.includes("denim")) tags.add("jeans");
-    if (sub.includes("trouser") || sub.includes("pant")) tags.add("trousers");
+    else if (sub.includes("trouser") || sub.includes("pant")) tags.add("trousers");
+    else if (sub.includes("short")) tags.add("shorts");
   }
   if (category === "outerwear" || sub.includes("blazer") || sub.includes("jacket") || sub.includes("coat")) {
     tags.add("blazer");
@@ -803,9 +810,14 @@ export function imageCountToShootType(shots: number): ShootType {
 export const POSE_CONSISTENCY_RULES = `
 POSE CONSISTENCY — ABSOLUTE RULES:
 Changing pose must NEVER change garment construction, garment colour, garment texture, garment proportions, garment dimensions, model identity, body proportions, hairstyle, facial features, footwear, or accessories.
-Only pose, camera angle, lighting, and styling may change — never the uploaded garment's dimensions or proportions.
+Only pose, camera angle, and lighting may change — never the uploaded garment's dimensions, proportions, or footwear styling.
 The uploaded garment must remain the primary visual focal point.
-Never invent garment pockets that do not exist on the uploaded product.`;
+Never invent garment pockets that do not exist on the uploaded product.
+Never use a pose that requires inserting a hand into a pocket unless the uploaded garment clearly shows usable pockets.
+A pose must NEVER cause footwear to disappear — walking, standing, cross-leg, and editorial movement poses must preserve the established footwear styling from the shoot brief.
+Never render bare feet for a commercial fashion garment when the shoot brief establishes footwear.
+BATCH COLOUR LOCK — every image in this generation batch must show identical garment colour, hue, saturation, brightness, print registration, and fabric appearance as Reference Image 1. Pose and camera may vary; garment colour must not.
+FOOTWEAR BATCH LOCK — every image in this generation batch must show identical footwear styling. Never switch between barefoot, heels, sandals, sneakers, or boots between shots.`;
 
 export function neutralizeBasePromptPose(basePrompt: string): string {
   return basePrompt.replace(

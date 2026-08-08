@@ -59,6 +59,14 @@ export type { GarmentLengthSelection, FabricBehaviourClass } from "./garment-int
 export { composeRenderPrompt }      from "./prompt-composer";
 export type { PromptComposerParams } from "./prompt-composer";
 
+export {
+  isBarefootAppropriateContext,
+  resolveFootwearStyling,
+  buildFootwearStylingPrompt,
+  buildFootwearBatchConsistencyRules,
+} from "./footwear-intelligence";
+export type { FootwearStylingMode, FootwearStylingResolution } from "./footwear-intelligence";
+
 export { analyzeGarment }           from "./garment-analyzer";
 export { FashionKnowledgeBase }     from "./fashion-knowledge-base";
 export { selectStyleMode, describeStyleMode } from "./style-engine";

@@ -5,6 +5,9 @@ import {
   useListRenders,
   useDeleteRender,
   useGetRenderUsage,
+  useCreateRender,
+  useGetRender,
+  useGetMe,
   getListRendersQueryKey,
   getGetRenderUsageQueryKey,
 } from '@workspace/api-client-react';
@@ -17,9 +20,20 @@ import { GalleryDashboardCard } from '@/components/gallery/gallery-dashboard-car
 import { GalleryLedgerLegend } from '@/components/gallery/gallery-ledger-legend';
 import { GalleryImageViewer } from '@/components/gallery/gallery-image-viewer';
 import { ShootDetailDialog } from '@/components/gallery/shoot-detail-dialog';
+import {
+  GalleryImageEditDialog,
+  type GalleryCropState,
+} from '@/components/gallery/gallery-image-edit-dialog';
 import type { CreativeLedgerCardRender } from '@/components/gallery/creative-ledger-card';
 import { buildGalleryShoots, type GalleryShoot } from '@/lib/gallery-shoots';
+import { buildGalleryRefinementRequest } from '@/lib/gallery-refinement';
 import { galleryQueryOptions } from '@/lib/gallery-queries';
+import type { RefinementType } from '@/lib/refinement-types';
+import { revokeCropObjectUrl } from '@/lib/studio-crop';
+import {
+  isStudioCreditLimitBlocked,
+  resolveStudioAdminFlag,
+} from '@workspace/studio-credit-engine';
 import {
   delay,
   GALLERY_EXIT_ANIMATION_MS,
@@ -35,6 +49,32 @@ import { StudioWorkspaceButton } from '@/components/studio/studio-workspace-cont
 
 /** Stable empty list — avoids re-running shoot grouping on every render while data is undefined. */
 const EMPTY_LEDGER_RENDERS: CreativeLedgerCardRender[] = [];
+
+function makeRefetchInterval(enabled: boolean) {
+  return (query: { state: { data: { status?: string } | undefined } }) => {
+    if (!enabled) return false;
+    const render = query.state.data;
+    if (render && (render.status === 'processing' || render.status === 'pending')) {
+      return 2000;
+    }
+    return false;
+  };
+}
+
+function renderApiErrorDescription(error: unknown): string {
+  if (import.meta.env.DEV) {
+    const err = error as {
+      message?: string;
+      response?: { data?: { error?: string; details?: { message?: string } } };
+    };
+    const apiMessage =
+      err.response?.data?.details?.message ??
+      err.response?.data?.error ??
+      err.message;
+    if (apiMessage) return apiMessage;
+  }
+  return 'Please try again in a few moments.';
+}
 
 const GALLERY_FAQ = [
   {
@@ -65,15 +105,37 @@ export default function GalleryPage() {
   const { data: usage } = useGetRenderUsage({
     query: galleryQueryOptions as never,
   });
+  const { data: user } = useGetMe();
+  const createRender = useCreateRender();
   const deleteRender = useDeleteRender();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [openShoot, setOpenShoot] = useState<GalleryShoot | null>(null);
   const [viewRender, setViewRender] = useState<CreativeLedgerCardRender | null>(null);
+  const [editRender, setEditRender] = useState<CreativeLedgerCardRender | null>(null);
+  const [cropStateByRenderId, setCropStateByRenderId] = useState<
+    Record<number, GalleryCropState>
+  >({});
+  const [refineInFlight, setRefineInFlight] = useState(false);
+  const [activeRefinement, setActiveRefinement] = useState<RefinementType | null>(null);
+  const [refinementPending, setRefinementPending] = useState<{
+    parentRenderId: number;
+    childRenderId: number;
+    refinementType: RefinementType;
+  } | null>(null);
+  const refinementHandledRef = useRef<number | null>(null);
   const [exitingShoots, setExitingShoots] = useState<GalleryShoot[]>([]);
   const stableShootsRef = useRef<GalleryShoot[]>([]);
   const exitingShootIdsRef = useRef<Set<string>>(new Set());
+
+  const pendingChildId = refinementPending?.childRenderId ?? 0;
+  const { data: pendingRefinementRender } = useGetRender(pendingChildId, {
+    query: {
+      enabled: pendingChildId > 0,
+      refetchInterval: makeRefetchInterval(pendingChildId > 0),
+    } as never,
+  });
 
   const rawShoots = useMemo(
     () => buildGalleryShoots((renders ?? EMPTY_LEDGER_RENDERS) as CreativeLedgerCardRender[]),
@@ -187,6 +249,112 @@ export default function GalleryPage() {
     setOpenShoot(shoot);
   };
 
+  const getGalleryDisplayUrl = (render: CreativeLedgerCardRender) =>
+    cropStateByRenderId[render.id]?.displayUrl ?? render.outputImageUrl;
+
+  const handleCropStateChange = (renderId: number, state: GalleryCropState | null) => {
+    setCropStateByRenderId((prev) => {
+      const next = { ...prev };
+      revokeCropObjectUrl(prev[renderId]?.displayUrl);
+      if (state == null) {
+        delete next[renderId];
+      } else {
+        next[renderId] = state;
+      }
+      return next;
+    });
+  };
+
+  const handleGalleryRefine = (render: CreativeLedgerCardRender, type: RefinementType) => {
+    if (refineInFlight || createRender.isPending) return;
+
+    if (isStudioCreditLimitBlocked(usage) && !resolveStudioAdminFlag(user, usage)) {
+      toast({
+        title: 'Studio Credit used',
+        description: 'View Membership to continue refining.',
+      });
+      return;
+    }
+
+    setRefineInFlight(true);
+    setActiveRefinement(type);
+
+    createRender.mutate(
+      { data: buildGalleryRefinementRequest(render, type) },
+      {
+        onSuccess: (renders) => {
+          const childId = (renders as unknown as { id: number }[])?.[0]?.id;
+          if (!childId) {
+            setRefineInFlight(false);
+            setActiveRefinement(null);
+            toast({
+              title: "We couldn't complete this refinement.",
+              description: withErrorContactHelper('Please try again in a few moments.'),
+            });
+            return;
+          }
+
+          refinementHandledRef.current = null;
+          setRefinementPending({
+            parentRenderId: render.id,
+            childRenderId: childId,
+            refinementType: type,
+          });
+        },
+        onError: (error: unknown) => {
+          setRefineInFlight(false);
+          setActiveRefinement(null);
+          setRefinementPending(null);
+          toast({
+            title: "We couldn't complete this refinement.",
+            description: withErrorContactHelper(renderApiErrorDescription(error)),
+          });
+        },
+      },
+    );
+  };
+
+  useEffect(() => {
+    if (!refinementPending || !pendingRefinementRender) return;
+
+    const { status } = pendingRefinementRender;
+    if (status !== 'completed' && status !== 'failed') return;
+
+    const { childRenderId, parentRenderId } = refinementPending;
+    if (refinementHandledRef.current === childRenderId) return;
+    refinementHandledRef.current = childRenderId;
+
+    if (status === 'completed') {
+      toast({
+        title: 'Refinement complete',
+        description: 'Your updated image is now in the Gallery.',
+      });
+      setEditRender(null);
+      setCropStateByRenderId((prev) => {
+        const next = { ...prev };
+        revokeCropObjectUrl(prev[parentRenderId]?.displayUrl);
+        delete next[parentRenderId];
+        return next;
+      });
+      void queryClient.invalidateQueries({ queryKey: getListRendersQueryKey() });
+    } else {
+      toast({
+        title: "We couldn't complete this refinement.",
+        description: withErrorContactHelper('Your original image is unchanged. Please try again.'),
+      });
+    }
+
+    setRefinementPending(null);
+    setRefineInFlight(false);
+    setActiveRefinement(null);
+    void queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
+  }, [
+    refinementPending,
+    pendingRefinementRender,
+    queryClient,
+    toast,
+  ]);
+
   return (
     <AppShell footer>
       <EditorialPageHeader
@@ -266,12 +434,30 @@ export default function GalleryPage() {
         open={openShoot != null}
         onOpenChange={(open) => !open && setOpenShoot(null)}
         onInspect={setViewRender}
+        onEdit={setEditRender}
         onDelete={handleDelete}
+        onDownloadError={handleDownloadError}
+        getDisplayUrl={getGalleryDisplayUrl}
+      />
+
+      <GalleryImageEditDialog
+        render={editRender}
+        open={editRender != null}
+        onOpenChange={(open) => !open && setEditRender(null)}
+        cropState={editRender ? cropStateByRenderId[editRender.id] : undefined}
+        onCropStateChange={handleCropStateChange}
+        refineInFlight={refineInFlight}
+        activeRefinement={activeRefinement}
+        onRefine={handleGalleryRefine}
         onDownloadError={handleDownloadError}
       />
 
       <GalleryImageViewer
-        imageUrl={viewRender?.outputImageUrl ?? null}
+        imageUrl={
+          viewRender
+            ? (getGalleryDisplayUrl(viewRender) ?? viewRender.outputImageUrl)
+            : null
+        }
         open={viewRender != null}
         onOpenChange={(open) => !open && setViewRender(null)}
       />

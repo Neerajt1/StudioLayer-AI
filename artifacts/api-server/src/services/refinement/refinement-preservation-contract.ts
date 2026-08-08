@@ -11,7 +11,7 @@
 // ---------------------------------------------------------------------------
 
 import type { RefinementType } from "./refinement-types.js";
-import { appendIdentityProtectionIfRequired } from "./refinement-identity-protection.js";
+import { appendIdentityProtectionIfRequired, REFINEMENT_POSE_PRESERVATION_BLOCK } from "./refinement-identity-protection.js";
 import { REFINEMENT_MASTER_ASSET_PRESERVATION } from "../image-architecture/master-asset.js";
 
 /** Declarative policy for a refinement type. Undeclared types inherit defaults. */
@@ -69,7 +69,12 @@ No other refinement may modify the background.
 Resolution, aspect ratio, crop, and framing.
 Exception: Studio Crop Tool (non-AI, client-side only).
 
-The uploaded garment (Reference Image 1) and the current photograph (Reference Image 3)
+9. FOOTWEAR — always preserve unless a future refinement explicitly targets footwear replacement:
+Footwear type, style, colour, placement, and visibility state (including intentional barefoot).
+Enhance Model Face and Enhance Garment must NEVER add, remove, or change footwear.
+Remove Background is a pixel-preserving background operation — it must not alter footwear at all.
+
+The uploaded garment (Reference Image 1) and the current photograph (Reference Image 2)
 are the source of truth — preserve them exactly except for the single approved modification.`;
 
 const V1_REFINEMENT_POLICIES: Record<RefinementType, RefinementPreservationPolicy> = {
@@ -77,7 +82,7 @@ const V1_REFINEMENT_POLICIES: Record<RefinementType, RefinementPreservationPolic
     allowedToModify: ["background only — replace with transparent PNG"],
     backgroundMode: "transparent_png",
     additionalPreserve: [
-      "Garment, model, pose, lighting, colours, materials, construction, and dimensions must remain pixel-faithful.",
+      "Garment, model, pose, lighting, colours, materials, construction, dimensions, and footwear must remain pixel-faithful.",
       "Only the studio background becomes transparent — nothing else changes.",
     ],
   },
@@ -90,6 +95,8 @@ const V1_REFINEMENT_POLICIES: Record<RefinementType, RefinementPreservationPolic
     ],
     additionalPreserve: [
       "Identity must remain unmistakably the same individual — enhancement, not replacement.",
+      "Pose, body position, limb placement, hand position, camera angle, framing, and composition must remain pixel-identical to Reference Image 2.",
+      "Footwear must remain exactly as in Reference Image 2 — same type, style, colour, placement, and visibility (including barefoot if barefoot). Never add or remove footwear.",
     ],
   },
   enhance_garment: {
@@ -102,6 +109,8 @@ const V1_REFINEMENT_POLICIES: Record<RefinementType, RefinementPreservationPolic
     ],
     additionalPreserve: [
       "The product must remain exactly the same garment — improve how it is photographed, never what it is.",
+      "Pose, body position, limb placement, hand position, camera angle, framing, and composition must remain pixel-identical to Reference Image 2.",
+      "Footwear must remain exactly as in Reference Image 2 — same type, style, colour, placement, and visibility (including barefoot if barefoot). Never add or remove footwear.",
     ],
   },
 };
@@ -163,6 +172,7 @@ export function composeRefinementInstruction(
 
   return [
     withIdentity,
+    REFINEMENT_POSE_PRESERVATION_BLOCK,
     REFINEMENT_MASTER_ASSET_PRESERVATION,
     buildPolicyBlock(type),
     REFINEMENT_PRESERVATION_CONTRACT,

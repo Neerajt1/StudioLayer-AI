@@ -64,7 +64,7 @@ const SYSTEM_PROMPT = `You are a professional fashion analyst. Analyse the garme
   "texture": string,             // "smooth" | "textured" | "knit" | "woven" | "sheer"
   "season": string[],            // any of: "spring" | "summer" | "autumn" | "winter"
   "occasion": string[]           // any of: "casual" | "office" | "evening" | "sport" | "formal" | "festive"
-  "hasPockets": boolean | null,  // true ONLY if clearly visible usable pockets exist
+  "hasPockets": boolean | null,  // true ONLY if clearly visible usable pockets exist — for dresses/gowns/skirts default false unless unmistakable
   "isFlowingGarment": boolean | null, // true for dresses, maxi skirts, flowing capes
   "silhouette": string | null,   // e.g. "fitted" | "relaxed" | "A-line" | "structured" | "flowing" | "boxy"
   "fabricBehaviour": string | null, // e.g. "structured" | "flowing" | "crisp" | "stretch" | "natural drape"
@@ -77,7 +77,8 @@ RULES:
 - silhouette, fabricBehaviour, and garmentStructure must describe what is visible — do not invent details.
 - Focus ONLY on the garment, ignore hangers, backgrounds, mannequins.
 - Respond with ONLY valid JSON, no markdown, no explanation.
-- If unsure about a nullable field, set it to null.`;
+- If unsure about a nullable field, set it to null.
+- hasPockets: for dresses, gowns, skirts, and one-piece garments, set false unless pockets are clearly visible and usable. Never assume pockets exist.`;
 
 // ---------------------------------------------------------------------------
 // Main export

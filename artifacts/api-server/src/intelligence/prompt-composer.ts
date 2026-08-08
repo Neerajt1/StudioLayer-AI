@@ -16,6 +16,7 @@
 
 import type { GarmentProfile, OutfitRecommendation } from "./types";
 import { buildGarmentIntelligencePrompt } from "./garment-intelligence";
+import { buildFootwearStylingPrompt } from "./footwear-intelligence";
 
 // ---------------------------------------------------------------------------
 // Human-readable field formatters
@@ -133,6 +134,7 @@ export function composeRenderPrompt(params: PromptComposerParams): string {
     : "Accessories must enhance styling without obscuring the hero garment.";
 
   const garmentIntelligence = buildGarmentIntelligencePrompt(profile);
+  const footwearStyling = buildFootwearStylingPrompt(profile, recommendedOutfit);
 
-  return [opening, hero, composition, protection, garmentIntelligence, accessoryClause, photography].join(" ");
+  return [opening, hero, composition, protection, garmentIntelligence, footwearStyling, accessoryClause, photography].join(" ");
 }

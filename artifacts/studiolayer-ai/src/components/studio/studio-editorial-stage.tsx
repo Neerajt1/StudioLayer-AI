@@ -48,6 +48,52 @@ export function StudioEditorialEmptyState({ compact = false }: StudioEditorialEm
   );
 }
 
+interface EditorialImageActionsProps {
+  renderId: number;
+  outputImageUrl: string;
+  refineDisabled?: boolean;
+  refineActive?: boolean;
+  onRefine: () => void;
+  onDownloadError?: (message: string) => void;
+}
+
+/** Compact Refine + Download controls overlaid on a result image. */
+export function EditorialImageActions({
+  renderId,
+  outputImageUrl,
+  refineDisabled = false,
+  refineActive = false,
+  onRefine,
+  onDownloadError,
+}: EditorialImageActionsProps) {
+  return (
+    <div className="flex items-center gap-1">
+      <StudioWorkspaceButton
+        variant="icon"
+        disabled={refineDisabled}
+        onClick={(event) => {
+          event.stopPropagation();
+          onRefine();
+        }}
+        aria-label="Refine image"
+        title="Refine image"
+        className={cn(refineActive && 'ring-1 ring-white/80')}
+      >
+        <Wand2 className="h-4 w-4" aria-hidden />
+      </StudioWorkspaceButton>
+      <div onClick={(event) => event.stopPropagation()}>
+        <EditorialDownloadMenu
+          renderId={renderId}
+          outputImageUrl={outputImageUrl}
+          label="Download image"
+          variant="icon"
+          onDownloadError={onDownloadError}
+        />
+      </div>
+    </div>
+  );
+}
+
 interface StudioResultToolbarProps {
   renderId?: number;
   outputImageUrl?: string;
@@ -80,7 +126,10 @@ export function StudioResultToolbar({
   onCreditsConsumed,
 }: StudioResultToolbarProps) {
   return (
-    <div className="sl-studio-result-toolbar">
+    <div className={cn(
+      'sl-studio-result-toolbar',
+      !onDownloadAll && !(renderId && outputImageUrl) && 'sl-studio-result-toolbar--single',
+    )}>
       {onDownloadAll ? (
         <StudioWorkspaceButton
           className="sl-studio-toolbar-btn gap-2"
@@ -94,15 +143,15 @@ export function StudioResultToolbar({
           ) : null}
           {downloadAllLoading ? downloadAllPreparingLabel : downloadLabel}
         </StudioWorkspaceButton>
-      ) : (
+      ) : renderId && outputImageUrl ? (
         <EditorialDownloadMenu
-          renderId={renderId!}
-          outputImageUrl={outputImageUrl!}
+          renderId={renderId}
+          outputImageUrl={outputImageUrl}
           label={downloadLabel}
           variant="toolbar"
           onDownloadError={onDownloadError}
         />
-      )}
+      ) : null}
       <StudioWorkspaceButton
         className="sl-studio-toolbar-btn"
         onClick={onNewImage}

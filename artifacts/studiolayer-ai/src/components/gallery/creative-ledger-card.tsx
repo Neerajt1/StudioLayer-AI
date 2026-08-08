@@ -16,6 +16,8 @@ export interface CreativeLedgerCardRender extends LedgerRender {
   sourceImageUrl: string | null;
   outputImageUrl: string | null;
   status: string;
+  modelPersona?: string;
+  locationEnvironment?: string;
   generationType?: 'hero' | 'campaign' | 'editorial';
   generationSessionId?: string | null;
 }

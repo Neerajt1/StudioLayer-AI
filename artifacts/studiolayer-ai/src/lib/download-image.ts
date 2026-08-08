@@ -75,6 +75,11 @@ function downloadBlob(blob: Blob, filename: string): void {
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), REVOKE_OBJECT_URL_MS);
 }
 
+/** Direct blob download — used for client-side crop exports in Gallery. */
+export function downloadBlobDirect(blob: Blob, filename: string): void {
+  downloadBlob(blob, filename);
+}
+
 export function parseRenderIdFromOutputUrl(url: string): number | null {
   const match = url.match(/\/renders\/(\d+)\//);
   if (!match) return null;

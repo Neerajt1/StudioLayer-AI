@@ -17,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Wand2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { GalleryImageDownloadButton } from '@/components/shared/gallery-image-download-button';
 import {
@@ -36,8 +37,10 @@ interface ShootDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onInspect: (render: CreativeLedgerCardRender) => void;
+  onEdit: (render: CreativeLedgerCardRender) => void;
   onDelete: (render: CreativeLedgerCardRender) => Promise<void>;
   onDownloadError?: (message: string) => void;
+  getDisplayUrl?: (render: CreativeLedgerCardRender) => string | null | undefined;
 }
 
 export function ShootDetailDialog({
@@ -45,8 +48,10 @@ export function ShootDetailDialog({
   open,
   onOpenChange,
   onInspect,
+  onEdit,
   onDelete,
   onDownloadError,
+  getDisplayUrl,
 }: ShootDetailDialogProps) {
   const {
     inFlight: downloadingAll,
@@ -185,6 +190,7 @@ export function ShootDetailDialog({
             {displayImages.map((render, index) => {
               const isExiting = exitingIds.has(render.id);
               const isDeleting = deletingId === render.id;
+              const imageUrl = getDisplayUrl?.(render) ?? render.outputImageUrl;
 
               return (
                 <div
@@ -201,9 +207,9 @@ export function ShootDetailDialog({
                     aria-label={`Inspect image ${index + 1}`}
                     disabled={deleteInFlight}
                   >
-                    {render.outputImageUrl ? (
+                    {imageUrl ? (
                       <img
-                        src={render.outputImageUrl}
+                        src={imageUrl}
                         alt={`Image ${index + 1}`}
                         className="sl-shoot-detail-image"
                         draggable={false}
@@ -219,10 +225,19 @@ export function ShootDetailDialog({
                     >
                       View
                     </button>
+                    <button
+                      type="button"
+                      className="sl-ledger-card-action sl-shoot-detail-refine"
+                      disabled={deleteInFlight || !render.outputImageUrl}
+                      onClick={() => onEdit(render)}
+                    >
+                      <Wand2 className="size-3 shrink-0 opacity-70" aria-hidden />
+                      Edit
+                    </button>
                     <GalleryImageDownloadButton
                       renderId={render.id}
-                      outputImageUrl={render.outputImageUrl!}
-                      disabled={!render.outputImageUrl || deleteInFlight}
+                      outputImageUrl={imageUrl ?? render.outputImageUrl!}
+                      disabled={!imageUrl || deleteInFlight}
                       onDownloadError={onDownloadError}
                     />
                     <button

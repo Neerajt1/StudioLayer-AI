@@ -68,6 +68,22 @@ CONSERVATIVE RULE:
 If the expression is already natural, leave it unchanged.
 Prefer better quality over a different emotion.`;
 
+/** Pose and composition lock for all OpenRouter refinements. */
+export const REFINEMENT_POSE_PRESERVATION_BLOCK = `
+POSE & COMPOSITION PRESERVATION — ALL REFINEMENTS (MANDATORY):
+
+Reference Image 2 is the authoritative photograph. Refinement is an EDIT, not a regeneration.
+
+Preserve pixel-identically from Reference Image 2:
+- Model body position, stance, and pose
+- Hand and arm placement — never move hands into pockets unless already there in Reference Image 2
+- Leg and foot placement
+- Camera angle, framing, crop, and composition
+- Overall lighting direction (except Remove Background)
+
+The output must look like Reference Image 2 with only the approved refinement applied.
+If the output appears to be a new photoshoot or different pose, you have failed.`;
+
 /** Combined identity + expression protection for Enhance Model Face. */
 export const FACE_IDENTITY_AND_EXPRESSION_PROTECTION = [
   FACE_IDENTITY_PROTECTION_BLOCK,

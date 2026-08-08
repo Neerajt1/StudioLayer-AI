@@ -126,6 +126,56 @@ async function callOpenRouter(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+  const isRefinementEdit =
+    Boolean(refinementInstruction) && Boolean(previousOutputUrl);
+
+  const primaryInstruction = isRefinementEdit
+    ? `${OPENROUTER_RENDERING_CONFIG.refinementEditInstruction}\n\n${refinementInstruction}`
+    : OPENROUTER_RENDERING_CONFIG.garmentInstruction;
+
+  const imageContent = isRefinementEdit
+    ? [
+        {
+          type: "image_url" as const,
+          image_url: {
+            url: garmentImageUrl,
+            detail: "high" as const,
+          },
+        },
+        {
+          type: "image_url" as const,
+          image_url: {
+            url: previousOutputUrl!,
+            detail: "high" as const,
+          },
+        },
+      ]
+    : [
+        {
+          type: "image_url" as const,
+          image_url: {
+            url: garmentImageUrl,
+            detail: "high" as const,
+          },
+        },
+        {
+          type: "image_url" as const,
+          image_url: {
+            url: modelImageUrl,
+            detail: "high" as const,
+          },
+        },
+        ...(previousOutputUrl
+          ? [{
+              type: "image_url" as const,
+              image_url: {
+                url: previousOutputUrl,
+                detail: "high" as const,
+              },
+            }]
+          : []),
+      ];
+
   let response: Response;
   try {
     response = await fetch(`${OPENROUTER_RENDERING_CONFIG.baseUrl}/chat/completions`, {
@@ -145,34 +195,10 @@ async function callOpenRouter(
             content: [
               {
                 type: "text",
-                text: refinementInstruction
-                  ? `${OPENROUTER_RENDERING_CONFIG.garmentInstruction}\n\n${refinementInstruction}`
-                  : OPENROUTER_RENDERING_CONFIG.garmentInstruction,
+                text: primaryInstruction,
               },
-              {
-                type: "image_url",
-                image_url: {
-                  url: garmentImageUrl,
-                  detail: "high",
-                },
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: modelImageUrl,
-                  detail: "high",
-                },
-              },
-              ...(previousOutputUrl
-                ? [{
-                    type: "image_url" as const,
-                    image_url: {
-                      url: previousOutputUrl,
-                      detail: "high" as const,
-                    },
-                  }]
-                : []),
-              ...(prompt
+              ...imageContent,
+              ...(prompt && !isRefinementEdit
                 ? [{ type: "text" as const, text: prompt }]
                 : []),
             ],

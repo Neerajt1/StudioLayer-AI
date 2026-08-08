@@ -45,8 +45,16 @@ export function estimatedRefinementCount<T extends LedgerRender>(
   return Math.max(0, getAncestorChain(renders, renderId).length - 1);
 }
 
-/** Resolve Studio Credits for gallery display — Studio Credit Engine first. */
+/**
+ * Resolve Studio Credits for gallery display.
+ * Render-row metadata is planned cost at insert time — only completed deliverables
+ * should display credits as used; failed/pending/processing were not charged.
+ */
 export function studioCreditsForRender<T extends LedgerRender>(render: T): number {
+  if (render.status !== 'completed') {
+    return 0;
+  }
+
   if (render.generationType) {
     return galleryGenerationCreditLabel(render.generationType);
   }

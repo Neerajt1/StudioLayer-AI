@@ -4,8 +4,8 @@
 // Uploads a base64 data-URI (e.g. from OpenRouter image-generation) to
 // Cloudflare R2 and returns a persistent, publicly-accessible HTTPS URL.
 //
-// BirefNet garment preprocessing may use a future ImageProcessingProvider —
-// that is a separate dependency and is not handled here.
+// BirefNet Remove Background refinement persists verified transparent PNGs —
+// that flow uses uploadTransparentPngBufferToR2().
 //
 // Usage:
 //   const url = await uploadBase64Image("data:image/png;base64,iVBOR...");
@@ -187,6 +187,58 @@ export async function uploadRemoteImageToR2(
   logger.info(
     { renderId, url, objectKey, variant, sizeBytes: buffer.length },
     "image-storage: remote image persisted to R2",
+  );
+  return url;
+}
+
+/** Downloads a remote image URL and returns raw bytes plus upstream content-type. */
+export async function fetchRemoteImageBuffer(
+  imageUrl: string,
+  options?: { timeoutMs?: number },
+): Promise<{ buffer: Buffer; contentType: string }> {
+  const timeoutMs = options?.timeoutMs ?? 30_000;
+  const upstream = await fetch(imageUrl, {
+    redirect: "follow",
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!upstream.ok) {
+    throw new Error(`image-storage: upstream fetch failed: HTTP ${upstream.status}`);
+  }
+
+  const contentType = upstream.headers.get("content-type") ?? "application/octet-stream";
+  const buffer = Buffer.from(await upstream.arrayBuffer());
+  return { buffer, contentType };
+}
+
+/**
+ * Persists a verified transparent PNG buffer to R2.
+ * Forces image/png — never JPEG/RGB flattening.
+ */
+export async function uploadTransparentPngBufferToR2(
+  buffer: Buffer,
+  renderId: number,
+): Promise<string> {
+  const config = getR2Config();
+  if (!config) {
+    throw new Error("image-storage: R2 is not configured (missing environment variables)");
+  }
+
+  const objectKey = buildTransparentObjectKey(renderId);
+  const client = createR2S3Client(config);
+
+  await client.send(
+    new PutObjectCommand({
+      Bucket: config.bucket,
+      Key: objectKey,
+      Body: buffer,
+      ContentType: "image/png",
+    }),
+  );
+
+  const url = buildPublicObjectUrl(config.publicUrl, objectKey);
+  logger.info(
+    { renderId, url, objectKey, sizeBytes: buffer.length },
+    "image-storage: transparent PNG uploaded to R2",
   );
   return url;
 }

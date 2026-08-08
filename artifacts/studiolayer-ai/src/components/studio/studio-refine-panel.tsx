@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Studio Refine Panel — Batch 21 Reliable Refine
+// Studio Refine Panel — Batch 21 Reliable Refine (Fix #5 simplified UX)
 // ---------------------------------------------------------------------------
 
 import { RotateCcw, Scissors, Wand2, ZoomIn } from 'lucide-react';
@@ -9,19 +9,16 @@ import {
   StudioWorkspaceButton,
 } from '@/components/studio/studio-workspace-controls';
 import { AI_REFINEMENT_OPTIONS, type RefinementType } from '@/lib/refinement-types';
-import {
-  CROP_PRESET_OPTIONS,
-  type CropPreset,
-} from '@/lib/studio-crop';
 
 interface StudioRefinePanelProps {
   disabled?: boolean;
   refineInFlight?: boolean;
   activeRefinement?: RefinementType | null;
-  cropPreset: CropPreset;
+  hasCropApplied?: boolean;
   canRevert: boolean;
+  imageLabel?: string;
   onRefine: (type: RefinementType) => void;
-  onCropPresetChange: (preset: CropPreset) => void;
+  onOpenCrop: () => void;
   onRevert: () => void;
   onZoom: () => void;
 }
@@ -30,10 +27,11 @@ export function StudioRefinePanel({
   disabled = false,
   refineInFlight = false,
   activeRefinement = null,
-  cropPreset,
+  hasCropApplied = false,
   canRevert,
+  imageLabel,
   onRefine,
-  onCropPresetChange,
+  onOpenCrop,
   onRevert,
   onZoom,
 }: StudioRefinePanelProps) {
@@ -44,28 +42,30 @@ export function StudioRefinePanel({
       <div className="space-y-1">
         <p className="text-xs font-semibold text-foreground">Refine</p>
         <p className="sl-ui-helper">
-          Each AI refinement uses 1 Studio Credit and does exactly what its name promises.
+          {imageLabel
+            ? `Choose one AI refinement for ${imageLabel}. Each uses 1 Studio Credit.`
+            : 'Choose one AI refinement for this image. Each uses 1 Studio Credit.'}
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {AI_REFINEMENT_OPTIONS.map((option) => {
-          const isActive = refineInFlight && activeRefinement === option.type;
+          const isRunning = refineInFlight && activeRefinement === option.type;
           return (
             <StudioToggleOption
               key={option.type}
-              selected={isActive}
+              selected={isRunning}
               disabled={busy}
               onClick={() => onRefine(option.type)}
               className="rounded px-2 py-2.5 text-left"
             >
               <p className="text-xs font-semibold flex items-center gap-1.5">
-                {!isActive ? <Wand2 className="size-3 shrink-0 opacity-70" aria-hidden /> : null}
-                {isActive ? 'Refining…' : option.label}
+                {!isRunning ? <Wand2 className="size-3 shrink-0 opacity-70" aria-hidden /> : null}
+                {isRunning ? 'Refining…' : option.label}
               </p>
               <p className={cn(
                 'text-[10px] font-mono mt-0.5 leading-tight',
-                isActive ? 'opacity-75' : 'text-muted-foreground',
+                isRunning ? 'opacity-75' : 'text-muted-foreground',
               )}>
                 {option.description} · 1 credit
               </p>
@@ -81,26 +81,17 @@ export function StudioRefinePanel({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground uppercase tracking-wide">
-            <Scissors className="size-3" aria-hidden />
+          <StudioWorkspaceButton
+            className={cn(
+              'h-8 px-3 text-xs gap-1.5',
+              hasCropApplied && 'ring-1 ring-foreground/20',
+            )}
+            disabled={busy}
+            onClick={onOpenCrop}
+          >
+            <Scissors className="size-3.5" aria-hidden />
             Crop
-          </div>
-          {CROP_PRESET_OPTIONS.map((preset) => (
-            <StudioWorkspaceButton
-              key={preset.value}
-              className={cn(
-                'h-7 px-2.5 text-[11px] font-medium',
-                cropPreset === preset.value && 'ring-1 ring-foreground/20',
-              )}
-              disabled={busy}
-              onClick={() => onCropPresetChange(preset.value)}
-            >
-              {preset.label}
-            </StudioWorkspaceButton>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap gap-2">
+          </StudioWorkspaceButton>
           <StudioWorkspaceButton
             className="h-8 px-3 text-xs gap-1.5"
             disabled={busy || !canRevert}

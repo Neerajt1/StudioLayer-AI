@@ -17,6 +17,7 @@ import { RENDERING_COLOR_FIDELITY_INSTRUCTION } from "./rendering-color-fidelity
 import {
   PLATFORM_IMAGE_STANDARD_INSTRUCTION,
 } from "../image-architecture/master-asset.js";
+import { STUDIO_LAYER_PREDICTABILITY_CONTRACT } from "../predictability-contract.js";
 
 export const OPENROUTER_RENDERING_CONFIG = {
   /** Provider label — internal only, never surfaced in UI. */
@@ -99,7 +100,9 @@ WHAT MUST NEVER CHANGE:
 - Do not change the sleeve length or type.
 - Do not alter the silhouette, overall shape, or relative measurements (waist position, hem height, shoulder width, body coverage).
 
-BATCH CONSISTENCY — when multiple images are generated from the same upload, every image must show the identical garment with identical proportions and dimensions. Never vary garment length, silhouette, or scale between shots.
+BATCH CONSISTENCY — when multiple images are generated from the same upload, every image must show the identical garment with identical proportions, dimensions, colour, hue, saturation, print, pattern, and fabric appearance. Never vary garment length, silhouette, scale, or colour between shots.
+
+FOOTWEAR BATCH CONSISTENCY — when multiple images are generated from the same upload, every image must show identical footwear styling. Same garment + same shoot = coherent footwear across the batch. Never switch between barefoot, heels, sandals, sneakers, or boots between parallel generations. Once footwear styling is established for the shoot, preserve it in every shot unless creative direction explicitly requires a footwear change. Bare feet are not the default for commercial fashion — barefoot is valid only when garment category or styling context supports it (swimwear, beach/resort, loungewear/sleepwear, deliberate editorial barefoot). Do not hallucinate unusual footwear — choose conservative, garment-appropriate styling only.
 
 ORIENTATION — Reproduce the garment in its exact original left/right orientation as shown in Reference Image 1. Do not flip, mirror, or horizontally reverse the garment for any reason. All asymmetric details — embroidery, prints, logos, button plackets, chest pockets, side slits, off-shoulder drops, and any embellishments — must remain on the same side as the original. If the garment has a logo on the left chest, it must appear on the left chest in the output.
 
@@ -118,9 +121,9 @@ WHAT MAY VARY NATURALLY:
 - Model pose and body position
 - Camera angle and framing
 - Lighting and shadows cast by the garment (within soft studio lighting — background remains pure white)
-- Complementary styling (footwear, accessories, and outfit-completion pieces around the hero garment)
+- Complementary styling (accessories and outfit-completion pieces around the hero garment) — footwear styling is locked for the batch once established; see FOOTWEAR BATCH CONSISTENCY
 - Facial expression
-- Complementary clothing items (shoes, trousers, skirt) that complete the outfit around the uploaded garment — these must not cover or obscure the uploaded garment in any way
+- Complementary clothing items (trousers, skirt) that complete the outfit around the uploaded garment — these must not cover or obscure the uploaded garment in any way
 
 BACKGROUND IS FIXED — pure white seamless studio in every output. Never vary the background between shots or introduce environmental scenery.
 
@@ -129,6 +132,29 @@ If the uploaded garment represents only part of an outfit (such as a blazer, jac
 Ignore the hanger, background and any non-garment objects present in Reference Image 1. Use only the garment itself for dressing the model.
 
 Generate a premium commercial fashion photograph suitable for an ecommerce clothing brand with realistic lighting, natural body proportions, accurate garment draping, and a clean professional studio appearance.${PLATFORM_IMAGE_STANDARD_INSTRUCTION}${RENDERING_REALISM_INSTRUCTION}${RENDERING_BACKGROUND_INSTRUCTION}${RENDERING_COLOR_FIDELITY_INSTRUCTION}`,
+
+  /**
+   * Primary instruction for OpenRouter refinements (Enhance Model Face, Enhance Garment).
+   *
+   * Reference Image 1 = garment (colour/construction source of truth).
+   * Reference Image 2 = current photograph to edit (sole visual anchor).
+   *
+   * Does NOT include model-identity try-on framing — refinement is an in-place edit.
+   */
+  refinementEditInstruction: `Reference Image 1 is the uploaded garment — colour, pattern, texture, and construction source of truth.
+
+Reference Image 2 is the EXACT current photograph to edit. This is your sole visual anchor.
+
+REFINEMENT MODE — TARGETED EDIT ONLY (NOT REGENERATION):
+You are editing Reference Image 2 in place — like a professional retoucher using Photoshop.
+Do NOT generate a new photoshoot. Do NOT reinterpret the scene. Do NOT create a new pose.
+
+${STUDIO_LAYER_PREDICTABILITY_CONTRACT}
+
+LOCKED — pixel-identical to Reference Image 2 unless explicitly allowed in the refinement request below:
+Model identity, pose, body position, limb placement, hand position, leg position, camera angle, framing, composition, garment construction, garment colour, print, pattern, texture, footwear (type, style, colour, placement, and visibility — including intentional barefoot), and overall scene layout.
+
+Reference Image 1 confirms garment fidelity — preserve it exactly except where the refinement explicitly permits quality improvement.`,
 
   /**
    * OpenRouter API base URL.

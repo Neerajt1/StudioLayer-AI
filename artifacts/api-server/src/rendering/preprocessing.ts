@@ -3,11 +3,11 @@
 //
 // Extracted from RenderOrchestrator (SL-017) so that any pipeline entry
 // point — the Render Orchestrator *and* the OpenRouter pipeline — can reuse
-// the same BirefNet garment preprocessing and model image resolution logic
-// without duplicating it.
+// the same garment passthrough and model image resolution logic without
+// duplicating it.
 //
 // Public surface:
-//   prepareGarmentImage(sourceImageUrl, renderId)   → garment PNG URL
+//   prepareGarmentImage(sourceImageUrl, renderId)   → garment image URL
 //   resolveModelImage(request, category, styleTemplate, renderId)
 //                                                   → { modelImageContext, modelImageUrl }
 //
@@ -20,10 +20,8 @@
 import { readFileSync, existsSync }     from "node:fs";
 import path                            from "node:path";
 import { fileURLToPath }               from "node:url";
-import { fal }                       from "@fal-ai/client";
 import { logger }                    from "../lib/logger";
-import { PipelineStage } from "../lib/render-pipeline-observability.js";
-import { traceRenderFailure, traceRenderStage } from "../lib/render-pipeline-trace.js";
+import { traceRenderFailure } from "../lib/render-pipeline-trace.js";
 import { findIdentityById }          from "../data/identity-library";
 import {
   selectBaseModel,
@@ -37,10 +35,6 @@ import type {
 } from "./types";
 
 export type { FashnCategory, ModelImageContext };
-
-// Ensure fal is configured whenever this module is loaded.
-// Calling fal.config multiple times with the same value is safe.
-fal.config({ credentials: process.env["FAL_KEY"] });
 
 // ---------------------------------------------------------------------------
 // Re-export mapStyleModeToTemplate for pipeline callers
@@ -115,71 +109,24 @@ export function loadStudioTalentImageAsDataUri(
 }
 
 // ---------------------------------------------------------------------------
-// BirefNet garment preprocessing
+// Garment passthrough (V1 — no Fal dependency for normal generation)
 // ---------------------------------------------------------------------------
 
 /**
- * Passes the uploaded garment image through fal-ai/birefnet to remove
- * hanger/background.  Returns a transparent PNG cutout URL.
- * Falls back to the original URL on any error so renders never hard-fail
- * due to preprocessing.
+ * Returns the uploaded garment URL unchanged.
+ *
+ * V1 architecture: Fal/BirefNet is reserved for Remove Background refinement
+ * only. Normal OpenRouter generation must not invoke Fal.
  */
 export async function prepareGarmentImage(
   sourceImageUrl: string,
   renderId: number,
 ): Promise<string> {
-  try {
-    logger.info(
-      { renderId, externalProvider: "fal-ai/birefnet" },
-      "preprocessing: garment background removal started",
-    );
-
-    const result = await fal.subscribe("fal-ai/birefnet", {
-      input: {
-        image_url:            sourceImageUrl,
-        model:                "General Use (Light)",
-        output_format:        "png",
-        operating_resolution: "1024x1024",
-        refine_foreground:    true,
-      },
-      logs: false,
-    });
-
-    const data = result.data as Record<string, unknown> | undefined;
-    const candidates: unknown[] = [
-      (data?.["image"]  as { url?: string } | undefined)?.url,
-      data?.["image_url"],
-      data?.["url"],
-      (data?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
-    ];
-
-    for (const c of candidates) {
-      if (typeof c === "string" && c.startsWith("http")) {
-        traceRenderStage(PipelineStage.GARMENT_PREPROCESSING_COMPLETED, {
-          renderId,
-          externalProvider: "fal-ai/birefnet",
-        });
-        logger.info(
-          { renderId, externalProvider: "fal-ai/birefnet" },
-          "preprocessing: garment background removed",
-        );
-        return c;
-      }
-    }
-
-    logger.warn({ renderId, externalProvider: "fal-ai/birefnet" }, "preprocessing: BirefNet returned no URL — using original");
-    return sourceImageUrl;
-  } catch (err) {
-    traceRenderFailure(PipelineStage.GARMENT_PREPROCESSING_COMPLETED, err, {
-      renderId,
-      externalProvider: "fal-ai/birefnet",
-    });
-    logger.warn(
-      { renderId, err },
-      "preprocessing: BirefNet failed — using original garment image",
-    );
-    return sourceImageUrl;
-  }
+  logger.info(
+    { renderId },
+    "preprocessing: garment passthrough (no Fal preprocessing in V1)",
+  );
+  return sourceImageUrl;
 }
 
 // ---------------------------------------------------------------------------

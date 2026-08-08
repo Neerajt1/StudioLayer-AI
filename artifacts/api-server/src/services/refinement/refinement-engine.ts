@@ -102,21 +102,23 @@ function buildRemoveBackgroundTaskInstruction(): string {
 function buildEnhanceFaceTaskInstruction(): string {
   return [
     "ENHANCE MODEL FACE — professional beauty retouching quality improvement only.",
-    "Reference Image 3 is the exact current state — the person to preserve.",
+    "Reference Image 2 is the exact current state — the person and pose to preserve.",
     "Improve photograph quality as if shot with a better camera: facial sharpness, skin detail and texture,",
     "eye clarity, natural lighting, fine facial detail, natural contrast, and image clarity.",
     "Apply conservative, subtle enhancement — minimal change if quality is already high.",
     "Preserve the subject's original facial expression, emotional tone, gaze direction, and head orientation exactly.",
-    "Improve only facial quality — do not introduce a different expression.",
-    "The output must clearly depict the same individual — enhancement, never replacement.",
+    "Preserve model body position, pose, limb placement, hand position, camera angle, framing, and composition exactly.",
+    "Improve only facial quality — do not introduce a different expression or pose.",
+    "The output must clearly depict the same individual in the same pose — enhancement, never replacement.",
   ].join(" ");
 }
 
 function buildEnhanceGarmentTaskInstruction(): string {
   return [
     "ENHANCE GARMENT — targeted realism improvement only.",
-    "Reference Image 3 is the exact current state.",
+    "Reference Image 2 is the exact current state — preserve its pose and composition.",
     "Improve: texture clarity, stitch definition, natural wrinkle quality, fabric detail, material realism, edge sharpness.",
+    "Preserve model pose, body position, limb placement, hand position, camera angle, framing, and composition exactly.",
     "Objective: improve how convincingly the garment is photographed — never what the garment is.",
   ].join(" ");
 }

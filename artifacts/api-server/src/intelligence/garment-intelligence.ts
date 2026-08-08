@@ -315,10 +315,11 @@ export function buildGarmentConsistencyRules(): string {
     "GARMENT CONSISTENCY — mandatory across this entire generation batch:",
     "Every image must show the SAME garment length, SAME silhouette, SAME neckline,",
     "SAME sleeve length, SAME waist position, SAME hemline, SAME proportions, SAME fit, and SAME dimensions.",
+    "Every image must show the SAME garment colour, SAME hue, SAME saturation, SAME brightness, SAME print, SAME pattern, and SAME fabric appearance as Reference Image 1.",
     "Garment proportions must be pixel-faithful to the upload — identical in every shot of this batch.",
     "Never generate one knee-length, one midi, and one maxi version of the same uploaded garment.",
-    "Never reinterpret or rescale the garment between images.",
-    "The AI may change only pose, camera angle, lighting, and styling — never garment dimensions or construction.",
+    "Never reinterpret, recolour, or rescale the garment between images.",
+    "The AI may change only pose, camera angle, and lighting — never garment dimensions, construction, colour, or footwear styling.",
     "The uploaded garment is the hero — every image is the same garment in a different professional pose.",
   ].join(" ");
 }

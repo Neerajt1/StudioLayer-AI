@@ -7,7 +7,7 @@ import { logger } from "./logger.js";
  *
  * | Observability stage              | Implementation                         | External? |
  * |----------------------------------|----------------------------------------|-----------|
- * | garment_preprocessing_*          | prepareGarmentImage → fal-ai/birefnet  | Yes (FAL) |
+ * | garment_preprocessing_*          | prepareGarmentImage (passthrough)        | No        |
  * | intelligence_analysis_*          | runIntelligenceAnalysis (internal)     | No*       |
  * | prompt_generation_completed      | Creative Director / prompt composer    | No        |
  * | openrouter_*                     | OpenRouterProvider → Gemini image API  | Yes       |
@@ -22,7 +22,8 @@ import { logger } from "./logger.js";
 
 /** External provider identifiers referenced in structured logs. */
 export const PipelineExternalProvider = {
-  GARMENT_PREPROCESSING: "fal-ai/birefnet",
+  GARMENT_PREPROCESSING: "internal_garment_passthrough",
+  BACKGROUND_REMOVAL: "fal-ai/birefnet",
   IMAGE_GENERATION: "openrouter",
   INTELLIGENCE_ENGINE: "internal_intelligence_engine",
 } as const;

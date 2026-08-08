@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
-import { eq, and, desc, ne } from "drizzle-orm";
+import { eq, and, desc, ne, inArray } from "drizzle-orm";
 import { creditCostForGenerationType } from "@workspace/studio-credit-engine";
 import { db, rendersTable, usersTable, renderDeletionEventsTable } from "@workspace/db";
 import { CreateRenderBody, GetRenderParams } from "@workspace/api-zod";
@@ -73,6 +73,8 @@ router.get("/renders/usage", async (req, res): Promise<void> => {
     return;
   }
 
+  await reconcileStaleCommercialState(userId);
+
   const [user] = await db
     .select()
     .from(usersTable)
@@ -110,6 +112,8 @@ router.get("/renders", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
+
+  await reconcileStaleCommercialState(userId);
 
   const renders = await db
     .select()
@@ -222,6 +226,23 @@ router.post("/renders", async (req, res): Promise<void> => {
       userId,
       async () => {
         await reconcileStaleCommercialState(userId);
+
+        if (isRefinement && parentRenderId) {
+          const activeOnParent = await db
+            .select()
+            .from(rendersTable)
+            .where(
+              and(
+                eq(rendersTable.userId, userId),
+                eq(rendersTable.parentRenderId, parentRenderId),
+                inArray(rendersTable.status, ["pending", "processing"]),
+              ),
+            );
+
+          if (activeOnParent.length > 0) {
+            return { type: "duplicate", renders: activeOnParent };
+          }
+        }
 
         const activeBatch = await findActiveGenerationBatch(userId);
         if (activeBatch.length > 0) {
@@ -690,6 +711,8 @@ router.get("/renders/:id", async (req, res): Promise<void> => {
     res.status(400).json({ error: params.error.message });
     return;
   }
+
+  await reconcileStaleCommercialState(userId);
 
   const [render] = await db
     .select()

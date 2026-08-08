@@ -66,6 +66,14 @@ export function shootRootForRender<T extends LedgerRender>(
   return getAncestorChain(allRenders, renderId)[0];
 }
 
+function isCompletedWithOutput<T extends CreativeLedgerCardRender>(render: T): boolean {
+  return (
+    render.status === 'completed' &&
+    typeof render.outputImageUrl === 'string' &&
+    render.outputImageUrl.length > 0
+  );
+}
+
 /** Latest completed descendant for a root slot (handles refinements). */
 export function tipRenderForRoot<T extends CreativeLedgerCardRender>(
   rootId: number,
@@ -81,26 +89,28 @@ export function tipRenderForRoot<T extends CreativeLedgerCardRender>(
     childrenByParent.set(render.parentRenderId, siblings);
   }
 
-  let current = byId.get(rootId);
-  if (!current) return undefined;
+  const root = byId.get(rootId);
+  if (!root) return undefined;
 
-  for (;;) {
+  function findLatestCompletedTip(current: T): T | undefined {
     const children = childrenByParent.get(current.id);
-    if (!children?.length) break;
-    current = [...children].sort(
+    if (!children?.length) {
+      return isCompletedWithOutput(current) ? current : undefined;
+    }
+
+    const sortedChildren = [...children].sort(
       (a, b) => parseTime(b.createdAt) - parseTime(a.createdAt) || b.id - a.id,
-    )[0];
+    );
+
+    for (const child of sortedChildren) {
+      const childTip = findLatestCompletedTip(child);
+      if (childTip) return childTip;
+    }
+
+    return isCompletedWithOutput(current) ? current : undefined;
   }
 
-  if (
-    current.status === 'completed' &&
-    typeof current.outputImageUrl === 'string' &&
-    current.outputImageUrl.length > 0
-  ) {
-    return current;
-  }
-
-  return undefined;
+  return findLatestCompletedTip(root);
 }
 
 /** Legacy: group root renders from the same generation batch into Shoot batches. */
@@ -156,11 +166,26 @@ export function groupRootRendersIntoBatches(
 }
 
 function studioCreditsForShootBatch(batch: CreativeLedgerCardRender[]): number {
-  const fromRow = batch[0]?.studioCreditsUsed;
+  const root = batch[0];
+  if (!root) return 0;
+
+  // Generation metadata is written at request time. Only show credits when every
+  // original root in the batch completed — partial/failed batches were not charged.
+  const generationSucceeded = batch.every(
+    (render) =>
+      render.status === 'completed' &&
+      typeof render.outputImageUrl === 'string' &&
+      render.outputImageUrl.length > 0,
+  );
+  if (!generationSucceeded) {
+    return 0;
+  }
+
+  const fromRow = root.studioCreditsUsed;
   if (fromRow != null && fromRow > 0) {
     return fromRow;
   }
-  return galleryGenerationCreditLabel(generationTypeOf(batch[0]!));
+  return galleryGenerationCreditLabel(generationTypeOf(root));
 }
 
 function refinementCountForShoot(

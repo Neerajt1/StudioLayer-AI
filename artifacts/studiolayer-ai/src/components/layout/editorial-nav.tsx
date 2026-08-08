@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { useGetMe, useLogout } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { destroyStoredStudioWorkflow } from '@/lib/studio-workflow';
+import { clearStudioWorkspaceSession } from '@/lib/studio-workspace-session';
 import { requestStudioIntroOnLogout } from '@/lib/studio-intro';
 import { prefetchGalleryQueries } from '@/lib/gallery-queries';
 
@@ -69,6 +70,7 @@ export function EditorialNav() {
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
         destroyStoredStudioWorkflow(user?.id ?? null);
+        clearStudioWorkspaceSession(user?.id ?? null);
         queryClient.clear();
         requestStudioIntroOnLogout();
         // TODO(dev-workaround): Remove full page reload once SelectedTalentProvider
