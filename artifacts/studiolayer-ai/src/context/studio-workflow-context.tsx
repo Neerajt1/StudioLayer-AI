@@ -13,6 +13,7 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  DEFAULT_GARMENT_LENGTH_SELECTION,
   EMPTY_STUDIO_WORKFLOW,
   destroyStoredStudioWorkflow,
   normalizeStudioWorkflow,
@@ -61,7 +62,9 @@ export function StudioWorkflowProvider({ children }: { children: ReactNode }) {
   const setGarmentPlacement = useCallback((placement: GarmentPlacement) => {
     patchWorkflow({
       garmentPlacement: placement,
-      ...(placement !== 'full_body' ? { garmentLengthSelection: 'auto' as const } : {}),
+      ...(placement !== 'full_body'
+        ? { garmentLengthSelection: DEFAULT_GARMENT_LENGTH_SELECTION }
+        : {}),
     });
   }, [patchWorkflow]);
 

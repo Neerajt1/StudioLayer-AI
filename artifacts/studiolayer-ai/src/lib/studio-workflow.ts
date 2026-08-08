@@ -22,19 +22,20 @@ export interface StudioWorkflow {
   imageCount: ShootType;
 }
 
+export const DEFAULT_GARMENT_LENGTH_SELECTION: Exclude<GarmentLengthSelection, 'auto'> = 'mini';
+
 export const EMPTY_STUDIO_WORKFLOW: StudioWorkflow = {
   sourceImageUrl: '',
   garmentPlacement: '',
-  garmentLengthSelection: 'auto',
+  garmentLengthSelection: DEFAULT_GARMENT_LENGTH_SELECTION,
   talentId: '',
   imageCount: 1,
 };
 
 export const GARMENT_LENGTH_OPTIONS: ReadonlyArray<{
-  value: GarmentLengthSelection;
+  value: Exclude<GarmentLengthSelection, 'auto'>;
   label: string;
 }> = [
-  { value: 'auto', label: 'Auto Detect' },
   { value: 'mini', label: 'Mini' },
   { value: 'above_knee', label: 'Above Knee' },
   { value: 'knee', label: 'Knee Length' },
@@ -81,10 +82,11 @@ function isGarmentPlacement(value: unknown): value is GarmentPlacement {
   return value === 'upper_body' || value === 'lower_body' || value === 'full_body' || value === '';
 }
 
-function isGarmentLengthSelection(value: unknown): value is GarmentLengthSelection {
+function isManualGarmentLengthSelection(
+  value: unknown,
+): value is Exclude<GarmentLengthSelection, 'auto'> {
   return (
-    value === 'auto'
-    || value === 'mini'
+    value === 'mini'
     || value === 'above_knee'
     || value === 'knee'
     || value === 'midi'
@@ -98,9 +100,9 @@ export function normalizeStudioWorkflow(raw: Partial<StudioWorkflow> | null | un
   return {
     sourceImageUrl: typeof raw?.sourceImageUrl === 'string' ? raw.sourceImageUrl : '',
     garmentPlacement: isGarmentPlacement(raw?.garmentPlacement) ? raw.garmentPlacement : '',
-    garmentLengthSelection: isGarmentLengthSelection(raw?.garmentLengthSelection)
+    garmentLengthSelection: isManualGarmentLengthSelection(raw?.garmentLengthSelection)
       ? raw.garmentLengthSelection
-      : 'auto',
+      : DEFAULT_GARMENT_LENGTH_SELECTION,
     talentId: typeof raw?.talentId === 'string' ? raw.talentId : '',
     imageCount: isShootType(raw?.imageCount) ? raw.imageCount : 1,
   };

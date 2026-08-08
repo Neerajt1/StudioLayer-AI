@@ -3620,9 +3620,16 @@
       0 0 0 4px hsl(var(--ring));
   }
 
-  .sl-studio-toggle:hover:not(:disabled) {
+  .sl-studio-toggle:not(.is-selected):hover:not(:disabled) {
     border-color: hsl(0 0% 72%);
-    background: hsl(0 0% 98%);
+    background: hsl(0 0% 96%);
+    color: hsl(var(--foreground));
+  }
+
+  .sl-studio-toggle.is-selected:hover:not(:disabled) {
+    border-color: hsl(var(--foreground));
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
   }
 
   .sl-studio-toggle.is-pressed:not(:disabled) {

@@ -33,7 +33,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Camera, Check } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SelectedTalentSummary } from '@/components/studio/selected-talent-summary';
 import { StudioBrandWatermark } from '@/components/studio/studio-brand-watermark';
@@ -759,15 +759,11 @@ export default function StudioPage() {
                     )}
                   >
                     <div className="space-y-1">
-                      <p className="text-xs font-medium text-foreground">Garment Length</p>
-                      <p className="sl-ui-helper">
-                        Auto Detect reads length from your upload. Override only if needed.
-                      </p>
+                      <p className="text-xs font-medium text-foreground">Length</p>
                     </div>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                       {GARMENT_LENGTH_OPTIONS.map((option) => {
                         const isSelected = workflow.garmentLengthSelection === option.value;
-                        const isAuto = option.value === 'auto';
                         return (
                           <StudioToggleOption
                             key={option.value}
@@ -779,12 +775,7 @@ export default function StudioPage() {
                             }}
                             className="rounded px-2 py-2"
                           >
-                            <p className="text-xs font-semibold flex items-center gap-1">
-                              {isAuto && isSelected && (
-                                <Check className="size-3 shrink-0" aria-hidden />
-                              )}
-                              {option.label}
-                            </p>
+                            <p className="text-xs font-semibold">{option.label}</p>
                           </StudioToggleOption>
                         );
                       })}
