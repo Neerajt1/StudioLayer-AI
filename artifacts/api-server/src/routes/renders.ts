@@ -5,6 +5,7 @@ import { creditCostForGenerationType } from "@workspace/studio-credit-engine";
 import { db, rendersTable, usersTable, renderDeletionEventsTable } from "@workspace/db";
 import { CreateRenderBody, GetRenderParams } from "@workspace/api-zod";
 import { runAIPipeline } from "../services/ai-pipeline";
+import { saveRenderPoseSelection } from "../services/pose-history-service";
 import {
   resolveRenderLedgerMetadata,
   type GenerationType,
@@ -487,6 +488,7 @@ router.post("/renders", async (req, res): Promise<void> => {
 
     void runAIPipeline({
       renderId: insertedRows[0]!.id,
+      userId,
       sourceImageUrl,
       modelPersona,
       locationEnvironment,
@@ -508,13 +510,21 @@ router.post("/renders", async (req, res): Promise<void> => {
       usedCameraAngles: usedCameraAngles ?? undefined,
       usedPoses: usedPoses ?? undefined,
       pipelineTrace,
-      onComplete: async (outputImageUrl, imageIndex) => {
+      onComplete: async (outputImageUrl, imageIndex, poseSelection) => {
         const row = insertedRows[imageIndex];
         if (!row) return;
         await db
           .update(rendersTable)
           .set({ status: "completed", outputImageUrl })
           .where(eq(rendersTable.id, row.id));
+
+        if (poseSelection) {
+          await saveRenderPoseSelection({
+            renderId: row.id,
+            poseName: poseSelection.poseName,
+            poseFamily: poseSelection.poseFamily,
+          });
+        }
 
         logPipelineStage(pipelineTrace, PipelineStage.DATABASE_UPDATE_COMPLETED, {
           renderId: row.id,

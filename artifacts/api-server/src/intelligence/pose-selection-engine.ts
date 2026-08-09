@@ -34,6 +34,8 @@ import {
   type PoseName,
   type ShootType,
   POCKET_ALTERNATIVE_POSES,
+  POSE_FAMILY_LABELS,
+  POSE_SELECTION_CLASS_LABELS,
   getPoseDefinition,
   getPoseDescription,
   getPosesInCollection,
@@ -47,33 +49,69 @@ import {
   isPoseDevLoggingEnabled,
   logPoseSelectionDevReport,
 } from "./pose-selection-dev-log";
+import {
+  POSE_SELECTION_TUNING,
+  buildPoseProfileKey,
+  garmentHasUsablePockets,
+  inferGarmentTags,
+  resolveModelGender,
+  GENERIC_GARMENT_TAGS,
+  type ModelGender,
+} from "./pose-garment-utils";
+import {
+  defaultShotCountForShootType,
+  planPosesForShoot,
+  type PlannedPose,
+} from "./pose-planner";
+import type { PoseSelectionContext, RecentPoseSelection } from "./pose-selection-types";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+export type { PoseSelectionContext, RecentPoseSelection };
 
-export type ModelGender = "womens" | "mens" | "kids" | "unisex";
-
-/** Cross-request recency memory entry for variety modifier. */
-export interface RecentPoseSelection {
-  poseName: PoseName;
-  shootType: ShootType;
-  /** Fingerprint from buildPoseProfileKey() — category + subcategory. */
-  profileKey: string;
+function buildFallbackPoseDevEntry(
+  name: PoseName,
+  ctx: { shootType: ShootType; profile: GarmentProfile },
+): PoseSelectionDevEntry {
+  const def = getPoseDefinition(name)!;
+  return {
+    code: getPoseCollectionCode(ctx.shootType, name),
+    name,
+    poseFamily: def.poseFamily,
+    poseFamilyLabel: POSE_FAMILY_LABELS[def.poseFamily],
+    selectionClass: def.selectionClass,
+    selectionClassLabel: POSE_SELECTION_CLASS_LABELS[def.selectionClass],
+    garmentCategory: ctx.profile.category,
+    suitabilityScore: def.suitabilityScore,
+    finalWeight: 0,
+    garmentCompatibility: 0,
+    varietyModifier: 0,
+    pocketSubstitute: false,
+  };
 }
 
-export interface PoseSelectionContext {
-  profile: GarmentProfile;
-  shootType: ShootType;
-  count: number;
-  modelGender?: string | null;
-  /** Poses already used in the current refinement session. */
-  usedPoses?: string[];
-  /** Recent selections for the same shoot type + garment profile (optional). */
-  recentPoseSelections?: RecentPoseSelection[];
-  /** Optional seed for reproducible weighted draws in tests. */
-  seed?: number;
+function buildPoseDevEntry(
+  resolved: PoseDefinition,
+  breakdown: ReturnType<typeof computeWeightBreakdown>,
+  ctx: { shootType: ShootType; profile: GarmentProfile },
+  options?: { requestedName?: PoseName; pocketSubstitute?: boolean },
+): PoseSelectionDevEntry {
+  return {
+    code: getPoseCollectionCode(ctx.shootType, resolved.name),
+    name: resolved.name,
+    poseFamily: resolved.poseFamily,
+    poseFamilyLabel: POSE_FAMILY_LABELS[resolved.poseFamily],
+    selectionClass: resolved.selectionClass,
+    selectionClassLabel: POSE_SELECTION_CLASS_LABELS[resolved.selectionClass],
+    garmentCategory: ctx.profile.category,
+    requestedName: options?.requestedName,
+    pocketSubstitute: options?.pocketSubstitute ?? false,
+    suitabilityScore: breakdown.suitabilityScore,
+    finalWeight: breakdown.finalWeight,
+    garmentCompatibility: breakdown.garmentCompatibility,
+    varietyModifier: breakdown.varietyModifier,
+  };
 }
+
+// ---------------------------------------------------------------------------
 
 export interface ShotDirection {
   label: string;
@@ -81,54 +119,18 @@ export interface ShotDirection {
   energy: string;
 }
 
-// ---------------------------------------------------------------------------
-// Algorithm tuning — multipliers only, never pose suitability scores
-// ---------------------------------------------------------------------------
-
-/** Weight tuning constants (Batch 17A). Pose scores live in pose-library.ts. */
-export const POSE_SELECTION_TUNING = {
-  /** garmentCompatibility bounds */
-  compatMin: 0.5,
-  compatMax: 1.5,
-  /** varietyModifier floor — never eliminate a pose completely */
-  varietyMin: 0.65,
-  /** Penalty when pose appeared recently for same profile + shoot type */
-  recencyPenalty: 0.72,
-  /** Per overlapping dimension with poses already selected this generation */
-  inBatchStancePenalty: 0.85,
-  inBatchCameraPenalty: 0.92,
-  inBatchOrientationPenalty: 0.92,
-} as const;
-
-const GENERIC_GARMENT_TAGS = new Set([
-  "catalog", "ecommerce", "hero", "minimal", "luxury", "campaign", "editorial",
-  "magazine", "high_fashion", "movement", "lifestyle", "commercial",
-  "no_pocket_alternative", "pocket", "three_quarter", "statement", "feminine",
-  "everyday", "street", "formal", "silhouette",
-]);
-
-/** Stable garment fingerprint for cross-request variety tracking. */
-export function buildPoseProfileKey(profile: GarmentProfile): string {
-  return `${profile.category}:${profile.subcategory.toLowerCase().trim()}`;
-}
+// Re-export garment utilities (pose-garment-utils is canonical source).
+export type { ModelGender };
+export {
+  POSE_SELECTION_TUNING,
+  buildPoseProfileKey,
+  garmentHasUsablePockets,
+  inferGarmentTags,
+  resolveModelGender,
+};
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
-}
-
-// ---------------------------------------------------------------------------
-// Gender resolution
-// ---------------------------------------------------------------------------
-
-export function resolveModelGender(
-  modelGender: string | null | undefined,
-  profileGender: ModelGender,
-): ModelGender {
-  const raw = (modelGender ?? profileGender).toLowerCase();
-  if (raw === "mens" || raw === "male") return "mens";
-  if (raw === "kids" || raw === "kid" || raw === "child") return "kids";
-  if (raw === "unisex") return "unisex";
-  return "womens";
 }
 
 function genderMatchesPool(pool: PoseDefinition["genderPool"], gender: ModelGender): boolean {
@@ -137,118 +139,6 @@ function genderMatchesPool(pool: PoseDefinition["genderPool"], gender: ModelGend
   if (pool === "female") return gender === "womens" || gender === "unisex";
   if (pool === "male") return gender === "mens" || gender === "unisex";
   return true;
-}
-
-// ---------------------------------------------------------------------------
-// Garment characteristics & tags
-// ---------------------------------------------------------------------------
-
-export function garmentHasUsablePockets(profile: GarmentProfile): boolean {
-  if (profile.hasPockets === true) return true;
-  if (profile.hasPockets === false) return false;
-
-  // Vision inconclusive — do NOT assume pockets. Pocket poses require confirmed
-  // pockets or strong subcategory evidence (Predictability Contract §9).
-  const sub = profile.subcategory.toLowerCase();
-  const { category } = profile;
-
-  if (category === "bottoms") {
-    if (
-      sub.includes("jean") ||
-      sub.includes("denim") ||
-      sub.includes("trouser") ||
-      sub.includes("pant") ||
-      sub.includes("short") ||
-      sub.includes("cargo")
-    ) {
-      return !sub.includes("legging") && !sub.includes("tight");
-    }
-    return false;
-  }
-
-  if (category === "outerwear") {
-    if (
-      sub.includes("jacket") ||
-      sub.includes("blazer") ||
-      sub.includes("coat") ||
-      sub.includes("hoodie") ||
-      sub.includes("cargo")
-    ) {
-      return true;
-    }
-    return false;
-  }
-
-  if (category === "one-pieces") {
-    return sub.includes("cargo") || sub.includes("utility");
-  }
-
-  return false;
-}
-
-export function inferGarmentTags(profile: GarmentProfile): Set<string> {
-  const tags = new Set<string>();
-  const sub = profile.subcategory.toLowerCase();
-  const occ = profile.occasion.map((o) => o.toLowerCase());
-  const { category, fit, fabric } = profile;
-
-  if (category === "one-pieces") {
-    tags.add("dress");
-    if (sub.includes("gown") || sub.includes("maxi") || sub.includes("evening")) {
-      tags.add("gown");
-      tags.add("formal_dress");
-    }
-  }
-  if (category === "bottoms") {
-    if (sub.includes("jean") || sub.includes("denim")) tags.add("jeans");
-    else if (sub.includes("trouser") || sub.includes("pant")) tags.add("trousers");
-    else if (sub.includes("short")) tags.add("shorts");
-  }
-  if (category === "outerwear" || sub.includes("blazer") || sub.includes("jacket") || sub.includes("coat")) {
-    tags.add("blazer");
-    tags.add("jacket");
-  }
-  if (sub.includes("suit")) tags.add("business");
-  if (sub.includes("blazer")) tags.add("blazer");
-
-  if (
-    profile.isFlowingGarment === true ||
-    sub.includes("maxi") ||
-    sub.includes("gown") ||
-    sub.includes("flow") ||
-    sub.includes("cape") ||
-    sub.includes("skirt") ||
-    fabric.toLowerCase().includes("silk") ||
-    fabric.toLowerCase().includes("chiffon") ||
-    fabric.toLowerCase().includes("satin")
-  ) {
-    tags.add("flowing");
-  }
-
-  if (profile.garmentLength === "maxi" || profile.garmentLength === "full-length") {
-    tags.add("full_length");
-    tags.add("flowing");
-  }
-
-  if (occ.some((o) => o.includes("sport") || o.includes("athletic") || o.includes("gym"))) {
-    tags.add("sportswear");
-  }
-  if (occ.some((o) => o.includes("formal") || o.includes("evening") || o.includes("office") || o.includes("business"))) {
-    tags.add("formal");
-    if (occ.some((o) => o.includes("office") || o.includes("business"))) tags.add("business");
-  }
-  if (occ.some((o) => o.includes("casual") || o.includes("street"))) tags.add("casual");
-
-  if (profile.gender === "kids") tags.add("kidswear");
-  if (fit.toLowerCase().includes("structured")) tags.add("structured");
-
-  if (garmentHasUsablePockets(profile)) tags.add("pocket");
-  else tags.add("no_pocket");
-
-  if (category === "tops" && !sub.includes("dress")) tags.add("everyday");
-  if (sub.includes("shirt") && !sub.includes("t-shirt")) tags.add("shirt");
-
-  return tags;
 }
 
 function categoryMatches(
@@ -502,12 +392,20 @@ function weightedSelectWithoutReplacement<T>(
 // ---------------------------------------------------------------------------
 
 /**
- * Select garment-appropriate poses for a shoot using weighted probability.
+ * Select garment-appropriate poses for a shoot using the Phase 2 pose planner.
  *
- * Campaign / Editorial — unique poses per generation (without replacement).
- * Hero — single weighted draw from the hero collection.
+ * Campaign / Editorial — unique poses per generation with family-aware diversity.
+ * Hero — single conservative draw from the hero collection.
  */
 export function selectPosesForShoot(ctx: PoseSelectionContext): PoseName[] {
+  return selectPosesWithPlan(ctx).poses.map((p) => p.name);
+}
+
+/** Full planner result including families — used for persistence and dev logging. */
+export function selectPosesWithPlan(ctx: PoseSelectionContext): {
+  poses: PlannedPose[];
+  planNotes: string[];
+} {
   const {
     profile,
     shootType,
@@ -523,10 +421,8 @@ export function selectPosesForShoot(ctx: PoseSelectionContext): PoseName[] {
   const garmentTags = inferGarmentTags(profile);
   const hasPockets = garmentHasUsablePockets(profile);
   const profileKey = buildPoseProfileKey(profile);
-  const sessionUsed = new Set(usedPoses.map((p) => p.toLowerCase()));
-  const rng = createRng(seed ?? Date.now());
-
   const collectionPoses = getPosesInCollection(shootType);
+  const sessionUsed = new Set(usedPoses.map((p) => p.toLowerCase()));
   let compatible = filterCompatiblePoses(collectionPoses, {
     gender,
     profile,
@@ -535,144 +431,30 @@ export function selectPosesForShoot(ctx: PoseSelectionContext): PoseName[] {
     usedPoses: sessionUsed,
   });
 
-  if (compatible.length < count) {
-    compatible = filterCompatiblePoses(getPosesInCollection(shootType), {
-      gender,
-      profile,
-      garmentTags,
-      hasPockets,
-      usedPoses: sessionUsed,
-    });
-  }
+  const plan = planPosesForShoot({
+    profile,
+    shootType,
+    count,
+    modelGender,
+    usedPoses,
+    recentPoseSelections,
+    seed,
+  });
 
-  const devEntries: PoseSelectionDevEntry[] = [];
-  let pocketAltIndex = 0;
-  let pocketSubstitutions = 0;
-  const selected: PoseDefinition[] = [];
-
-  const pickWeighted = (pool: PoseDefinition[], picks: number): PoseDefinition[] => {
-    const results: PoseDefinition[] = [];
-
-    for (let i = 0; i < picks; i++) {
-      const remaining = pool.filter(
-        (pose) => !results.some((s) => s.name.toLowerCase() === pose.name.toLowerCase()),
-      );
-
-      if (remaining.length === 0) break;
-
+  if (captureDevReport) {
+    const devEntries: PoseSelectionDevEntry[] = plan.poses.map((planned) => {
+      const def = getPoseDefinition(planned.name)!;
       const weightCtx = {
         garmentTags,
         shootType,
         profileKey,
-        selectedInBatch: [...selected, ...results],
+        selectedInBatch: [] as PoseDefinition[],
         recentPoseSelections,
       };
+      const breakdown = computeWeightBreakdown(def, weightCtx);
+      return buildPoseDevEntry(def, breakdown, { shootType, profile });
+    });
 
-      const [pick] = weightedSelectWithoutReplacement(
-        remaining,
-        1,
-        (pose) => computeSelectionWeight(pose, weightCtx),
-        rng,
-      );
-
-      if (!pick) break;
-
-      const requestedName = pick.name;
-      let resolved = resolvePocketPose(pick, hasPockets, pocketAltIndex);
-      const pocketSubstitute =
-        requestedName !== resolved.name && pick.requiresPockets && !hasPockets;
-
-      if (pick.requiresPockets && !hasPockets) pocketAltIndex += 1;
-      if (pocketSubstitute) pocketSubstitutions += 1;
-
-      if (captureDevReport) {
-        const breakdown = computeWeightBreakdown(resolved, weightCtx);
-        devEntries.push({
-          code: getPoseCollectionCode(shootType, resolved.name),
-          name: resolved.name,
-          requestedName: pocketSubstitute ? requestedName : undefined,
-          pocketSubstitute,
-          suitabilityScore: breakdown.suitabilityScore,
-          finalWeight: breakdown.finalWeight,
-          garmentCompatibility: breakdown.garmentCompatibility,
-          varietyModifier: breakdown.varietyModifier,
-        });
-      }
-
-      results.push(resolved);
-    }
-
-    return results;
-  };
-
-  if (compatible.length === 0) {
-    const fallback = Array.from({ length: count }, () => "Relaxed Standing" as PoseName);
-    if (captureDevReport) {
-      emitPoseSelectionDevReport({
-        shootType,
-        gender,
-        profile,
-        garmentTags,
-        hasPockets,
-        collectionPoses,
-        compatible,
-        selectedEntries: fallback.map((name) => ({
-          code: getPoseCollectionCode(shootType, name),
-          name,
-          suitabilityScore: getPoseDefinition(name)?.suitabilityScore ?? 0,
-          finalWeight: 0,
-          garmentCompatibility: 0,
-          varietyModifier: 0,
-          pocketSubstitute: false,
-        })),
-        pocketSubstitutions: 0,
-        filterNotes: ["No compatible poses — using Relaxed Standing fallback"],
-      });
-    }
-    return fallback;
-  }
-
-  if (shootType === "hero") {
-    const [heroPose] = pickWeighted(compatible, 1);
-    const result = [heroPose?.name ?? "Relaxed Standing"];
-    if (captureDevReport) {
-      emitPoseSelectionDevReport({
-        shootType,
-        gender,
-        profile,
-        garmentTags,
-        hasPockets,
-        collectionPoses,
-        compatible,
-        selectedEntries: devEntries,
-        pocketSubstitutions,
-        filterNotes: buildPoseFilterNotes({
-          shootType,
-          gender,
-          collectionPoses,
-          compatible,
-          hasPockets,
-          garmentTags,
-        }),
-      });
-    }
-    return result;
-  }
-
-  selected.push(...pickWeighted(compatible, count));
-
-  while (selected.length < count) {
-    const fallback = getPoseDefinition("Relaxed Standing");
-    if (fallback && !selected.some((s) => s.name === fallback.name)) {
-      selected.push(fallback);
-    } else {
-      break;
-    }
-  }
-
-  const result = selected.slice(0, count).map((p) => p.name);
-
-  if (captureDevReport) {
     emitPoseSelectionDevReport({
       shootType,
       gender,
@@ -682,19 +464,22 @@ export function selectPosesForShoot(ctx: PoseSelectionContext): PoseName[] {
       collectionPoses,
       compatible,
       selectedEntries: devEntries,
-      pocketSubstitutions,
-      filterNotes: buildPoseFilterNotes({
-        shootType,
-        gender,
-        collectionPoses,
-        compatible,
-        hasPockets,
-        garmentTags,
-      }),
+      pocketSubstitutions: 0,
+      filterNotes: [
+        ...buildPoseFilterNotes({
+          shootType,
+          gender,
+          collectionPoses,
+          compatible,
+          hasPockets,
+          garmentTags,
+        }),
+        ...plan.planNotes,
+      ],
     });
   }
 
-  return result;
+  return plan;
 }
 
 function buildPoseFilterNotes(input: {
@@ -908,6 +693,65 @@ function buildEditorialDirections(profile: GarmentProfile): ShotDirection[] {
   ];
 }
 
+export function buildShotPromptsWithPlan(
+  basePrompt: string,
+  profile: GarmentProfile,
+  options: {
+    shootType: ShootType;
+    modelGender?: string | null;
+    usedPoses?: string[];
+    recentPoseSelections?: RecentPoseSelection[];
+    seed?: number;
+    /** Override default 1/2/4 — supports future 12–20 image campaigns. */
+    count?: number;
+  },
+): { prompts: string[]; plannedPoses: PlannedPose[]; planNotes: string[] } {
+  const { shootType, modelGender, usedPoses, recentPoseSelections, seed, count } = options;
+  const shotCount = count ?? defaultShotCountForShootType(shootType);
+  const plan = selectPosesWithPlan({
+    profile,
+    shootType,
+    count: shotCount,
+    modelGender,
+    usedPoses,
+    recentPoseSelections,
+    seed,
+  });
+  const poses = plan.poses.map((p) => p.name);
+  const neutralBase = neutralizeBasePromptPose(basePrompt);
+
+  if (shootType === "hero") {
+    return {
+      prompts: [buildDiverseShotPrompt(neutralBase, poses[0] ?? "Relaxed Standing", HERO_DIRECTION)],
+      plannedPoses: plan.poses,
+      planNotes: plan.planNotes,
+    };
+  }
+
+  if (shootType === "campaign") {
+    return {
+      prompts: poses.map((pose, index) =>
+        buildDiverseShotPrompt(
+          neutralBase,
+          pose,
+          CAMPAIGN_DIRECTIONS[index] ?? CAMPAIGN_DIRECTIONS[CAMPAIGN_DIRECTIONS.length - 1]!,
+        ),
+      ),
+      plannedPoses: plan.poses,
+      planNotes: plan.planNotes,
+    };
+  }
+
+  const directions = buildEditorialDirections(profile);
+  return {
+    prompts: poses.map((pose, index) =>
+      buildDiverseShotPrompt(neutralBase, pose, directions[index] ?? directions[directions.length - 1]!),
+    ),
+    plannedPoses: plan.poses,
+    planNotes: plan.planNotes,
+  };
+}
+
 export function buildShotPrompts(
   basePrompt: string,
   profile: GarmentProfile,
@@ -917,40 +761,10 @@ export function buildShotPrompts(
     usedPoses?: string[];
     recentPoseSelections?: RecentPoseSelection[];
     seed?: number;
+    count?: number;
   },
 ): string[] {
-  const { shootType, modelGender, usedPoses, recentPoseSelections, seed } = options;
-  const count = shootType === "editorial" ? 4 : shootType === "campaign" ? 2 : 1;
-  const poses = selectPosesForShoot({
-    profile,
-    shootType,
-    count,
-    modelGender,
-    usedPoses,
-    recentPoseSelections,
-    seed,
-  });
-
-  const neutralBase = neutralizeBasePromptPose(basePrompt);
-
-  if (shootType === "hero") {
-    return [buildDiverseShotPrompt(neutralBase, poses[0] ?? "Relaxed Standing", HERO_DIRECTION)];
-  }
-
-  if (shootType === "campaign") {
-    return poses.map((pose, index) =>
-      buildDiverseShotPrompt(
-        neutralBase,
-        pose,
-        CAMPAIGN_DIRECTIONS[index] ?? CAMPAIGN_DIRECTIONS[CAMPAIGN_DIRECTIONS.length - 1]!,
-      ),
-    );
-  }
-
-  const directions = buildEditorialDirections(profile);
-  return poses.map((pose, index) =>
-    buildDiverseShotPrompt(neutralBase, pose, directions[index] ?? directions[directions.length - 1]!),
-  );
+  return buildShotPromptsWithPlan(basePrompt, profile, options).prompts;
 }
 
 /** @deprecated Use buildShotPrompts — kept for backward compatibility. */

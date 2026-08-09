@@ -5,10 +5,14 @@
 // Never runs in production — guarded by NODE_ENV === "development".
 // ---------------------------------------------------------------------------
 
-import type { GarmentProfile } from "./types";
+import type { GarmentProfile, GarmentCategory } from "./types";
 import {
   type PoseName,
+  type PoseFamily,
+  type PoseSelectionClass,
   type ShootType,
+  POSE_FAMILY_LABELS,
+  POSE_SELECTION_CLASS_LABELS,
   getCollectionForShootType,
 } from "./pose-library";
 import type { ModelGender } from "./pose-selection-engine";
@@ -16,6 +20,11 @@ import type { ModelGender } from "./pose-selection-engine";
 export interface PoseSelectionDevEntry {
   code: string;
   name: PoseName;
+  poseFamily: PoseFamily;
+  poseFamilyLabel: string;
+  selectionClass: PoseSelectionClass;
+  selectionClassLabel: string;
+  garmentCategory: GarmentCategory;
   /** Original pose before pocket substitution, if different. */
   requestedName?: PoseName;
   pocketSubstitute?: boolean;
@@ -147,6 +156,9 @@ export function logPoseSelectionDevReport(report: PoseSelectionDevReport): void 
         ? ` (substituted for ${pose.requestedName})`
         : "";
     lines.push(`${index + 1}. ${pose.code} – ${pose.name}${substitute}`);
+    lines.push(
+      `   Family: ${pose.poseFamilyLabel} · Class: ${pose.selectionClassLabel} · Garment: ${pose.garmentCategory}`,
+    );
   });
 
   lines.push(
@@ -154,7 +166,7 @@ export function logPoseSelectionDevReport(report: PoseSelectionDevReport): void 
     "Selection Weights:",
     ...report.selectedPoses.map(
       (pose) =>
-        `${pose.code} = ${pose.suitabilityScore} (weight ${pose.finalWeight.toFixed(1)})`,
+        `${pose.code} = suitability ${pose.suitabilityScore}, weight ${pose.finalWeight.toFixed(1)}`,
     ),
     "────────────────────────────────────────",
   );

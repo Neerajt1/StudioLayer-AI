@@ -44,7 +44,9 @@ import {
   PipelineStage,
   type PipelineTraceContext,
 } from "../lib/render-pipeline-observability.js";
-import { runIntelligenceAnalysis, buildShotPrompts, imageCountToShootType } from "../intelligence";
+import { runIntelligenceAnalysis, buildShotPromptsWithPlan, imageCountToShootType } from "../intelligence";
+import type { PoseFamily, PoseName } from "../intelligence/pose-library";
+import { loadRecentPoseSelections } from "./pose-history-service";
 import {
   buildRefinementBrief,
   resolveRefinementType,
@@ -70,6 +72,8 @@ import { classifyTask, routeTask }   from "../router/ai-router";
 
 export async function runAIPipeline(params: {
   renderId:            number;
+  /** Required for same-garment pose history (Phase 2). */
+  userId?:             number;
   sourceImageUrl:      string;
   modelPersona:        string;
   locationEnvironment: string;
@@ -124,8 +128,13 @@ export async function runAIPipeline(params: {
   /**
    * Called once per successfully generated image.
    * imageIndex is 0-based within this generation batch.
+   * poseSelection is set when Pose Intelligence planned this shot.
    */
-  onComplete:          (outputImageUrl: string, imageIndex: number) => Promise<void>;
+  onComplete:          (
+    outputImageUrl: string,
+    imageIndex: number,
+    poseSelection?: { poseName: PoseName; poseFamily: PoseFamily },
+  ) => Promise<void>;
   /**
    * Called for each individual shot that failed to generate (partial failure).
    * Not called when ALL shots fail — in that case only onError is called.
@@ -137,6 +146,7 @@ export async function runAIPipeline(params: {
 }): Promise<void> {
   const {
     renderId,
+    userId,
     sourceImageUrl,
     modelGender,
     modelAgeRange,
@@ -282,14 +292,28 @@ export async function runAIPipeline(params: {
     // a refinement, the Pose Selection Engine generates distinct per-shot briefs
     // from the professional pose library.
     const basePrompt = intelligenceResult.prompt ?? "";
+    const shootType = imageCountToShootType(shots);
 
-    const perShotPrompts: string[] | undefined =
+    const recentPoseSelections =
+      userId && sourceImageUrl
+        ? await loadRecentPoseSelections({
+            userId,
+            sourceImageUrl,
+            profile: intelligenceResult.profile,
+          })
+        : [];
+
+    const shotPlan =
       routeDecision.supportsPerShotPrompts && !resolvedRefinementType
-        ? buildShotPrompts(basePrompt, intelligenceResult.profile, {
-            shootType: imageCountToShootType(shots),
+        ? buildShotPromptsWithPlan(basePrompt, intelligenceResult.profile, {
+            shootType,
             modelGender,
+            recentPoseSelections,
+            count: shots,
           })
         : undefined;
+
+    const perShotPrompts = shotPlan?.prompts;
 
     if (perShotPrompts) {
       logger.info(
@@ -367,7 +391,12 @@ export async function runAIPipeline(params: {
         "AI pipeline: image uploaded",
       );
 
-      await params.onComplete(outputImageUrl, image.index);
+      await params.onComplete(outputImageUrl, image.index, shotPlan?.plannedPoses[image.index]
+        ? {
+            poseName: shotPlan.plannedPoses[image.index]!.name,
+            poseFamily: shotPlan.plannedPoses[image.index]!.family,
+          }
+        : undefined);
     }
 
     // ── Step 7: Mark individually failed shots (partial failure) ──────────────

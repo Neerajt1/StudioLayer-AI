@@ -15,6 +15,7 @@ export {
   buildCampaignShotPrompts,
   buildHeroShotPrompt,
   buildShotPrompts,
+  buildShotPromptsWithPlan,
   CANONICAL_CAMERA_ANGLES,
   CANONICAL_POSES,
 } from "./creative-director";
@@ -22,6 +23,7 @@ export type { ActionType, CreativeBrief, CameraAngle, PoseName } from "./creativ
 
 export {
   selectPosesForShoot,
+  selectPosesWithPlan,
   selectNextPose,
   imageCountToShootType,
   garmentHasUsablePockets,
@@ -32,17 +34,27 @@ export {
 } from "./pose-selection-engine";
 export type { PoseSelectionContext, ModelGender, RecentPoseSelection } from "./pose-selection-engine";
 export {
+  planPosesForShoot,
+  defaultShotCountForShootType,
+  POSE_PLANNER_TUNING,
+} from "./pose-planner";
+export type { PosePlannerContext, PlannedPose, PosePlanResult } from "./pose-planner";
+export {
   isPoseDevLoggingEnabled,
   getPoseCollectionCode,
   logPoseSelectionDevReport,
 } from "./pose-selection-dev-log";
 export type { PoseSelectionDevReport, PoseSelectionDevEntry } from "./pose-selection-dev-log";
-export type { ShootType } from "./pose-library";
+export type { ShootType, PoseFamily, PoseSelectionClass, PoseIntelligenceMetadata } from "./pose-library";
 
 export {
   HERO_COLLECTION,
   CAMPAIGN_COLLECTION,
   EDITORIAL_COLLECTION,
+  POSE_INTELLIGENCE_METADATA,
+  POSE_FAMILY_LABELS,
+  POSE_SELECTION_CLASS_LABELS,
+  getPoseIntelligenceMetadata,
 } from "./pose-library";
 
 export {

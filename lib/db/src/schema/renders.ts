@@ -54,6 +54,9 @@ export const rendersTable = pgTable("renders", {
    * Refinements inherit the parent session; Gallery groups Shoots by this field.
    */
   generationSessionId: uuid("generation_session_id"),
+  /** Pose Intelligence — canonical pose selected for this render (Phase 2). */
+  selectedPoseName: text("selected_pose_name"),
+  selectedPoseFamily: text("selected_pose_family"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

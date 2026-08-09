@@ -39,6 +39,7 @@ import {
   selectNextPose,
   getPoseDescriptionForName as getPoseDescription,
   buildShotPrompts,
+  buildShotPromptsWithPlan,
   buildCampaignShotPrompts,
   buildEditorialShotPrompts,
   buildHeroShotPrompt,
@@ -48,6 +49,7 @@ import {
 export { CANONICAL_POSES, type PoseName, selectNextPose };
 export {
   buildShotPrompts,
+  buildShotPromptsWithPlan,
   buildCampaignShotPrompts,
   buildEditorialShotPrompts,
   buildHeroShotPrompt,

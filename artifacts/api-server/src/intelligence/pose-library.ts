@@ -6,6 +6,14 @@
 // ---------------------------------------------------------------------------
 
 import type { GarmentCategory } from "./types";
+import {
+  POSE_EXPANSION_CAMPAIGN,
+  POSE_EXPANSION_DEFINITIONS,
+  POSE_EXPANSION_EDITORIAL,
+  POSE_EXPANSION_HERO,
+  POSE_EXPANSION_INTELLIGENCE,
+  POSE_EXPANSION_NAMES,
+} from "./pose-library-expansion";
 
 export type ShootType = "hero" | "campaign" | "editorial";
 export type PoseGenderPool = "universal" | "female" | "male";
@@ -19,6 +27,57 @@ export type PoseCameraAngle =
   | "elevated";
 export type PoseBodyOrientation = "front" | "three_quarter" | "profile" | "rear";
 export type FabricMovementLevel = "none" | "subtle" | "moderate" | "dramatic";
+
+/** Customer-perceived visual pose family — used for future family-aware planning. */
+export type PoseFamily =
+  | "catalog_front_presentation"
+  | "three_quarter_s_twist"
+  | "contrapposto_weight_shift"
+  | "cross_leg_stance_variation"
+  | "walking_motion"
+  | "turning_over_shoulder"
+  | "gaze_away_candid_head"
+  | "garment_interaction_dress_skirt"
+  | "garment_interaction_jacket_blazer"
+  | "pocket_hip_hand"
+  | "arms_torso_editorial"
+  | "hair_face_interaction"
+  | "accessory_detail_gesture"
+  | "leaning_environmental"
+  | "seated"
+  | "high_fashion_elevated_editorial"
+  | "rear_back_presentation"
+  | "profile_presentation"
+  | "gaze_direction"
+  | "hands_natural_position"
+  | "torso_face_contrast"
+  | "body_level_variation"
+  | "ethnic_garment_interaction";
+
+/** Planner selection class — A signature, B rotational, C contextual, D high-repetition-risk. */
+export type PoseSelectionClass =
+  | "signature"
+  | "rotational"
+  | "contextual"
+  | "high_repetition_risk";
+
+/** Exposure-band flags for future Hero / Campaign / Editorial pool sizing. */
+export interface PoseExposureFlags {
+  heroEligible: boolean;
+  campaignEligible: boolean;
+  editorialEligible: boolean;
+}
+
+/** Fields consumed by the PosePlanner — metadata foundation. */
+export interface PoseIntelligenceMetadata {
+  poseFamily: PoseFamily;
+  selectionClass: PoseSelectionClass;
+  heroEligible: boolean;
+  campaignEligible: boolean;
+  editorialEligible: boolean;
+  /** Optional broader visual territory — prevents redundant customer-visible similarity in small batches. */
+  visualCluster?: string;
+}
 
 export interface PoseDefinition {
   /** Human-readable pose name — stable identifier across sessions. */
@@ -46,6 +105,18 @@ export interface PoseDefinition {
   suitabilityScore: number;
   /** Detailed execution direction sent to the rendering model. */
   description: string;
+  /** Customer-perceived visual pose family. */
+  poseFamily: PoseFamily;
+  /** Signature / rotational / contextual / high-repetition-risk class. */
+  selectionClass: PoseSelectionClass;
+  /** Exposure band — Hero pool eligibility (future planner). */
+  heroEligible: boolean;
+  /** Exposure band — Campaign pool eligibility (future planner). */
+  campaignEligible: boolean;
+  /** Exposure band — Editorial pool eligibility (future planner). */
+  editorialEligible: boolean;
+  /** Optional broader visual territory for small-batch diversity. */
+  visualCluster?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +169,8 @@ export const POSE_NAMES = [
   "Watch Adjustment",
   "Business Stance",
   "Blazer Hold",
+  // Phase 2 expansion — 34 distinct concepts
+  ...POSE_EXPANSION_NAMES,
 ] as const;
 
 export type PoseName = (typeof POSE_NAMES)[number];
@@ -120,6 +193,10 @@ export const HERO_COLLECTION: readonly PoseName[] = [
   "Looking Away Naturally",
   "Soft Cross-Leg Standing",
   "Catalog Front Showcase",
+  "Relaxed Hands at Side",
+  "Hands Clasped Front",
+  "Full Profile Standing",
+  "Open Coat Front Presentation",
 ] as const;
 
 export const CAMPAIGN_COLLECTION: readonly PoseName[] = [
@@ -133,6 +210,7 @@ export const CAMPAIGN_COLLECTION: readonly PoseName[] = [
   "Resting One Foot Higher",
   "Walking Across Frame",
   "One Hand in Pocket",
+  "Both Hands in Pocket",
   "Pocket Illusion Pose",
   "Thumb Hook Pose",
   "Hip Rest Pose",
@@ -146,6 +224,26 @@ export const CAMPAIGN_COLLECTION: readonly PoseName[] = [
   "Business Stance",
   "Relaxed Standing",
   "Fashion Power Pose",
+  // Phase 2 campaign expansion
+  "Seated on Stool",
+  "Cross-Leg Seated",
+  "Chair Seated Three-Quarter",
+  "Full Profile Standing",
+  "Strong Head Turn Profile",
+  "Static Back Presentation",
+  "Downward Gaze Contemplative",
+  "Chin Lift Gaze Away",
+  "Hands Clasped Front",
+  "Hands Behind Back",
+  "One Hand on Opposite Elbow",
+  "Relaxed Hands at Side",
+  "Natural Hand on Thigh",
+  "Shoulders Back Face Soft",
+  "Soft Editorial Pause",
+  "Saree Pallu Drape Hold",
+  "Open Coat Front Presentation",
+  "Pivot Stop Motion",
+  "Walk Past Camera",
 ] as const;
 
 export const EDITORIAL_COLLECTION: readonly PoseName[] = [
@@ -169,6 +267,39 @@ export const EDITORIAL_COLLECTION: readonly PoseName[] = [
   "Watch Adjustment",
   "Blazer Hold",
   "Jacket Adjustment",
+  // Phase 2 editorial expansion
+  "Seated on Stool",
+  "Cross-Leg Seated",
+  "Asymmetric Seated Editorial",
+  "Floor Editorial Seated",
+  "Chair Seated Three-Quarter",
+  "Stair Seated Editorial",
+  "Full Profile Standing",
+  "Strong Head Turn Profile",
+  "Profile Walk Past",
+  "Static Back Presentation",
+  "Upward Gaze Editorial",
+  "Downward Gaze Contemplative",
+  "Chin Lift Gaze Away",
+  "Hands Behind Back",
+  "One Hand on Opposite Elbow",
+  "Natural Hand on Thigh",
+  "Torso Forward Face Turned",
+  "Shoulders Back Face Soft",
+  "Upper Body Lean Lower Body Still",
+  "Low Angle Power Stance",
+  "Elevated Three-Quarter Crop",
+  "Kneeling Editorial",
+  "Crouched Fashion Pose",
+  "Relaxed Editorial Lounge",
+  "Soft Editorial Pause",
+  "Candid Mid-Laugh Editorial",
+  "Saree Pallu Drape Hold",
+  "Dupatta Flow Hold",
+  "Open Coat Front Presentation",
+  "Pivot Stop Motion",
+  "Step Down Editorial",
+  "Walk Past Camera",
 ] as const;
 
 const COLLECTION_MAP: Record<ShootType, readonly string[]> = {
@@ -182,10 +313,369 @@ export function getCollectionForShootType(shootType: ShootType): readonly string
 }
 
 // ---------------------------------------------------------------------------
-// Pose definitions
+// Pose intelligence metadata (Phase 1 — foundation for PosePlanner)
+// Exposure flags align with HERO / CAMPAIGN / EDITORIAL collection membership.
 // ---------------------------------------------------------------------------
 
-const POSE_DEFINITIONS: Record<string, PoseDefinition> = {
+export const POSE_INTELLIGENCE_METADATA: Record<string, PoseIntelligenceMetadata> = {
+  "Catalog Front Showcase": {
+    poseFamily: "catalog_front_presentation",
+    selectionClass: "signature",
+    heroEligible: true,
+    campaignEligible: false,
+    editorialEligible: false,
+  },
+  "Relaxed Standing": {
+    poseFamily: "catalog_front_presentation",
+    selectionClass: "rotational",
+    heroEligible: true,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Fashion Power Pose": {
+    poseFamily: "catalog_front_presentation",
+    selectionClass: "signature",
+    heroEligible: true,
+    campaignEligible: true,
+    editorialEligible: true,
+  },
+  "Three-Quarter Front": {
+    poseFamily: "three_quarter_s_twist",
+    selectionClass: "signature",
+    heroEligible: true,
+    campaignEligible: false,
+    editorialEligible: false,
+  },
+  "Walking Towards Camera": {
+    poseFamily: "walking_motion",
+    selectionClass: "signature",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Walking Across Frame": {
+    poseFamily: "walking_motion",
+    selectionClass: "rotational",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Walking Away": {
+    poseFamily: "rear_back_presentation",
+    selectionClass: "rotational",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Looking Over Shoulder": {
+    poseFamily: "turning_over_shoulder",
+    selectionClass: "signature",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Looking Away Naturally": {
+    poseFamily: "gaze_away_candid_head",
+    selectionClass: "rotational",
+    heroEligible: true,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Leaning Against Wall": {
+    poseFamily: "leaning_environmental",
+    selectionClass: "rotational",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Leaning Forward Slightly": {
+    poseFamily: "leaning_environmental",
+    selectionClass: "rotational",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Resting One Foot Higher": {
+    poseFamily: "cross_leg_stance_variation",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Sitting": {
+    poseFamily: "seated",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Natural Turning Motion": {
+    poseFamily: "turning_over_shoulder",
+    selectionClass: "rotational",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: true,
+  },
+  "Arms Crossed": {
+    poseFamily: "arms_torso_editorial",
+    selectionClass: "rotational",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Casual Conversation Pose": {
+    poseFamily: "arms_torso_editorial",
+    selectionClass: "rotational",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Minimalist Editorial": {
+    poseFamily: "catalog_front_presentation",
+    selectionClass: "signature",
+    heroEligible: true,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Magazine Cover Pose": {
+    poseFamily: "hair_face_interaction",
+    selectionClass: "high_repetition_risk",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Premium Luxury Campaign Pose": {
+    poseFamily: "catalog_front_presentation",
+    selectionClass: "signature",
+    heroEligible: true,
+    campaignEligible: true,
+    editorialEligible: true,
+  },
+  "Mid-Stride Editorial": {
+    poseFamily: "walking_motion",
+    selectionClass: "signature",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: true,
+  },
+  "Dynamic Editorial Movement": {
+    poseFamily: "walking_motion",
+    selectionClass: "rotational",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Luxury Fashion Editorial": {
+    poseFamily: "high_fashion_elevated_editorial",
+    selectionClass: "rotational",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "One Hand in Pocket": {
+    poseFamily: "pocket_hip_hand",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Both Hands in Pocket": {
+    poseFamily: "pocket_hip_hand",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Pocket Illusion Pose": {
+    poseFamily: "pocket_hip_hand",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Thumb Hook Pose": {
+    poseFamily: "pocket_hip_hand",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Hip Rest Pose": {
+    poseFamily: "pocket_hip_hand",
+    selectionClass: "rotational",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Elegant Dress Pose": {
+    poseFamily: "garment_interaction_dress_skirt",
+    selectionClass: "signature",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Twirl": {
+    poseFamily: "garment_interaction_dress_skirt",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Holding Dress Hem": {
+    poseFamily: "garment_interaction_dress_skirt",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Soft Cross-Leg Standing": {
+    poseFamily: "cross_leg_stance_variation",
+    selectionClass: "rotational",
+    heroEligible: true,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Elegant Shoulder Turn": {
+    poseFamily: "three_quarter_s_twist",
+    selectionClass: "signature",
+    heroEligible: true,
+    campaignEligible: true,
+    editorialEligible: true,
+    visualCluster: "feminine_s_curve",
+  },
+  "Soft Contrapposto": {
+    poseFamily: "contrapposto_weight_shift",
+    selectionClass: "signature",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+    visualCluster: "feminine_s_curve",
+  },
+  "Hair Touch Editorial": {
+    poseFamily: "hair_face_interaction",
+    selectionClass: "high_repetition_risk",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Hand on Waist": {
+    poseFamily: "contrapposto_weight_shift",
+    selectionClass: "signature",
+    heroEligible: true,
+    campaignEligible: true,
+    editorialEligible: false,
+    visualCluster: "feminine_s_curve",
+  },
+  "Adjusting Collar": {
+    poseFamily: "accessory_detail_gesture",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Holding Jacket Lapel": {
+    poseFamily: "garment_interaction_jacket_blazer",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Jacket Adjustment": {
+    poseFamily: "garment_interaction_jacket_blazer",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Watch Adjustment": {
+    poseFamily: "accessory_detail_gesture",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+  "Business Stance": {
+    poseFamily: "catalog_front_presentation",
+    selectionClass: "rotational",
+    heroEligible: false,
+    campaignEligible: true,
+    editorialEligible: false,
+  },
+  "Blazer Hold": {
+    poseFamily: "garment_interaction_jacket_blazer",
+    selectionClass: "contextual",
+    heroEligible: false,
+    campaignEligible: false,
+    editorialEligible: true,
+  },
+};
+
+/** Human-readable labels for dev logging and future planner diagnostics. */
+export const POSE_FAMILY_LABELS: Record<PoseFamily, string> = {
+  catalog_front_presentation: "Catalog / Front Presentation",
+  three_quarter_s_twist: "Three-Quarter / S-Twist",
+  contrapposto_weight_shift: "Contrapposto / Weight Shift",
+  cross_leg_stance_variation: "Cross-Leg / Stance Variation",
+  walking_motion: "Walking / Motion",
+  turning_over_shoulder: "Turning / Over-Shoulder",
+  gaze_away_candid_head: "Gaze Away / Candid Head",
+  garment_interaction_dress_skirt: "Garment Interaction — Dress/Skirt",
+  garment_interaction_jacket_blazer: "Garment Interaction — Jacket/Blazer",
+  pocket_hip_hand: "Pocket / Hip Hand",
+  arms_torso_editorial: "Arms / Torso Editorial",
+  hair_face_interaction: "Hair / Face Interaction",
+  accessory_detail_gesture: "Accessory / Detail Gesture",
+  leaning_environmental: "Leaning / Environmental",
+  seated: "Seated",
+  high_fashion_elevated_editorial: "High-Fashion / Elevated Editorial",
+  rear_back_presentation: "Rear / Back Presentation",
+  profile_presentation: "Profile Presentation",
+  gaze_direction: "Gaze Direction",
+  hands_natural_position: "Hands — Natural Position",
+  torso_face_contrast: "Torso / Face Contrast",
+  body_level_variation: "Body Level / Composition",
+  ethnic_garment_interaction: "Ethnic Garment Interaction",
+};
+
+export const POSE_SELECTION_CLASS_LABELS: Record<PoseSelectionClass, string> = {
+  signature: "A — Signature",
+  rotational: "B — Rotational",
+  contextual: "C — Contextual",
+  high_repetition_risk: "D — High-Repetition-Risk",
+};
+
+type PoseDefinitionCore = Omit<
+  PoseDefinition,
+  keyof PoseIntelligenceMetadata
+>;
+
+function buildCompletePoseDefinitions(): Record<PoseName, PoseDefinition> {
+  const mergedCore = {
+    ...POSE_DEFINITIONS_CORE,
+    ...POSE_EXPANSION_DEFINITIONS,
+  } as Record<PoseName, PoseDefinitionCore>;
+  const mergedIntel = {
+    ...POSE_INTELLIGENCE_METADATA,
+    ...POSE_EXPANSION_INTELLIGENCE,
+  } as Record<PoseName, PoseIntelligenceMetadata>;
+
+  const result = {} as Record<PoseName, PoseDefinition>;
+  for (const name of POSE_NAMES) {
+    const base = mergedCore[name];
+    const intel = mergedIntel[name];
+    if (!base || !intel) {
+      throw new Error(`Incomplete pose registry: ${name}`);
+    }
+    result[name] = { ...base, ...intel, name };
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Pose definitions (core fields — intelligence metadata merged at build time)
+// ---------------------------------------------------------------------------
+
+const POSE_DEFINITIONS_CORE: Record<string, PoseDefinitionCore> = {
   "Relaxed Standing": {
     name: "Relaxed Standing",
     genderPool: "universal",
@@ -926,6 +1416,8 @@ const POSE_DEFINITIONS: Record<string, PoseDefinition> = {
   },
 };
 
+const POSE_DEFINITIONS: Record<PoseName, PoseDefinition> = buildCompletePoseDefinitions();
+
 /** Pocket-pose substitutes when garment has no usable pockets. */
 export const POCKET_ALTERNATIVE_POSES: readonly PoseName[] = [
   "Pocket Illusion Pose",
@@ -934,15 +1426,30 @@ export const POCKET_ALTERNATIVE_POSES: readonly PoseName[] = [
 ] as const;
 
 export function getPoseDefinition(name: string): PoseDefinition | undefined {
-  return POSE_DEFINITIONS[name];
+  return POSE_DEFINITIONS[name as PoseName];
 }
 
 export function getPoseDescription(name: PoseName): string {
-  return POSE_DEFINITIONS[name]?.description ?? POSE_DEFINITIONS["Relaxed Standing"]!.description;
+  return POSE_DEFINITIONS[name]?.description ?? POSE_DEFINITIONS["Relaxed Standing"].description;
 }
 
 export function getAllPoseDefinitions(): PoseDefinition[] {
-  return Object.values(POSE_DEFINITIONS);
+  return POSE_NAMES.map((name) => POSE_DEFINITIONS[name]);
+}
+
+export function getPoseIntelligenceMetadata(name: PoseName): PoseIntelligenceMetadata {
+  const def = POSE_DEFINITIONS[name];
+  if (!def) {
+    throw new Error(`Unknown pose: ${name}`);
+  }
+  return {
+    poseFamily: def.poseFamily,
+    selectionClass: def.selectionClass,
+    heroEligible: def.heroEligible,
+    campaignEligible: def.campaignEligible,
+    editorialEligible: def.editorialEligible,
+    visualCluster: def.visualCluster,
+  };
 }
 
 export function getPosesInCollection(shootType: ShootType): PoseDefinition[] {
