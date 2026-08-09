@@ -106,7 +106,7 @@ export function composeRenderPrompt(params: PromptComposerParams): string {
   // Part 4 — garment protection
   const protection = [
     "Preserve every detail of the uploaded garment exactly as photographed:",
-    "precise colour, fabric texture, stitching, logos, branding, pockets, buttons, zippers, prints, and embroidery.",
+    "precise colour identity (do not reinterpret detected hues — e.g. ivory must not become white or cream), fabric texture, stitching, logos, branding, pockets, buttons, zippers, prints, and embroidery.",
     "Preserve original material properties — matte or glossy finish, natural sheen, weave, surface reflectivity, and fabric-specific optical characteristics.",
     "Never reinterpret the material into a different fabric appearance.",
     "Complementary garments adapt around the uploaded product — never replace or obscure it.",

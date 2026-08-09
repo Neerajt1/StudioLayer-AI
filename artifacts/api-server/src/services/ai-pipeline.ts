@@ -45,6 +45,8 @@ import {
   type PipelineTraceContext,
 } from "../lib/render-pipeline-observability.js";
 import { runIntelligenceAnalysis, buildShotPromptsWithPlan, imageCountToShootType } from "../intelligence";
+import type { ShootType as PoseShootType } from "../intelligence/pose-library";
+import type { GenerationType } from "@workspace/studio-credit-engine";
 import type { PoseFamily, PoseName } from "../intelligence/pose-library";
 import { loadRecentPoseSelections } from "./pose-history-service";
 import {
@@ -63,8 +65,18 @@ import {
 import { mapToFashnCategory }        from "../rendering/types";
 import { uploadBase64Image }         from "../rendering/image-storage";
 import { getRenderingEngine }        from "./rendering/RenderingEngine";
-import type { ShotCount }            from "./rendering/types";
 import { classifyTask, routeTask }   from "../router/ai-router";
+
+function generationTypeToPoseShootType(generationType: GenerationType): PoseShootType {
+  if (generationType === "editorial") return "editorial";
+  if (generationType === "campaign") return "campaign";
+  return "hero";
+}
+
+function resolvePoseShootType(shots: number, generationType?: GenerationType): PoseShootType {
+  if (generationType) return generationTypeToPoseShootType(generationType);
+  return imageCountToShootType(shots);
+}
 
 // ---------------------------------------------------------------------------
 // runAIPipeline — public API
@@ -95,7 +107,14 @@ export async function runAIPipeline(params: {
    * Each shot is an independent OpenRouter call.
    * Defaults to 1.
    */
-  shots?:              ShotCount;
+  shots?:              number;
+  /**
+   * Workspace generation type — drives pose shoot type for Custom Campaign batches.
+   * When omitted, falls back to image-count heuristics.
+   */
+  generationType?:     GenerationType;
+  /** Custom Campaign (4–20) — enables bucket recipe composition (Phase 5). */
+  customCampaign?:     boolean;
   /**
    * URL of the previously generated output image (refinement mode).
    * When set, the provider includes it as Reference Image 3.
@@ -156,6 +175,7 @@ export async function runAIPipeline(params: {
     modelIdentityId,
     outfitStyle,
     shots = 1,
+    generationType,
     previousOutputUrl,
     refinementPrompt,
     refinementType,
@@ -220,6 +240,7 @@ export async function runAIPipeline(params: {
         modelAgeRange,
         outfitStyle,
         shots,
+        generationType,
       }).then((result) => {
         logPipelineStage(pipelineTrace, PipelineStage.INTELLIGENCE_ANALYSIS_COMPLETED, {
           durationMs: Date.now() - intelligenceStartedAt,
@@ -292,7 +313,7 @@ export async function runAIPipeline(params: {
     // a refinement, the Pose Selection Engine generates distinct per-shot briefs
     // from the professional pose library.
     const basePrompt = intelligenceResult.prompt ?? "";
-    const shootType = imageCountToShootType(shots);
+    const shootType = resolvePoseShootType(shots, generationType);
 
     const recentPoseSelections =
       userId && sourceImageUrl
@@ -310,6 +331,7 @@ export async function runAIPipeline(params: {
             modelGender,
             recentPoseSelections,
             count: shots,
+            useCampaignComposition: params.customCampaign === true,
           })
         : undefined;
 
@@ -322,7 +344,7 @@ export async function runAIPipeline(params: {
           generationSessionId: pipelineTrace.generationSessionId,
           shots,
           perShotPromptCount: perShotPrompts.length,
-          diversityMode: imageCountToShootType(shots),
+          diversityMode: resolvePoseShootType(shots, generationType),
         },
         "Creative Director: per-shot pose diversity briefs generated",
       );

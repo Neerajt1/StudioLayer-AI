@@ -2,6 +2,11 @@
 // Studio workflow — single source of truth for the creation pipeline
 // ---------------------------------------------------------------------------
 
+import {
+  CUSTOM_CAMPAIGN_MAX,
+  CUSTOM_CAMPAIGN_MIN,
+} from '@workspace/studio-credit-engine';
+
 export type GarmentPlacement = 'upper_body' | 'lower_body' | 'full_body' | '';
 export type GarmentLengthSelection =
   | 'auto'
@@ -20,6 +25,9 @@ export interface StudioWorkflow {
   garmentLengthSelection: GarmentLengthSelection;
   talentId: string;
   imageCount: ShootType;
+  /** Custom Campaign mode — variable 4–20 image batch at Campaign per-image pricing. */
+  customCampaign: boolean;
+  customImageCount: number;
 }
 
 export const DEFAULT_GARMENT_LENGTH_SELECTION: Exclude<GarmentLengthSelection, 'auto'> = 'mini';
@@ -30,6 +38,8 @@ export const EMPTY_STUDIO_WORKFLOW: StudioWorkflow = {
   garmentLengthSelection: DEFAULT_GARMENT_LENGTH_SELECTION,
   talentId: '',
   imageCount: 1,
+  customCampaign: false,
+  customImageCount: CUSTOM_CAMPAIGN_MIN,
 };
 
 export const GARMENT_LENGTH_OPTIONS: ReadonlyArray<{
@@ -96,6 +106,13 @@ function isManualGarmentLengthSelection(
   );
 }
 
+function isCustomImageCount(value: unknown): value is number {
+  return typeof value === 'number'
+    && Number.isInteger(value)
+    && value >= CUSTOM_CAMPAIGN_MIN
+    && value <= CUSTOM_CAMPAIGN_MAX;
+}
+
 export function normalizeStudioWorkflow(raw: Partial<StudioWorkflow> | null | undefined): StudioWorkflow {
   return {
     sourceImageUrl: typeof raw?.sourceImageUrl === 'string' ? raw.sourceImageUrl : '',
@@ -105,7 +122,15 @@ export function normalizeStudioWorkflow(raw: Partial<StudioWorkflow> | null | un
       : DEFAULT_GARMENT_LENGTH_SELECTION,
     talentId: typeof raw?.talentId === 'string' ? raw.talentId : '',
     imageCount: isShootType(raw?.imageCount) ? raw.imageCount : 1,
+    customCampaign: raw?.customCampaign === true,
+    customImageCount: isCustomImageCount(raw?.customImageCount)
+      ? raw.customImageCount
+      : CUSTOM_CAMPAIGN_MIN,
   };
+}
+
+export function resolveWorkflowImageCount(workflow: StudioWorkflow): number {
+  return workflow.customCampaign ? workflow.customImageCount : workflow.imageCount;
 }
 
 export function validateStudioWorkflow(workflow: StudioWorkflow): StudioWorkflowValidation {
@@ -184,7 +209,8 @@ export function buildGenerationRequest(
     modelAgeRange: identity?.ageGroup as never,
     smartLighting: true,
     imageDimensions: 'portrait_45' as const,
-    imageCount: workflow.imageCount,
+    imageCount: resolveWorkflowImageCount(workflow),
+    ...(workflow.customCampaign ? { customCampaign: true as const } : {}),
   };
 }
 

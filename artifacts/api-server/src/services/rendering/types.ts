@@ -5,8 +5,8 @@
 // No FAL / FASHN types here — this layer is independent of the existing pipeline.
 // ---------------------------------------------------------------------------
 
-/** Number of images the engine should produce. */
-export type ShotCount = 1 | 2 | 4 | 8;
+/** Number of images the engine should produce (1, 2, 4 presets or 4–20 Custom Campaign). */
+export type ShotCount = number;
 
 /** Input accepted by RenderingEngine.generatePhotoshoot() */
 export interface PhotoshootInput {

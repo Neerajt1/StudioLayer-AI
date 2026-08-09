@@ -31,12 +31,21 @@ import type {
 // Validation helpers
 // ---------------------------------------------------------------------------
 
-const VALID_SHOT_COUNTS: ReadonlySet<number> = new Set([1, 2, 4, 8]);
+const PRESET_SHOT_COUNTS: ReadonlySet<number> = new Set([1, 2, 4]);
 
 function assertValidShots(shots: number): asserts shots is ShotCount {
-  if (!VALID_SHOT_COUNTS.has(shots)) {
+  if (!Number.isInteger(shots)) {
     throw new Error(
-      `RenderingEngine: invalid shot count ${shots}. Must be 1, 2, 4, or 8.`
+      `RenderingEngine: invalid shot count ${shots}. Must be an integer.`,
+    );
+  }
+
+  const isPreset = PRESET_SHOT_COUNTS.has(shots);
+  const isCustomCampaign = shots >= 4 && shots <= 20;
+
+  if (!isPreset && !isCustomCampaign) {
+    throw new Error(
+      `RenderingEngine: invalid shot count ${shots}. Must be 1, 2, 4, or 5–20 for Custom Campaign.`,
     );
   }
 }

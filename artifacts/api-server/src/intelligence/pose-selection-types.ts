@@ -22,4 +22,6 @@ export interface PoseSelectionContext {
   usedPoses?: string[];
   recentPoseSelections?: RecentPoseSelection[];
   seed?: number;
+  /** Custom Campaign — use bucket recipe + composition planner (Phase 5). */
+  useCampaignComposition?: boolean;
 }

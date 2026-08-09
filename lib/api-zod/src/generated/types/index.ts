@@ -22,7 +22,6 @@ export * from './renderInput';
 export * from './renderInputCameraFraming';
 export * from './renderInputGarmentLengthSelection';
 export * from './renderInputGarmentPlacement';
-export * from './renderInputImageCount';
 export * from './renderInputImageDimensions';
 export * from './renderInputLocationEnvironment';
 export * from './renderInputModelAgeRange';

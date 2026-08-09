@@ -63,6 +63,7 @@ import {
   planPosesForShoot,
   type PlannedPose,
 } from "./pose-planner";
+import { planCampaignComposition } from "./campaign-composition-planner";
 import type { PoseSelectionContext, RecentPoseSelection } from "./pose-selection-types";
 
 export type { PoseSelectionContext, RecentPoseSelection };
@@ -307,7 +308,7 @@ function resolvePocketPose(
   if (!pose.requiresPockets || hasPockets) return pose;
 
   const altName = POCKET_ALTERNATIVE_POSES[alternativeIndex % POCKET_ALTERNATIVE_POSES.length]!;
-  return getPoseDefinition(altName) ?? getPoseDefinition("Hip Rest Pose")!;
+  return getPoseDefinition(altName) ?? getPoseDefinition("Hip Shift")!;
 }
 
 // ---------------------------------------------------------------------------
@@ -414,6 +415,7 @@ export function selectPosesWithPlan(ctx: PoseSelectionContext): {
     usedPoses = [],
     recentPoseSelections = [],
     seed,
+    useCampaignComposition = false,
   } = ctx;
 
   const captureDevReport = isPoseDevLoggingEnabled();
@@ -431,7 +433,7 @@ export function selectPosesWithPlan(ctx: PoseSelectionContext): {
     usedPoses: sessionUsed,
   });
 
-  const plan = planPosesForShoot({
+  const plannerCtx = {
     profile,
     shootType,
     count,
@@ -439,7 +441,11 @@ export function selectPosesWithPlan(ctx: PoseSelectionContext): {
     usedPoses,
     recentPoseSelections,
     seed,
-  });
+  };
+
+  const plan = useCampaignComposition
+    ? planCampaignComposition(plannerCtx)
+    : planPosesForShoot(plannerCtx);
 
   if (captureDevReport) {
     const devEntries: PoseSelectionDevEntry[] = plan.poses.map((planned) => {
@@ -704,9 +710,11 @@ export function buildShotPromptsWithPlan(
     seed?: number;
     /** Override default 1/2/4 — supports future 12–20 image campaigns. */
     count?: number;
+    /** Custom Campaign — bucket recipe composition (Phase 5). */
+    useCampaignComposition?: boolean;
   },
 ): { prompts: string[]; plannedPoses: PlannedPose[]; planNotes: string[] } {
-  const { shootType, modelGender, usedPoses, recentPoseSelections, seed, count } = options;
+  const { shootType, modelGender, usedPoses, recentPoseSelections, seed, count, useCampaignComposition } = options;
   const shotCount = count ?? defaultShotCountForShootType(shootType);
   const plan = selectPosesWithPlan({
     profile,
@@ -716,13 +724,14 @@ export function buildShotPromptsWithPlan(
     usedPoses,
     recentPoseSelections,
     seed,
+    useCampaignComposition,
   });
   const poses = plan.poses.map((p) => p.name);
   const neutralBase = neutralizeBasePromptPose(basePrompt);
 
   if (shootType === "hero") {
     return {
-      prompts: [buildDiverseShotPrompt(neutralBase, poses[0] ?? "Relaxed Standing", HERO_DIRECTION)],
+      prompts: [buildDiverseShotPrompt(neutralBase, poses[0] ?? "Relaxed Front", HERO_DIRECTION)],
       plannedPoses: plan.poses,
       planNotes: plan.planNotes,
     };

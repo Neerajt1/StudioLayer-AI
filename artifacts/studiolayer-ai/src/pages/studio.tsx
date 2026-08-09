@@ -23,6 +23,7 @@ import {
   getListRendersQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useActiveRenders } from '@/hooks/use-active-renders';
 import { withErrorContactHelper } from '@/lib/studio-contact';
 import { formatDownloadPreparingLabel } from '@/lib/download-preparing-label';
 import { useDownloadInFlight } from '@/hooks/use-download-in-flight';
@@ -52,6 +53,11 @@ import {
   type StudioImageInspectionTarget,
 } from '@/components/studio/studio-image-inspector';
 import { ShootTypeSelector } from '@/components/studio/shoot-type-selector';
+import { CustomCampaignControl } from '@/components/studio/custom-campaign-control';
+import { DirectShootDialog } from '@/components/studio/direct-shoot-dialog';
+import {
+  FixedBatchViewport,
+} from '@/components/shared/fixed-batch-viewport';
 import {
   StudioToggleOption,
   StudioWorkspaceButton,
@@ -62,10 +68,13 @@ import type { ModelIdentity } from '@/components/studio/talent/types';
 import { cn } from '@/lib/utils';
 import { fetchEditorialImageBlob } from '@/lib/download-image';
 import {
+  formatStudioCredits,
   isComplimentaryCreditExhaustedForUser,
   isComplimentaryMembershipTier,
   isPremiumShootTypeLocked,
   isStudioCreditLimitBlocked,
+  membershipCreditsRemaining,
+  resolveGenerationCreditCost,
   resolveStudioAdminFlag,
 } from '@workspace/studio-credit-engine';
 import { useStudioWorkflow } from '@/context/studio-workflow-context';
@@ -75,6 +84,7 @@ import {
   buildRefinementRequest,
   canGenerateStudioWorkflow,
   GARMENT_LENGTH_OPTIONS,
+  resolveWorkflowImageCount,
   validateStudioWorkflow,
 } from '@/lib/studio-workflow';
 import { StudioRefinePanel } from '@/components/studio/studio-refine-panel';
@@ -247,6 +257,7 @@ export default function StudioPage() {
   const [showValidation, setShowValidation]     = useState(false);
 
   const [showProRequiredDialog, setShowProRequiredDialog] = useState(false);
+  const [directShootOpen, setDirectShootOpen] = useState(false);
   const [imageInspection, setImageInspection] = useState<StudioImageInspectionTarget | null>(null);
   const [awaitingResultDisplay, setAwaitingResultDisplay] = useState(false);
   const [loadedResultUrls, setLoadedResultUrls] = useState<Set<string>>(() => new Set());
@@ -285,16 +296,8 @@ export default function StudioPage() {
     run: runDownloadAll,
   } = useDownloadInFlight();
 
-  // ── Multi-render polling — 4 unconditional hooks (Rule of Hooks) ───────────
-  const id0 = activeRenderIds[0] ?? 0;
-  const id1 = activeRenderIds[1] ?? 0;
-  const id2 = activeRenderIds[2] ?? 0;
-  const id3 = activeRenderIds[3] ?? 0;
-
-  const { data: render0 } = useGetRender(id0, { query: { enabled: !!activeRenderIds[0], refetchInterval: makeRefetchInterval(!!activeRenderIds[0]) } } as never);
-  const { data: render1 } = useGetRender(id1, { query: { enabled: !!activeRenderIds[1], refetchInterval: makeRefetchInterval(!!activeRenderIds[1]) } } as never);
-  const { data: render2 } = useGetRender(id2, { query: { enabled: !!activeRenderIds[2], refetchInterval: makeRefetchInterval(!!activeRenderIds[2]) } } as never);
-  const { data: render3 } = useGetRender(id3, { query: { enabled: !!activeRenderIds[3], refetchInterval: makeRefetchInterval(!!activeRenderIds[3]) } } as never);
+  // ── Multi-render polling — dynamic batch (up to 20 Custom Campaign) ───────
+  const allRenderData = useActiveRenders(activeRenderIds);
 
   const pendingChildId = refinementPending?.childRenderId ?? 0;
   const { data: pendingRefinementRender } = useGetRender(pendingChildId, {
@@ -303,8 +306,6 @@ export default function StudioPage() {
       refetchInterval: makeRefetchInterval(pendingChildId > 0),
     },
   } as never);
-
-  const allRenderData = [render0, render1, render2, render3].slice(0, Math.max(activeRenderIds.length, 1));
 
   // ── Derived state ──────────────────────────────────────────────────────────
   const isProcessing = allRenderData.some(
@@ -369,6 +370,17 @@ export default function StudioPage() {
     isProcessing: isGenerationBusy,
   });
 
+  const generationCreditCost = resolveGenerationCreditCost({
+    imageCount: resolveWorkflowImageCount(workflow),
+    customCampaign: workflow.customCampaign,
+  });
+
+  const shootImageCount = resolveWorkflowImageCount(workflow);
+
+  const createButtonLabel = workflow.customCampaign
+    ? 'Custom Campaign'
+    : SHOOT_TYPE_LABEL[workflow.imageCount];
+
   const beginGenerationFeedback = (preloadedUrls: string[] = []) => {
     setAwaitingResultDisplay(true);
     setGenerationInFlight(true);
@@ -401,10 +413,10 @@ export default function StudioPage() {
   };
 
   useEffect(() => {
-    if (isComplimentaryTier && workflow.imageCount !== 1) {
-      setImageCount(1);
+    if (isComplimentaryTier && (workflow.imageCount !== 1 || workflow.customCampaign)) {
+      patchWorkflow({ imageCount: 1, customCampaign: false });
     }
-  }, [isComplimentaryTier, workflow.imageCount, setImageCount]);
+  }, [isComplimentaryTier, workflow.imageCount, workflow.customCampaign, patchWorkflow]);
 
   useEffect(() => {
     if (!awaitingResultDisplay || generationStartedAt == null) return;
@@ -534,7 +546,20 @@ export default function StudioPage() {
       setShowProRequiredDialog(true);
       return;
     }
-    setImageCount(value);
+    patchWorkflow({ imageCount: value, customCampaign: false });
+  };
+
+  const handleCustomCampaignSelect = () => {
+    if (isGenerationBusy) return;
+    if (isPremiumShootTypeLocked(usage, 2)) {
+      setShowProRequiredDialog(true);
+      return;
+    }
+    patchWorkflow({ customCampaign: true });
+  };
+
+  const handleCustomImageCountChange = (count: number) => {
+    patchWorkflow({ customCampaign: true, customImageCount: count });
   };
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -558,6 +583,19 @@ export default function StudioPage() {
         description: 'View Membership to continue creating.',
       });
       return;
+    }
+
+    if (!resolveStudioAdminFlag(user, usage)) {
+      const remaining =
+        usage?.remaining
+        ?? membershipCreditsRemaining(usage?.tier ?? 'free', usage?.used ?? 0, usage?.limit ?? null);
+      if (remaining < generationCreditCost) {
+        toast({
+          title: 'Insufficient Studio Credits',
+          description: `This shoot requires ${formatStudioCredits(generationCreditCost)}.`,
+        });
+        return;
+      }
     }
 
     const selectedIdentity = (identities as { id: string; gender?: string; ageGroup?: string }[])
@@ -906,6 +944,62 @@ export default function StudioPage() {
     }
   }, [generationInFlight, activeRenderIds, allRenderData, setGenerationInFlight]);
 
+  const renderEditorialCell = (slotIndex: number) => {
+    const id = activeRenderIds[slotIndex];
+    if (!id) return null;
+
+    const render = allRenderData[slotIndex];
+    const url = getSlotDisplayUrl(slotIndex);
+    const status = render?.status ?? 'pending';
+    const imageVisible =
+      status === 'completed' && !!url && !showGenerationProgress && !showRefinementProgress;
+    const isRefineTarget = refinePanelSlot === slotIndex;
+
+    return (
+      <div
+        key={id}
+        className={cn(
+          'sl-studio-editorial-cell',
+          isRefineTarget && showResultToolbar && 'ring-2 ring-foreground/20 rounded',
+        )}
+      >
+        <div className="sl-studio-editorial-cell-inner">
+          {!url && !showGenerationProgress && !showRefinementProgress && status !== 'failed' && (
+            <StudioEditorialPlaceholder visible compact />
+          )}
+          {status === 'completed' && url && (
+            <StudioEditorialImage
+              src={url}
+              alt={`Fashion image ${slotIndex + 1}`}
+              visible={imageVisible}
+              maxHeightClass="max-h-[min(calc(50vh-2rem),480px)]"
+              onLoad={() => markResultImageLoaded(url)}
+              imageRef={bindResultImageRef(url)}
+              onInspect={() => openImageInspection({
+                imageUrl: url,
+                alt: `Fashion image ${slotIndex + 1}`,
+                renderId: id,
+              })}
+            />
+          )}
+          {status === 'failed' && <StudioEditorialFailedState />}
+        </div>
+        {status === 'completed' && url && !showGenerationProgress && !showRefinementProgress && (
+          <div className="absolute bottom-0 left-0 right-0 flex justify-end bg-gradient-to-t from-black/25 to-transparent p-2">
+            <EditorialImageActions
+              renderId={id}
+              outputImageUrl={url}
+              refineDisabled={isSlotRefining(slotIndex)}
+              refineActive={isRefineTarget}
+              onRefine={() => handleOpenRefine(slotIndex)}
+              onDownloadError={handleDownloadError}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
       <AppShell footer>
@@ -1027,15 +1121,38 @@ export default function StudioPage() {
               </section>
 
               {/* Step 3: Shoot Type */}
-              <section className="space-y-3 pt-1">
+              <section className="sl-shoot-type-section space-y-3 pt-1">
                 <StepLabel number={3} title="Shoot Type" />
-                <ShootTypeSelector
-                  options={IMAGE_COUNT_OPTIONS}
-                  imageCount={workflow.imageCount}
-                  isPremiumLocked={(value) => isPremiumShootTypeLocked(usage, value)}
-                  disabled={isGenerationBusy}
-                  onSelect={handleShootTypeSelect}
-                />
+                <div className="sl-shoot-type-panel">
+                  <ShootTypeSelector
+                    options={IMAGE_COUNT_OPTIONS}
+                    imageCount={workflow.imageCount}
+                    customCampaignActive={workflow.customCampaign}
+                    isPremiumLocked={(value) => isPremiumShootTypeLocked(usage, value)}
+                    disabled={isGenerationBusy}
+                    onSelect={handleShootTypeSelect}
+                  />
+                  <CustomCampaignControl
+                    selected={workflow.customCampaign}
+                    imageCount={workflow.customImageCount}
+                    premiumLocked={isPremiumShootTypeLocked(usage, 2)}
+                    disabled={isGenerationBusy}
+                    onSelect={handleCustomCampaignSelect}
+                    onImageCountChange={handleCustomImageCountChange}
+                  />
+                  <p className="sl-shoot-type-credit-total">
+                    {formatStudioCredits(generationCreditCost)}
+                  </p>
+                  <button
+                    type="button"
+                    className="sl-direct-shoot-trigger"
+                    disabled={isGenerationBusy}
+                    onClick={() => setDirectShootOpen(true)}
+                  >
+                    <span className="sl-direct-shoot-trigger-mark" aria-hidden>✦</span>
+                    I&apos;ll Direct the Shoot
+                  </button>
+                </div>
               </section>
 
               {/* Create CTA */}
@@ -1049,7 +1166,7 @@ export default function StudioPage() {
                   data-testid="button-render"
                 >
                   <Camera className="w-4 h-4" />
-                  {isGenerationBusy ? 'Creating…' : `Create ${SHOOT_TYPE_LABEL[workflow.imageCount]}`}
+                  {isGenerationBusy ? 'Creating…' : `Create ${createButtonLabel}`}
                 </StudioWorkspaceButton>
 
                 <p className="mx-auto mt-[18px] mb-[15px] max-w-[390px] text-center text-[11px] font-normal leading-relaxed text-muted-foreground/80">
@@ -1139,60 +1256,15 @@ export default function StudioPage() {
                       label={showRefinementProgress ? 'Applying refinement…' : 'Creating your images…'}
                       elapsedSec={elapsedSec}
                     />
-                    <div className={cn('grid w-full grid-cols-2 gap-3', (showGenerationProgress || showRefinementProgress) && 'opacity-35')}>
-                      {activeRenderIds.map((id, i) => {
-                        const render = allRenderData[i];
-                        const url = getSlotDisplayUrl(i);
-                        const status = render?.status ?? 'pending';
-                        const imageVisible =
-                          status === 'completed' && !!url && !showGenerationProgress && !showRefinementProgress;
-                        const isRefineTarget = refinePanelSlot === i;
-
-                        return (
-                          <div
-                            key={id}
-                            className={cn(
-                              'sl-studio-editorial-cell',
-                              isRefineTarget && showResultToolbar && 'ring-2 ring-foreground/20 rounded',
-                            )}
-                          >
-                            <div className="sl-studio-editorial-cell-inner">
-                              {!url && !showGenerationProgress && !showRefinementProgress && status !== 'failed' && (
-                                <StudioEditorialPlaceholder visible compact />
-                              )}
-                              {status === 'completed' && url && (
-                                <StudioEditorialImage
-                                  src={url}
-                                  alt={`Fashion image ${i + 1}`}
-                                  visible={imageVisible}
-                                  maxHeightClass="max-h-[min(calc(50vh-2rem),480px)]"
-                                  onLoad={() => markResultImageLoaded(url)}
-                                  imageRef={bindResultImageRef(url)}
-                                  onInspect={() => openImageInspection({
-                                    imageUrl: url,
-                                    alt: `Fashion image ${i + 1}`,
-                                    renderId: id,
-                                  })}
-                                />
-                              )}
-                              {status === 'failed' && <StudioEditorialFailedState />}
-                            </div>
-                            {status === 'completed' && url && !showGenerationProgress && !showRefinementProgress && (
-                              <div className="absolute bottom-0 left-0 right-0 flex justify-end bg-gradient-to-t from-black/25 to-transparent p-2">
-                                <EditorialImageActions
-                                  renderId={id}
-                                  outputImageUrl={url}
-                                  refineDisabled={isSlotRefining(i)}
-                                  refineActive={isRefineTarget}
-                                  onRefine={() => handleOpenRefine(i)}
-                                  onDownloadError={handleDownloadError}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {activeRenderIds.length > 0 && (
+                      <FixedBatchViewport
+                        totalCount={activeRenderIds.length}
+                        gridClassName={cn(
+                          (showGenerationProgress || showRefinementProgress) && 'opacity-35',
+                        )}
+                        renderCell={(index) => renderEditorialCell(index)}
+                      />
+                    )}
                   </StudioEditorialCanvas>
 
                   {showResultToolbar && (
@@ -1304,7 +1376,7 @@ export default function StudioPage() {
             </Link>
             <StudioWorkspaceButton
               onClick={() => {
-                setImageCount(1);
+                patchWorkflow({ imageCount: 1, customCampaign: false });
                 setShowProRequiredDialog(false);
               }}
             >
@@ -1313,6 +1385,12 @@ export default function StudioPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DirectShootDialog
+        open={directShootOpen}
+        onOpenChange={setDirectShootOpen}
+        shootImageCount={shootImageCount}
+      />
 
       <StudioCustomCropDialog
         open={customCropDialogOpen}

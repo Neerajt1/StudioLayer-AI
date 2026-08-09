@@ -1,5 +1,7 @@
 export {
   StudioCreditRules,
+  CUSTOM_CAMPAIGN_MIN,
+  CUSTOM_CAMPAIGN_MAX,
   type GenerationType,
   type CreditAction,
   type ImageCount,
@@ -15,6 +17,11 @@ export {
   imageCountToGenerationType,
   creditCostForGenerationType,
   creditCostForImageCount,
+  campaignCreditCostPerImage,
+  creditCostForCustomCampaign,
+  isValidCustomCampaignImageCount,
+  resolveGenerationCreditCost,
+  creditCostPerCompletedImageInBatch,
   creditCostForRefine,
   creditCostForRegenerate,
   creditCostForTransparentDownload,
@@ -28,6 +35,7 @@ export {
 
 export {
   workspaceCreditTooltip,
+  workspaceCreditTooltipForCustomCampaign,
   galleryGenerationCreditLabel,
   formatStudioCredits,
   creativeStepCreditCopy,

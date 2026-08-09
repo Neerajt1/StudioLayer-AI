@@ -145,6 +145,10 @@ export const ListRendersResponse = zod.array(ListRendersResponseItem)
 /**
  * @summary Start a new render job
  */
+export const createRenderBodyImageCountMax = 20;
+
+
+
 export const CreateRenderBody = zod.object({
   "sourceImageUrl": zod.string(),
   "modelPersona": zod.enum(['casual', 'high_fashion', 'athletic', 'minimalist', 'high_fashion_editorial', 'natural_smile', 'confident_commercial']),
@@ -160,7 +164,8 @@ export const CreateRenderBody = zod.object({
   "garmentLengthSelection": zod.enum(['auto', 'mini', 'above_knee', 'knee', 'midi', 'mid_calf', 'maxi', 'floor']).optional().describe('Garment length for Full Outfit uploads only. \"auto\" (default) uses AI detection from the uploaded image. Manual selection overrides auto detection and becomes part of rendering instructions.\n'),
   "modelIdentityId": zod.string().optional(),
   "outfitStyle": zod.string().optional().describe('Complete the Look selection from the UI. One of: ai_recommended, formal, business_casual, casual, denim, streetwear, ethnic, sportswear, none. When present and not \"none\", the PromptComposer uses the externally computed outfit specification instead of its own recommendation.\n'),
-  "imageCount": zod.union([zod.literal(1),zod.literal(2),zod.literal(4)]).optional().describe('Number of output images to generate (1, 2, or 4). Each image is an independently generated shot with a natural fashion pose. Defaults to 1.\n'),
+  "imageCount": zod.number().int().min(1).max(createRenderBodyImageCountMax).optional().describe('Number of output images to generate. Preset shoots: 1 (Hero), 2 (Campaign), or 4 (Editorial). When customCampaign is true, must be an integer from 4 to 20. Defaults to 1.\n'),
+  "customCampaign": zod.boolean().optional().describe('When true, generates a Custom Campaign batch at the specified imageCount (4–20). Uses Campaign per-image pricing. Editorial preset (imageCount=4 without this flag) remains unchanged.\n'),
   "refinementPrompt": zod.string().optional().describe('Deprecated — use refinementType. Legacy button-label mapping still accepted for V1 refinements only.\n'),
   "refinementType": zod.enum(['remove_background', 'enhance_model_face', 'enhance_garment']).optional().describe('Batch 21 reliable refine selection. Requires parentRenderId. Each refinement consumes exactly 1 Studio Credit.\n'),
   "parentRenderId": zod.number().optional().describe('ID of the render being refined. When set, the pipeline loads the parent\'s output image as context (Reference Image 3) and treats this request as a refinement rather than a fresh generation. Creates a new render row linked to the parent for version history.\n'),

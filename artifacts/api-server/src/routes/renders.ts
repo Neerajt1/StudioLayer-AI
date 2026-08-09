@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
 import { eq, and, desc, ne, inArray } from "drizzle-orm";
-import { creditCostForGenerationType } from "@workspace/studio-credit-engine";
+import { creditCostForGenerationType, creditCostPerCompletedImageInBatch, isValidCustomCampaignImageCount } from "@workspace/studio-credit-engine";
 import { db, rendersTable, usersTable, renderDeletionEventsTable } from "@workspace/db";
 import { CreateRenderBody, GetRenderParams } from "@workspace/api-zod";
 import { runAIPipeline } from "../services/ai-pipeline";
@@ -13,8 +13,8 @@ import {
 import {
   assertStudioCreditsAvailable,
   beginGenerationCreditTransaction,
-  completeStudioCreditTransaction,
   failStudioCreditTransaction,
+  finalizeGenerationCreditTransaction,
   getBillingCycleLedgerStats,
   getStudioCreditBalance,
 } from "../services/studio-credit-service.js";
@@ -44,6 +44,39 @@ import {
 import type { RefinementType } from "../services/refinement/refinement-types.js";
 
 const router: IRouter = Router();
+
+const PRESET_IMAGE_COUNTS = new Set([1, 2, 4]);
+
+function validateGenerationImageCount(input: {
+  imageCount: number | undefined;
+  customCampaign: boolean | undefined;
+}): { ok: true; shots: number; customCampaign: boolean } | { ok: false; error: string } {
+  const count = input.imageCount ?? 1;
+  const customCampaign = input.customCampaign === true;
+
+  if (!Number.isInteger(count)) {
+    return { ok: false, error: "imageCount must be an integer." };
+  }
+
+  if (customCampaign) {
+    if (!isValidCustomCampaignImageCount(count)) {
+      return {
+        ok: false,
+        error: "Custom Campaign image count must be an integer from 4 to 20.",
+      };
+    }
+    return { ok: true, shots: count, customCampaign: true };
+  }
+
+  if (!PRESET_IMAGE_COUNTS.has(count)) {
+    return {
+      ok: false,
+      error: "imageCount must be 1, 2, or 4 unless customCampaign is true.",
+    };
+  }
+
+  return { ok: true, shots: count, customCampaign: false };
+}
 
 function serializeRender(render: typeof rendersTable.$inferSelect) {
   return {
@@ -181,6 +214,7 @@ router.post("/renders", async (req, res): Promise<void> => {
     modelIdentityId,
     outfitStyle,
     imageCount,
+    customCampaign,
     refinementPrompt,
     refinementType,
     parentRenderId,
@@ -206,7 +240,21 @@ router.post("/renders", async (req, res): Promise<void> => {
   }
 
   const isRefinement = Boolean(parentRenderId && validatedRefinementType);
-  const shots = isRefinement ? 1 : ((imageCount ?? 1) as 1 | 2 | 4);
+  const imageCountValidation = validateGenerationImageCount({
+    imageCount: isRefinement ? 1 : imageCount,
+    customCampaign: isRefinement ? false : customCampaign,
+  });
+
+  if (!imageCountValidation.ok) {
+    traceRenderFailure(PipelineStage.VALIDATION_COMPLETE, new Error(imageCountValidation.error), {
+      pipelineTrace,
+      userId,
+    });
+    res.status(400).json({ error: imageCountValidation.error });
+    return;
+  }
+
+  const { shots, customCampaign: isCustomCampaign } = imageCountValidation;
 
   let creditTransactionId: string | undefined;
 
@@ -257,6 +305,7 @@ router.post("/renders", async (req, res): Promise<void> => {
           isAdmin: user.isAdmin,
           imageCount: shots,
           isRefinement,
+          customCampaign: isCustomCampaign,
         });
 
         if (!creditCheck.ok) {
@@ -313,6 +362,7 @@ router.post("/renders", async (req, res): Promise<void> => {
           parentRenderId ?? null,
           parentMetadata,
           shots,
+          { customCampaign: isCustomCampaign },
         );
 
         const generationSessionId =
@@ -378,6 +428,7 @@ router.post("/renders", async (req, res): Promise<void> => {
             userId,
             imageCount: shots,
             isRefinement,
+            customCampaign: isCustomCampaign,
             renderId: insertedRows[0]!.id,
           });
 
@@ -453,22 +504,33 @@ router.post("/renders", async (req, res): Promise<void> => {
       finalized: false,
     };
 
+    const creditPerCompletedImage = creditCostPerCompletedImageInBatch({
+      imageCount: shots,
+      customCampaign: isCustomCampaign,
+      isRefinement,
+    });
+
     async function finalizeCreditTransaction(): Promise<void> {
       if (batchTracker.finalized || !creditTransactionId) return;
       batchTracker.finalized = true;
 
-      const allSucceeded =
-        batchTracker.completed === shots && batchTracker.failed === 0;
+      const { chargedCredits } = await finalizeGenerationCreditTransaction({
+        transactionId: creditTransactionId,
+        completedCount: batchTracker.completed,
+        creditPerCompletedImage,
+      });
 
-      if (allSucceeded) {
-        await completeStudioCreditTransaction(creditTransactionId);
-      } else {
-        await failStudioCreditTransaction(creditTransactionId);
+      if (chargedCredits > 0) {
+        await db
+          .update(rendersTable)
+          .set({ studioCreditsUsed: chargedCredits })
+          .where(inArray(rendersTable.id, insertedRows.map((row) => row.id)));
       }
 
       logPipelineStage(pipelineTrace, PipelineStage.CREDIT_TRANSACTION_FINALIZED, {
         creditTransactionId,
-        allSucceeded,
+        allSucceeded: batchTracker.completed === shots && batchTracker.failed === 0,
+        chargedCredits,
         completedCount: batchTracker.completed,
         failedCount: batchTracker.failed,
       });
@@ -504,6 +566,8 @@ router.post("/renders", async (req, res): Promise<void> => {
       modelIdentityId,
       outfitStyle,
       shots,
+      generationType: (insertedRows[0]!.generationType ?? "hero") as GenerationType,
+      customCampaign: isCustomCampaign,
       previousOutputUrl,
       refinementPrompt,
       refinementType: validatedRefinementType,
@@ -518,14 +582,6 @@ router.post("/renders", async (req, res): Promise<void> => {
           .set({ status: "completed", outputImageUrl })
           .where(eq(rendersTable.id, row.id));
 
-        if (poseSelection) {
-          await saveRenderPoseSelection({
-            renderId: row.id,
-            poseName: poseSelection.poseName,
-            poseFamily: poseSelection.poseFamily,
-          });
-        }
-
         logPipelineStage(pipelineTrace, PipelineStage.DATABASE_UPDATE_COMPLETED, {
           renderId: row.id,
           imageIndex,
@@ -533,6 +589,25 @@ router.post("/renders", async (req, res): Promise<void> => {
         });
 
         await noteBatchProgress("complete");
+
+        if (poseSelection) {
+          try {
+            await saveRenderPoseSelection({
+              renderId: row.id,
+              poseName: poseSelection.poseName,
+              poseFamily: poseSelection.poseFamily,
+            });
+          } catch (poseError) {
+            logger.warn(
+              {
+                renderId: row.id,
+                imageIndex,
+                err: poseError instanceof Error ? poseError.message : String(poseError),
+              },
+              "pose metadata save failed — render completed",
+            );
+          }
+        }
       },
       onShotError: async (_error, imageIndex) => {
         const row = insertedRows[imageIndex];

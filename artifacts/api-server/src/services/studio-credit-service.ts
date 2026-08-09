@@ -5,7 +5,6 @@ import {
   StudioCreditTransactionStatus,
   adminStudioCreditBalance,
   computeBillingCycleLedgerStats,
-  creditCostForImageCount,
   creditCostForRefine,
   creditCostForTransparentDownload,
   isStudioAdmin,
@@ -13,8 +12,10 @@ import {
   membershipAllowanceForTier,
   reasonCodeForImageRequest,
   reasonCodeForTransparentDownload,
+  reasonCodeForGenerationType,
+  resolveGenerationCreditCost,
   type BillingCycleLedgerStats,
-  type ImageCount,
+  type GenerationType,
   type StudioCreditReasonCodeValue,
 } from "@workspace/studio-credit-engine";
 import {
@@ -28,13 +29,29 @@ export function billingCycleStart(now = new Date()): Date {
 }
 
 function creditCostForRequest(
-  imageCount: ImageCount,
+  imageCount: number,
   isRefinement: boolean,
   isRegenerate = false,
+  customCampaign = false,
 ): number {
-  if (isRegenerate) return creditCostForRefine();
-  if (isRefinement) return creditCostForRefine();
-  return creditCostForImageCount(imageCount);
+  return resolveGenerationCreditCost({
+    imageCount,
+    customCampaign,
+    isRefinement,
+    isRegenerate,
+  });
+}
+
+function reasonCodeForRequest(
+  imageCount: number,
+  isRefinement: boolean,
+  isRegenerate: boolean,
+  customCampaign: boolean,
+): StudioCreditReasonCodeValue {
+  if (isRegenerate) return reasonCodeForImageRequest(1, false, true);
+  if (isRefinement) return reasonCodeForImageRequest(1, true, false);
+  if (customCampaign) return reasonCodeForGenerationType("campaign");
+  return reasonCodeForImageRequest(imageCount as 1 | 2 | 4, false, false);
 }
 
 /** Begin a single pending transaction for an entire generation request. */
@@ -92,6 +109,39 @@ export async function failStudioCreditTransaction(
         ),
       ),
     );
+}
+
+/**
+ * Finalize a generation credit hold for partial batch success.
+ * Charges only for completed renders; releases the hold when none succeeded.
+ */
+export async function finalizeGenerationCreditTransaction(input: {
+  transactionId: string;
+  completedCount: number;
+  creditPerCompletedImage: number;
+}): Promise<{ chargedCredits: number }> {
+  const charged = input.completedCount * input.creditPerCompletedImage;
+
+  if (charged <= 0) {
+    await failStudioCreditTransaction(input.transactionId);
+    return { chargedCredits: 0 };
+  }
+
+  await db
+    .update(studioCreditTransactionsTable)
+    .set({ amount: -Math.abs(charged) })
+    .where(
+      and(
+        eq(studioCreditTransactionsTable.transactionId, input.transactionId),
+        eq(
+          studioCreditTransactionsTable.status,
+          StudioCreditTransactionStatus.PENDING,
+        ),
+      ),
+    );
+
+  await completeStudioCreditTransaction(input.transactionId);
+  return { chargedCredits: charged };
 }
 
 /**
@@ -186,14 +236,17 @@ export async function assertStudioCreditsAvailable(input: {
   tier: string;
   limit: number | null;
   isAdmin: boolean;
-  imageCount: ImageCount;
+  imageCount: number;
   isRefinement: boolean;
+  customCampaign?: boolean;
 }): Promise<{ ok: true } | { ok: false; message: string }> {
   if (isStudioAdmin(input)) return { ok: true };
 
   const required = creditCostForRequest(
     input.imageCount,
     input.isRefinement,
+    false,
+    input.customCampaign,
   );
 
   const balance = await getStudioCreditBalance({
@@ -260,20 +313,23 @@ export async function deductTransparentDownloadCredit(input: {
 
 export async function beginGenerationCreditTransaction(input: {
   userId: number;
-  imageCount: ImageCount;
+  imageCount: number;
   isRefinement: boolean;
   isRegenerate?: boolean;
+  customCampaign?: boolean;
   renderId: number;
 }): Promise<string> {
   const amount = creditCostForRequest(
     input.imageCount,
     input.isRefinement,
     input.isRegenerate,
+    input.customCampaign,
   );
-  const reasonCode = reasonCodeForImageRequest(
+  const reasonCode = reasonCodeForRequest(
     input.imageCount,
     input.isRefinement,
-    input.isRegenerate,
+    input.isRegenerate ?? false,
+    input.customCampaign ?? false,
   );
 
   return beginStudioCreditTransaction({

@@ -8,7 +8,6 @@
 import type { RenderInputCameraFraming } from './renderInputCameraFraming';
 import type { RenderInputGarmentLengthSelection } from './renderInputGarmentLengthSelection';
 import type { RenderInputGarmentPlacement } from './renderInputGarmentPlacement';
-import type { RenderInputImageCount } from './renderInputImageCount';
 import type { RenderInputImageDimensions } from './renderInputImageDimensions';
 import type { RenderInputLocationEnvironment } from './renderInputLocationEnvironment';
 import type { RenderInputModelAgeRange } from './renderInputModelAgeRange';
@@ -35,8 +34,14 @@ export interface RenderInput {
   modelIdentityId?: string;
   /** Complete the Look selection from the UI. One of: ai_recommended, formal, business_casual, casual, denim, streetwear, ethnic, sportswear, none. When present and not "none", the PromptComposer uses the externally computed outfit specification instead of its own recommendation. */
   outfitStyle?: string;
-  /** Number of output images to generate (1, 2, or 4). Each image is an independently generated shot with a natural fashion pose. Defaults to 1. */
-  imageCount?: RenderInputImageCount;
+  /**
+     * Number of output images to generate. Preset shoots: 1 (Hero), 2 (Campaign), or 4 (Editorial). When customCampaign is true, must be an integer from 4 to 20. Defaults to 1.
+     * @minimum 1
+     * @maximum 20
+     */
+  imageCount?: number;
+  /** When true, generates a Custom Campaign batch at the specified imageCount (4–20). Uses Campaign per-image pricing. Editorial preset (imageCount=4 without this flag) remains unchanged. */
+  customCampaign?: boolean;
   /** Deprecated — use refinementType. Legacy button-label mapping still accepted for V1 refinements only. */
   refinementPrompt?: string;
   /** Batch 21 reliable refine selection. Requires parentRenderId. Each refinement consumes exactly 1 Studio Credit. */

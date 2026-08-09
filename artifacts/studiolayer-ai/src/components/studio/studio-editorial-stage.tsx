@@ -287,12 +287,12 @@ export function StudioEditorialProgressOverlay({
   );
 }
 
-/** Fallback icon for multi-image failed slots */
+/** Fallback for multi-image failed slots — subtle, does not overpower successes. */
 export function StudioEditorialFailedState() {
   return (
-    <div className="flex flex-col items-center gap-2 px-4 text-center">
-      <Camera className="h-5 w-5 text-muted-foreground/50" aria-hidden />
-      <p className="text-xs font-mono text-muted-foreground">Generation failed</p>
+    <div className="sl-studio-editorial-failed flex flex-col items-center gap-1.5 px-3 py-4 text-center">
+      <Camera className="h-4 w-4 text-muted-foreground/35" aria-hidden />
+      <p className="text-[10px] font-mono text-muted-foreground/70">Generation failed</p>
     </div>
   );
 }

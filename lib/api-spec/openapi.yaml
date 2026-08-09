@@ -622,12 +622,20 @@ components:
             When present and not "none", the PromptComposer uses the externally
             computed outfit specification instead of its own recommendation.
         imageCount:
-          type: number
-          enum: [1, 2, 4]
+          type: integer
+          minimum: 1
+          maximum: 20
           description: >
-            Number of output images to generate (1, 2, or 4).
-            Each image is an independently generated shot with a natural fashion pose.
+            Number of output images to generate.
+            Preset shoots: 1 (Hero), 2 (Campaign), or 4 (Editorial).
+            When customCampaign is true, must be an integer from 4 to 20.
             Defaults to 1.
+        customCampaign:
+          type: boolean
+          description: >
+            When true, generates a Custom Campaign batch at the specified imageCount (4–20).
+            Uses Campaign per-image pricing. Editorial preset (imageCount=4 without this flag)
+            remains unchanged.
         refinementPrompt:
           type: string
           description: >

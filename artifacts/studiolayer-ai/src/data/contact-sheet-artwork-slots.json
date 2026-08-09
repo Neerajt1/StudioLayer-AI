@@ -1,0 +1,1372 @@
+{
+  "templates": [
+    [
+      {
+        "left": 0.503,
+        "top": 0.3964,
+        "width": 22.837,
+        "height": 31.3181
+      },
+      {
+        "left": 25.9557,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      },
+      {
+        "left": 51.3078,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      },
+      {
+        "left": 76.66,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      },
+      {
+        "left": 0.503,
+        "top": 34.2914,
+        "width": 73.7425,
+        "height": 31.3181
+      },
+      {
+        "left": 76.66,
+        "top": 34.2914,
+        "width": 22.9376,
+        "height": 31.3181
+      },
+      {
+        "left": 0.503,
+        "top": 68.1863,
+        "width": 22.9376,
+        "height": 31.3181
+      },
+      {
+        "left": 25.4527,
+        "top": 68.1863,
+        "width": 22.9376,
+        "height": 31.3181
+      },
+      {
+        "left": 50.4024,
+        "top": 68.1863,
+        "width": 49.1952,
+        "height": 31.3181
+      }
+    ],
+    [
+      {
+        "left": 0.4028,
+        "top": 0.495,
+        "width": 47.9355,
+        "height": 31.3861
+      },
+      {
+        "left": 51.2588,
+        "top": 0.495,
+        "width": 22.9607,
+        "height": 31.3861
+      },
+      {
+        "left": 76.6365,
+        "top": 0.495,
+        "width": 22.9607,
+        "height": 65.1485
+      },
+      {
+        "left": 0.4028,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 31.2871
+      },
+      {
+        "left": 25.3776,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 44.3564
+      },
+      {
+        "left": 51.2588,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 31.2871
+      },
+      {
+        "left": 0.4028,
+        "top": 68.2178,
+        "width": 22.9607,
+        "height": 31.3861
+      },
+      {
+        "left": 51.2588,
+        "top": 68.2178,
+        "width": 48.3384,
+        "height": 31.2871
+      },
+      {
+        "left": 25.3776,
+        "top": 81.1881,
+        "width": 22.9607,
+        "height": 18.4158
+      }
+    ],
+    [
+      {
+        "left": 0.4028,
+        "top": 0.3964,
+        "width": 22.9607,
+        "height": 31.4172
+      },
+      {
+        "left": 25.8812,
+        "top": 0.3964,
+        "width": 22.86,
+        "height": 31.4172
+      },
+      {
+        "left": 51.2588,
+        "top": 0.3964,
+        "width": 48.3384,
+        "height": 31.4172
+      },
+      {
+        "left": 0.4028,
+        "top": 34.2914,
+        "width": 48.3384,
+        "height": 31.4172
+      },
+      {
+        "left": 51.2588,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 65.2131
+      },
+      {
+        "left": 76.6365,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 31.3181
+      },
+      {
+        "left": 0.4028,
+        "top": 68.1863,
+        "width": 22.9607,
+        "height": 31.4172
+      },
+      {
+        "left": 25.3776,
+        "top": 68.1863,
+        "width": 22.9607,
+        "height": 31.4172
+      },
+      {
+        "left": 76.6365,
+        "top": 68.1863,
+        "width": 22.9607,
+        "height": 31.3181
+      }
+    ],
+    [
+      {
+        "left": 0.4028,
+        "top": 0.495,
+        "width": 47.9355,
+        "height": 31.3861
+      },
+      {
+        "left": 51.2588,
+        "top": 0.495,
+        "width": 22.9607,
+        "height": 31.3861
+      },
+      {
+        "left": 76.6365,
+        "top": 0.495,
+        "width": 22.9607,
+        "height": 65.1485
+      },
+      {
+        "left": 0.4028,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 31.2871
+      },
+      {
+        "left": 25.3776,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 44.3564
+      },
+      {
+        "left": 51.2588,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 31.2871
+      },
+      {
+        "left": 0.4028,
+        "top": 68.2178,
+        "width": 22.9607,
+        "height": 31.3861
+      },
+      {
+        "left": 51.2588,
+        "top": 68.2178,
+        "width": 48.3384,
+        "height": 31.2871
+      },
+      {
+        "left": 25.3776,
+        "top": 81.1881,
+        "width": 22.9607,
+        "height": 18.4158
+      }
+    ],
+    [
+      {
+        "left": 0.503,
+        "top": 0.3964,
+        "width": 22.837,
+        "height": 31.3181
+      },
+      {
+        "left": 25.9557,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      },
+      {
+        "left": 51.3078,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      },
+      {
+        "left": 76.66,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      },
+      {
+        "left": 0.503,
+        "top": 34.2914,
+        "width": 73.7425,
+        "height": 31.3181
+      },
+      {
+        "left": 76.66,
+        "top": 34.2914,
+        "width": 22.9376,
+        "height": 31.3181
+      },
+      {
+        "left": 0.503,
+        "top": 68.1863,
+        "width": 22.9376,
+        "height": 31.3181
+      },
+      {
+        "left": 25.4527,
+        "top": 68.1863,
+        "width": 22.9376,
+        "height": 31.3181
+      },
+      {
+        "left": 50.4024,
+        "top": 68.1863,
+        "width": 49.1952,
+        "height": 31.3181
+      }
+    ],
+    [
+      {
+        "left": 0.502,
+        "top": 0.3964,
+        "width": 22.8916,
+        "height": 31.4172
+      },
+      {
+        "left": 25.9036,
+        "top": 0.3964,
+        "width": 22.7912,
+        "height": 31.4172
+      },
+      {
+        "left": 51.3052,
+        "top": 0.3964,
+        "width": 48.0924,
+        "height": 31.4172
+      },
+      {
+        "left": 0.502,
+        "top": 34.2914,
+        "width": 22.7912,
+        "height": 31.4172
+      },
+      {
+        "left": 25.9036,
+        "top": 34.2914,
+        "width": 22.7912,
+        "height": 31.3181
+      },
+      {
+        "left": 51.3052,
+        "top": 34.2914,
+        "width": 22.8916,
+        "height": 31.3181
+      },
+      {
+        "left": 76.7068,
+        "top": 34.2914,
+        "width": 22.8916,
+        "height": 31.3181
+      },
+      {
+        "left": 0.502,
+        "top": 68.1863,
+        "width": 22.8916,
+        "height": 31.4172
+      },
+      {
+        "left": 25.9036,
+        "top": 68.1863,
+        "width": 48.2932,
+        "height": 31.3181
+      },
+      {
+        "left": 76.7068,
+        "top": 68.1863,
+        "width": 22.8916,
+        "height": 31.3181
+      }
+    ],
+    [
+      {
+        "left": 0.4028,
+        "top": 0.3964,
+        "width": 47.9355,
+        "height": 31.4172
+      },
+      {
+        "left": 51.2588,
+        "top": 0.3964,
+        "width": 22.9607,
+        "height": 31.4172
+      },
+      {
+        "left": 76.6365,
+        "top": 0.3964,
+        "width": 22.9607,
+        "height": 31.4172
+      },
+      {
+        "left": 0.4028,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 31.3181
+      },
+      {
+        "left": 25.3776,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 44.4004
+      },
+      {
+        "left": 51.2588,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 31.3181
+      },
+      {
+        "left": 76.6365,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 31.3181
+      },
+      {
+        "left": 0.4028,
+        "top": 68.1863,
+        "width": 22.9607,
+        "height": 31.4172
+      },
+      {
+        "left": 51.2588,
+        "top": 68.1863,
+        "width": 48.3384,
+        "height": 31.3181
+      },
+      {
+        "left": 25.3776,
+        "top": 81.1695,
+        "width": 22.9607,
+        "height": 18.4341
+      }
+    ],
+    [
+      {
+        "left": 0.4028,
+        "top": 0.3964,
+        "width": 47.9355,
+        "height": 31.4172
+      },
+      {
+        "left": 51.2588,
+        "top": 0.3964,
+        "width": 22.9607,
+        "height": 31.4172
+      },
+      {
+        "left": 76.6365,
+        "top": 0.3964,
+        "width": 22.9607,
+        "height": 31.3181
+      },
+      {
+        "left": 0.4028,
+        "top": 34.2914,
+        "width": 22.5579,
+        "height": 31.3181
+      },
+      {
+        "left": 25.7805,
+        "top": 34.2914,
+        "width": 22.5579,
+        "height": 31.3181
+      },
+      {
+        "left": 51.1581,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 65.2131
+      },
+      {
+        "left": 76.6365,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 31.3181
+      },
+      {
+        "left": 0.4028,
+        "top": 68.1863,
+        "width": 22.5579,
+        "height": 31.3181
+      },
+      {
+        "left": 25.7805,
+        "top": 68.1863,
+        "width": 22.5579,
+        "height": 31.3181
+      },
+      {
+        "left": 76.6365,
+        "top": 68.1863,
+        "width": 22.9607,
+        "height": 31.3181
+      }
+    ]
+  ],
+  "master": [
+    {
+      "slotId": 1,
+      "poseIndex": 73,
+      "templateId": 1,
+      "slotIndex": 0,
+      "rect": {
+        "left": 0.503,
+        "top": 0.3964,
+        "width": 22.837,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 2,
+      "poseIndex": 46,
+      "templateId": 1,
+      "slotIndex": 1,
+      "rect": {
+        "left": 25.9557,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 3,
+      "poseIndex": 44,
+      "templateId": 1,
+      "slotIndex": 2,
+      "rect": {
+        "left": 51.3078,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 4,
+      "poseIndex": 16,
+      "templateId": 1,
+      "slotIndex": 3,
+      "rect": {
+        "left": 76.66,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 5,
+      "poseIndex": 22,
+      "templateId": 1,
+      "slotIndex": 4,
+      "rect": {
+        "left": 0.503,
+        "top": 34.2914,
+        "width": 73.7425,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 6,
+      "poseIndex": 38,
+      "templateId": 1,
+      "slotIndex": 5,
+      "rect": {
+        "left": 76.66,
+        "top": 34.2914,
+        "width": 22.9376,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 7,
+      "poseIndex": 71,
+      "templateId": 1,
+      "slotIndex": 6,
+      "rect": {
+        "left": 0.503,
+        "top": 68.1863,
+        "width": 22.9376,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 8,
+      "poseIndex": 30,
+      "templateId": 1,
+      "slotIndex": 7,
+      "rect": {
+        "left": 25.4527,
+        "top": 68.1863,
+        "width": 22.9376,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 9,
+      "poseIndex": 26,
+      "templateId": 1,
+      "slotIndex": 8,
+      "rect": {
+        "left": 50.4024,
+        "top": 68.1863,
+        "width": 49.1952,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 10,
+      "poseIndex": 45,
+      "templateId": 2,
+      "slotIndex": 0,
+      "rect": {
+        "left": 0.4028,
+        "top": 0.495,
+        "width": 47.9355,
+        "height": 31.3861
+      }
+    },
+    {
+      "slotId": 11,
+      "poseIndex": 64,
+      "templateId": 2,
+      "slotIndex": 1,
+      "rect": {
+        "left": 51.2588,
+        "top": 0.495,
+        "width": 22.9607,
+        "height": 31.3861
+      }
+    },
+    {
+      "slotId": 12,
+      "poseIndex": 47,
+      "templateId": 2,
+      "slotIndex": 2,
+      "rect": {
+        "left": 76.6365,
+        "top": 0.495,
+        "width": 22.9607,
+        "height": 65.1485
+      }
+    },
+    {
+      "slotId": 13,
+      "poseIndex": 21,
+      "templateId": 2,
+      "slotIndex": 3,
+      "rect": {
+        "left": 0.4028,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 31.2871
+      }
+    },
+    {
+      "slotId": 14,
+      "poseIndex": 14,
+      "templateId": 2,
+      "slotIndex": 4,
+      "rect": {
+        "left": 25.3776,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 44.3564
+      }
+    },
+    {
+      "slotId": 15,
+      "poseIndex": 59,
+      "templateId": 2,
+      "slotIndex": 5,
+      "rect": {
+        "left": 51.2588,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 31.2871
+      }
+    },
+    {
+      "slotId": 16,
+      "poseIndex": 43,
+      "templateId": 2,
+      "slotIndex": 6,
+      "rect": {
+        "left": 0.4028,
+        "top": 68.2178,
+        "width": 22.9607,
+        "height": 31.3861
+      }
+    },
+    {
+      "slotId": 17,
+      "poseIndex": 25,
+      "templateId": 2,
+      "slotIndex": 7,
+      "rect": {
+        "left": 51.2588,
+        "top": 68.2178,
+        "width": 48.3384,
+        "height": 31.2871
+      }
+    },
+    {
+      "slotId": 18,
+      "poseIndex": 32,
+      "templateId": 2,
+      "slotIndex": 8,
+      "rect": {
+        "left": 25.3776,
+        "top": 81.1881,
+        "width": 22.9607,
+        "height": 18.4158
+      }
+    },
+    {
+      "slotId": 19,
+      "poseIndex": 68,
+      "templateId": 3,
+      "slotIndex": 0,
+      "rect": {
+        "left": 0.4028,
+        "top": 0.3964,
+        "width": 22.9607,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 20,
+      "poseIndex": 42,
+      "templateId": 3,
+      "slotIndex": 1,
+      "rect": {
+        "left": 25.8812,
+        "top": 0.3964,
+        "width": 22.86,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 21,
+      "poseIndex": 62,
+      "templateId": 3,
+      "slotIndex": 2,
+      "rect": {
+        "left": 51.2588,
+        "top": 0.3964,
+        "width": 48.3384,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 22,
+      "poseIndex": 67,
+      "templateId": 3,
+      "slotIndex": 3,
+      "rect": {
+        "left": 0.4028,
+        "top": 34.2914,
+        "width": 48.3384,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 23,
+      "poseIndex": 20,
+      "templateId": 3,
+      "slotIndex": 4,
+      "rect": {
+        "left": 51.2588,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 65.2131
+      }
+    },
+    {
+      "slotId": 24,
+      "poseIndex": 35,
+      "templateId": 3,
+      "slotIndex": 5,
+      "rect": {
+        "left": 76.6365,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 25,
+      "poseIndex": 55,
+      "templateId": 3,
+      "slotIndex": 6,
+      "rect": {
+        "left": 0.4028,
+        "top": 68.1863,
+        "width": 22.9607,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 26,
+      "poseIndex": 41,
+      "templateId": 3,
+      "slotIndex": 7,
+      "rect": {
+        "left": 25.3776,
+        "top": 68.1863,
+        "width": 22.9607,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 27,
+      "poseIndex": 58,
+      "templateId": 3,
+      "slotIndex": 8,
+      "rect": {
+        "left": 76.6365,
+        "top": 68.1863,
+        "width": 22.9607,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 28,
+      "poseIndex": 28,
+      "templateId": 4,
+      "slotIndex": 0,
+      "rect": {
+        "left": 0.4028,
+        "top": 0.495,
+        "width": 47.9355,
+        "height": 31.3861
+      }
+    },
+    {
+      "slotId": 29,
+      "poseIndex": 7,
+      "templateId": 4,
+      "slotIndex": 1,
+      "rect": {
+        "left": 51.2588,
+        "top": 0.495,
+        "width": 22.9607,
+        "height": 31.3861
+      }
+    },
+    {
+      "slotId": 30,
+      "poseIndex": 37,
+      "templateId": 4,
+      "slotIndex": 2,
+      "rect": {
+        "left": 76.6365,
+        "top": 0.495,
+        "width": 22.9607,
+        "height": 65.1485
+      }
+    },
+    {
+      "slotId": 31,
+      "poseIndex": 69,
+      "templateId": 4,
+      "slotIndex": 3,
+      "rect": {
+        "left": 0.4028,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 31.2871
+      }
+    },
+    {
+      "slotId": 32,
+      "poseIndex": 50,
+      "templateId": 4,
+      "slotIndex": 4,
+      "rect": {
+        "left": 25.3776,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 44.3564
+      }
+    },
+    {
+      "slotId": 33,
+      "poseIndex": 60,
+      "templateId": 4,
+      "slotIndex": 5,
+      "rect": {
+        "left": 51.2588,
+        "top": 34.3564,
+        "width": 22.9607,
+        "height": 31.2871
+      }
+    },
+    {
+      "slotId": 34,
+      "poseIndex": 36,
+      "templateId": 4,
+      "slotIndex": 6,
+      "rect": {
+        "left": 0.4028,
+        "top": 68.2178,
+        "width": 22.9607,
+        "height": 31.3861
+      }
+    },
+    {
+      "slotId": 35,
+      "poseIndex": 72,
+      "templateId": 4,
+      "slotIndex": 7,
+      "rect": {
+        "left": 51.2588,
+        "top": 68.2178,
+        "width": 48.3384,
+        "height": 31.2871
+      }
+    },
+    {
+      "slotId": 36,
+      "poseIndex": 29,
+      "templateId": 4,
+      "slotIndex": 8,
+      "rect": {
+        "left": 25.3776,
+        "top": 81.1881,
+        "width": 22.9607,
+        "height": 18.4158
+      }
+    },
+    {
+      "slotId": 37,
+      "poseIndex": 65,
+      "templateId": 5,
+      "slotIndex": 0,
+      "rect": {
+        "left": 0.503,
+        "top": 0.3964,
+        "width": 22.837,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 38,
+      "poseIndex": 48,
+      "templateId": 5,
+      "slotIndex": 1,
+      "rect": {
+        "left": 25.9557,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 39,
+      "poseIndex": 23,
+      "templateId": 5,
+      "slotIndex": 2,
+      "rect": {
+        "left": 51.3078,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 40,
+      "poseIndex": 31,
+      "templateId": 5,
+      "slotIndex": 3,
+      "rect": {
+        "left": 76.66,
+        "top": 0.3964,
+        "width": 22.9376,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 41,
+      "poseIndex": 63,
+      "templateId": 5,
+      "slotIndex": 4,
+      "rect": {
+        "left": 0.503,
+        "top": 34.2914,
+        "width": 73.7425,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 42,
+      "poseIndex": 40,
+      "templateId": 5,
+      "slotIndex": 5,
+      "rect": {
+        "left": 76.66,
+        "top": 34.2914,
+        "width": 22.9376,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 43,
+      "poseIndex": 56,
+      "templateId": 5,
+      "slotIndex": 6,
+      "rect": {
+        "left": 0.503,
+        "top": 68.1863,
+        "width": 22.9376,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 44,
+      "poseIndex": 61,
+      "templateId": 5,
+      "slotIndex": 7,
+      "rect": {
+        "left": 25.4527,
+        "top": 68.1863,
+        "width": 22.9376,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 45,
+      "poseIndex": 33,
+      "templateId": 5,
+      "slotIndex": 8,
+      "rect": {
+        "left": 50.4024,
+        "top": 68.1863,
+        "width": 49.1952,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 46,
+      "poseIndex": 49,
+      "templateId": 6,
+      "slotIndex": 0,
+      "rect": {
+        "left": 0.502,
+        "top": 0.3964,
+        "width": 22.8916,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 47,
+      "poseIndex": 66,
+      "templateId": 6,
+      "slotIndex": 1,
+      "rect": {
+        "left": 25.9036,
+        "top": 0.3964,
+        "width": 22.7912,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 48,
+      "poseIndex": 34,
+      "templateId": 6,
+      "slotIndex": 2,
+      "rect": {
+        "left": 51.3052,
+        "top": 0.3964,
+        "width": 48.0924,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 49,
+      "poseIndex": 57,
+      "templateId": 6,
+      "slotIndex": 3,
+      "rect": {
+        "left": 0.502,
+        "top": 34.2914,
+        "width": 22.7912,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 50,
+      "poseIndex": 39,
+      "templateId": 6,
+      "slotIndex": 4,
+      "rect": {
+        "left": 25.9036,
+        "top": 34.2914,
+        "width": 22.7912,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 51,
+      "poseIndex": 70,
+      "templateId": 6,
+      "slotIndex": 5,
+      "rect": {
+        "left": 51.3052,
+        "top": 34.2914,
+        "width": 22.8916,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 52,
+      "poseIndex": 13,
+      "templateId": 6,
+      "slotIndex": 6,
+      "rect": {
+        "left": 76.7068,
+        "top": 34.2914,
+        "width": 22.8916,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 53,
+      "poseIndex": 27,
+      "templateId": 6,
+      "slotIndex": 7,
+      "rect": {
+        "left": 0.502,
+        "top": 68.1863,
+        "width": 22.8916,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 54,
+      "poseIndex": 51,
+      "templateId": 6,
+      "slotIndex": 8,
+      "rect": {
+        "left": 25.9036,
+        "top": 68.1863,
+        "width": 48.2932,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 55,
+      "poseIndex": 74,
+      "templateId": 6,
+      "slotIndex": 9,
+      "rect": {
+        "left": 76.7068,
+        "top": 68.1863,
+        "width": 22.8916,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 56,
+      "poseIndex": 1,
+      "templateId": 7,
+      "slotIndex": 0,
+      "rect": {
+        "left": 0.4028,
+        "top": 0.3964,
+        "width": 47.9355,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 57,
+      "poseIndex": 53,
+      "templateId": 7,
+      "slotIndex": 1,
+      "rect": {
+        "left": 51.2588,
+        "top": 0.3964,
+        "width": 22.9607,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 58,
+      "poseIndex": 24,
+      "templateId": 7,
+      "slotIndex": 2,
+      "rect": {
+        "left": 76.6365,
+        "top": 0.3964,
+        "width": 22.9607,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 59,
+      "poseIndex": 9,
+      "templateId": 7,
+      "slotIndex": 3,
+      "rect": {
+        "left": 0.4028,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 60,
+      "poseIndex": 54,
+      "templateId": 7,
+      "slotIndex": 4,
+      "rect": {
+        "left": 25.3776,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 44.4004
+      }
+    },
+    {
+      "slotId": 61,
+      "poseIndex": 17,
+      "templateId": 7,
+      "slotIndex": 5,
+      "rect": {
+        "left": 51.2588,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 62,
+      "poseIndex": 52,
+      "templateId": 7,
+      "slotIndex": 6,
+      "rect": {
+        "left": 76.6365,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 63,
+      "poseIndex": 10,
+      "templateId": 7,
+      "slotIndex": 7,
+      "rect": {
+        "left": 0.4028,
+        "top": 68.1863,
+        "width": 22.9607,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 64,
+      "poseIndex": 15,
+      "templateId": 7,
+      "slotIndex": 8,
+      "rect": {
+        "left": 51.2588,
+        "top": 68.1863,
+        "width": 48.3384,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 65,
+      "poseIndex": 2,
+      "templateId": 7,
+      "slotIndex": 9,
+      "rect": {
+        "left": 25.3776,
+        "top": 81.1695,
+        "width": 22.9607,
+        "height": 18.4341
+      }
+    },
+    {
+      "slotId": 66,
+      "poseIndex": 0,
+      "templateId": 8,
+      "slotIndex": 0,
+      "rect": {
+        "left": 0.4028,
+        "top": 0.3964,
+        "width": 47.9355,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 67,
+      "poseIndex": 5,
+      "templateId": 8,
+      "slotIndex": 1,
+      "rect": {
+        "left": 51.2588,
+        "top": 0.3964,
+        "width": 22.9607,
+        "height": 31.4172
+      }
+    },
+    {
+      "slotId": 68,
+      "poseIndex": 12,
+      "templateId": 8,
+      "slotIndex": 2,
+      "rect": {
+        "left": 76.6365,
+        "top": 0.3964,
+        "width": 22.9607,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 69,
+      "poseIndex": 4,
+      "templateId": 8,
+      "slotIndex": 3,
+      "rect": {
+        "left": 0.4028,
+        "top": 34.2914,
+        "width": 22.5579,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 70,
+      "poseIndex": 6,
+      "templateId": 8,
+      "slotIndex": 4,
+      "rect": {
+        "left": 25.7805,
+        "top": 34.2914,
+        "width": 22.5579,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 71,
+      "poseIndex": 11,
+      "templateId": 8,
+      "slotIndex": 5,
+      "rect": {
+        "left": 51.1581,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 65.2131
+      }
+    },
+    {
+      "slotId": 72,
+      "poseIndex": 19,
+      "templateId": 8,
+      "slotIndex": 6,
+      "rect": {
+        "left": 76.6365,
+        "top": 34.2914,
+        "width": 22.9607,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 73,
+      "poseIndex": 3,
+      "templateId": 8,
+      "slotIndex": 7,
+      "rect": {
+        "left": 0.4028,
+        "top": 68.1863,
+        "width": 22.5579,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 74,
+      "poseIndex": 18,
+      "templateId": 8,
+      "slotIndex": 8,
+      "rect": {
+        "left": 25.7805,
+        "top": 68.1863,
+        "width": 22.5579,
+        "height": 31.3181
+      }
+    },
+    {
+      "slotId": 75,
+      "poseIndex": 8,
+      "templateId": 8,
+      "slotIndex": 9,
+      "rect": {
+        "left": 76.6365,
+        "top": 68.1863,
+        "width": 22.9607,
+        "height": 31.3181
+      }
+    }
+  ]
+}

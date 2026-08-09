@@ -15,3 +15,7 @@ export type GenerationType = 'hero' | 'campaign' | 'editorial';
 export type CreditAction = keyof typeof StudioCreditRules;
 
 export type ImageCount = 1 | 2 | 4;
+
+/** Custom Campaign — variable batch size (Phase 3). */
+export const CUSTOM_CAMPAIGN_MIN = 4;
+export const CUSTOM_CAMPAIGN_MAX = 20;

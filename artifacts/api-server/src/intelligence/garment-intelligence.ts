@@ -324,10 +324,32 @@ export function buildGarmentConsistencyRules(): string {
   ].join(" ");
 }
 
+function formatDetectedGarmentColours(profile: GarmentProfile): string {
+  const colours = profile.colour.filter(Boolean);
+  if (colours.length === 0) return "the exact colours shown in Reference Image 1";
+  return colours.join(" and ");
+}
+
+/**
+ * Profile-specific colour identity lock — uses garment intelligence output.
+ * Prevents the model from reinterpreting detected colours into adjacent families.
+ */
+export function buildGarmentColourIdentityPrompt(profile: GarmentProfile): string {
+  const detected = formatDetectedGarmentColours(profile);
+  return [
+    "GARMENT COLOUR IDENTITY — hard lock (non-negotiable):",
+    `The uploaded garment's colour identity is ${detected}. Treat this as a fixed product attribute — not a stylistic suggestion.`,
+    "Reproduce this exact colour in every image. Natural lighting shadows and highlights may vary; perceptible hue, value, or saturation shifts that change how the colour reads are forbidden.",
+    "Do NOT reinterpret named colours into adjacent palette families — e.g. ivory must stay ivory (not white, cream, beige, or grey); navy must stay navy (not black or royal blue); burgundy must stay burgundy (not red or brown).",
+    "Preserve material finish, texture, print/pattern registration, and construction alongside colour — only pose, camera, and neutral studio lighting may change.",
+  ].join(" ");
+}
+
 /** Combined garment intelligence prompt block for Prompt Composer. */
 export function buildGarmentIntelligencePrompt(profile: GarmentProfile): string {
   return [
     buildGarmentPreservationPrompt(profile),
+    buildGarmentColourIdentityPrompt(profile),
     buildFabricBehaviourRules(profile),
     buildGarmentConsistencyRules(),
   ].join(" ");

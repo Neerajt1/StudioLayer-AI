@@ -27,6 +27,12 @@ PRESERVE ORIGINAL GARMENT COLOURS EXACTLY:
 Preserve the uploaded garment's colours exactly as shown in Reference Image 1.
 Never alter primary colours, secondary colours, accent colours, colour saturation, colour temperature, or colour balance.
 The generated garment must visually match the uploaded garment — hue, saturation, and brightness faithful to the source.
+Treat garment colour as a hard product identity attribute: do not reinterpret ivory as white/cream/beige/grey, navy as black, or similar palette substitutions.
+
+GARMENT COLOUR IDENTITY — NO REINTERPRETATION:
+The garment's detected colour from Reference Image 1 is fixed across every pose, lighting setup, and camera angle in this batch.
+Natural shadow and highlight variation is acceptable; perceptible hue/value/saturation changes that alter the garment's colour identity are not.
+Preserve prints, patterns, material finish, and construction together with colour — never recolour, desaturate, or lighten/darken the garment to match background or mood.
 
 PRESERVE SURFACE DETAILS WITHOUT DISTORTION:
 Accurately preserve all prints, patterns, stripes, checks, florals, logos, embroidery, graphics, text, labels, trims, decorative stitching, and surface textures.

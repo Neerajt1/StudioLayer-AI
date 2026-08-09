@@ -6,7 +6,6 @@
 // ---------------------------------------------------------------------------
 
 import { POSE_NAMES, HERO_COLLECTION, CAMPAIGN_COLLECTION, EDITORIAL_COLLECTION } from "../src/intelligence/pose-library.ts";
-import { POSE_EXPANSION_NAMES } from "../src/intelligence/pose-library-expansion.ts";
 import { planPosesForShoot } from "../src/intelligence/pose-planner.ts";
 import type { GarmentProfile } from "../src/intelligence/types.ts";
 import type { RecentPoseSelection } from "../src/intelligence/pose-selection-types.ts";
@@ -37,18 +36,17 @@ function simulateEditorialWithHistory(
     seed,
   });
   const hairFamilyCount = plan.poses.filter((p) => p.family === "hair_face_interaction").length;
-  const hairTouchCount = plan.poses.filter((p) => p.name === "Hair Touch Editorial").length;
+  const hairTouchCount = plan.poses.filter((p) => p.name === "Portrait — Hair Frame").length;
   console.log(`\n--- ${label} (seed=${seed}) ---`);
   console.log("Poses:", plan.poses.map((p) => `${p.name} [${p.family}]`).join(" | "));
   console.log("Hair/face family in batch:", hairFamilyCount);
-  console.log("Hair Touch Editorial count:", hairTouchCount);
+  console.log("Portrait — Hair Frame count:", hairTouchCount);
   console.log("Plan notes:", plan.planNotes.join("; "));
   return { plan, hairTouchCount, hairFamilyCount };
 }
 
 console.log("=== Pose Intelligence Phase 2 Simulation ===");
 console.log("Total canonical poses:", POSE_NAMES.length);
-console.log("Expansion poses:", POSE_EXPANSION_NAMES.length);
 console.log("Hero collection:", HERO_COLLECTION.length);
 console.log("Campaign collection:", CAMPAIGN_COLLECTION.length);
 console.log("Editorial collection:", EDITORIAL_COLLECTION.length);
@@ -59,7 +57,7 @@ const baseline = simulateEditorialWithHistory("Editorial baseline (no history)",
 // Same garment — prior campaign used Hair Touch + Magazine Cover
 const priorHistory: RecentPoseSelection[] = [
   {
-    poseName: "Hair Touch Editorial",
+    poseName: "Portrait — Hair Frame",
     shootType: "editorial",
     profileKey: "one-pieces:evening gown",
     poseFamily: "hair_face_interaction",

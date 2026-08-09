@@ -1,4 +1,6 @@
 import {
+  CUSTOM_CAMPAIGN_MAX,
+  CUSTOM_CAMPAIGN_MIN,
   StudioCreditRules,
   type GenerationType,
   type ImageCount,
@@ -20,6 +22,50 @@ export function creditCostForGenerationType(generationType: GenerationType): num
 
 export function creditCostForImageCount(imageCount: ImageCount): number {
   return creditCostForGenerationType(imageCountToGenerationType(imageCount));
+}
+
+/** Per-image Campaign cost — derived from the existing 2-image Campaign price. */
+export function campaignCreditCostPerImage(): number {
+  return StudioCreditRules.campaign / 2;
+}
+
+export function isValidCustomCampaignImageCount(imageCount: number): boolean {
+  return (
+    Number.isInteger(imageCount)
+    && imageCount >= CUSTOM_CAMPAIGN_MIN
+    && imageCount <= CUSTOM_CAMPAIGN_MAX
+  );
+}
+
+/** Total Studio Credits for a Custom Campaign batch. */
+export function creditCostForCustomCampaign(imageCount: number): number {
+  return campaignCreditCostPerImage() * imageCount;
+}
+
+export function resolveGenerationCreditCost(input: {
+  imageCount: number;
+  customCampaign?: boolean;
+  isRefinement?: boolean;
+  isRegenerate?: boolean;
+}): number {
+  if (input.isRegenerate || input.isRefinement) return creditCostForRefine();
+  if (input.customCampaign) return creditCostForCustomCampaign(input.imageCount);
+  return creditCostForImageCount(input.imageCount as ImageCount);
+}
+
+/** Per-image credit cost within a generation batch (partial-success billing). */
+export function creditCostPerCompletedImageInBatch(input: {
+  imageCount: number;
+  customCampaign?: boolean;
+  isRefinement?: boolean;
+}): number {
+  if (input.isRefinement) return creditCostForRefine();
+  const total = resolveGenerationCreditCost({
+    imageCount: input.imageCount,
+    customCampaign: input.customCampaign,
+    isRefinement: false,
+  });
+  return total / input.imageCount;
 }
 
 export function creditCostForRefine(): number {

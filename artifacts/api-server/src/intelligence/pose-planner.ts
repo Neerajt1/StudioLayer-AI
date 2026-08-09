@@ -26,6 +26,12 @@ import {
   type ModelGender,
 } from "./pose-garment-utils";
 import type { RecentPoseSelection } from "./pose-selection-types";
+import {
+  ADJACENT_POSE_BUCKETS,
+  getPrimaryPoseBucket,
+  POSE_BUCKET_LABELS,
+  type PoseBucketId,
+} from "./pose-buckets";
 
 export const POSE_PLANNER_TUNING = {
   /** Strong penalty when exact pose used recently for same garment profile */
@@ -290,7 +296,7 @@ function resolvePocketPose(
 ): PoseDefinition {
   if (!pose.requiresPockets || hasPockets) return pose;
   const altName = POCKET_ALTERNATIVE_POSES[alternativeIndex % POCKET_ALTERNATIVE_POSES.length]!;
-  return getPoseDefinition(altName) ?? getPoseDefinition("Hip Rest Pose")!;
+  return getPoseDefinition(altName) ?? getPoseDefinition("Hip Shift")!;
 }
 
 /**
@@ -337,8 +343,8 @@ export function planPosesForShoot(ctx: PosePlannerContext): PosePlanResult {
   }
 
   if (compatible.length === 0) {
-    planNotes.push("No compatible poses — Relaxed Standing fallback");
-    const fallback = getPoseDefinition("Relaxed Standing")!;
+    planNotes.push("No compatible poses — Relaxed Front fallback");
+    const fallback = getPoseDefinition("Relaxed Front")!;
     return {
       poses: Array.from({ length: count }, () => ({
         name: fallback.name,
@@ -405,7 +411,7 @@ export function planPosesForShoot(ctx: PosePlannerContext): PosePlanResult {
   }
 
   while (selected.length < count) {
-    const fallback = getPoseDefinition("Relaxed Standing");
+    const fallback = getPoseDefinition("Relaxed Front");
     if (fallback && !selected.some((s) => s.name === fallback.name)) {
       selected.push(fallback);
     } else {
@@ -425,6 +431,194 @@ export function planPosesForShoot(ctx: PosePlannerContext): PosePlanResult {
   if (uniqueClusters > 0) {
     planNotes.push(`Batch visual cluster diversity: ${uniqueClusters} distinct cluster(s)`);
   }
+
+  return {
+    poses: selected.slice(0, count).map((p) => ({
+      name: p.name,
+      family: p.poseFamily,
+      selectionClass: p.selectionClass,
+    })),
+    planNotes,
+  };
+}
+
+function filterPosesForBucket(
+  pool: PoseDefinition[],
+  bucket: PoseBucketId,
+): PoseDefinition[] {
+  return pool.filter((pose) => getPrimaryPoseBucket(pose.name) === bucket);
+}
+
+function resolveBucketPool(
+  compatible: PoseDefinition[],
+  bucket: PoseBucketId,
+  planNotes: string[],
+): { pool: PoseDefinition[]; resolvedBucket: PoseBucketId } {
+  let pool = filterPosesForBucket(compatible, bucket);
+  if (pool.length > 0) return { pool, resolvedBucket: bucket };
+
+  for (const adjacent of ADJACENT_POSE_BUCKETS[bucket]) {
+    pool = filterPosesForBucket(compatible, adjacent);
+    if (pool.length > 0) {
+      planNotes.push(
+        `Bucket fallback: ${POSE_BUCKET_LABELS[bucket]} → ${POSE_BUCKET_LABELS[adjacent]} (no eligible poses)`,
+      );
+      return { pool, resolvedBucket: adjacent };
+    }
+  }
+
+  planNotes.push(`Bucket fallback: ${POSE_BUCKET_LABELS[bucket]} → open pool (no adjacent eligible poses)`);
+  return { pool: compatible, resolvedBucket: bucket };
+}
+
+/**
+ * Plan N poses using explicit bucket slots — reuses Phase 2 planner intelligence
+ * for weighted selection, family caps, and same-garment memory.
+ */
+export function planPosesWithBucketSlots(
+  ctx: PosePlannerContext,
+  bucketSlots: PoseBucketId[],
+): PosePlanResult {
+  const {
+    profile,
+    shootType,
+    count,
+    modelGender,
+    usedPoses = [],
+    recentPoseSelections = [],
+    seed,
+  } = ctx;
+
+  const planNotes: string[] = [
+    `Campaign composition: ${bucketSlots.length} bucket slot(s) for N=${count}`,
+  ];
+  const gender = resolveModelGender(modelGender, profile.gender);
+  const garmentTags = inferGarmentTags(profile);
+  const hasPockets = garmentHasUsablePockets(profile);
+  const profileKey = buildPoseProfileKey(profile);
+  const sessionUsed = new Set(usedPoses.map((p) => p.toLowerCase()));
+  const rng = createRng(seed ?? Date.now());
+  const familyCap = maxFamilyOccurrences(count, shootType);
+  const visualClusterCap = maxVisualClusterOccurrences(count, shootType);
+
+  let compatible = filterCompatiblePoses(getPosesInCollection(shootType), {
+    gender,
+    profile,
+    garmentTags,
+    hasPockets,
+    usedPoses: sessionUsed,
+  }).filter((pose) => exposureEligible(pose, shootType));
+
+  if (compatible.length < count) {
+    compatible = filterCompatiblePoses(getPosesInCollection(shootType), {
+      gender,
+      profile,
+      garmentTags,
+      hasPockets,
+      usedPoses: sessionUsed,
+    });
+    planNotes.push("Exposure band relaxed — insufficient eligible poses");
+  }
+
+  if (compatible.length === 0) {
+    planNotes.push("No compatible poses — Relaxed Front fallback");
+    const fallback = getPoseDefinition("Relaxed Front")!;
+    return {
+      poses: Array.from({ length: count }, () => ({
+        name: fallback.name,
+        family: fallback.poseFamily,
+        selectionClass: fallback.selectionClass,
+      })),
+      planNotes,
+    };
+  }
+
+  const selected: PoseDefinition[] = [];
+  const familyCounts = new Map<PoseFamily, number>();
+  const visualClusterCounts = new Map<string, number>();
+  let highRiskSelected = 0;
+  let pocketAltIndex = 0;
+
+  for (let slot = 0; slot < bucketSlots.length && slot < count; slot++) {
+    const targetBucket = bucketSlots[slot]!;
+    const { pool: bucketPool } = resolveBucketPool(compatible, targetBucket, planNotes);
+
+    const weightCtx = {
+      garmentTags,
+      shootType,
+      profileKey,
+      selectedInBatch: selected,
+      recentPoseSelections,
+      familyCountsInBatch: familyCounts,
+      highRiskSelected,
+    };
+
+    const pool = bucketPool.filter((pose) => {
+      if (selected.some((s) => s.name === pose.name)) return false;
+      const familyCount = familyCounts.get(pose.poseFamily) ?? 0;
+      if (familyCount >= familyCap) return false;
+      if (pose.visualCluster) {
+        const clusterCount = visualClusterCounts.get(pose.visualCluster) ?? 0;
+        if (clusterCount >= visualClusterCap) return false;
+      }
+      if (
+        pose.selectionClass === "high_repetition_risk" &&
+        highRiskSelected >= POSE_PLANNER_TUNING.highRiskBatchCap[shootType]
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    const pickPool = pool.length > 0
+      ? pool
+      : compatible.filter((pose) => !selected.some((s) => s.name === pose.name));
+
+    const pick = weightedSelectOne(pickPool, (pose) => computePlannerWeight(pose, weightCtx), rng);
+    if (!pick) break;
+
+    let resolved = resolvePocketPose(pick, hasPockets, pocketAltIndex);
+    if (pick.requiresPockets && !hasPockets) pocketAltIndex += 1;
+
+    selected.push(resolved);
+    familyCounts.set(resolved.poseFamily, (familyCounts.get(resolved.poseFamily) ?? 0) + 1);
+    if (resolved.visualCluster) {
+      visualClusterCounts.set(
+        resolved.visualCluster,
+        (visualClusterCounts.get(resolved.visualCluster) ?? 0) + 1,
+      );
+    }
+    if (resolved.selectionClass === "high_repetition_risk") highRiskSelected += 1;
+
+    planNotes.push(
+      `Slot ${slot + 1}: ${POSE_BUCKET_LABELS[targetBucket]} → ${resolved.name}`,
+    );
+  }
+
+  while (selected.length < count) {
+    const fallback = getPoseDefinition("Relaxed Front");
+    if (fallback && !selected.some((s) => s.name === fallback.name)) {
+      selected.push(fallback);
+    } else {
+      break;
+    }
+  }
+
+  if (recentPoseSelections.length > 0) {
+    planNotes.push(`Same-garment history: ${recentPoseSelections.length} prior selection(s) applied`);
+  }
+  planNotes.push(`Family cap per batch: ${familyCap} (N=${count}, ${shootType})`);
+  planNotes.push(`Visual cluster cap per batch: ${visualClusterCap}`);
+
+  const bucketDistribution = bucketSlots.reduce<Record<string, number>>((acc, bucket) => {
+    acc[bucket] = (acc[bucket] ?? 0) + 1;
+    return acc;
+  }, {});
+  planNotes.push(
+    `Bucket recipe: ${Object.entries(bucketDistribution)
+      .map(([bucket, qty]) => `${POSE_BUCKET_LABELS[bucket as PoseBucketId]}=${qty}`)
+      .join(", ")}`,
+  );
 
   return {
     poses: selected.slice(0, count).map((p) => ({

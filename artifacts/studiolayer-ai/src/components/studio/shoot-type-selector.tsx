@@ -12,6 +12,7 @@ interface ShootTypeOption {
 interface ShootTypeSelectorProps {
   options: readonly ShootTypeOption[];
   imageCount: ImageCount;
+  customCampaignActive?: boolean;
   isPremiumLocked: (value: ImageCount) => boolean;
   disabled: boolean;
   onSelect: (value: ImageCount) => void;
@@ -20,6 +21,7 @@ interface ShootTypeSelectorProps {
 export function ShootTypeSelector({
   options,
   imageCount,
+  customCampaignActive = false,
   isPremiumLocked,
   disabled,
   onSelect,
@@ -50,7 +52,7 @@ export function ShootTypeSelector({
   return (
     <div className="sl-shoot-type-grid grid grid-cols-3 gap-2 items-stretch">
       {options.map((opt) => {
-        const isSelected = imageCount === opt.value;
+        const isSelected = !customCampaignActive && imageCount === opt.value;
         const premiumLocked = isPremiumLocked(opt.value);
         const hintVisible = activeHint === opt.value;
 

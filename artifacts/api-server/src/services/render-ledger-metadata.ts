@@ -1,4 +1,5 @@
 import {
+  creditCostForCustomCampaign,
   creditCostForGenerationType,
   imageCountToGenerationType,
   type GenerationType,
@@ -23,7 +24,8 @@ export interface RenderLedgerMetadata {
 export function resolveRenderLedgerMetadata(
   parentRenderId: number | null | undefined,
   parentMetadata: RenderLedgerMetadata | null,
-  imageCount: ImageCount,
+  imageCount: number,
+  options?: { customCampaign?: boolean },
 ): RenderLedgerMetadata {
   if (parentRenderId != null && parentMetadata) {
     return {
@@ -33,7 +35,15 @@ export function resolveRenderLedgerMetadata(
     };
   }
 
-  const generationType = imageCountToGenerationType(imageCount);
+  if (options?.customCampaign) {
+    return {
+      generationType: "campaign",
+      studioCreditsUsed: creditCostForCustomCampaign(imageCount),
+      refinementCount: 0,
+    };
+  }
+
+  const generationType = imageCountToGenerationType(imageCount as ImageCount);
   return {
     generationType,
     studioCreditsUsed: creditCostForGenerationType(generationType),

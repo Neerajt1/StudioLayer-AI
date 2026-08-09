@@ -20,6 +20,7 @@ import {
 import { Wand2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { GalleryImageDownloadButton } from '@/components/shared/gallery-image-download-button';
+import { FixedBatchViewport } from '@/components/shared/fixed-batch-viewport';
 import {
   formatShootDate,
   SHOOT_TYPE_LABEL,
@@ -82,6 +83,83 @@ export function ShootDetailDialog({
   if (!shoot) {
     return null;
   }
+
+  const renderDetailCell = (index: number) => {
+    const render = displayImages[index];
+    if (!render) return null;
+
+    const isExiting = exitingIds.has(render.id);
+    const isDeleting = deletingId === render.id;
+    const imageUrl = getDisplayUrl?.(render) ?? render.outputImageUrl;
+
+    return (
+      <div
+        key={render.id}
+        className={cn(
+          'sl-shoot-detail-cell',
+          isExiting && 'sl-shoot-detail-cell--exit',
+        )}
+      >
+        <button
+          type="button"
+          className="sl-shoot-detail-image-trigger"
+          onClick={() => onInspect(render)}
+          aria-label={`Inspect image ${index + 1}`}
+          disabled={deleteInFlight}
+        >
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={`Image ${index + 1}`}
+              className="sl-shoot-detail-image"
+              draggable={false}
+            />
+          ) : null}
+        </button>
+        <div className="sl-shoot-detail-actions" aria-label={`Image ${index + 1} actions`}>
+          <button
+            type="button"
+            className="sl-ledger-card-action"
+            disabled={deleteInFlight}
+            onClick={() => onInspect(render)}
+          >
+            View
+          </button>
+          <button
+            type="button"
+            className="sl-ledger-card-action sl-shoot-detail-refine"
+            disabled={deleteInFlight || !render.outputImageUrl}
+            onClick={() => onEdit(render)}
+          >
+            <Wand2 className="size-3 shrink-0 opacity-70" aria-hidden />
+            Edit
+          </button>
+          <GalleryImageDownloadButton
+            renderId={render.id}
+            outputImageUrl={imageUrl ?? render.outputImageUrl!}
+            disabled={!imageUrl || deleteInFlight}
+            onDownloadError={onDownloadError}
+          />
+          <button
+            type="button"
+            className="sl-ledger-card-action sl-ledger-card-action--delete sl-shoot-detail-delete"
+            disabled={deleteInFlight}
+            aria-busy={isDeleting || undefined}
+            onClick={() => setPendingDelete(render)}
+          >
+            {isDeleting ? (
+              <>
+                <Spinner className="sl-shoot-detail-delete-spinner" />
+                Deleting…
+              </>
+            ) : (
+              'Delete'
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   const handleDownloadAll = () => {
     void runDownloadAll(async () => {
@@ -186,80 +264,12 @@ export function ShootDetailDialog({
             </dl>
           </DialogHeader>
 
-          <div className="sl-shoot-detail-grid">
-            {displayImages.map((render, index) => {
-              const isExiting = exitingIds.has(render.id);
-              const isDeleting = deletingId === render.id;
-              const imageUrl = getDisplayUrl?.(render) ?? render.outputImageUrl;
-
-              return (
-                <div
-                  key={render.id}
-                  className={cn(
-                    'sl-shoot-detail-cell',
-                    isExiting && 'sl-shoot-detail-cell--exit',
-                  )}
-                >
-                  <button
-                    type="button"
-                    className="sl-shoot-detail-image-trigger"
-                    onClick={() => onInspect(render)}
-                    aria-label={`Inspect image ${index + 1}`}
-                    disabled={deleteInFlight}
-                  >
-                    {imageUrl ? (
-                      <img
-                        src={imageUrl}
-                        alt={`Image ${index + 1}`}
-                        className="sl-shoot-detail-image"
-                        draggable={false}
-                      />
-                    ) : null}
-                  </button>
-                  <div className="sl-shoot-detail-actions" aria-label={`Image ${index + 1} actions`}>
-                    <button
-                      type="button"
-                      className="sl-ledger-card-action"
-                      disabled={deleteInFlight}
-                      onClick={() => onInspect(render)}
-                    >
-                      View
-                    </button>
-                    <button
-                      type="button"
-                      className="sl-ledger-card-action sl-shoot-detail-refine"
-                      disabled={deleteInFlight || !render.outputImageUrl}
-                      onClick={() => onEdit(render)}
-                    >
-                      <Wand2 className="size-3 shrink-0 opacity-70" aria-hidden />
-                      Edit
-                    </button>
-                    <GalleryImageDownloadButton
-                      renderId={render.id}
-                      outputImageUrl={imageUrl ?? render.outputImageUrl!}
-                      disabled={!imageUrl || deleteInFlight}
-                      onDownloadError={onDownloadError}
-                    />
-                    <button
-                      type="button"
-                      className="sl-ledger-card-action sl-ledger-card-action--delete sl-shoot-detail-delete"
-                      disabled={deleteInFlight}
-                      aria-busy={isDeleting || undefined}
-                      onClick={() => setPendingDelete(render)}
-                    >
-                      {isDeleting ? (
-                        <>
-                          <Spinner className="sl-shoot-detail-delete-spinner" />
-                          Deleting…
-                        </>
-                      ) : (
-                        'Delete'
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="sl-shoot-detail-body">
+            <FixedBatchViewport
+              totalCount={displayImages.length}
+              gridClassName="sl-shoot-detail-grid"
+              renderCell={(index) => renderDetailCell(index)}
+            />
           </div>
         </DialogContent>
       </Dialog>

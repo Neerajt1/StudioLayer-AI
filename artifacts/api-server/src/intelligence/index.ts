@@ -35,10 +35,24 @@ export {
 export type { PoseSelectionContext, ModelGender, RecentPoseSelection } from "./pose-selection-engine";
 export {
   planPosesForShoot,
+  planPosesWithBucketSlots,
   defaultShotCountForShootType,
   POSE_PLANNER_TUNING,
 } from "./pose-planner";
 export type { PosePlannerContext, PlannedPose, PosePlanResult } from "./pose-planner";
+
+export {
+  POSE_BUCKET_LABELS,
+  POSE_BUCKET_MEMBERSHIP,
+  BATCH_RECIPE_COUNTS,
+  BATCH_RECIPE_ANCHORS,
+  resolveBatchRecipeSlots,
+  getPrimaryPoseBucket,
+  getSecondaryPoseBuckets,
+} from "./pose-buckets";
+export type { PoseBucketId, PoseBucketMembership, BucketCountMap } from "./pose-buckets";
+
+export { planCampaignComposition } from "./campaign-composition-planner";
 export {
   isPoseDevLoggingEnabled,
   getPoseCollectionCode,
@@ -56,6 +70,22 @@ export {
   POSE_SELECTION_CLASS_LABELS,
   getPoseIntelligenceMetadata,
 } from "./pose-library";
+
+export {
+  exportPoseLibrarySummary,
+  POSE_CATALOG,
+  POSE_NAME_LIST,
+} from "./pose-library";
+
+export type {
+  PoseBodyState,
+  PosePreferredFraming,
+  PoseEnergy,
+  PoseExpression,
+  PoseProp,
+  PoseCoveragePurpose,
+  PoseVocabularyMetadata,
+} from "./pose-vocabulary-types";
 
 export {
   applyGarmentIntelligence,

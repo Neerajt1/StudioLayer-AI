@@ -198,6 +198,17 @@ function ruleEngineOutfit(
   return { outfit, confidence: best.score, ruleId: best.rule.id };
 }
 
+function accessoryContextShots(
+  shots: number,
+  generationType?: IntelligenceParams["generationType"],
+): 1 | 2 | 4 | 8 {
+  if (generationType === "hero") return 1;
+  if (generationType === "campaign") return 2;
+  if (generationType === "editorial") return 4;
+  if (shots === 1 || shots === 2 || shots === 4 || shots === 8) return shots;
+  return shots >= 4 ? 4 : shots >= 2 ? 2 : 1;
+}
+
 // ---------------------------------------------------------------------------
 // Main export — runIntelligenceAnalysis
 // ---------------------------------------------------------------------------
@@ -220,7 +231,9 @@ export interface IntelligenceParams {
    */
   outfitStyle?: string | null;
   /** Number of images being generated — used for context-aware accessories. */
-  shots?: 1 | 2 | 4 | 8;
+  shots?: number;
+  /** When set, drives accessory context for Custom Campaign batches. */
+  generationType?: "hero" | "campaign" | "editorial";
 }
 
 /**
@@ -245,8 +258,11 @@ export async function runIntelligenceAnalysis(
     modelAgeRange,
     outfitStyle,
     shots = 1,
+    generationType,
     region = "default",
   } = params;
+
+  const accessoryShots = accessoryContextShots(shots, generationType);
 
   const startMs = Date.now();
   let usedHardFallback = false;
@@ -342,7 +358,7 @@ export async function runIntelligenceAnalysis(
   }
 
   // 7b. Context-aware accessories (Batch 3.2) ───────────────────────────────
-  outfit = applyContextAwareAccessories(outfit, profile, modelGender, shots);
+  outfit = applyContextAwareAccessories(outfit, profile, modelGender, accessoryShots);
   recommendation.recommendedOutfit = outfit;
 
   // 8. Compose render prompt ─────────────────────────────────────────────────
@@ -351,7 +367,7 @@ export async function runIntelligenceAnalysis(
     recommendation,
     modelGender,
     modelAgeGroup: modelAgeRange,
-    accessoryGuidance: accessoryPromptGuidance(profile, modelGender, shots),
+    accessoryGuidance: accessoryPromptGuidance(profile, modelGender, accessoryShots),
   });
 
   const durationMs = Date.now() - startMs;

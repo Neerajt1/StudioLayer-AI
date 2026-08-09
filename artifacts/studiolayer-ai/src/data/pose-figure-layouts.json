@@ -1,0 +1,306 @@
+{
+  "version": "5C-O",
+  "generatedAt": "2026-08-09T18:36:06.124Z",
+  "layouts": {
+    "Candid Looking Away": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Floor Cross-Leg": {
+      "objectPosition": "center 90%",
+      "canvasAlignContent": "end"
+    },
+    "Seated Edge — Forward Lean": {
+      "objectPosition": "52% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Wall Lean": {
+      "objectPosition": "44% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Collar Adjustment": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Seated Stool — Cross-Leg": {
+      "objectPosition": "52% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Hair Movement": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Walk Past Camera": {
+      "objectPosition": "center bottom",
+      "canvasAlignContent": "end"
+    },
+    "Shoulder/Strap Adjustment": {
+      "objectPosition": "center 85%",
+      "canvasAlignContent": "end"
+    },
+    "Seated Editorial — Asymmetric": {
+      "objectPosition": "center 82%",
+      "canvasAlignContent": "end"
+    },
+    "Portrait — Neck Touch": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Floor One-Knee Up": {
+      "objectPosition": "center 90%",
+      "canvasAlignContent": "end"
+    },
+    "Sleeve Adjustment": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Diagonal Lean": {
+      "objectPosition": "44% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Portrait — Profile": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Seated Chair — One Leg Extended": {
+      "objectPosition": "52% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Pocket Detail": {
+      "objectPosition": "center 55%",
+      "canvasAlignContent": "center"
+    },
+    "Long Stride": {
+      "objectPosition": "center bottom",
+      "canvasAlignContent": "end"
+    },
+    "Torso Twist": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Seated Chair — Cross-Leg": {
+      "objectPosition": "52% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Portrait — Chin Rest": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Dynamic Lean Back": {
+      "objectPosition": "34% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Jacket Adjustment": {
+      "objectPosition": "center bottom",
+      "canvasAlignContent": "end"
+    },
+    "Step-Up Motion": {
+      "objectPosition": "center bottom",
+      "canvasAlignContent": "end"
+    },
+    "Over-Shoulder Rear": {
+      "objectPosition": "34% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Seated Chair — Three-Quarter": {
+      "objectPosition": "52% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Portrait — Three-Quarter": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Walking Toward Camera": {
+      "objectPosition": "center bottom",
+      "canvasAlignContent": "end"
+    },
+    "Loose Arms Crossed": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Seated Stool — Forward Lean": {
+      "objectPosition": "52% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Shoulder Back / Face Front": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Crouched Editorial": {
+      "objectPosition": "center 90%",
+      "canvasAlignContent": "end"
+    },
+    "Portrait — Over Shoulder": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Seated Stool — Relaxed": {
+      "objectPosition": "52% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Relaxed Laugh / Joy": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Walking Away": {
+      "objectPosition": "center bottom",
+      "canvasAlignContent": "end"
+    },
+    "Portrait — Shoulder Turn": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Floor Side Sit": {
+      "objectPosition": "center 90%",
+      "canvasAlignContent": "end"
+    },
+    "Open Layer Presentation": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Profile Walk": {
+      "objectPosition": "66% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Portrait — Hair Frame": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Seated Stool — One Leg Extended": {
+      "objectPosition": "52% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Back-to-Camera Walking": {
+      "objectPosition": "34% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Portrait — Looking Away": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Mid-Step Pause": {
+      "objectPosition": "center bottom",
+      "canvasAlignContent": "end"
+    },
+    "Low Kneel Editorial": {
+      "objectPosition": "center 90%",
+      "canvasAlignContent": "end"
+    },
+    "Portrait — Expressive Tilt": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Turning While Walking": {
+      "objectPosition": "center bottom",
+      "canvasAlignContent": "end"
+    },
+    "Portrait — Direct": {
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
+    },
+    "Seated Stool — Side Turn": {
+      "objectPosition": "52% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Expressive Side Bend": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Wide Power Stance": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Garment Sweep": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Full Profile": {
+      "objectPosition": "66% bottom",
+      "canvasAlignContent": "end"
+    },
+    "High-Fashion Sculptural": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Classic Three-Quarter": {
+      "objectPosition": "center 85%",
+      "canvasAlignContent": "end"
+    },
+    "Three-Quarter Back": {
+      "objectPosition": "34% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Hem Hold": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Shoulder Turn": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Full Back Presentation": {
+      "objectPosition": "34% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Chair Touch Standing": {
+      "objectPosition": "52% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Profile with Head Turn": {
+      "objectPosition": "66% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Hip Shift": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Cross-Leg Lean": {
+      "objectPosition": "44% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Soft Contrapposto": {
+      "objectPosition": "center 85%",
+      "canvasAlignContent": "end"
+    },
+    "Relaxed Front": {
+      "objectPosition": "center 85%",
+      "canvasAlignContent": "end"
+    },
+    "Hands in Pockets": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Crossed Ankles": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Both Hands at Waist": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "One Hand in Pocket": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Long Leg Extension": {
+      "objectPosition": "center bottom",
+      "canvasAlignContent": "end"
+    },
+    "Sculptural Standing": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Hand on Waist": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Stool Touch Standing": {
+      "objectPosition": "52% bottom",
+      "canvasAlignContent": "end"
+    },
+    "Hands Clasped Low": {
+      "objectPosition": "42% bottom",
+      "canvasAlignContent": "end"
+    }
+  }
+}

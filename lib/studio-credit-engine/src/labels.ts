@@ -1,4 +1,8 @@
-import { creditCostForGenerationType, creditCostForImageCount } from './costs';
+import {
+  creditCostForCustomCampaign,
+  creditCostForGenerationType,
+  creditCostForImageCount,
+} from './costs';
 import type { GenerationType, ImageCount } from './rules';
 
 function pluralCredits(count: number): string {
@@ -8,6 +12,12 @@ function pluralCredits(count: number): string {
 /** Workspace hover label — e.g. "✦ Uses 2 Studio Credits" */
 export function workspaceCreditTooltip(imageCount: ImageCount): string {
   const cost = creditCostForImageCount(imageCount);
+  return `✦ Uses ${cost} ${pluralCredits(cost)}`;
+}
+
+/** Custom Campaign credit label for the stepper control. */
+export function workspaceCreditTooltipForCustomCampaign(imageCount: number): string {
+  const cost = creditCostForCustomCampaign(imageCount);
   return `✦ Uses ${cost} ${pluralCredits(cost)}`;
 }
 
