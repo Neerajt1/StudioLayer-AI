@@ -50,24 +50,25 @@ export function ShootTypeSelector({
   };
 
   return (
-    <div className="sl-shoot-type-grid grid grid-cols-3 gap-2 items-stretch">
+    <div className="sl-shoot-type-grid">
       {options.map((opt) => {
         const isSelected = !customCampaignActive && imageCount === opt.value;
         const premiumLocked = isPremiumLocked(opt.value);
         const hintVisible = activeHint === opt.value;
+        const creditLabel = workspaceCreditTooltip(opt.value);
 
         return (
-          <div key={opt.value} className="relative">
+          <div key={opt.value} className="sl-shoot-type-option-wrap relative">
             {hintVisible && (
               <p
                 className={cn(
-                  'sl-shoot-type-credit-hint',
+                  'sl-shoot-type-credit-hint sl-shoot-type-credit-hint--hover',
                   hintPhase === 'visible' && 'sl-shoot-type-credit-hint--visible',
                   hintPhase === 'exit' && 'sl-shoot-type-credit-hint--exit',
                 )}
                 onTransitionEnd={handleHintTransitionEnd}
               >
-                {workspaceCreditTooltip(opt.value)}
+                {creditLabel}
               </p>
             )}
             <StudioToggleOption
@@ -79,13 +80,13 @@ export function ShootTypeSelector({
               onFocus={() => showHint(opt.value)}
               onBlur={() => hideHint(opt.value)}
               className={cn(
-                'flex h-full min-h-[3.125rem] w-full flex-col items-center justify-center gap-0.5 px-2 py-1.5',
-                premiumLocked && 'opacity-50 cursor-pointer',
+                'sl-shoot-type-option flex h-full w-full flex-col items-center justify-center gap-1 px-2 py-2 sm:min-h-[3.125rem] sm:gap-0.5 sm:py-1.5',
+                premiumLocked && 'cursor-pointer opacity-50',
               )}
             >
               <p
                 className={cn(
-                  'text-[11px] font-semibold leading-none',
+                  'sl-shoot-type-option-label font-semibold leading-tight',
                   isSelected && !premiumLocked ? 'text-inherit' : 'text-muted-foreground',
                 )}
               >
@@ -93,7 +94,7 @@ export function ShootTypeSelector({
               </p>
               <p
                 className={cn(
-                  'text-[9px] font-mono leading-none',
+                  'sl-shoot-type-option-sub font-mono leading-snug',
                   isSelected && !premiumLocked
                     ? 'opacity-75'
                     : 'text-muted-foreground',
@@ -101,6 +102,11 @@ export function ShootTypeSelector({
               >
                 {opt.sub}
               </p>
+              {isSelected && !premiumLocked && (
+                <p className="sl-shoot-type-credit-hint sl-shoot-type-credit-hint--selected">
+                  {creditLabel}
+                </p>
+              )}
             </StudioToggleOption>
           </div>
         );

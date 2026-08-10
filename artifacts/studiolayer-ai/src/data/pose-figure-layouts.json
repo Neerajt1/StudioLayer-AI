@@ -1,9 +1,9 @@
 {
-  "version": "5C-O",
-  "generatedAt": "2026-08-09T18:36:06.124Z",
+  "version": "5C-FINAL",
+  "generatedAt": "2026-08-10T11:51:40.302Z",
   "layouts": {
     "Candid Looking Away": {
-      "objectPosition": "42% bottom",
+      "objectPosition": "center bottom",
       "canvasAlignContent": "end"
     },
     "Floor Cross-Leg": {
@@ -67,15 +67,15 @@
       "canvasAlignContent": "end"
     },
     "Pocket Detail": {
-      "objectPosition": "center 55%",
-      "canvasAlignContent": "center"
+      "objectPosition": "center bottom",
+      "canvasAlignContent": "end"
     },
     "Long Stride": {
       "objectPosition": "center bottom",
       "canvasAlignContent": "end"
     },
     "Torso Twist": {
-      "objectPosition": "42% bottom",
+      "objectPosition": "52% bottom",
       "canvasAlignContent": "end"
     },
     "Seated Chair — Cross-Leg": {
@@ -159,7 +159,7 @@
       "canvasAlignContent": "end"
     },
     "Profile Walk": {
-      "objectPosition": "66% bottom",
+      "objectPosition": "center bottom",
       "canvasAlignContent": "end"
     },
     "Portrait — Hair Frame": {
@@ -171,7 +171,7 @@
       "canvasAlignContent": "end"
     },
     "Back-to-Camera Walking": {
-      "objectPosition": "34% bottom",
+      "objectPosition": "center bottom",
       "canvasAlignContent": "end"
     },
     "Portrait — Looking Away": {
@@ -219,7 +219,7 @@
       "canvasAlignContent": "end"
     },
     "High-Fashion Sculptural": {
-      "objectPosition": "42% bottom",
+      "objectPosition": "center 90%",
       "canvasAlignContent": "end"
     },
     "Classic Three-Quarter": {
@@ -255,7 +255,7 @@
       "canvasAlignContent": "end"
     },
     "Cross-Leg Lean": {
-      "objectPosition": "44% bottom",
+      "objectPosition": "center 85%",
       "canvasAlignContent": "end"
     },
     "Soft Contrapposto": {
@@ -263,7 +263,7 @@
       "canvasAlignContent": "end"
     },
     "Relaxed Front": {
-      "objectPosition": "center 85%",
+      "objectPosition": "center 88%",
       "canvasAlignContent": "end"
     },
     "Hands in Pockets": {
@@ -283,7 +283,7 @@
       "canvasAlignContent": "end"
     },
     "Long Leg Extension": {
-      "objectPosition": "center bottom",
+      "objectPosition": "center 90%",
       "canvasAlignContent": "end"
     },
     "Sculptural Standing": {
@@ -291,16 +291,16 @@
       "canvasAlignContent": "end"
     },
     "Hand on Waist": {
-      "objectPosition": "42% bottom",
-      "canvasAlignContent": "end"
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
     },
     "Stool Touch Standing": {
       "objectPosition": "52% bottom",
       "canvasAlignContent": "end"
     },
     "Hands Clasped Low": {
-      "objectPosition": "42% bottom",
-      "canvasAlignContent": "end"
+      "objectPosition": "center 42%",
+      "canvasAlignContent": "center"
     }
   }
 }

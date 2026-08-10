@@ -1043,7 +1043,7 @@ export default function StudioPage() {
                       Helps StudioLayer AI understand your garment more accurately.
                     </p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="sl-garment-category-grid">
                     {GARMENT_TYPES.map((g) => {
                       const isSelected = workflow.garmentPlacement === g.value;
                       return (
@@ -1055,11 +1055,11 @@ export default function StudioPage() {
                             setGarmentPlacement(g.value as GarmentPlacement);
                             setShowValidation(false);
                           }}
-                          className="rounded px-2 py-2.5"
+                          className="sl-garment-category-option rounded px-2.5 py-3 sm:px-2 sm:py-2.5"
                         >
-                          <p className="text-xs font-semibold">{g.label}</p>
+                          <p className="sl-garment-category-label font-semibold">{g.label}</p>
                           <p className={cn(
-                            'text-[10px] font-mono mt-0.5 leading-tight',
+                            'sl-garment-category-sub font-mono mt-0.5',
                             isSelected ? 'opacity-75' : 'text-muted-foreground',
                           )}>
                             {g.sub}

@@ -72,11 +72,15 @@ export function AuthPageShell({ children }: AuthPageShellProps) {
         }}
         aria-hidden={!authRevealed}
       >
-        <div className="absolute left-0 top-0 z-10 pt-12 pl-10 sm:pt-14 sm:pl-12 lg:pt-16 lg:pl-20 xl:pt-20 xl:pl-24">
+        <div className="sl-auth-brand-desktop absolute left-0 top-0 z-10 pt-12 pl-10 sm:pt-14 sm:pl-12 lg:pt-16 lg:pl-20 xl:pt-20 xl:pl-24">
           <AuthBrandMark />
         </div>
 
         <div className="flex min-h-screen w-full flex-col items-center justify-center p-4 pb-16 lg:-translate-x-6 xl:-translate-x-8">
+          <div className="sl-auth-brand-stacked mb-8 w-full max-w-sm shrink-0">
+            <AuthBrandMark variant="stacked" />
+          </div>
+
           <div className="flex w-full flex-1 items-center justify-center">{children}</div>
           <StudioContactFooterLink className="mt-8 shrink-0" />
         </div>

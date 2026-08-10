@@ -6,12 +6,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { getArtworkContactSheetTemplates } from '@/lib/contact-sheet-artwork-layout';
-import {
-  getPoseCardFrameVariant,
-  POSE_LIBRARY_DISPLAY_NAMES,
-} from '@/lib/pose-library-display';
-import { PoseLibraryCard } from '@/components/studio/pose-library-card';
+import { DirectShootPoseBoard } from '@/components/studio/direct-shoot-pose-board';
+import { DirectShootMobileBoard } from '@/components/studio/direct-shoot-mobile-board';
+import { useDirectShootMobilePresentation } from '@/hooks/use-direct-shoot-mobile';
+import { cn } from '@/lib/utils';
 
 interface DirectShootDialogProps {
   open: boolean;
@@ -19,7 +17,7 @@ interface DirectShootDialogProps {
   shootImageCount: number;
 }
 
-/** Legacy experiment storage key — cleared on open so stale modes cannot persist. */
+/** Cleared on open so stale experiment modes cannot persist. */
 const LEGACY_LAYOUT_STORAGE_KEY = 'studiolayer.direct-shoot.layout-mode';
 
 export function DirectShootDialog({
@@ -45,8 +43,6 @@ export function DirectShootDialog({
       window.sessionStorage.removeItem(LEGACY_LAYOUT_STORAGE_KEY);
     }
   }, [open]);
-
-  const artworkTemplates = useMemo(() => getArtworkContactSheetTemplates(), []);
 
   const selectionLimitReached = selectedPoses.length >= shootImageCount;
   const selectedCount = selectedPoses.length;
@@ -91,6 +87,8 @@ export function DirectShootDialog({
     onOpenChange(false);
   };
 
+  const isMobilePresentation = useDirectShootMobilePresentation();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sl-direct-shoot-dialog gap-0 overflow-hidden border border-border bg-card p-0 sm:max-w-none">
@@ -101,48 +99,30 @@ export function DirectShootDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="sl-direct-shoot-grid-scroll" role="list" aria-label="Pose library">
-          <div className="sl-contact-sheet-scroll">
-            <div className="sl-contact-sheet-artwork-stack">
-              {artworkTemplates.map((template) => (
-                <section
-                  key={template.templateId}
-                  className="sl-contact-sheet-artwork-template"
-                  aria-label={`Contact sheet template ${String(template.templateId).padStart(2, '0')}`}
-                >
-                  <img
-                    src={template.artworkUrl}
-                    alt=""
-                    className="sl-contact-sheet-artwork-layer"
-                    draggable={false}
-                  />
-                  {template.slots.map((slot) => {
-                    const poseName = POSE_LIBRARY_DISPLAY_NAMES[slot.poseIndex];
-                    if (!poseName) {
-                      return null;
-                    }
-
-                    const selectionIndex = selectedPoses.indexOf(poseName);
-                    const selectionOrder = selectionIndex >= 0 ? selectionIndex + 1 : null;
-
-                    return (
-                      <PoseLibraryCard
-                        key={slot.slotId}
-                        poseName={poseName}
-                        layout="artwork"
-                        slotRect={slot.rect}
-                        frameVariant={getPoseCardFrameVariant(slot.poseIndex)}
-                        selected={selectionOrder != null}
-                        selectionOrder={selectionOrder}
-                        disabled={selectionLimitReached}
-                        onToggle={() => togglePose(poseName)}
-                      />
-                    );
-                  })}
-                </section>
-              ))}
-            </div>
-          </div>
+        <div
+          className={cn(
+            'sl-direct-shoot-grid-scroll sl-direct-shoot-grid-scroll--phase1',
+            isMobilePresentation && 'sl-direct-shoot-grid-scroll--mobile',
+          )}
+          role="list"
+          aria-label="Pose library"
+          data-presentation-mode={
+            isMobilePresentation ? 'phase-1-mobile-grid' : 'phase-1-editorial-grid'
+          }
+        >
+          {isMobilePresentation ? (
+            <DirectShootMobileBoard
+              selectedPoses={selectedPoses}
+              selectionLimitReached={selectionLimitReached}
+              onTogglePose={togglePose}
+            />
+          ) : (
+            <DirectShootPoseBoard
+              selectedPoses={selectedPoses}
+              selectionLimitReached={selectionLimitReached}
+              onTogglePose={togglePose}
+            />
+          )}
         </div>
 
         <footer className="sl-direct-shoot-footer">

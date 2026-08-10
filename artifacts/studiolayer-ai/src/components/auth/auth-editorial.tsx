@@ -19,21 +19,42 @@ export const AUTH_FORM_MAX_WIDTH = 'w-full max-w-sm';
 /** Vertical rhythm between form field groups (+8px vs prior space-y-8). */
 export const AUTH_FORM_STACK = 'space-y-10';
 
+interface AuthBrandMarkProps {
+  variant?: 'default' | 'stacked';
+}
+
 /** Auth shell brand block — canonical StudioLayer AI signature (Monogram → Name → Tagline). */
-export function AuthBrandMark() {
+export function AuthBrandMark({ variant = 'default' }: AuthBrandMarkProps) {
   return (
-    <>
-      <BrandLogo variant="auth" format="svg" />
-      <p className="sl-brand-name mt-5 text-[1.953125rem]">{BRAND_NAME}</p>
+    <div className={cn(variant === 'stacked' && 'sl-auth-brand-mark--stacked text-center')}>
+      <BrandLogo variant="auth" format="svg" className={variant === 'stacked' ? 'mx-auto' : undefined} />
+      <p
+        className={cn(
+          'sl-brand-name mt-5 text-[1.953125rem]',
+          variant === 'stacked' && 'sl-auth-brand-mark-name--stacked',
+        )}
+      >
+        {BRAND_NAME}
+      </p>
       <div className="mt-1 space-y-0">
-        <p className="sl-tagline-primary text-[1.078125rem] leading-[1.28]">
+        <p
+          className={cn(
+            'sl-tagline-primary text-[1.078125rem] leading-[1.28]',
+            variant === 'stacked' && 'sl-auth-brand-mark-tagline--stacked',
+          )}
+        >
           {BRAND_TAGLINE_PRIMARY}
         </p>
-        <p className="sl-tagline-secondary text-[0.953125rem] leading-[1.28]">
+        <p
+          className={cn(
+            'sl-tagline-secondary text-[0.953125rem] leading-[1.28]',
+            variant === 'stacked' && 'sl-auth-brand-mark-tagline--stacked',
+          )}
+        >
           {BRAND_TAGLINE_SECONDARY}
         </p>
       </div>
-    </>
+    </div>
   );
 }
 

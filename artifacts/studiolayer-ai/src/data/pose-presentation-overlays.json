@@ -1,0 +1,463 @@
+{
+  "version": "5C-SYMMETRICAL-EXPERIMENT",
+  "generatedAt": "2026-08-10T12:04:11.523Z",
+  "description": "Presentation-only scale balance overlays. Revert by disabling SYMMETRICAL_PRESENTATION_EXPERIMENT_ENABLED.",
+  "overlays": {
+    "Candid Looking Away": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Floor Cross-Leg": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Seated Edge — Forward Lean": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Wall Lean": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Collar Adjustment": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%",
+      "canvasInset": "2%"
+    },
+    "Seated Stool — Cross-Leg": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Hair Movement": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Walk Past Camera": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Shoulder/Strap Adjustment": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Seated Editorial — Asymmetric": {
+      "figureScale": 0.976,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Portrait — Neck Touch": {
+      "figureScale": 0.919,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Floor One-Knee Up": {
+      "figureScale": 1.046,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "102%",
+      "transformOrigin": "center bottom",
+      "canvasInset": "1.5%"
+    },
+    "Sleeve Adjustment": {
+      "figureScale": 0.885,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Diagonal Lean": {
+      "figureScale": 0.994,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "102%",
+      "transformOrigin": "center bottom"
+    },
+    "Portrait — Profile": {
+      "figureScale": 1.062,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Seated Chair — One Leg Extended": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Pocket Detail": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Long Stride": {
+      "figureScale": 1,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Torso Twist": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Seated Chair — Cross-Leg": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Portrait — Chin Rest": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Dynamic Lean Back": {
+      "figureScale": 1,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Jacket Adjustment": {
+      "figureScale": 1.042,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "102%",
+      "transformOrigin": "center bottom",
+      "canvasInset": "1.5%"
+    },
+    "Step-Up Motion": {
+      "figureScale": 0.899,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Over-Shoulder Rear": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Seated Chair — Three-Quarter": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Portrait — Three-Quarter": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Walking Toward Camera": {
+      "figureScale": 0.976,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Loose Arms Crossed": {
+      "figureScale": 0.919,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Seated Stool — Forward Lean": {
+      "figureScale": 1.046,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "102%",
+      "transformOrigin": "center bottom",
+      "canvasInset": "1.5%"
+    },
+    "Shoulder Back / Face Front": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Crouched Editorial": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "102%",
+      "transformOrigin": "center bottom"
+    },
+    "Portrait — Over Shoulder": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Seated Stool — Relaxed": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Relaxed Laugh / Joy": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Walking Away": {
+      "figureScale": 1,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Portrait — Shoulder Turn": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Floor Side Sit": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Open Layer Presentation": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Profile Walk": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Portrait — Hair Frame": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%",
+      "canvasInset": "2%"
+    },
+    "Seated Stool — One Leg Extended": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Back-to-Camera Walking": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Portrait — Looking Away": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Mid-Step Pause": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Low Kneel Editorial": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Portrait — Expressive Tilt": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Turning While Walking": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Portrait — Direct": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Seated Stool — Side Turn": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Expressive Side Bend": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Wide Power Stance": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Garment Sweep": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Full Profile": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "High-Fashion Sculptural": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Classic Three-Quarter": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Three-Quarter Back": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Hem Hold": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Shoulder Turn": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Full Back Presentation": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "102%",
+      "transformOrigin": "center bottom"
+    },
+    "Chair Touch Standing": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Profile with Head Turn": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Hip Shift": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Cross-Leg Lean": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Soft Contrapposto": {
+      "figureScale": 1,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Relaxed Front": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "102%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Hands in Pockets": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Crossed Ankles": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Both Hands at Waist": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "One Hand in Pocket": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Long Leg Extension": {
+      "figureScale": 1.08,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "102%",
+      "transformOrigin": "center bottom",
+      "canvasInset": "1.5%"
+    },
+    "Sculptural Standing": {
+      "figureScale": 1,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Hand on Waist": {
+      "figureScale": 0.979,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    },
+    "Stool Touch Standing": {
+      "figureScale": 0.932,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center bottom"
+    },
+    "Hands Clasped Low": {
+      "figureScale": 1.049,
+      "figureMaxWidth": "100%",
+      "figureMaxHeight": "100%",
+      "transformOrigin": "center 46%"
+    }
+  }
+}

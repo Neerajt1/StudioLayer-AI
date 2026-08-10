@@ -1,6 +1,8 @@
 import poseLibraryNames from '@/data/pose-library-names.json';
 import poseFigureLayoutsData from '@/data/pose-figure-layouts.json';
 import poseReferenceManifest from '@/data/pose-reference-manifest.json';
+import poseIllustrationManifest from '@/data/pose-illustration-manifest.json';
+import poseCatalogBridge from '@/data/pose-catalog-bridge.json';
 
 /** Display-only pose list for the Phase 5C prototype — names only, no planner metadata. */
 export const POSE_LIBRARY_DISPLAY_NAMES: readonly string[] = poseLibraryNames;
@@ -8,6 +10,22 @@ export const POSE_LIBRARY_DISPLAY_NAMES: readonly string[] = poseLibraryNames;
 /** All 75 pose illustration URLs keyed by catalog pose name. */
 export const POSE_REFERENCE_IMAGES: Readonly<Record<string, string>> =
   poseReferenceManifest.images;
+
+/** Final Pose1–Pose75 illustration intelligence layer (Phase 5C). */
+export const POSE_ILLUSTRATION_MANIFEST = poseIllustrationManifest;
+
+/** Catalog name ↔ PoseN.png bridge for planner/display integration. */
+export const POSE_CATALOG_BRIDGE = poseCatalogBridge;
+
+export function getPoseIllustrationId(poseName: string): string | null {
+  return (poseCatalogBridge.catalogNameToPoseId as Record<string, string>)[poseName] ?? null;
+}
+
+export function getPoseIllustrationEntry(poseName: string) {
+  const poseId = getPoseIllustrationId(poseName);
+  if (!poseId) return null;
+  return poseIllustrationManifest.poses.find((p) => p.poseId === poseId) ?? null;
+}
 
 export function getPoseReferenceImageUrl(poseName: string): string | null {
   return POSE_REFERENCE_IMAGES[poseName] ?? null;
