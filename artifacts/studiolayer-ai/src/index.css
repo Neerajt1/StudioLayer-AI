@@ -822,32 +822,30 @@
     }
   }
 
-  /* ── Studio Talent — mobile horizontal card selector ── */
+  /* ── Studio Talent — mobile 2-column grid (casting spreads) ── */
   @media (max-width: 767px) {
-    .sl-talent-collection {
+    .sl-talent-spread-mobile-wrap {
       max-width: 100%;
     }
 
-    .sl-talent-collection-scroll {
-      gap: 1rem;
-      padding-block: 0.25rem;
-      padding-inline: 0;
-      scroll-padding-inline: 1rem;
-      scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
+    .sl-talent-spread-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 0.75rem;
+      row-gap: 1.25rem;
+      box-sizing: border-box;
+      width: 100%;
       max-width: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
-      overscroll-behavior-x: contain;
+      padding-block: 0.25rem;
+      padding-inline: var(--sl-gutter);
     }
 
     .sl-talent-card--scroll {
-      width: 76vw !important;
-      flex: 0 0 76vw;
+      width: 100% !important;
+      flex: unset;
+      min-width: 0;
       overflow: hidden;
       isolation: isolate;
-      scroll-snap-align: start;
-      scroll-snap-stop: always;
       transform: none !important;
     }
 
@@ -863,13 +861,13 @@
     }
 
     /*
-      Full-body portrait slot: height tracks card width (76vw × 1.34 ≈ 3:4 fashion
-      proportion) and is capped by viewport height so cards stay usable on short screens.
+      Full-body portrait slot: height tracks grid column width (~45vw)
+      and is capped by viewport height for short screens.
     */
-    .sl-talent-card--scroll .sl-talent-portrait-wrap {
+    .sl-talent-spread-grid .sl-talent-card--scroll .sl-talent-portrait-wrap {
       position: relative;
       width: 100%;
-      height: min(48svh, calc(76vw * 1.34));
+      height: min(44svh, calc(45vw * 1.34));
       flex-shrink: 0;
       overflow: hidden;
       background: #fff;
@@ -941,10 +939,6 @@
       margin-top: 0.5rem !important;
       padding-inline: 0.125rem;
       text-align: center;
-    }
-
-    .sl-talent-spread-mobile-wrap {
-      max-width: 100%;
     }
 
     .sl-casting-spread-spacer {

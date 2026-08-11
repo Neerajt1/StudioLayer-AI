@@ -1,10 +1,9 @@
 // ---------------------------------------------------------------------------
 // Editorial Spread — absolute canvas renderer (Sprint 3.3)
-// Mobile (≤767px): horizontal scroll card strip (same UX as talent collection).
+// Mobile (≤767px): 2-column vertical grid per spread.
 // Desktop (≥768px): PDF art-directed absolute canvas (unchanged).
 // ---------------------------------------------------------------------------
 
-import { cn } from '@/lib/utils';
 import { TalentCard } from './talent-card';
 import { TALENT_PORTRAIT_HEIGHT } from './casting-tokens';
 import type { ModelIdentity } from './types';
@@ -18,7 +17,7 @@ interface EditorialSpreadViewProps {
   onSelect: (id: string) => void;
 }
 
-function EditorialSpreadMobileStrip({
+function EditorialSpreadMobileGrid({
   spread,
   placements,
   selectedTalentId,
@@ -30,25 +29,18 @@ function EditorialSpreadMobileStrip({
       className="sl-talent-spread-mobile"
       aria-label={`Editorial spread ${spread.spreadId}`}
     >
-      <div className="sl-talent-collection">
-        <div
-          className={cn(
-            'sl-talent-collection-scroll flex gap-10 overflow-x-auto scroll-smooth py-2',
-            '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-          )}
-        >
-          {placements.map(({ talent, slot }) => (
-            <TalentCard
-              key={slot.talentCode}
-              model={talent}
-              isSelected={selectedTalentId === talent.id && !selectingId}
-              isSelecting={selectingId === talent.id}
-              disabled={!!selectingId}
-              portraitMaxHeight={TALENT_PORTRAIT_HEIGHT}
-              onSelect={onSelect}
-            />
-          ))}
-        </div>
+      <div className="sl-talent-spread-grid">
+        {placements.map(({ talent, slot }) => (
+          <TalentCard
+            key={slot.talentCode}
+            model={talent}
+            isSelected={selectedTalentId === talent.id && !selectingId}
+            isSelecting={selectingId === talent.id}
+            disabled={!!selectingId}
+            portraitMaxHeight={TALENT_PORTRAIT_HEIGHT}
+            onSelect={onSelect}
+          />
+        ))}
       </div>
     </section>
   );
@@ -98,7 +90,7 @@ export function EditorialSpreadView(props: EditorialSpreadViewProps) {
   return (
     <>
       <div className="sl-talent-spread-mobile-wrap md:hidden">
-        <EditorialSpreadMobileStrip {...props} />
+        <EditorialSpreadMobileGrid {...props} />
       </div>
       <div className="sl-talent-spread-canvas-wrap hidden md:block">
         <EditorialSpreadDesktopCanvas {...props} />
