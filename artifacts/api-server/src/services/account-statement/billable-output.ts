@@ -73,19 +73,17 @@ export function billableGenerationImagesForTransaction(
   return Math.abs(tx.amount);
 }
 
+/** Root generation outcomes only — refinement activity never changes status. */
 export function deriveSessionActivityStatus(
   rootOutcomes: RenderOutcomeCounts,
-  refinementOutcomes: RenderOutcomeCounts,
 ): SessionActivityStatus {
-  const requested = rootOutcomes.requested + refinementOutcomes.requested;
-  const completed = rootOutcomes.completed + refinementOutcomes.completed;
-  const failed = rootOutcomes.failed + refinementOutcomes.failed;
+  const { requested, completed, failed } = rootOutcomes;
 
   if (requested === 0) {
     return "Completed";
   }
 
-  if (completed === requested) {
+  if (completed === requested && failed === 0) {
     return "Completed";
   }
 

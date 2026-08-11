@@ -6,8 +6,6 @@ import {
   billableGenerationImagesForTransaction,
   countRenderOutcomes,
   deriveSessionActivityStatus,
-  refinementRendersInSession,
-  rootRendersInSession,
 } from "./billable-output.js";
 
 function render(partial: Partial<Render> & Pick<Render, "id">): Render {
@@ -124,59 +122,81 @@ describe("billableGenerationImagesForTransaction", () => {
 });
 
 describe("deriveSessionActivityStatus", () => {
-  it("marks full success as Completed", () => {
+  it("1. marks 4/4 generated as Completed", () => {
+    const roots = countRenderOutcomes([
+      render({ id: 1, status: "completed" }),
+      render({ id: 2, status: "completed" }),
+      render({ id: 3, status: "completed" }),
+      render({ id: 4, status: "completed" }),
+    ]);
+
+    assert.equal(deriveSessionActivityStatus(roots), "Completed");
+  });
+
+  it("2. marks 2/2 generated as Completed regardless of successful refinements", () => {
     const roots = countRenderOutcomes([
       render({ id: 1, status: "completed" }),
       render({ id: 2, status: "completed" }),
     ]);
 
-    assert.equal(
-      deriveSessionActivityStatus(roots, { requested: 0, completed: 0, failed: 0 }),
-      "Completed",
-    );
+    assert.equal(deriveSessionActivityStatus(roots), "Completed");
   });
 
-  it("marks partial success as Partial", () => {
+  it("3. marks 2/2 generated as Completed when refinements failed", () => {
     const roots = countRenderOutcomes([
       render({ id: 1, status: "completed" }),
-      render({ id: 2, status: "failed" }),
+      render({ id: 2, status: "completed" }),
     ]);
 
-    assert.equal(
-      deriveSessionActivityStatus(roots, { requested: 0, completed: 0, failed: 0 }),
-      "Partial",
-    );
+    assert.equal(deriveSessionActivityStatus(roots), "Completed");
   });
 
-  it("marks all-failed sessions as Failed", () => {
+  it("4. marks 2/4 generated as Partial", () => {
+    const roots = countRenderOutcomes([
+      render({ id: 1, status: "completed" }),
+      render({ id: 2, status: "completed" }),
+      render({ id: 3, status: "failed" }),
+      render({ id: 4, status: "failed" }),
+    ]);
+
+    assert.equal(deriveSessionActivityStatus(roots), "Partial");
+  });
+
+  it("5. marks 1/6 generated as Partial", () => {
+    const roots = countRenderOutcomes([
+      render({ id: 1, status: "completed" }),
+      ...Array.from({ length: 5 }, (_, index) =>
+        render({ id: index + 2, status: "failed" }),
+      ),
+    ]);
+
+    assert.equal(deriveSessionActivityStatus(roots), "Partial");
+  });
+
+  it("6. marks 0/4 generated as Failed", () => {
     const roots = countRenderOutcomes([
       render({ id: 1, status: "failed" }),
       render({ id: 2, status: "failed" }),
+      render({ id: 3, status: "failed" }),
+      render({ id: 4, status: "failed" }),
     ]);
 
-    assert.equal(
-      deriveSessionActivityStatus(roots, { requested: 0, completed: 0, failed: 0 }),
-      "Failed",
-    );
+    assert.equal(deriveSessionActivityStatus(roots), "Failed");
   });
 
-  it("marks failed refinement sessions as Failed with zero billable refinements", () => {
-    const refinements = countRenderOutcomes([
-      render({
-        id: 5,
-        parentRenderId: 1,
-        status: "failed",
-      }),
+  it("7. does not downgrade Completed when refinement outcomes would have failed", () => {
+    const roots = countRenderOutcomes([
+      render({ id: 1, status: "completed" }),
+      render({ id: 2, status: "completed" }),
     ]);
 
+    assert.equal(deriveSessionActivityStatus(roots), "Completed");
+  });
+
+  it("does not upgrade Failed when only refinement renders exist", () => {
     assert.equal(
-      deriveSessionActivityStatus(
-        { requested: 0, completed: 0, failed: 0 },
-        refinements,
-      ),
-      "Failed",
+      deriveSessionActivityStatus({ requested: 0, completed: 0, failed: 0 }),
+      "Completed",
     );
-    assert.equal(refinementRendersInSession([render({ id: 5, parentRenderId: 1, status: "failed" })]).length, 1);
-    assert.equal(rootRendersInSession([render({ id: 5, parentRenderId: 1, status: "failed" })]).length, 0);
   });
 });

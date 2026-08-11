@@ -13,6 +13,9 @@ import {
   generationTypeFromRenderType,
 } from "../labels.js";
 
+export const DELETED_IMAGES_SHEET_NOTE =
+  "Deleted Images is for record-keeping and credit reconciliation. Credits are charged for successful generations and refinements.";
+
 function formatOptionalDate(date: Date | null): string {
   return date ? formatStatementDate(date) : "—";
 }
@@ -30,12 +33,9 @@ export function buildDeletedImagesSheet(
   const titleRow = sheet.addRow(["Deleted Images"]);
   titleRow.font = { name: STATEMENT_FONT, bold: true, size: 14 };
 
-  const noteRow = sheet.addRow([
-    "Informational record only. Deleting an image does not deduct or refund Studio Credits. "
-    + "Original generation credits belong to the original generation batch, not to the deletion event.",
-  ]);
+  const noteRow = sheet.addRow([DELETED_IMAGES_SHEET_NOTE]);
   noteRow.font = { name: STATEMENT_FONT, size: 10 };
-  sheet.mergeCells(`A${noteRow.number}:J${noteRow.number}`);
+  sheet.mergeCells(`A${noteRow.number}:I${noteRow.number}`);
 
   sheet.addRow([]);
 
@@ -48,7 +48,6 @@ export function buildDeletedImagesSheet(
     "Original Generation Date",
     "Original Generation Credits (Batch)",
     "Original Generation Images (Billable)",
-    "Deletion Credit Impact",
     "Deleted By",
   ];
 
@@ -68,7 +67,6 @@ export function buildDeletedImagesSheet(
       formatOptionalDate(row.originalGenerationDate),
       formatOptionalCount(row.originalGenerationCredits),
       formatOptionalCount(row.originalGenerationImageCount),
-      row.deletionCreditImpact,
       row.deletedBy,
     ]);
     excelRow.eachCell((cell) => applyDataCell(cell));

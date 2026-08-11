@@ -226,7 +226,7 @@ describe("account statement stage 1 invariants", () => {
     assert.equal(activityCredits, ledgerCredits);
   });
 
-  it("failed refinement session remains visible with zero billable output", () => {
+  it("refinement-only session does not change root generation status fields", () => {
     const ctx = baseContext({
       renders: [
         render({
@@ -241,8 +241,140 @@ describe("account statement stage 1 invariants", () => {
 
     const activity = computeCreativeActivityRows(ctx)[0]!;
 
-    assert.equal(activity.status, "Failed");
+    assert.equal(activity.status, "Completed");
+    assert.equal(activity.imagesRequested, 0);
+    assert.equal(activity.imagesCompleted, 0);
+    assert.equal(activity.imagesFailed, 0);
     assert.equal(activity.imagesRefined, 0);
+    assert.equal(activity.creditsUsed, 0);
+  });
+});
+
+describe("account statement final correction — creative activity status", () => {
+  it("4/4 editorial generated remains Completed", () => {
+    const ctx = baseContext({
+      renders: [
+        render({ id: 1, status: "completed" }),
+        render({ id: 2, status: "completed" }),
+        render({ id: 3, status: "completed" }),
+        render({ id: 4, status: "completed" }),
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          reasonCode: StudioCreditReasonCode.EDITORIAL_GENERATION,
+          amount: -4,
+          renderId: 1,
+        }),
+      ],
+    });
+
+    const activity = computeCreativeActivityRows(ctx)[0]!;
+    assert.equal(activity.status, "Completed");
+    assert.equal(activity.imagesRequested, 4);
+    assert.equal(activity.imagesCompleted, 4);
+    assert.equal(activity.imagesFailed, 0);
+  });
+
+  it("2/2 campaign with successful refinements remains Completed", () => {
+    const ctx = baseContext({
+      renders: [
+        render({ id: 1, status: "completed", generationType: "campaign", generationSessionId: "campaign-1" }),
+        render({ id: 2, status: "completed", generationType: "campaign", generationSessionId: "campaign-1" }),
+        render({ id: 3, parentRenderId: 1, status: "completed", generationSessionId: "campaign-1" }),
+        render({ id: 4, parentRenderId: 2, status: "completed", generationSessionId: "campaign-1" }),
+      ],
+      transactions: [
+        usageTx({
+          id: 2,
+          reasonCode: StudioCreditReasonCode.CAMPAIGN_GENERATION,
+          amount: -2,
+          renderId: 1,
+        }),
+      ],
+    });
+
+    const activity = computeCreativeActivityRows(ctx)[0]!;
+    assert.equal(activity.status, "Completed");
+    assert.equal(activity.imagesRefined, 2);
+  });
+
+  it("2/2 campaign with failed refinement remains Completed", () => {
+    const ctx = baseContext({
+      renders: [
+        render({ id: 1, status: "completed", generationType: "campaign", generationSessionId: "campaign-1" }),
+        render({ id: 2, status: "completed", generationType: "campaign", generationSessionId: "campaign-1" }),
+        render({ id: 3, parentRenderId: 1, status: "failed", generationSessionId: "campaign-1" }),
+        render({ id: 4, parentRenderId: 2, status: "failed", generationSessionId: "campaign-1" }),
+      ],
+      transactions: [
+        usageTx({
+          id: 3,
+          reasonCode: StudioCreditReasonCode.CAMPAIGN_GENERATION,
+          amount: -2,
+          renderId: 1,
+        }),
+      ],
+    });
+
+    const activity = computeCreativeActivityRows(ctx)[0]!;
+    assert.equal(activity.status, "Completed");
+    assert.equal(activity.imagesCompleted, 2);
+    assert.equal(activity.imagesFailed, 0);
+    assert.equal(activity.imagesRefined, 0);
+  });
+
+  it("1/6 custom campaign with COMPLETED ledger shows Partial and 1 credit used", () => {
+    const ctx = baseContext({
+      renders: [
+        render({ id: 1, status: "completed", generationType: "campaign", generationSessionId: "custom-6" }),
+        ...Array.from({ length: 5 }, (_, index) =>
+          render({
+            id: index + 2,
+            status: "failed",
+            generationType: "campaign",
+            generationSessionId: "custom-6",
+          }),
+        ),
+      ],
+      transactions: [
+        usageTx({
+          id: 4,
+          reasonCode: StudioCreditReasonCode.CAMPAIGN_GENERATION,
+          amount: -1,
+          renderId: 1,
+        }),
+      ],
+    });
+
+    const activity = computeCreativeActivityRows(ctx)[0]!;
+    assert.equal(activity.status, "Partial");
+    assert.equal(activity.imagesRequested, 6);
+    assert.equal(activity.imagesCompleted, 1);
+    assert.equal(activity.imagesFailed, 5);
+    assert.equal(activity.imagesGenerated, 1);
+    assert.equal(activity.creditsUsed, 1);
+  });
+
+  it("1/6 custom campaign without COMPLETED ledger remains ledger-authoritative at 0 credits", () => {
+    const ctx = baseContext({
+      renders: [
+        render({ id: 1, status: "completed", generationType: "campaign", generationSessionId: "custom-6" }),
+        ...Array.from({ length: 5 }, (_, index) =>
+          render({
+            id: index + 2,
+            status: "failed",
+            generationType: "campaign",
+            generationSessionId: "custom-6",
+          }),
+        ),
+      ],
+      transactions: [],
+    });
+
+    const activity = computeCreativeActivityRows(ctx)[0]!;
+    assert.equal(activity.status, "Partial");
+    assert.equal(activity.imagesGenerated, 1);
     assert.equal(activity.creditsUsed, 0);
   });
 });

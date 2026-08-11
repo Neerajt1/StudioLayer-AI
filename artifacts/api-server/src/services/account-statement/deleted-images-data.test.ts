@@ -139,7 +139,6 @@ describe("computeDeletedImageRows", () => {
 
     const row = computeDeletedImageRows(ctx)[0]!;
 
-    assert.equal(row.deletionCreditImpact, 0);
     assert.equal(row.originalGenerationCredits, 4);
     assert.equal(row.originalGenerationImageCount, 4);
     assert.notEqual(row.originalGenerationCredits, 1);
@@ -168,7 +167,6 @@ describe("computeDeletedImageRows", () => {
 
     assert.equal(row.originalGenerationCredits, 2);
     assert.equal(row.originalGenerationImageCount, 2);
-    assert.equal(row.deletionCreditImpact, 0);
   });
 
   it("shows hero batch as 1 credit and 1 billable image", () => {
@@ -197,7 +195,6 @@ describe("computeDeletedImageRows", () => {
 
     assert.equal(row.originalGenerationCredits, 1);
     assert.equal(row.originalGenerationImageCount, 1);
-    assert.equal(row.deletionCreditImpact, 0);
   });
 
   it("does not invent per-image credits when no generation ledger transaction exists", () => {
@@ -214,7 +211,6 @@ describe("computeDeletedImageRows", () => {
 
     const row = computeDeletedImageRows(ctx)[0]!;
 
-    assert.equal(row.deletionCreditImpact, 0);
     assert.equal(row.originalGenerationCredits, null);
     assert.equal(row.originalGenerationImageCount, null);
   });
@@ -246,7 +242,6 @@ describe("computeDeletedImageRows", () => {
 
     assert.equal(row.originalGenerationDate?.getTime(), generationDate.getTime());
     assert.equal(row.originalGenerationCredits, 2);
-    assert.equal(row.deletionCreditImpact, 0);
   });
 
   it("never creates or implies a credit transaction from deletion", () => {

@@ -23,8 +23,6 @@ export interface DeletedImageRow {
   originalGenerationCredits: number | null;
   /** Billable images in the original generation batch (ledger-backed when available). */
   originalGenerationImageCount: number | null;
-  /** Always zero — deletion never changes the customer credit balance. */
-  deletionCreditImpact: 0;
   deletedBy: string;
 }
 
@@ -106,7 +104,6 @@ export function computeDeletedImageRows(
       originalGenerationDate,
       originalGenerationCredits,
       originalGenerationImageCount,
-      deletionCreditImpact: 0,
       deletedBy: event.deletedBy,
     };
   });

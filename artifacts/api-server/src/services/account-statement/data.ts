@@ -366,7 +366,7 @@ export function computeCreativeActivityRows(
       const refinements = refinementRendersInSession(sessionRenders);
       const rootOutcomes = countRenderOutcomes(roots);
       const refinementOutcomes = countRenderOutcomes(refinements);
-      const status = deriveSessionActivityStatus(rootOutcomes, refinementOutcomes);
+      const status = deriveSessionActivityStatus(rootOutcomes);
 
       let dateTime = ctx.generatedAt;
       let generationType = "—";

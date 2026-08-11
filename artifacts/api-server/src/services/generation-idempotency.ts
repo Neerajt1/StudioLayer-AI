@@ -12,8 +12,14 @@ import {
 } from "@workspace/studio-credit-engine";
 import {
   failStudioCreditTransaction,
+  finalizeGenerationCreditTransaction,
   reverseOrphanCompletedStudioCreditTransaction,
 } from "./studio-credit-service.js";
+import {
+  isGenerationCreditReasonCode,
+  isRefinementOrphanReasonCode,
+  resolvePendingGenerationFinalization,
+} from "./generation-credit-reconciliation.js";
 import { logger } from "../lib/logger.js";
 
 const ACTIVE_RENDER_STATUSES = ["pending", "processing"] as const;
@@ -28,6 +34,7 @@ export interface StaleReconcileResult {
   staleRenderIds: number[];
   failedTransactionIds: string[];
   reversedOrphanTransactionIds: string[];
+  finalizedGenerationTransactionIds: string[];
 }
 
 /**
@@ -107,6 +114,112 @@ export async function reconcileFailedSessionOrphanCharges(
 }
 
 /**
+ * Finalizes still-PENDING generation credit transactions when their linked
+ * generation session has reached a terminal state.
+ */
+export async function reconcilePendingGenerationCreditFinalization(
+  userId: number,
+): Promise<string[]> {
+  const pendingGeneration = await db
+    .select({
+      transactionId: studioCreditTransactionsTable.transactionId,
+      renderId: studioCreditTransactionsTable.renderId,
+      amount: studioCreditTransactionsTable.amount,
+      reasonCode: studioCreditTransactionsTable.reasonCode,
+    })
+    .from(studioCreditTransactionsTable)
+    .where(
+      and(
+        eq(studioCreditTransactionsTable.userId, userId),
+        eq(
+          studioCreditTransactionsTable.status,
+          StudioCreditTransactionStatus.PENDING,
+        ),
+      ),
+    );
+
+  const finalized: string[] = [];
+
+  for (const tx of pendingGeneration) {
+    if (tx.renderId == null) continue;
+    if (!isGenerationCreditReasonCode(tx.reasonCode)) continue;
+
+    const [anchorRender] = await db
+      .select({
+        generationSessionId: rendersTable.generationSessionId,
+      })
+      .from(rendersTable)
+      .where(
+        and(eq(rendersTable.id, tx.renderId), eq(rendersTable.userId, userId)),
+      );
+
+    if (!anchorRender?.generationSessionId) continue;
+
+    const sessionRenders = await db
+      .select()
+      .from(rendersTable)
+      .where(
+        and(
+          eq(rendersTable.userId, userId),
+          eq(
+            rendersTable.generationSessionId,
+            anchorRender.generationSessionId,
+          ),
+        ),
+      );
+
+    const finalization = resolvePendingGenerationFinalization({
+      holdAmount: tx.amount,
+      sessionRenders,
+    });
+
+    if (!finalization) continue;
+
+    const before = await db
+      .select({ status: studioCreditTransactionsTable.status })
+      .from(studioCreditTransactionsTable)
+      .where(
+        eq(studioCreditTransactionsTable.transactionId, tx.transactionId),
+      );
+
+    if (
+      before[0]?.status !== StudioCreditTransactionStatus.PENDING
+    ) {
+      continue;
+    }
+
+    await finalizeGenerationCreditTransaction({
+      transactionId: tx.transactionId,
+      completedCount: finalization.completedCount,
+      creditPerCompletedImage: finalization.creditPerCompletedImage,
+    });
+
+    const [after] = await db
+      .select({ status: studioCreditTransactionsTable.status })
+      .from(studioCreditTransactionsTable)
+      .where(
+        eq(studioCreditTransactionsTable.transactionId, tx.transactionId),
+      );
+
+    if (
+      after?.status === StudioCreditTransactionStatus.COMPLETED
+      || after?.status === StudioCreditTransactionStatus.FAILED
+    ) {
+      finalized.push(tx.transactionId);
+    }
+  }
+
+  if (finalized.length > 0) {
+    logger.warn(
+      { userId, count: finalized.length, transactionIds: finalized },
+      "commercial-reconcile: finalized pending generation credit transactions",
+    );
+  }
+
+  return finalized;
+}
+
+/**
  * Reconciles stuck generations and orphan pending credit transactions.
  * Prevents users from being permanently blocked after process crashes.
  *
@@ -153,25 +266,6 @@ export async function reconcileStaleCommercialState(
         ),
       );
 
-    const linkedPending = await db
-      .select({ transactionId: studioCreditTransactionsTable.transactionId })
-      .from(studioCreditTransactionsTable)
-      .where(
-        and(
-          eq(studioCreditTransactionsTable.userId, userId),
-          eq(
-            studioCreditTransactionsTable.status,
-            StudioCreditTransactionStatus.PENDING,
-          ),
-          inArray(studioCreditTransactionsTable.renderId, staleIds),
-        ),
-      );
-
-    for (const tx of linkedPending) {
-      await failStudioCreditTransaction(tx.transactionId);
-      failedTransactionIds.push(tx.transactionId);
-    }
-
     logger.warn(
       { userId, staleRenderIds: staleIds, count: staleIds.length },
       "commercial-reconcile: marked stale in-flight renders as failed",
@@ -179,7 +273,10 @@ export async function reconcileStaleCommercialState(
   }
 
   const orphanPending = await db
-    .select({ transactionId: studioCreditTransactionsTable.transactionId })
+    .select({
+      transactionId: studioCreditTransactionsTable.transactionId,
+      reasonCode: studioCreditTransactionsTable.reasonCode,
+    })
     .from(studioCreditTransactionsTable)
     .where(
       and(
@@ -193,16 +290,25 @@ export async function reconcileStaleCommercialState(
     );
 
   for (const tx of orphanPending) {
+    if (!isRefinementOrphanReasonCode(tx.reasonCode)) continue;
     await failStudioCreditTransaction(tx.transactionId);
     failedTransactionIds.push(tx.transactionId);
   }
 
-  if (orphanPending.length > 0) {
+  if (orphanPending.some((tx) => isRefinementOrphanReasonCode(tx.reasonCode))) {
     logger.warn(
-      { userId, count: orphanPending.length },
-      "commercial-reconcile: failed orphan pending credit transactions",
+      {
+        userId,
+        count: orphanPending.filter((tx) =>
+          isRefinementOrphanReasonCode(tx.reasonCode),
+        ).length,
+      },
+      "commercial-reconcile: failed orphan pending refinement credit transactions",
     );
   }
+
+  const finalizedGenerationTransactionIds =
+    await reconcilePendingGenerationCreditFinalization(userId);
 
   const reversedOrphanTransactionIds =
     await reconcileFailedSessionOrphanCharges(userId);
@@ -211,6 +317,7 @@ export async function reconcileStaleCommercialState(
     staleRenderIds: staleIds,
     failedTransactionIds: [...new Set(failedTransactionIds)],
     reversedOrphanTransactionIds,
+    finalizedGenerationTransactionIds,
   };
 }
 
