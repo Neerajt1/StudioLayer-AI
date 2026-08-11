@@ -15,9 +15,9 @@ import {
   beginGenerationCreditTransaction,
   failStudioCreditTransaction,
   finalizeGenerationCreditTransaction,
-  getBillingCycleLedgerStats,
   getStudioCreditBalance,
 } from "../services/studio-credit-service.js";
+import { getBillingCycleActivityStats } from "../services/account-statement/billing-cycle-activity.js";
 import {
   findActiveGenerationBatch,
   reconcileStaleCommercialState,
@@ -127,7 +127,7 @@ router.get("/renders/usage", async (req, res): Promise<void> => {
     limit,
     isAdmin: user.isAdmin,
   });
-  const cycleStats = await getBillingCycleLedgerStats(userId, tier);
+  const cycleStats = await getBillingCycleActivityStats(userId, tier);
 
   res.json({
     used: balance.used,

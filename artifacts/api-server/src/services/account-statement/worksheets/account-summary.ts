@@ -3,6 +3,7 @@ import type { AccountStatementContext } from "../data.js";
 import {
   computeMembershipAllowance,
   computeStatementCycleImagesGenerated,
+  computeStatementCycleRefinements,
 } from "../data.js";
 import {
   addSummaryRow,
@@ -12,19 +13,8 @@ import {
 import {
   billingCycleLabel,
   formatStatementDate,
-  isRefinementReasonCode,
   membershipPlanLabel,
 } from "../labels.js";
-
-function countRefinementsInCycle(ctx: AccountStatementContext): number {
-  const isLifetime = ctx.user.subscriptionTier === "free";
-
-  return ctx.transactions.filter(
-    (tx) =>
-      (isLifetime || tx.createdAt >= ctx.cycleStart) &&
-      isRefinementReasonCode(tx.reasonCode),
-  ).length;
-}
 
 export function buildAccountSummarySheet(
   workbook: ExcelJS.Workbook,
@@ -72,7 +62,7 @@ export function buildAccountSummarySheet(
     "Images Generated",
     computeStatementCycleImagesGenerated(ctx),
   );
-  addSummaryRow(sheet, "Images Refined", countRefinementsInCycle(ctx));
+  addSummaryRow(sheet, "Images Refined", computeStatementCycleRefinements(ctx));
   addSummaryRow(sheet, "Images Deleted", ctx.imagesDeletedInCycle);
   addSummaryRow(
     sheet,

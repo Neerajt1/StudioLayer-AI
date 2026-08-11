@@ -24,10 +24,10 @@ import {
 } from "@workspace/db";
 import {
   billingCycleStart,
-  getBillingCycleLedgerStats,
   getStudioCreditBalance,
   sumStudioCreditsUsed,
 } from "./studio-credit-service.js";
+import { getBillingCycleActivityStats } from "./account-statement/billing-cycle-activity.js";
 import {
   loadAccountStatementContext,
   computeMonthlySummaryRows,
@@ -87,7 +87,7 @@ export interface CommercialReconciliationReport {
       used: number;
       remaining: number | null;
       limit: number | null;
-      cycleStats: Awaited<ReturnType<typeof getBillingCycleLedgerStats>>;
+      cycleStats: Awaited<ReturnType<typeof getBillingCycleActivityStats>>;
     };
     ledger: {
       completedUsageTotal: number;
@@ -97,7 +97,7 @@ export interface CommercialReconciliationReport {
       refinementCountInScope: number;
     };
     gallery: {
-      cycleStats: Awaited<ReturnType<typeof getBillingCycleLedgerStats>>;
+      cycleStats: Awaited<ReturnType<typeof getBillingCycleActivityStats>>;
     };
     accountStatement: {
       balanceUsed: number;
@@ -297,7 +297,7 @@ export async function runCommercialReconciliation(
       limit,
       isAdmin: user.isAdmin,
     }),
-    getBillingCycleLedgerStats(userId, user.subscriptionTier),
+    getBillingCycleActivityStats(userId, user.subscriptionTier),
     loadAccountStatementContext(userId),
     db
       .select()

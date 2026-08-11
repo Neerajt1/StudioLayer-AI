@@ -15,6 +15,7 @@ const {
   computeLedgerRunningBalance,
   computeMonthlySummaryRows,
   computeStatementCycleImagesGenerated,
+  computeStatementCycleRefinements,
 } = await import("./data.js");
 
 type AccountStatementContext = Awaited<
@@ -107,6 +108,17 @@ function baseContext(
   };
 }
 
+function generationRows(
+  rows: ReturnType<typeof computeCreativeActivityRows>,
+  sessionId = "session-editorial",
+) {
+  return rows.filter(
+    (row) =>
+      row.activityType === "Generation" &&
+      row.generationSessionId === sessionId,
+  );
+}
+
 describe("account statement stage 1 invariants", () => {
   it("A. all-failed editorial: 0 images generated and 0 credits used", () => {
     const ctx = baseContext({
@@ -119,17 +131,14 @@ describe("account statement stage 1 invariants", () => {
       transactions: [],
     });
 
-    const activity = computeCreativeActivityRows(ctx)[0]!;
+    const rows = generationRows(computeCreativeActivityRows(ctx));
     const monthly = computeMonthlySummaryRows(ctx).find(
       (row) => row.monthKey === "2026-08",
     );
 
-    assert.equal(activity.status, "Failed");
-    assert.equal(activity.imagesRequested, 4);
-    assert.equal(activity.imagesCompleted, 0);
-    assert.equal(activity.imagesFailed, 4);
-    assert.equal(activity.imagesGenerated, 0);
-    assert.equal(activity.creditsUsed, 0);
+    assert.equal(rows.length, 4);
+    assert.equal(rows.every((row) => row.sessionStatus === "Failed"), true);
+    assert.equal(rows.every((row) => row.creditsUsed === 0), true);
     assert.equal(computeStatementCycleImagesGenerated(ctx), 0);
     assert.equal(monthly?.imagesGenerated ?? 0, 0);
     assert.equal(monthly?.creditsUsed ?? 0, 0);
@@ -159,14 +168,21 @@ describe("account statement stage 1 invariants", () => {
       },
     });
 
-    const activity = computeCreativeActivityRows(ctx)[0]!;
+    const rows = generationRows(computeCreativeActivityRows(ctx));
     const monthly = computeMonthlySummaryRows(ctx).find(
       (row) => row.monthKey === "2026-08",
     );
 
-    assert.equal(activity.status, "Partial");
-    assert.equal(activity.imagesGenerated, 2);
-    assert.equal(activity.creditsUsed, 2);
+    assert.equal(rows.length, 4);
+    assert.equal(rows[0]!.sessionStatus, "Partial");
+    assert.equal(
+      rows.filter((row) => row.result === "Completed").length,
+      2,
+    );
+    assert.equal(
+      rows.reduce((sum, row) => sum + row.creditsUsed, 0),
+      2,
+    );
     assert.equal(computeStatementCycleImagesGenerated(ctx), 2);
     assert.equal(monthly?.imagesGenerated, 2);
     assert.equal(monthly?.creditsUsed, 2);
@@ -174,7 +190,9 @@ describe("account statement stage 1 invariants", () => {
 
   it("C. full hero success: images generated equals completed count and ledger amount", () => {
     const ctx = baseContext({
-      renders: [render({ id: 1, generationType: "hero", generationSessionId: "hero-1" })],
+      renders: [
+        render({ id: 1, generationType: "hero", generationSessionId: "hero-1" }),
+      ],
       transactions: [
         usageTx({
           id: 2,
@@ -191,19 +209,29 @@ describe("account statement stage 1 invariants", () => {
       },
     });
 
-    const activity = computeCreativeActivityRows(ctx)[0]!;
+    const rows = computeCreativeActivityRows(ctx);
 
-    assert.equal(activity.status, "Completed");
-    assert.equal(activity.imagesGenerated, 1);
-    assert.equal(activity.creditsUsed, 1);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]!.sessionStatus, "Completed");
+    assert.equal(rows[0]!.creditsUsed, 1);
     assert.equal(computeStatementCycleImagesGenerated(ctx), 1);
   });
 
   it("D. creative activity credits reconcile with ledger usage transactions", () => {
     const ctx = baseContext({
       renders: [
-        render({ id: 1, status: "completed", generationSessionId: "campaign-1", generationType: "campaign" }),
-        render({ id: 2, status: "failed", generationSessionId: "campaign-1", generationType: "campaign" }),
+        render({
+          id: 1,
+          status: "completed",
+          generationSessionId: "campaign-1",
+          generationType: "campaign",
+        }),
+        render({
+          id: 2,
+          status: "failed",
+          generationSessionId: "campaign-1",
+          generationType: "campaign",
+        }),
       ],
       transactions: [
         usageTx({
@@ -239,19 +267,17 @@ describe("account statement stage 1 invariants", () => {
       transactions: [],
     });
 
-    const activity = computeCreativeActivityRows(ctx)[0]!;
+    const rows = computeCreativeActivityRows(ctx);
 
-    assert.equal(activity.status, "Completed");
-    assert.equal(activity.imagesRequested, 0);
-    assert.equal(activity.imagesCompleted, 0);
-    assert.equal(activity.imagesFailed, 0);
-    assert.equal(activity.imagesRefined, 0);
-    assert.equal(activity.creditsUsed, 0);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]!.activityType, "Refinement");
+    assert.equal(rows[0]!.sessionStatus, "Completed");
+    assert.equal(rows[0]!.creditsUsed, 0);
   });
 });
 
 describe("account statement final correction — creative activity status", () => {
-  it("4/4 editorial generated remains Completed", () => {
+  it("4/4 editorial generated remains Completed across image rows", () => {
     const ctx = baseContext({
       renders: [
         render({ id: 1, status: "completed" }),
@@ -269,20 +295,39 @@ describe("account statement final correction — creative activity status", () =
       ],
     });
 
-    const activity = computeCreativeActivityRows(ctx)[0]!;
-    assert.equal(activity.status, "Completed");
-    assert.equal(activity.imagesRequested, 4);
-    assert.equal(activity.imagesCompleted, 4);
-    assert.equal(activity.imagesFailed, 0);
+    const rows = generationRows(computeCreativeActivityRows(ctx));
+    assert.equal(rows.length, 4);
+    assert.equal(rows.every((row) => row.sessionStatus === "Completed"), true);
+    assert.equal(rows[3]!.outputLabel, "4/4");
   });
 
   it("2/2 campaign with successful refinements remains Completed", () => {
     const ctx = baseContext({
       renders: [
-        render({ id: 1, status: "completed", generationType: "campaign", generationSessionId: "campaign-1" }),
-        render({ id: 2, status: "completed", generationType: "campaign", generationSessionId: "campaign-1" }),
-        render({ id: 3, parentRenderId: 1, status: "completed", generationSessionId: "campaign-1" }),
-        render({ id: 4, parentRenderId: 2, status: "completed", generationSessionId: "campaign-1" }),
+        render({
+          id: 1,
+          status: "completed",
+          generationType: "campaign",
+          generationSessionId: "campaign-1",
+        }),
+        render({
+          id: 2,
+          status: "completed",
+          generationType: "campaign",
+          generationSessionId: "campaign-1",
+        }),
+        render({
+          id: 3,
+          parentRenderId: 1,
+          status: "completed",
+          generationSessionId: "campaign-1",
+        }),
+        render({
+          id: 4,
+          parentRenderId: 2,
+          status: "completed",
+          generationSessionId: "campaign-1",
+        }),
       ],
       transactions: [
         usageTx({
@@ -291,21 +336,57 @@ describe("account statement final correction — creative activity status", () =
           amount: -2,
           renderId: 1,
         }),
+        usageTx({
+          id: 3,
+          reasonCode: StudioCreditReasonCode.REFINE,
+          amount: -1,
+          renderId: 3,
+        }),
+        usageTx({
+          id: 4,
+          reasonCode: StudioCreditReasonCode.REFINE,
+          amount: -1,
+          renderId: 4,
+        }),
       ],
     });
 
-    const activity = computeCreativeActivityRows(ctx)[0]!;
-    assert.equal(activity.status, "Completed");
-    assert.equal(activity.imagesRefined, 2);
+    const rows = computeCreativeActivityRows(ctx);
+    const gen = rows.filter((row) => row.activityType === "Generation");
+    const ref = rows.filter((row) => row.activityType === "Refinement");
+
+    assert.equal(gen.every((row) => row.sessionStatus === "Completed"), true);
+    assert.equal(ref.length, 2);
+    assert.equal(computeStatementCycleRefinements(ctx), 2);
   });
 
   it("2/2 campaign with failed refinement remains Completed", () => {
     const ctx = baseContext({
       renders: [
-        render({ id: 1, status: "completed", generationType: "campaign", generationSessionId: "campaign-1" }),
-        render({ id: 2, status: "completed", generationType: "campaign", generationSessionId: "campaign-1" }),
-        render({ id: 3, parentRenderId: 1, status: "failed", generationSessionId: "campaign-1" }),
-        render({ id: 4, parentRenderId: 2, status: "failed", generationSessionId: "campaign-1" }),
+        render({
+          id: 1,
+          status: "completed",
+          generationType: "campaign",
+          generationSessionId: "campaign-1",
+        }),
+        render({
+          id: 2,
+          status: "completed",
+          generationType: "campaign",
+          generationSessionId: "campaign-1",
+        }),
+        render({
+          id: 3,
+          parentRenderId: 1,
+          status: "failed",
+          generationSessionId: "campaign-1",
+        }),
+        render({
+          id: 4,
+          parentRenderId: 2,
+          status: "failed",
+          generationSessionId: "campaign-1",
+        }),
       ],
       transactions: [
         usageTx({
@@ -317,17 +398,24 @@ describe("account statement final correction — creative activity status", () =
       ],
     });
 
-    const activity = computeCreativeActivityRows(ctx)[0]!;
-    assert.equal(activity.status, "Completed");
-    assert.equal(activity.imagesCompleted, 2);
-    assert.equal(activity.imagesFailed, 0);
-    assert.equal(activity.imagesRefined, 0);
+    const gen = computeCreativeActivityRows(ctx).filter(
+      (row) => row.activityType === "Generation",
+    );
+
+    assert.equal(gen.every((row) => row.sessionStatus === "Completed"), true);
+    assert.equal(gen.length, 2);
+    assert.equal(computeStatementCycleRefinements(ctx), 0);
   });
 
   it("1/6 custom campaign with COMPLETED ledger shows Partial and 1 credit used", () => {
     const ctx = baseContext({
       renders: [
-        render({ id: 1, status: "completed", generationType: "campaign", generationSessionId: "custom-6" }),
+        render({
+          id: 1,
+          status: "completed",
+          generationType: "campaign",
+          generationSessionId: "custom-6",
+        }),
         ...Array.from({ length: 5 }, (_, index) =>
           render({
             id: index + 2,
@@ -347,19 +435,25 @@ describe("account statement final correction — creative activity status", () =
       ],
     });
 
-    const activity = computeCreativeActivityRows(ctx)[0]!;
-    assert.equal(activity.status, "Partial");
-    assert.equal(activity.imagesRequested, 6);
-    assert.equal(activity.imagesCompleted, 1);
-    assert.equal(activity.imagesFailed, 5);
-    assert.equal(activity.imagesGenerated, 1);
-    assert.equal(activity.creditsUsed, 1);
+    const rows = generationRows(
+      computeCreativeActivityRows(ctx),
+      "custom-6",
+    );
+
+    assert.equal(rows.length, 6);
+    assert.equal(rows[0]!.sessionStatus, "Partial");
+    assert.equal(rows.reduce((sum, row) => sum + row.creditsUsed, 0), 1);
   });
 
-  it("1/6 custom campaign without COMPLETED ledger remains ledger-authoritative at 0 credits", () => {
+  it("1/6 custom campaign without COMPLETED ledger shows image credit mismatch transparently", () => {
     const ctx = baseContext({
       renders: [
-        render({ id: 1, status: "completed", generationType: "campaign", generationSessionId: "custom-6" }),
+        render({
+          id: 1,
+          status: "completed",
+          generationType: "campaign",
+          generationSessionId: "custom-6",
+        }),
         ...Array.from({ length: 5 }, (_, index) =>
           render({
             id: index + 2,
@@ -372,21 +466,46 @@ describe("account statement final correction — creative activity status", () =
       transactions: [],
     });
 
-    const activity = computeCreativeActivityRows(ctx)[0]!;
-    assert.equal(activity.status, "Partial");
-    assert.equal(activity.imagesGenerated, 1);
-    assert.equal(activity.creditsUsed, 0);
+    const rows = generationRows(
+      computeCreativeActivityRows(ctx),
+      "custom-6",
+    );
+
+    assert.equal(rows[0]!.sessionStatus, "Partial");
+    assert.equal(rows.reduce((sum, row) => sum + row.creditsUsed, 0), 1);
   });
 });
 
 describe("account statement stage 2 balance reconciliation", () => {
   it("paid monthly summary: opening + added - used = closing for current month", () => {
     const ctx = baseContext({
+      renders: [
+        render({
+          id: 1,
+          generationType: "hero",
+          generationSessionId: "hero-ledger",
+          createdAt: new Date("2026-08-04T10:00:00.000Z"),
+        }),
+        render({
+          id: 2,
+          generationType: "hero",
+          generationSessionId: "hero-ledger-2",
+          createdAt: new Date("2026-08-04T10:00:00.000Z"),
+        }),
+      ],
       transactions: [
         usageTx({
           id: 1,
           reasonCode: StudioCreditReasonCode.HERO_GENERATION,
           amount: -2,
+          renderId: 1,
+          createdAt: new Date("2026-08-04T10:00:00.000Z"),
+        }),
+        usageTx({
+          id: 2,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: 0,
+          renderId: 2,
           createdAt: new Date("2026-08-04T10:00:00.000Z"),
         }),
       ],
@@ -413,17 +532,33 @@ describe("account statement stage 2 balance reconciliation", () => {
 
   it("paid monthly summary: prior month closing does not carry into next month opening", () => {
     const ctx = baseContext({
+      renders: [
+        render({
+          id: 1,
+          generationType: "hero",
+          generationSessionId: "hero-july",
+          createdAt: new Date("2026-07-20T10:00:00.000Z"),
+        }),
+        render({
+          id: 2,
+          generationType: "hero",
+          generationSessionId: "hero-august",
+          createdAt: new Date("2026-08-04T10:00:00.000Z"),
+        }),
+      ],
       transactions: [
         usageTx({
           id: 1,
           reasonCode: StudioCreditReasonCode.HERO_GENERATION,
           amount: -100,
+          renderId: 1,
           createdAt: new Date("2026-07-20T10:00:00.000Z"),
         }),
         usageTx({
           id: 2,
           reasonCode: StudioCreditReasonCode.HERO_GENERATION,
           amount: -2,
+          renderId: 2,
           createdAt: new Date("2026-08-04T10:00:00.000Z"),
         }),
       ],
@@ -525,15 +660,50 @@ describe("account statement stage 2 balance reconciliation", () => {
       },
     });
 
-    const activity = computeCreativeActivityRows(ctx)[0]!;
+    const activityCredits = computeCreativeActivityRows(ctx).reduce(
+      (sum, row) => sum + row.creditsUsed,
+      0,
+    );
     const august = computeMonthlySummaryRows(ctx).find(
       (row) => row.monthKey === "2026-08",
     )!;
 
-    assert.equal(activity.status, "Partial");
-    assert.equal(activity.imagesGenerated, 2);
+    assert.equal(activityCredits, 2);
     assert.equal(august.imagesGenerated, 2);
     assert.equal(august.creditsUsed, 2);
     assert.equal(august.closingBalance, 118);
+  });
+});
+
+describe("account summary derives from master creative activity", () => {
+  it("14. Account Summary image and refinement counts match master cycle totals", () => {
+    const ctx = baseContext({
+      renders: [
+        render({ id: 1, status: "completed", generationSessionId: "s1" }),
+        render({
+          id: 2,
+          parentRenderId: 1,
+          status: "completed",
+          generationSessionId: "s1",
+        }),
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          reasonCode: StudioCreditReasonCode.EDITORIAL_GENERATION,
+          amount: -1,
+          renderId: 1,
+        }),
+        usageTx({
+          id: 2,
+          reasonCode: StudioCreditReasonCode.REFINE,
+          amount: -1,
+          renderId: 2,
+        }),
+      ],
+    });
+
+    assert.equal(computeStatementCycleImagesGenerated(ctx), 1);
+    assert.equal(computeStatementCycleRefinements(ctx), 1);
   });
 });

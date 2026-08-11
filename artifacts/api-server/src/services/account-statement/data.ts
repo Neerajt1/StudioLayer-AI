@@ -17,29 +17,25 @@ import {
 } from "@workspace/db";
 import {
   billingCycleStart,
-  getBillingCycleLedgerStats,
   getStudioCreditBalance,
 } from "../studio-credit-service.js";
 import { reconcileStaleCommercialState } from "../generation-idempotency.js";
 import {
   formatMonthKey,
-  isGenerationReasonCode,
   isMembershipAllocationReasonCode,
   isPromotionalReasonCode,
   isPurchasedReasonCode,
-  isRefinementReasonCode,
   isUsageReasonCode,
 } from "./labels.js";
 import {
-  billableGenerationImagesForTransaction,
-  countRenderOutcomes,
-  deriveSessionActivityStatus,
-  refinementRendersInSession,
-  rendersForSession,
-  resolveSessionIdForRender,
-  resolveSessionIdForTransaction,
-  rootRendersInSession,
-} from "./billable-output.js";
+  aggregateMasterByMonth,
+  buildMasterCreativeActivity,
+  countMasterImagesGenerated,
+  countMasterRefinements,
+  filterMasterRowsForCycle,
+  type CreativeActivityRow,
+} from "./creative-activity-master.js";
+import { getBillingCycleActivityStats } from "./billing-cycle-activity.js";
 import {
   applyMonthlyBalanceFields,
   computeLedgerRunningBalance as computeLedgerRunningBalanceFromHistory,
@@ -52,7 +48,7 @@ export interface AccountStatementContext {
   allowance: number;
   isAdmin: boolean;
   balance: Awaited<ReturnType<typeof getStudioCreditBalance>>;
-  cycleStats: Awaited<ReturnType<typeof getBillingCycleLedgerStats>>;
+  cycleStats: Awaited<ReturnType<typeof getBillingCycleActivityStats>>;
   cycleStart: Date;
   transactions: StudioCreditTransaction[];
   renders: Render[];
@@ -75,45 +71,28 @@ export interface MonthlySummaryRow {
   closingBalance: number;
 }
 
-export interface CreativeActivityRow {
-  sessionId: string;
-  dateTime: Date;
-  generationType: string;
-  imagesRequested: number;
-  imagesCompleted: number;
-  imagesFailed: number;
-  imagesGenerated: number;
-  imagesRefined: number;
-  creditsUsed: number;
-  status: string;
+export type { CreativeActivityRow } from "./creative-activity-master.js";
+
+function masterForContext(ctx: AccountStatementContext) {
+  return buildMasterCreativeActivity(ctx);
 }
 
-function renderByIdMap(renders: Render[]): Map<number, Render> {
-  return new Map(renders.map((render) => [render.id, render]));
-}
-
-/** Billable generation images in billing-cycle scope — render outcomes first, ledger fallback. */
+/** Billable generation images in billing-cycle scope — derived from master activity rows. */
 export function computeStatementCycleImagesGenerated(
   ctx: AccountStatementContext,
 ): number {
-  const isLifetime = ctx.user.subscriptionTier === "free";
-  const renderById = renderByIdMap(ctx.renders);
-  let total = 0;
+  const master = masterForContext(ctx);
+  const cycleRows = filterMasterRowsForCycle(ctx, master.rows);
+  return countMasterImagesGenerated(cycleRows);
+}
 
-  for (const tx of ctx.transactions) {
-    if (!isGenerationReasonCode(tx.reasonCode)) continue;
-    if (!isLifetime && tx.createdAt < ctx.cycleStart) continue;
-
-    const sessionId = resolveSessionIdForTransaction(
-      tx,
-      renderById,
-      ctx.deletionEvents,
-    );
-    const sessionRenders = rendersForSession(sessionId, ctx.renders);
-    total += billableGenerationImagesForTransaction(tx, sessionRenders);
-  }
-
-  return total;
+/** Billable refinement images in billing-cycle scope — derived from master activity rows. */
+export function computeStatementCycleRefinements(
+  ctx: AccountStatementContext,
+): number {
+  const master = masterForContext(ctx);
+  const cycleRows = filterMasterRowsForCycle(ctx, master.rows);
+  return countMasterRefinements(cycleRows);
 }
 
 function statementBalanceContext(
@@ -161,7 +140,7 @@ export async function loadAccountStatementContext(
         limit,
         isAdmin: user.isAdmin,
       }),
-      getBillingCycleLedgerStats(userId, user.subscriptionTier),
+      getBillingCycleActivityStats(userId, user.subscriptionTier),
       db
         .select()
         .from(studioCreditTransactionsTable)
@@ -240,6 +219,8 @@ export async function loadAccountStatementContext(
 export function computeMonthlySummaryRows(
   ctx: AccountStatementContext,
 ): MonthlySummaryRow[] {
+  const master = masterForContext(ctx);
+  const masterByMonth = aggregateMasterByMonth(master.rows);
   const monthMap = new Map<string, MonthlySummaryRow>();
 
   const ensureMonth = (monthKey: string): MonthlySummaryRow => {
@@ -265,24 +246,25 @@ export function computeMonthlySummaryRows(
 
     if (tx.amount > 0) {
       row.creditsAdded += tx.amount;
-    } else if (isUsageReasonCode(tx.reasonCode)) {
-      row.creditsUsed += Math.abs(tx.amount);
     }
+  }
 
-    if (isGenerationReasonCode(tx.reasonCode)) {
-      const sessionId = resolveSessionIdForTransaction(
-        tx,
-        renderByIdMap(ctx.renders),
-        ctx.deletionEvents,
+  const ledgerCreditsByMonth = new Map<string, number>();
+  for (const tx of ctx.transactions) {
+    if (tx.amount < 0 && isUsageReasonCode(tx.reasonCode)) {
+      const monthKey = formatMonthKey(tx.createdAt);
+      ledgerCreditsByMonth.set(
+        monthKey,
+        (ledgerCreditsByMonth.get(monthKey) ?? 0) + Math.abs(tx.amount),
       );
-      const sessionRenders = rendersForSession(sessionId, ctx.renders);
-      row.imagesGenerated += billableGenerationImagesForTransaction(
-        tx,
-        sessionRenders,
-      );
-    } else if (isRefinementReasonCode(tx.reasonCode)) {
-      row.refinements += 1;
     }
+  }
+
+  for (const [monthKey, activity] of masterByMonth) {
+    const row = ensureMonth(monthKey);
+    row.imagesGenerated = activity.imagesGenerated;
+    row.refinements = activity.refinements;
+    row.creditsUsed = activity.creditsUsed;
   }
 
   for (const event of ctx.deletionEvents) {
@@ -300,7 +282,7 @@ export function computeMonthlySummaryRows(
     return {
       monthKey,
       creditsAdded: row.creditsAdded,
-      creditsUsed: row.creditsUsed,
+      creditsUsed: ledgerCreditsByMonth.get(monthKey) ?? 0,
     };
   });
   const balanceFields = applyMonthlyBalanceFields(
@@ -330,95 +312,5 @@ export function computeLedgerRunningBalance(
 export function computeCreativeActivityRows(
   ctx: AccountStatementContext,
 ): CreativeActivityRow[] {
-  const renderById = renderByIdMap(ctx.renders);
-  const sessionIds = new Set<string>();
-  const creditsBySession = new Map<string, number>();
-
-  for (const render of ctx.renders) {
-    sessionIds.add(resolveSessionIdForRender(render));
-  }
-
-  for (const event of ctx.deletionEvents) {
-    if (event.generationSessionId) {
-      sessionIds.add(event.generationSessionId);
-    }
-  }
-
-  for (const tx of ctx.transactions) {
-    if (!isUsageReasonCode(tx.reasonCode)) continue;
-
-    const sessionId = resolveSessionIdForTransaction(
-      tx,
-      renderById,
-      ctx.deletionEvents,
-    );
-    sessionIds.add(sessionId);
-    creditsBySession.set(
-      sessionId,
-      (creditsBySession.get(sessionId) ?? 0) + Math.abs(tx.amount),
-    );
-  }
-
-  return [...sessionIds]
-    .map((sessionId) => {
-      const sessionRenders = rendersForSession(sessionId, ctx.renders);
-      const roots = rootRendersInSession(sessionRenders);
-      const refinements = refinementRendersInSession(sessionRenders);
-      const rootOutcomes = countRenderOutcomes(roots);
-      const refinementOutcomes = countRenderOutcomes(refinements);
-      const status = deriveSessionActivityStatus(rootOutcomes);
-
-      let dateTime = ctx.generatedAt;
-      let generationType = "—";
-
-      for (const render of sessionRenders) {
-        if (render.createdAt < dateTime) {
-          dateTime = render.createdAt;
-        }
-        if (generationType === "—") {
-          generationType = render.generationType;
-        }
-      }
-
-      for (const tx of ctx.transactions) {
-        if (!isUsageReasonCode(tx.reasonCode)) continue;
-        if (
-          resolveSessionIdForTransaction(tx, renderById, ctx.deletionEvents)
-          !== sessionId
-        ) {
-          continue;
-        }
-        if (tx.createdAt < dateTime) {
-          dateTime = tx.createdAt;
-        }
-        if (generationType === "—" && isGenerationReasonCode(tx.reasonCode)) {
-          generationType = tx.reasonCode.replace("_generation", "");
-        }
-      }
-
-      const imagesCompleted = rootOutcomes.completed;
-      const imagesGenerated =
-        status === "Failed" && imagesCompleted === 0
-          ? 0
-          : imagesCompleted;
-      const imagesRefined =
-        status === "Failed" && refinementOutcomes.completed === 0
-          ? 0
-          : refinementOutcomes.completed;
-      const creditsUsed = creditsBySession.get(sessionId) ?? 0;
-
-      return {
-        sessionId,
-        dateTime,
-        generationType,
-        imagesRequested: rootOutcomes.requested,
-        imagesCompleted,
-        imagesFailed: rootOutcomes.failed,
-        imagesGenerated,
-        imagesRefined,
-        creditsUsed,
-        status,
-      };
-    })
-    .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime());
+  return masterForContext(ctx).rows;
 }
