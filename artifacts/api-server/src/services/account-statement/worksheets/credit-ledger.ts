@@ -27,7 +27,7 @@ export function buildCreditLedgerSheet(
     "Transaction Type",
     "Description",
     "Credits Added",
-    "Credits Deducted",
+    "Credits Used",
     "Running Balance",
   ];
 
@@ -37,7 +37,7 @@ export function buildCreditLedgerSheet(
 
   ctx.transactions.forEach((tx, index) => {
     const creditsAdded = tx.amount > 0 ? tx.amount : 0;
-    const creditsDeducted =
+    const creditsUsed =
       tx.amount < 0 && isUsageReasonCode(tx.reasonCode)
         ? Math.abs(tx.amount)
         : tx.amount < 0
@@ -53,7 +53,7 @@ export function buildCreditLedgerSheet(
       transactionTypeLabel(tx.reasonCode),
       transactionDescription(tx.reasonCode, tx.renderId),
       creditsAdded || "",
-      creditsDeducted || "",
+      creditsUsed || "",
       runningBalance,
     ]);
     row.eachCell((cell) => applyDataCell(cell));

@@ -16,6 +16,9 @@ const {
   computeMonthlySummaryRows,
   computeStatementCycleImagesGenerated,
   computeStatementCycleRefinements,
+  computeStatementLedgerCreditsUsed,
+  computeStatementReconciliation,
+  computeUnmappedLedgerTransactions,
 } = await import("./data.js");
 
 type AccountStatementContext = Awaited<
@@ -705,5 +708,249 @@ describe("account summary derives from master creative activity", () => {
 
     assert.equal(computeStatementCycleImagesGenerated(ctx), 1);
     assert.equal(computeStatementCycleRefinements(ctx), 1);
+  });
+});
+
+describe("ledger and activity reconciliation", () => {
+  it("11. unmapped completed ledger transaction is not converted into a fake image row", () => {
+    const ctx = baseContext({
+      renders: [],
+      transactions: [
+        usageTx({
+          id: 1,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -1,
+          renderId: 99,
+          createdAt: new Date("2026-08-05T12:00:00.000Z"),
+        }),
+      ],
+    });
+
+    const activityRows = computeCreativeActivityRows(ctx);
+    const unmapped = computeUnmappedLedgerTransactions(ctx);
+    const reconciliation = computeStatementReconciliation(ctx);
+
+    assert.equal(activityRows.length, 0);
+    assert.equal(unmapped.length, 1);
+    assert.equal(reconciliation.ledgerCreditsUsed, 1);
+    assert.equal(reconciliation.activityCreditsUsed, 0);
+    assert.equal(reconciliation.reconciliationGap, 1);
+    assert.equal(reconciliation.unmappedLedgerCredits, 1);
+    assert.equal(reconciliation.creditsReconcile, false);
+  });
+
+  it("12. mapped master credits reconcile with ledger for valid activity", () => {
+    const ctx = baseContext({
+      renders: [
+        render({ id: 1, status: "completed", generationSessionId: "s1" }),
+        render({ id: 2, status: "failed", generationSessionId: "s1" }),
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          reasonCode: StudioCreditReasonCode.CAMPAIGN_GENERATION,
+          amount: -1,
+          renderId: 1,
+          createdAt: new Date("2026-08-05T12:00:00.000Z"),
+        }),
+      ],
+    });
+
+    const reconciliation = computeStatementReconciliation(ctx);
+
+    assert.equal(reconciliation.ledgerCreditsUsed, 1);
+    assert.equal(reconciliation.activityCreditsUsed, 1);
+    assert.equal(reconciliation.reconciliationGap, 0);
+    assert.equal(reconciliation.creditsReconcile, true);
+  });
+
+  it("13. Monthly Summary Credits Used follows ledger authority", () => {
+    const ctx = baseContext({
+      renders: [
+        render({ id: 1, status: "completed", generationSessionId: "s1" }),
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -1,
+          renderId: 1,
+          createdAt: new Date("2026-08-05T12:00:00.000Z"),
+        }),
+        usageTx({
+          id: 2,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -1,
+          renderId: null,
+          createdAt: new Date("2026-08-05T13:00:00.000Z"),
+        }),
+      ],
+    });
+
+    const august = computeMonthlySummaryRows(ctx).find(
+      (row) => row.monthKey === "2026-08",
+    )!;
+
+    assert.equal(august.creditsUsed, 2);
+    assert.equal(august.activityCreditsUsed, 1);
+    assert.equal(august.creditsReconciliationGap, 1);
+    assert.equal(august.imagesGenerated, 1);
+  });
+
+  it("14. Account Summary Studio Credits Used follows ledger authority", () => {
+    const ctx = baseContext({
+      renders: [
+        render({ id: 1, status: "completed", generationSessionId: "s1" }),
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -1,
+          renderId: 1,
+          createdAt: new Date("2026-08-05T12:00:00.000Z"),
+        }),
+        usageTx({
+          id: 2,
+          reasonCode: StudioCreditReasonCode.REFINE,
+          amount: -1,
+          renderId: null,
+          createdAt: new Date("2026-08-05T13:00:00.000Z"),
+        }),
+      ],
+      balance: {
+        used: 2,
+        limit: 120,
+        remaining: 118,
+        canRender: true,
+      },
+    });
+
+    assert.equal(computeStatementLedgerCreditsUsed(ctx), 2);
+    assert.equal(computeStatementReconciliation(ctx).activityCreditsUsed, 1);
+  });
+
+  it("admin Account Summary Studio Credits Used uses ledger not zero", () => {
+    const ctx = baseContext({
+      isAdmin: true,
+      renders: [
+        render({ id: 1, status: "completed", generationSessionId: "s1" }),
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -3,
+          renderId: 1,
+          createdAt: new Date("2026-08-05T12:00:00.000Z"),
+        }),
+      ],
+      balance: {
+        used: 0,
+        limit: null,
+        remaining: Infinity,
+        canRender: true,
+      },
+    });
+
+    assert.equal(computeStatementLedgerCreditsUsed(ctx), 3);
+  });
+
+  it("historical 6-credit gap preserves ledger authority without synthetic activity rows", () => {
+    const ctx = baseContext({
+      user: {
+        id: 3,
+        email: "historical@example.com",
+        name: "Historical User",
+        subscriptionTier: "free",
+        isAdmin: true,
+      } as User,
+      isAdmin: true,
+      renders: [
+        render({
+          id: 4,
+          generationType: "hero",
+          generationSessionId: "hero-4",
+          status: "completed",
+        }),
+        render({
+          id: 5,
+          generationType: "campaign",
+          generationSessionId: null,
+          status: "completed",
+          createdAt: new Date("2026-08-06T06:50:46.036Z"),
+        }),
+      ],
+      transactions: [
+        usageTx({
+          id: 4,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -1,
+          renderId: 4,
+          createdAt: new Date("2026-08-05T15:07:44.430Z"),
+        }),
+        usageTx({
+          id: 5,
+          transactionId: "4c5893b8-30cd-43c9-b28e-0bc1fc9138d1",
+          reasonCode: StudioCreditReasonCode.CAMPAIGN_GENERATION,
+          amount: -2,
+          renderId: null,
+          createdAt: new Date("2026-08-06T06:50:46.622Z"),
+        }),
+        usageTx({
+          id: 6,
+          transactionId: "95782b28-b76a-4d31-9b8f-9c3d90501b0a",
+          reasonCode: StudioCreditReasonCode.REFINE,
+          amount: -1,
+          renderId: null,
+          createdAt: new Date("2026-08-06T06:52:14.335Z"),
+        }),
+        usageTx({
+          id: 7,
+          transactionId: "3a4bd7e5-7355-4d5f-8b30-2dbb8c370e70",
+          reasonCode: StudioCreditReasonCode.REFINE,
+          amount: -1,
+          renderId: null,
+          createdAt: new Date("2026-08-06T07:05:13.054Z"),
+        }),
+        usageTx({
+          id: 8,
+          transactionId: "0474da77-50cc-4ecd-8b94-f857634079d9",
+          reasonCode: StudioCreditReasonCode.REFINE,
+          amount: -1,
+          renderId: null,
+          createdAt: new Date("2026-08-06T07:08:33.034Z"),
+        }),
+        usageTx({
+          id: 9,
+          transactionId: "556cf741-a4af-4417-b989-b26cf2c8f325",
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -1,
+          renderId: null,
+          createdAt: new Date("2026-08-06T16:08:50.229Z"),
+        }),
+      ],
+      balance: {
+        used: 0,
+        limit: null,
+        remaining: Infinity,
+        canRender: true,
+      },
+    });
+
+    const activityRows = computeCreativeActivityRows(ctx);
+    const reconciliation = computeStatementReconciliation(ctx);
+
+    assert.equal(computeStatementLedgerCreditsUsed(ctx), 7);
+    assert.equal(reconciliation.activityCreditsUsed, 2);
+    assert.equal(reconciliation.reconciliationGap, 5);
+    assert.equal(reconciliation.unmappedTransactions.length, 5);
+    assert.equal(reconciliation.unmappedLedgerCredits, 6);
+    assert.equal(activityRows.length, 2);
+    assert.equal(
+      activityRows.reduce((sum, row) => sum + row.creditsUsed, 0),
+      2,
+    );
+    assert.equal(reconciliation.creditsReconcile, false);
   });
 });

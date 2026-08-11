@@ -29,7 +29,7 @@ export function buildCreativeActivitySheet(
     "Batch Action",
     "Output",
     "Outputs Requested",
-    "Image / Render ID",
+    "Image ID",
     "Result",
     "Billable Image",
     "Credits Used",

@@ -200,6 +200,40 @@ describe("master creative activity architecture", () => {
     assert.equal(rows[0]!.sessionStatus, "Partial");
   });
 
+  it("5b. Campaign 2 requested / 1 completed → 2 rows, 1 credit, Partial", () => {
+    const ctx = baseContext({
+      renders: [
+        render({
+          id: 1,
+          status: "completed",
+          generationType: "campaign",
+          generationSessionId: "campaign-partial",
+        }),
+        render({
+          id: 2,
+          status: "failed",
+          generationType: "campaign",
+          generationSessionId: "campaign-partial",
+        }),
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          reasonCode: StudioCreditReasonCode.CAMPAIGN_GENERATION,
+          amount: -1,
+          renderId: 1,
+        }),
+      ],
+    });
+
+    const master = buildMasterCreativeActivity(ctx);
+    const rows = generationRows(master.rows);
+
+    assert.equal(rows.length, 2);
+    assert.equal(sumMasterCreditsUsed(master.rows), 1);
+    assert.equal(rows[0]!.sessionStatus, "Partial");
+  });
+
   it("5. Campaign 6 requested / 1 completed → 6 rows, 1 credit, Partial", () => {
     const ctx = baseContext({
       renders: [

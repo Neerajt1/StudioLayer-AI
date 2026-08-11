@@ -4,6 +4,8 @@ import {
   computeMembershipAllowance,
   computeStatementCycleImagesGenerated,
   computeStatementCycleRefinements,
+  computeStatementLedgerCreditsUsed,
+  computeStatementReconciliation,
 } from "../data.js";
 import {
   addSummaryRow,
@@ -29,7 +31,8 @@ export function buildAccountSummarySheet(
 
   const membershipAllowance = computeMembershipAllowance(ctx);
   const currentBalance = ctx.isAdmin ? "Unlimited" : ctx.balance.remaining;
-  const creditsUsed = ctx.isAdmin ? 0 : ctx.balance.used;
+  const creditsUsed = computeStatementLedgerCreditsUsed(ctx);
+  const reconciliation = computeStatementReconciliation(ctx);
   const promotionalDisplay =
     ctx.promotionalCreditsInCycle > 0
       ? ctx.promotionalCreditsInCycle
@@ -56,6 +59,19 @@ export function buildAccountSummarySheet(
   addSummaryRow(sheet, "Promotional Credits", promotionalDisplay);
   addSummaryRow(sheet, "Total Credits Added", ctx.totalCreditsAddedInCycle);
   addSummaryRow(sheet, "Studio Credits Used", creditsUsed);
+  addSummaryRow(sheet, "Activity Credits Used", reconciliation.activityCreditsUsed);
+  if (reconciliation.reconciliationGap !== 0) {
+    addSummaryRow(
+      sheet,
+      "Credits Reconciliation Gap",
+      reconciliation.reconciliationGap,
+    );
+    addSummaryRow(
+      sheet,
+      "Unmapped Ledger Credits",
+      reconciliation.unmappedLedgerCredits,
+    );
+  }
   addSummaryRow(sheet, "Current Credit Balance", currentBalance);
   addSummaryRow(
     sheet,

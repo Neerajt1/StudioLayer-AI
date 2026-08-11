@@ -33,7 +33,10 @@ import {
   countMasterImagesGenerated,
   countMasterRefinements,
   filterMasterRowsForCycle,
+  reconcileMasterWithLedger,
   type CreativeActivityRow,
+  type MasterCreativeActivityResult,
+  type UnmappedHistoricalTransaction,
 } from "./creative-activity-master.js";
 import { getBillingCycleActivityStats } from "./billing-cycle-activity.js";
 import {
@@ -64,17 +67,127 @@ export interface MonthlySummaryRow {
   monthKey: string;
   openingBalance: number;
   creditsAdded: number;
+  /** Authoritative completed ledger deductions for the month. */
   creditsUsed: number;
+  /** Master-derived successful billable activity credits for the month. */
+  activityCreditsUsed: number;
+  /** Ledger creditsUsed minus activityCreditsUsed when they differ. */
+  creditsReconciliationGap: number;
   imagesGenerated: number;
   refinements: number;
   imagesDeleted: number;
   closingBalance: number;
 }
 
-export type { CreativeActivityRow } from "./creative-activity-master.js";
+export interface StatementReconciliation {
+  ledgerCreditsUsed: number;
+  activityCreditsUsed: number;
+  reconciliationGap: number;
+  unmappedLedgerCredits: number;
+  unmappedTransactions: UnmappedHistoricalTransaction[];
+  creditsReconcile: boolean;
+}
 
-function masterForContext(ctx: AccountStatementContext) {
+export type {
+  CreativeActivityRow,
+  MasterCreativeActivityResult,
+  UnmappedHistoricalTransaction,
+} from "./creative-activity-master.js";
+
+function isWithinStatementScope(ctx: AccountStatementContext, date: Date): boolean {
+  if (ctx.user.subscriptionTier === "free") return true;
+  return date >= ctx.cycleStart;
+}
+
+/** Transactions included in the current statement period. */
+export function filterTransactionsForStatementScope(
+  ctx: AccountStatementContext,
+): StudioCreditTransaction[] {
+  return ctx.transactions.filter((tx) => isWithinStatementScope(ctx, tx.createdAt));
+}
+
+function masterForContext(ctx: AccountStatementContext): MasterCreativeActivityResult {
   return buildMasterCreativeActivity(ctx);
+}
+
+export function computeMasterCreativeActivityResult(
+  ctx: AccountStatementContext,
+): MasterCreativeActivityResult {
+  return masterForContext(ctx);
+}
+
+/** Completed ledger usage deductions for the statement period — financial authority. */
+export function sumStatementLedgerCreditsUsed(
+  ctx: AccountStatementContext,
+): number {
+  return filterTransactionsForStatementScope(ctx)
+    .filter((tx) => tx.amount < 0 && isUsageReasonCode(tx.reasonCode))
+    .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+}
+
+/** Successful billable activity credits for the statement period — master authority. */
+export function sumStatementActivityCreditsUsed(
+  ctx: AccountStatementContext,
+): number {
+  const master = masterForContext(ctx);
+  const cycleRows = filterMasterRowsForCycle(ctx, master.rows);
+  return cycleRows.reduce((sum, row) => sum + row.creditsUsed, 0);
+}
+
+function scopedMasterForReconciliation(
+  ctx: AccountStatementContext,
+): MasterCreativeActivityResult {
+  const master = masterForContext(ctx);
+  const cycleRows = filterMasterRowsForCycle(ctx, master.rows);
+  const unmappedTransactions = master.unmappedTransactions.filter((tx) =>
+    isWithinStatementScope(ctx, tx.date),
+  );
+
+  return { rows: cycleRows, unmappedTransactions };
+}
+
+/** Compares ledger deductions with mapped master activity for the statement period. */
+export function computeStatementReconciliation(
+  ctx: AccountStatementContext,
+): StatementReconciliation {
+  const scopedTransactions = filterTransactionsForStatementScope(ctx);
+  const scopedMaster = scopedMasterForReconciliation(ctx);
+  const reconciliation = reconcileMasterWithLedger(
+    {
+      user: ctx.user,
+      cycleStart: ctx.cycleStart,
+      transactions: scopedTransactions,
+      renders: ctx.renders,
+      deletionEvents: ctx.deletionEvents,
+    },
+    scopedMaster,
+  );
+
+  const unmappedLedgerCredits = reconciliation.unmappedTransactions.reduce(
+    (sum, tx) => sum + tx.amount,
+    0,
+  );
+
+  return {
+    ledgerCreditsUsed: reconciliation.ledgerCreditsUsed,
+    activityCreditsUsed: reconciliation.masterCreditsUsed,
+    reconciliationGap:
+      reconciliation.ledgerCreditsUsed - reconciliation.masterCreditsUsed,
+    unmappedLedgerCredits,
+    unmappedTransactions: reconciliation.unmappedTransactions,
+    creditsReconcile: reconciliation.creditsReconcile,
+  };
+}
+
+/** Authoritative Studio Credits Used for Account Summary — ledger, not activity. */
+export function computeStatementLedgerCreditsUsed(
+  ctx: AccountStatementContext,
+): number {
+  if (ctx.isAdmin) {
+    return sumStatementLedgerCreditsUsed(ctx);
+  }
+
+  return ctx.balance.used;
 }
 
 /** Billable generation images in billing-cycle scope — derived from master activity rows. */
@@ -231,6 +344,8 @@ export function computeMonthlySummaryRows(
       openingBalance: 0,
       creditsAdded: 0,
       creditsUsed: 0,
+      activityCreditsUsed: 0,
+      creditsReconciliationGap: 0,
       imagesGenerated: 0,
       refinements: 0,
       imagesDeleted: 0,
@@ -264,7 +379,13 @@ export function computeMonthlySummaryRows(
     const row = ensureMonth(monthKey);
     row.imagesGenerated = activity.imagesGenerated;
     row.refinements = activity.refinements;
-    row.creditsUsed = activity.creditsUsed;
+    row.activityCreditsUsed = activity.creditsUsed;
+  }
+
+  for (const [monthKey, ledgerUsed] of ledgerCreditsByMonth) {
+    const row = ensureMonth(monthKey);
+    row.creditsUsed = ledgerUsed;
+    row.creditsReconciliationGap = ledgerUsed - row.activityCreditsUsed;
   }
 
   for (const event of ctx.deletionEvents) {
@@ -313,4 +434,10 @@ export function computeCreativeActivityRows(
   ctx: AccountStatementContext,
 ): CreativeActivityRow[] {
   return masterForContext(ctx).rows;
+}
+
+export function computeUnmappedLedgerTransactions(
+  ctx: AccountStatementContext,
+): UnmappedHistoricalTransaction[] {
+  return scopedMasterForReconciliation(ctx).unmappedTransactions;
 }

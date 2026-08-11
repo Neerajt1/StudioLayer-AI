@@ -8,6 +8,7 @@ import { buildAccountSummarySheet } from "./worksheets/account-summary.js";
 import { buildMonthlySummarySheet } from "./worksheets/monthly-summary.js";
 import { buildCreditLedgerSheet } from "./worksheets/credit-ledger.js";
 import { buildCreativeActivitySheet } from "./worksheets/creative-activity.js";
+import { buildLedgerReconciliationSheet } from "./worksheets/ledger-reconciliation.js";
 import { buildDeletedImagesSheet } from "./worksheets/deleted-images.js";
 
 export type AccountStatementWorksheetBuilder = (
@@ -21,6 +22,7 @@ const WORKSHEET_BUILDERS: AccountStatementWorksheetBuilder[] = [
   buildMonthlySummarySheet,
   buildCreditLedgerSheet,
   buildCreativeActivitySheet,
+  buildLedgerReconciliationSheet,
   buildDeletedImagesSheet,
 ];
 
