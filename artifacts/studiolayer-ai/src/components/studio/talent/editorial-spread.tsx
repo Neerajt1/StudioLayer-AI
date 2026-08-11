@@ -1,8 +1,12 @@
 // ---------------------------------------------------------------------------
 // Editorial Spread — absolute canvas renderer (Sprint 3.3)
+// Mobile (≤767px): horizontal scroll card strip (same UX as talent collection).
+// Desktop (≥768px): PDF art-directed absolute canvas (unchanged).
 // ---------------------------------------------------------------------------
 
+import { cn } from '@/lib/utils';
 import { TalentCard } from './talent-card';
+import { TALENT_PORTRAIT_HEIGHT } from './casting-tokens';
 import type { ModelIdentity } from './types';
 import type { TalentLayoutSlot, TalentLayoutSpread } from './talent-layout-spec';
 
@@ -14,7 +18,7 @@ interface EditorialSpreadViewProps {
   onSelect: (id: string) => void;
 }
 
-export function EditorialSpreadView({
+function EditorialSpreadMobileStrip({
   spread,
   placements,
   selectedTalentId,
@@ -23,7 +27,43 @@ export function EditorialSpreadView({
 }: EditorialSpreadViewProps) {
   return (
     <section
-      className="relative w-full"
+      className="sl-talent-spread-mobile"
+      aria-label={`Editorial spread ${spread.spreadId}`}
+    >
+      <div className="sl-talent-collection">
+        <div
+          className={cn(
+            'sl-talent-collection-scroll flex gap-10 overflow-x-auto scroll-smooth py-2',
+            '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+          )}
+        >
+          {placements.map(({ talent, slot }) => (
+            <TalentCard
+              key={slot.talentCode}
+              model={talent}
+              isSelected={selectedTalentId === talent.id && !selectingId}
+              isSelecting={selectingId === talent.id}
+              disabled={!!selectingId}
+              portraitMaxHeight={TALENT_PORTRAIT_HEIGHT}
+              onSelect={onSelect}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function EditorialSpreadDesktopCanvas({
+  spread,
+  placements,
+  selectedTalentId,
+  selectingId,
+  onSelect,
+}: EditorialSpreadViewProps) {
+  return (
+    <section
+      className="sl-talent-spread-canvas relative w-full"
       style={{ minHeight: '100svh' }}
       aria-label={`Editorial spread ${spread.spreadId}`}
     >
@@ -51,5 +91,18 @@ export function EditorialSpreadView({
         </div>
       ))}
     </section>
+  );
+}
+
+export function EditorialSpreadView(props: EditorialSpreadViewProps) {
+  return (
+    <>
+      <div className="sl-talent-spread-mobile-wrap md:hidden">
+        <EditorialSpreadMobileStrip {...props} />
+      </div>
+      <div className="sl-talent-spread-canvas-wrap hidden md:block">
+        <EditorialSpreadDesktopCanvas {...props} />
+      </div>
+    </>
   );
 }

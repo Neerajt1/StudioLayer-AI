@@ -75,7 +75,7 @@ export function CastingStudio({ identities }: CastingStudioProps) {
             onSelect={handleSelect}
           />
           {spread.spreadId < TALENT_LAYOUT.length && (
-            <div className="min-h-[24svh]" aria-hidden />
+            <div className="sl-casting-spread-spacer min-h-[24svh]" aria-hidden />
           )}
         </div>
       ))}

@@ -98,7 +98,7 @@ export function TalentCollection({
           <p className="text-xs text-muted-foreground font-mono">Loading Studio Talent…</p>
         </div>
       ) : (
-        <div className="group/collection relative">
+        <div className="sl-talent-collection group/collection relative">
           <button
             type="button"
             aria-label={`Scroll ${config.title} left`}

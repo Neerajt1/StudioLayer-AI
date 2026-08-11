@@ -36,6 +36,7 @@ export const TalentCard = memo(function TalentCard({
 }: TalentCardProps) {
   const interactive = !disabled && !isSelecting;
   const showSelected = isSelected || isSelecting;
+  const scrollCardLayout = !editorialAbsolute;
 
   return (
     <button
@@ -45,7 +46,8 @@ export const TalentCard = memo(function TalentCard({
       }}
       style={editorialAbsolute ? undefined : { width: slotWidth }}
       className={cn(
-        'sl-talent-card group relative overflow-visible border-0 bg-transparent p-0 text-left select-none',
+        'sl-talent-card group relative border-0 bg-transparent p-0 text-left select-none',
+        scrollCardLayout && 'sl-talent-card--scroll overflow-visible',
         editorialAbsolute ? 'flex h-full w-full flex-col' : 'flex shrink-0 flex-col items-center text-center',
         TALENT_MOTION,
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -57,42 +59,59 @@ export const TalentCard = memo(function TalentCard({
         disabled && 'pointer-events-none opacity-50',
       )}
     >
-      <div className={cn('sl-talent-portrait-wrap relative', editorialAbsolute ? 'min-h-0 flex-1' : 'w-full')}>
-        <ModelImageFrame
-          src={model.imageUrl}
-          alt={model.displayName}
-          identityId={model.id}
-          interactive={interactive}
-          portraitMaxHeight={portraitMaxHeight}
-        />
+      <div
+        className={cn(
+          'sl-talent-card-media w-full',
+          editorialAbsolute ? 'relative min-h-0 flex-1' : 'relative flex flex-col items-center',
+        )}
+      >
+        <div
+          className={cn(
+            'sl-talent-portrait-wrap relative w-full',
+            editorialAbsolute ? 'min-h-0 flex-1' : 'shrink-0',
+          )}
+        >
+          <ModelImageFrame
+            src={model.imageUrl}
+            alt={model.displayName}
+            identityId={model.id}
+            interactive={interactive}
+            portraitMaxHeight={portraitMaxHeight}
+          />
+        </div>
 
         {!showSelected && !disabled && (
           <div
             className={cn(
-              'sl-talent-select-hint pointer-events-none absolute inset-x-0 bottom-3 flex justify-center',
-              'opacity-0 transition-opacity duration-200 ease-out motion-reduce:transition-none',
-              'group-hover:opacity-100',
+              'sl-talent-select-hint flex justify-center',
+              'transition-opacity duration-200 ease-out motion-reduce:transition-none',
+              scrollCardLayout
+                ? 'pointer-events-none'
+                : 'pointer-events-none absolute inset-x-0 bottom-3 opacity-0 group-hover:opacity-100',
             )}
           >
-            <span className="rounded-sm bg-foreground px-2.5 py-1 text-[10px] font-medium text-background">
+            <span className="sl-talent-select-label rounded-sm bg-foreground px-2.5 py-1 text-[10px] font-medium text-background">
               Select
             </span>
           </div>
         )}
-      </div>
 
-      {showSelected && (
-        <div
-          className={cn(
-            'absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-foreground/90 pointer-events-none',
-            'transition-transform duration-200 ease-out motion-reduce:transition-none',
-            isSelecting && 'scale-110',
-          )}
-          aria-hidden
-        >
-          <Check className="h-3 w-3 text-background" strokeWidth={2.5} />
-        </div>
-      )}
+        {showSelected && (
+          <div
+            className={cn(
+              'sl-talent-check pointer-events-none flex h-5 w-5 items-center justify-center rounded-full bg-foreground/90',
+              'transition-transform duration-200 ease-out motion-reduce:transition-none',
+              scrollCardLayout
+                ? 'absolute top-0 right-0 z-[1]'
+                : 'absolute top-0 right-0',
+              isSelecting && 'scale-110',
+            )}
+            aria-hidden
+          >
+            <Check className="h-3 w-3 text-background" strokeWidth={2.5} />
+          </div>
+        )}
+      </div>
 
       <p
         className={cn(

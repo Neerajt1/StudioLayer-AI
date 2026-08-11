@@ -39,11 +39,11 @@ export function ModelImageFrame({
   if (!useBodyNormalization) {
     return (
       <div
-        className={cn('relative w-full overflow-visible', className)}
+        className={cn('sl-talent-portrait-frame relative w-full overflow-visible', className)}
         style={{ maxHeight: portraitMaxHeight, backgroundColor: STUDIO_CANVAS_WHITE }}
       >
         <div
-          className="relative flex h-full w-full items-end justify-center overflow-visible"
+          className="sl-talent-portrait-slot relative flex h-full w-full items-end justify-center overflow-visible"
           style={{
             maxHeight: portraitMaxHeight,
             minHeight: portraitMaxHeight,
@@ -56,7 +56,7 @@ export function ModelImageFrame({
             loading="lazy"
             decoding="async"
             draggable={false}
-            className="block h-auto w-auto max-h-full max-w-full object-contain object-bottom"
+            className="sl-talent-portrait-image block h-auto w-auto max-h-full max-w-full object-contain object-bottom"
             style={{ maxHeight: portraitMaxHeight }}
           />
         </div>
@@ -75,7 +75,7 @@ export function ModelImageFrame({
       style={{ backgroundColor: STUDIO_CANVAS_WHITE }}
     >
       <div
-        className="absolute inset-x-0 overflow-visible"
+        className="sl-talent-portrait-slot absolute inset-x-0 overflow-visible"
         style={{
           height: portraitMaxHeight,
           maxHeight: '100%',
@@ -84,7 +84,7 @@ export function ModelImageFrame({
         }}
       >
         <div
-          className="absolute left-1/2 overflow-visible"
+          className="sl-talent-portrait-anchor absolute left-1/2 overflow-visible"
           style={{
             bottom: 0,
             transform: `translateX(-50%) translateY(${calibration.yOffset}px)`,
@@ -97,7 +97,7 @@ export function ModelImageFrame({
             decoding="async"
             draggable={false}
             className={cn(
-              'block max-w-none',
+              'sl-talent-portrait-image block max-w-none',
               interactive && [
                 TALENT_MOTION_TRANSFORM,
                 'origin-bottom',
