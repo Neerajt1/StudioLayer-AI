@@ -55,7 +55,7 @@ function EditorialSpreadDesktopCanvas({
 }: EditorialSpreadViewProps) {
   return (
     <section
-      className="sl-talent-spread-canvas relative w-full"
+      className="relative w-full"
       style={{ minHeight: '100svh' }}
       aria-label={`Editorial spread ${spread.spreadId}`}
     >

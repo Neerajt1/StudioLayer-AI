@@ -24,6 +24,8 @@ interface ModelImageFrameProps {
   interactive?: boolean;
   portraitMaxHeight?: string;
   className?: string;
+  /** Mobile scroll/grid cards — adds hook classes for portrait containment CSS. */
+  portraitLayout?: 'editorial' | 'scroll';
 }
 
 export function ModelImageFrame({
@@ -33,17 +35,26 @@ export function ModelImageFrame({
   interactive = true,
   portraitMaxHeight = TALENT_PORTRAIT_HEIGHT,
   className,
+  portraitLayout = 'editorial',
 }: ModelImageFrameProps) {
   const useBodyNormalization = Boolean(identityId);
+  const scrollPortrait = portraitLayout === 'scroll';
 
   if (!useBodyNormalization) {
     return (
       <div
-        className={cn('sl-talent-portrait-frame relative w-full overflow-visible', className)}
+        className={cn(
+          scrollPortrait && 'sl-talent-portrait-frame',
+          'relative w-full overflow-visible',
+          className,
+        )}
         style={{ maxHeight: portraitMaxHeight, backgroundColor: STUDIO_CANVAS_WHITE }}
       >
         <div
-          className="sl-talent-portrait-slot relative flex h-full w-full items-end justify-center overflow-visible"
+          className={cn(
+            scrollPortrait && 'sl-talent-portrait-slot',
+            'relative flex h-full w-full items-end justify-center overflow-visible',
+          )}
           style={{
             maxHeight: portraitMaxHeight,
             minHeight: portraitMaxHeight,
@@ -56,7 +67,10 @@ export function ModelImageFrame({
             loading="lazy"
             decoding="async"
             draggable={false}
-            className="sl-talent-portrait-image block h-auto w-auto max-h-full max-w-full object-contain object-bottom"
+            className={cn(
+              scrollPortrait && 'sl-talent-portrait-image',
+              'block h-auto w-auto max-h-full max-w-full object-contain object-bottom',
+            )}
             style={{ maxHeight: portraitMaxHeight }}
           />
         </div>
@@ -75,7 +89,10 @@ export function ModelImageFrame({
       style={{ backgroundColor: STUDIO_CANVAS_WHITE }}
     >
       <div
-        className="sl-talent-portrait-slot absolute inset-x-0 overflow-visible"
+        className={cn(
+          scrollPortrait && 'sl-talent-portrait-slot',
+          'absolute inset-x-0 overflow-visible',
+        )}
         style={{
           height: portraitMaxHeight,
           maxHeight: '100%',
@@ -84,7 +101,10 @@ export function ModelImageFrame({
         }}
       >
         <div
-          className="sl-talent-portrait-anchor absolute left-1/2 overflow-visible"
+          className={cn(
+            scrollPortrait && 'sl-talent-portrait-anchor',
+            'absolute left-1/2 overflow-visible',
+          )}
           style={{
             bottom: 0,
             transform: `translateX(-50%) translateY(${calibration.yOffset}px)`,
@@ -97,7 +117,8 @@ export function ModelImageFrame({
             decoding="async"
             draggable={false}
             className={cn(
-              'sl-talent-portrait-image block max-w-none',
+              scrollPortrait && 'sl-talent-portrait-image',
+              'block max-w-none',
               interactive && [
                 TALENT_MOTION_TRANSFORM,
                 'origin-bottom',
