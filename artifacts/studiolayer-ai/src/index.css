@@ -826,7 +826,6 @@
   @media (max-width: 767px) {
     .sl-talent-collection {
       max-width: 100%;
-      overflow-x: clip;
     }
 
     .sl-talent-collection-scroll {
@@ -839,7 +838,7 @@
       max-width: 100%;
       overflow-x: auto;
       overflow-y: hidden;
-      touch-action: pan-x;
+      overscroll-behavior-x: contain;
     }
 
     .sl-talent-card--scroll {
