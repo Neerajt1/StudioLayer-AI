@@ -434,7 +434,10 @@ export default function GalleryPage() {
         open={openShoot != null}
         onOpenChange={(open) => !open && setOpenShoot(null)}
         onInspect={setViewRender}
-        onEdit={setEditRender}
+        onEdit={(render) => {
+          setOpenShoot(null);
+          setEditRender(render);
+        }}
         onDelete={handleDelete}
         onDownloadError={handleDownloadError}
         getDisplayUrl={getGalleryDisplayUrl}

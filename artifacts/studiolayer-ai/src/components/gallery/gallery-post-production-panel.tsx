@@ -10,6 +10,7 @@ import { AI_REFINEMENT_OPTIONS, type RefinementType } from '@/lib/refinement-typ
 
 interface GalleryPostProductionPanelProps {
   hasCropApplied?: boolean;
+  isCropDialogOpen?: boolean;
   displayUrl: string | null;
   masterUrl: string | null;
   renderId: number;
@@ -23,6 +24,7 @@ interface GalleryPostProductionPanelProps {
 
 export function GalleryPostProductionPanel({
   hasCropApplied = false,
+  isCropDialogOpen = false,
   displayUrl,
   masterUrl,
   renderId,
@@ -34,6 +36,7 @@ export function GalleryPostProductionPanel({
   onDownloadError,
 }: GalleryPostProductionPanelProps) {
   const busy = disabled || refineInFlight;
+  const isCropActive = hasCropApplied || isCropDialogOpen;
   const downloadUrl = displayUrl ?? masterUrl ?? '';
 
   return (
@@ -48,8 +51,9 @@ export function GalleryPostProductionPanel({
         </div>
         <div className="sl-gallery-post-chip-row">
           <StudioWorkspaceButton
-            className={cn('sl-gallery-post-chip', hasCropApplied && 'is-active')}
+            className={cn('sl-gallery-post-chip', isCropActive && 'is-active')}
             disabled={busy || !masterUrl}
+            aria-pressed={isCropActive}
             onClick={onOpenCrop}
           >
             Crop

@@ -45,7 +45,7 @@ export const TalentCard = memo(function TalentCard({
       }}
       style={editorialAbsolute ? undefined : { width: slotWidth }}
       className={cn(
-        'group relative overflow-visible border-0 bg-transparent p-0 text-left select-none',
+        'sl-talent-card group relative overflow-visible border-0 bg-transparent p-0 text-left select-none',
         editorialAbsolute ? 'flex h-full w-full flex-col' : 'flex shrink-0 flex-col items-center text-center',
         TALENT_MOTION,
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -57,7 +57,7 @@ export const TalentCard = memo(function TalentCard({
         disabled && 'pointer-events-none opacity-50',
       )}
     >
-      <div className={cn('relative', editorialAbsolute ? 'min-h-0 flex-1' : 'w-full')}>
+      <div className={cn('sl-talent-portrait-wrap relative', editorialAbsolute ? 'min-h-0 flex-1' : 'w-full')}>
         <ModelImageFrame
           src={model.imageUrl}
           alt={model.displayName}
@@ -69,7 +69,7 @@ export const TalentCard = memo(function TalentCard({
         {!showSelected && !disabled && (
           <div
             className={cn(
-              'pointer-events-none absolute inset-x-0 bottom-3 flex justify-center',
+              'sl-talent-select-hint pointer-events-none absolute inset-x-0 bottom-3 flex justify-center',
               'opacity-0 transition-opacity duration-200 ease-out motion-reduce:transition-none',
               'group-hover:opacity-100',
             )}
@@ -96,7 +96,7 @@ export const TalentCard = memo(function TalentCard({
 
       <p
         className={cn(
-          'shrink-0 truncate text-[11px] font-medium leading-tight',
+          'sl-talent-name shrink-0 truncate text-[11px] font-medium leading-tight',
           editorialAbsolute ? 'mt-2' : 'mt-4 w-full',
           'transition-colors duration-200 ease-out motion-reduce:transition-none',
           showSelected

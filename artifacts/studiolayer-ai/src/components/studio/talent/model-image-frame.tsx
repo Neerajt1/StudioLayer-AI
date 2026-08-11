@@ -71,7 +71,7 @@ export function ModelImageFrame({
 
   return (
     <div
-      className={cn('relative h-full w-full overflow-visible', className)}
+      className={cn('sl-talent-portrait-frame relative h-full w-full overflow-visible', className)}
       style={{ backgroundColor: STUDIO_CANVAS_WHITE }}
     >
       <div

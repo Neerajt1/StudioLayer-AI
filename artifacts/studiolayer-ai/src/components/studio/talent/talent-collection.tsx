@@ -136,7 +136,7 @@ export function TalentCollection({
           <div
             ref={scrollRef}
             className={cn(
-              'flex gap-10 overflow-x-auto scroll-smooth py-2',
+              'sl-talent-collection-scroll flex gap-10 overflow-x-auto scroll-smooth py-2',
               '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
             )}
           >

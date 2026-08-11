@@ -120,6 +120,7 @@ export function GalleryImageEditDialog({
 
             <GalleryPostProductionPanel
               hasCropApplied={hasCropApplied}
+              isCropDialogOpen={cropDialogOpen}
               displayUrl={displayUrl}
               masterUrl={masterUrl}
               renderId={render.id}
