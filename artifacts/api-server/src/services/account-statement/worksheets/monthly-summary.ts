@@ -18,6 +18,7 @@ export function buildMonthlySummarySheet(
   const sheet = workbook.addWorksheet("Monthly Summary");
   const headers = [
     "Month",
+    "Opening Balance",
     "Credits Added",
     "Credits Used",
     "Images Generated",
@@ -34,6 +35,7 @@ export function buildMonthlySummarySheet(
   for (const row of rows) {
     const excelRow = sheet.addRow([
       formatMonthDisplay(row.monthKey),
+      ctx.isAdmin ? "Unlimited" : row.openingBalance,
       row.creditsAdded,
       row.creditsUsed,
       row.imagesGenerated,

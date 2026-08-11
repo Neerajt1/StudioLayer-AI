@@ -1,7 +1,8 @@
 import type ExcelJS from "exceljs";
 import type { AccountStatementContext } from "../data.js";
 import {
-  computeOpeningCreditBalance,
+  computeMembershipAllowance,
+  computeStatementCycleImagesGenerated,
 } from "../data.js";
 import {
   addSummaryRow,
@@ -36,7 +37,7 @@ export function buildAccountSummarySheet(
   titleRow.font = { name: STATEMENT_FONT, bold: true, size: 14 };
   sheet.addRow([]);
 
-  const openingBalance = computeOpeningCreditBalance(ctx);
+  const membershipAllowance = computeMembershipAllowance(ctx);
   const currentBalance = ctx.isAdmin ? "Unlimited" : ctx.balance.remaining;
   const creditsUsed = ctx.isAdmin ? 0 : ctx.balance.used;
   const promotionalDisplay =
@@ -58,8 +59,8 @@ export function buildAccountSummarySheet(
   );
   addSummaryRow(
     sheet,
-    "Opening Credit Balance",
-    ctx.isAdmin ? "Unlimited" : openingBalance,
+    "Membership Allowance",
+    ctx.isAdmin ? "Unlimited" : membershipAllowance,
   );
   addSummaryRow(sheet, "Credits Purchased", ctx.creditsPurchasedInCycle);
   addSummaryRow(sheet, "Promotional Credits", promotionalDisplay);
@@ -69,7 +70,7 @@ export function buildAccountSummarySheet(
   addSummaryRow(
     sheet,
     "Images Generated",
-    ctx.cycleStats.imagesCreated,
+    computeStatementCycleImagesGenerated(ctx),
   );
   addSummaryRow(sheet, "Images Refined", countRefinementsInCycle(ctx));
   addSummaryRow(sheet, "Images Deleted", ctx.imagesDeletedInCycle);

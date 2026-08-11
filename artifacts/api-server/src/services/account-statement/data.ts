@@ -1,10 +1,8 @@
 import { and, asc, eq } from "drizzle-orm";
 import {
   StudioCreditTransactionStatus,
-  imagesCreatedForReasonCode,
   isStudioAdmin,
   membershipAllowanceForTier,
-  type StudioCreditReasonCodeValue,
 } from "@workspace/studio-credit-engine";
 import {
   db,
@@ -32,6 +30,21 @@ import {
   isRefinementReasonCode,
   isUsageReasonCode,
 } from "./labels.js";
+import {
+  billableGenerationImagesForTransaction,
+  countRenderOutcomes,
+  deriveSessionActivityStatus,
+  refinementRendersInSession,
+  rendersForSession,
+  resolveSessionIdForRender,
+  resolveSessionIdForTransaction,
+  rootRendersInSession,
+} from "./billable-output.js";
+import {
+  applyMonthlyBalanceFields,
+  computeLedgerRunningBalance as computeLedgerRunningBalanceFromHistory,
+  type StatementBalanceContext,
+} from "./balance-history.js";
 
 export interface AccountStatementContext {
   user: User;
@@ -53,6 +66,7 @@ export interface AccountStatementContext {
 
 export interface MonthlySummaryRow {
   monthKey: string;
+  openingBalance: number;
   creditsAdded: number;
   creditsUsed: number;
   imagesGenerated: number;
@@ -65,10 +79,60 @@ export interface CreativeActivityRow {
   sessionId: string;
   dateTime: Date;
   generationType: string;
+  imagesRequested: number;
+  imagesCompleted: number;
+  imagesFailed: number;
   imagesGenerated: number;
   imagesRefined: number;
   creditsUsed: number;
   status: string;
+}
+
+function renderByIdMap(renders: Render[]): Map<number, Render> {
+  return new Map(renders.map((render) => [render.id, render]));
+}
+
+/** Billable generation images in billing-cycle scope — render outcomes first, ledger fallback. */
+export function computeStatementCycleImagesGenerated(
+  ctx: AccountStatementContext,
+): number {
+  const isLifetime = ctx.user.subscriptionTier === "free";
+  const renderById = renderByIdMap(ctx.renders);
+  let total = 0;
+
+  for (const tx of ctx.transactions) {
+    if (!isGenerationReasonCode(tx.reasonCode)) continue;
+    if (!isLifetime && tx.createdAt < ctx.cycleStart) continue;
+
+    const sessionId = resolveSessionIdForTransaction(
+      tx,
+      renderById,
+      ctx.deletionEvents,
+    );
+    const sessionRenders = rendersForSession(sessionId, ctx.renders);
+    total += billableGenerationImagesForTransaction(tx, sessionRenders);
+  }
+
+  return total;
+}
+
+function statementBalanceContext(
+  ctx: AccountStatementContext,
+): StatementBalanceContext {
+  return {
+    allowance: ctx.allowance,
+    tier: ctx.user.subscriptionTier,
+    isAdmin: ctx.isAdmin,
+    generatedAt: ctx.generatedAt,
+    transactions: ctx.transactions,
+    liveRemaining: ctx.balance.remaining,
+  };
+}
+
+/** Membership allowance for the customer's plan — not a historical ledger balance. */
+export function computeMembershipAllowance(ctx: AccountStatementContext): number {
+  if (ctx.isAdmin) return 0;
+  return ctx.allowance;
 }
 
 export async function loadAccountStatementContext(
@@ -173,11 +237,6 @@ export async function loadAccountStatementContext(
   };
 }
 
-export function computeOpeningCreditBalance(ctx: AccountStatementContext): number {
-  if (ctx.isAdmin) return 0;
-  return ctx.allowance;
-}
-
 export function computeMonthlySummaryRows(
   ctx: AccountStatementContext,
 ): MonthlySummaryRow[] {
@@ -188,6 +247,7 @@ export function computeMonthlySummaryRows(
     if (existing) return existing;
     const row: MonthlySummaryRow = {
       monthKey,
+      openingBalance: 0,
       creditsAdded: 0,
       creditsUsed: 0,
       imagesGenerated: 0,
@@ -210,8 +270,15 @@ export function computeMonthlySummaryRows(
     }
 
     if (isGenerationReasonCode(tx.reasonCode)) {
-      row.imagesGenerated += imagesCreatedForReasonCode(
-        tx.reasonCode as StudioCreditReasonCodeValue,
+      const sessionId = resolveSessionIdForTransaction(
+        tx,
+        renderByIdMap(ctx.renders),
+        ctx.deletionEvents,
+      );
+      const sessionRenders = rendersForSession(sessionId, ctx.renders);
+      row.imagesGenerated += billableGenerationImagesForTransaction(
+        tx,
+        sessionRenders,
       );
     } else if (isRefinementReasonCode(tx.reasonCode)) {
       row.refinements += 1;
@@ -228,87 +295,47 @@ export function computeMonthlySummaryRows(
   }
 
   const sortedMonths = [...monthMap.keys()].sort();
-  let cumulativeAdded = 0;
-  let cumulativeUsed = 0;
-
-  for (const monthKey of sortedMonths) {
+  const activityRows = sortedMonths.map((monthKey) => {
     const row = monthMap.get(monthKey)!;
+    return {
+      monthKey,
+      creditsAdded: row.creditsAdded,
+      creditsUsed: row.creditsUsed,
+    };
+  });
+  const balanceFields = applyMonthlyBalanceFields(
+    statementBalanceContext(ctx),
+    activityRows,
+  );
 
-    if (ctx.user.subscriptionTier === "free") {
-      cumulativeAdded = ctx.allowance;
-      cumulativeUsed += row.creditsUsed;
-      row.closingBalance = Math.max(0, cumulativeAdded - cumulativeUsed);
-    } else {
-      row.closingBalance = Math.max(
-        0,
-        ctx.allowance + row.creditsAdded - row.creditsUsed,
-      );
-    }
-  }
-
-  if (
-    ctx.user.subscriptionTier !== "free" &&
-    sortedMonths.length > 0
-  ) {
-    const currentMonthKey = formatMonthKey(ctx.generatedAt);
-    const currentRow = monthMap.get(currentMonthKey);
-    if (currentRow) {
-      currentRow.closingBalance = ctx.isAdmin
-        ? 0
-        : Math.max(0, ctx.balance.remaining);
-    }
-  }
-
-  return sortedMonths.map((monthKey) => monthMap.get(monthKey)!);
+  return sortedMonths.map((monthKey, index) => {
+    const row = monthMap.get(monthKey)!;
+    const balances = balanceFields[index]!;
+    row.openingBalance = balances.openingBalance;
+    row.closingBalance = balances.closingBalance;
+    return row;
+  });
 }
 
 export function computeLedgerRunningBalance(
   ctx: AccountStatementContext,
   txIndex: number,
 ): number {
-  if (ctx.isAdmin) return 0;
-
-  let cycleUsed = 0;
-  let cycleAdded = 0;
-  const tx = ctx.transactions[txIndex];
-  const txMonth = formatMonthKey(tx.createdAt);
-
-  for (let i = 0; i <= txIndex; i += 1) {
-    const current = ctx.transactions[i];
-
-    if (
-      ctx.user.subscriptionTier !== "free" &&
-      formatMonthKey(current.createdAt) !== txMonth
-    ) {
-      continue;
-    }
-
-    if (current.amount > 0) {
-      cycleAdded += current.amount;
-    } else if (isUsageReasonCode(current.reasonCode)) {
-      cycleUsed += Math.abs(current.amount);
-    }
-  }
-
-  return Math.max(0, ctx.allowance + cycleAdded - cycleUsed);
+  return computeLedgerRunningBalanceFromHistory(
+    statementBalanceContext(ctx),
+    txIndex,
+  );
 }
 
 export function computeCreativeActivityRows(
   ctx: AccountStatementContext,
 ): CreativeActivityRow[] {
-  const renderById = new Map(ctx.renders.map((render) => [render.id, render]));
+  const renderById = renderByIdMap(ctx.renders);
   const sessionIds = new Set<string>();
-
-  const sessionIdForRender = (render: Render): string =>
-    render.generationSessionId ?? `session-render-${render.id}`;
-
-  const rendersForSession = (sessionId: string): Render[] =>
-    ctx.renders.filter((render) => sessionIdForRender(render) === sessionId);
+  const creditsBySession = new Map<string, number>();
 
   for (const render of ctx.renders) {
-    if (render.generationSessionId) {
-      sessionIds.add(render.generationSessionId);
-    }
+    sessionIds.add(resolveSessionIdForRender(render));
   }
 
   for (const event of ctx.deletionEvents) {
@@ -317,108 +344,80 @@ export function computeCreativeActivityRows(
     }
   }
 
-  const sessionMeta = new Map<
-    string,
-    {
-      dateTime: Date;
-      generationType: string;
-      imagesGenerated: number;
-      imagesRefined: number;
-      creditsUsed: number;
-      status: string;
-    }
-  >();
-
-  const ensureSession = (sessionId: string) => {
-    if (!sessionMeta.has(sessionId)) {
-      sessionMeta.set(sessionId, {
-        dateTime: ctx.generatedAt,
-        generationType: "—",
-        imagesGenerated: 0,
-        imagesRefined: 0,
-        creditsUsed: 0,
-        status: "Completed",
-      });
-    }
-    return sessionMeta.get(sessionId)!;
-  };
-
-  for (const render of ctx.renders) {
-    const sessionId = sessionIdForRender(render);
-    sessionIds.add(sessionId);
-    const meta = ensureSession(sessionId);
-    if (render.createdAt < meta.dateTime) {
-      meta.dateTime = render.createdAt;
-    }
-    if (meta.generationType === "—") {
-      meta.generationType = render.generationType;
-    }
-    if (render.status === "failed") {
-      meta.status = "Failed";
-    }
-  }
-
   for (const tx of ctx.transactions) {
     if (!isUsageReasonCode(tx.reasonCode)) continue;
 
-    const render = tx.renderId != null ? renderById.get(tx.renderId) : null;
-    const sessionId =
-      render?.generationSessionId ??
-      ctx.deletionEvents.find((event) => event.renderId === tx.renderId)
-        ?.generationSessionId ??
-      (tx.renderId != null ? `session-render-${tx.renderId}` : `session-tx-${tx.id}`);
-
+    const sessionId = resolveSessionIdForTransaction(
+      tx,
+      renderById,
+      ctx.deletionEvents,
+    );
     sessionIds.add(sessionId);
-    const sessionRenders = rendersForSession(sessionId);
-    const sessionAllFailed =
-      sessionRenders.length > 0
-      && sessionRenders.every((row) => row.status === "failed");
-    if (sessionAllFailed) {
-      continue;
-    }
-
-    const meta = ensureSession(sessionId);
-
-    if (tx.createdAt < meta.dateTime) {
-      meta.dateTime = tx.createdAt;
-    }
-
-    meta.creditsUsed += Math.abs(tx.amount);
-
-    if (isGenerationReasonCode(tx.reasonCode)) {
-      meta.imagesGenerated += imagesCreatedForReasonCode(
-        tx.reasonCode as StudioCreditReasonCodeValue,
-      );
-      meta.generationType = tx.reasonCode.replace("_generation", "");
-    } else if (isRefinementReasonCode(tx.reasonCode)) {
-      meta.imagesRefined += 1;
-    }
+    creditsBySession.set(
+      sessionId,
+      (creditsBySession.get(sessionId) ?? 0) + Math.abs(tx.amount),
+    );
   }
 
   return [...sessionIds]
     .map((sessionId) => {
-      const meta = ensureSession(sessionId);
-      const sessionRenders = rendersForSession(sessionId);
-      const sessionAllFailed =
-        sessionRenders.length > 0
-        && sessionRenders.every((row) => row.status === "failed");
-      const sessionAnyCompleted = sessionRenders.some(
-        (row) => row.status === "completed",
-      );
+      const sessionRenders = rendersForSession(sessionId, ctx.renders);
+      const roots = rootRendersInSession(sessionRenders);
+      const refinements = refinementRendersInSession(sessionRenders);
+      const rootOutcomes = countRenderOutcomes(roots);
+      const refinementOutcomes = countRenderOutcomes(refinements);
+      const status = deriveSessionActivityStatus(rootOutcomes, refinementOutcomes);
 
-      if (sessionAllFailed || (!sessionAnyCompleted && meta.status === "Failed")) {
-        meta.creditsUsed = 0;
-        meta.status = "Failed";
+      let dateTime = ctx.generatedAt;
+      let generationType = "—";
+
+      for (const render of sessionRenders) {
+        if (render.createdAt < dateTime) {
+          dateTime = render.createdAt;
+        }
+        if (generationType === "—") {
+          generationType = render.generationType;
+        }
       }
+
+      for (const tx of ctx.transactions) {
+        if (!isUsageReasonCode(tx.reasonCode)) continue;
+        if (
+          resolveSessionIdForTransaction(tx, renderById, ctx.deletionEvents)
+          !== sessionId
+        ) {
+          continue;
+        }
+        if (tx.createdAt < dateTime) {
+          dateTime = tx.createdAt;
+        }
+        if (generationType === "—" && isGenerationReasonCode(tx.reasonCode)) {
+          generationType = tx.reasonCode.replace("_generation", "");
+        }
+      }
+
+      const imagesCompleted = rootOutcomes.completed;
+      const imagesGenerated =
+        status === "Failed" && imagesCompleted === 0
+          ? 0
+          : imagesCompleted;
+      const imagesRefined =
+        status === "Failed" && refinementOutcomes.completed === 0
+          ? 0
+          : refinementOutcomes.completed;
+      const creditsUsed = creditsBySession.get(sessionId) ?? 0;
 
       return {
         sessionId,
-        dateTime: meta.dateTime,
-        generationType: meta.generationType,
-        imagesGenerated: meta.imagesGenerated,
-        imagesRefined: meta.imagesRefined,
-        creditsUsed: meta.creditsUsed,
-        status: meta.status,
+        dateTime,
+        generationType,
+        imagesRequested: rootOutcomes.requested,
+        imagesCompleted,
+        imagesFailed: rootOutcomes.failed,
+        imagesGenerated,
+        imagesRefined,
+        creditsUsed,
+        status,
       };
     })
     .sort((a, b) => a.dateTime.getTime() - b.dateTime.getTime());

@@ -28,14 +28,21 @@ import {
   getStudioCreditBalance,
   sumStudioCreditsUsed,
 } from "./studio-credit-service.js";
-import { loadAccountStatementContext } from "./account-statement/data.js";
+import {
+  loadAccountStatementContext,
+  computeMonthlySummaryRows,
+} from "./account-statement/data.js";
+import {
+  computeBillingCycleBalanceSummary,
+  finalLedgerRunningBalance,
+} from "./account-statement/balance-history.js";
 import {
   assetTypeFromRefinementType,
   MASTER_ASSET_VERSION,
 } from "./image-architecture/asset-lineage.js";
 import { resolveMasterRenderId } from "./image-architecture/master-asset.js";
 import { isRefinementType } from "./refinement/refinement-types.js";
-import { isRefinementReasonCode } from "./account-statement/labels.js";
+import { isRefinementReasonCode, formatMonthKey } from "./account-statement/labels.js";
 
 const KNOWN_TIERS = new Set(["free", "pro", "enterprise"]);
 const ACTIVE_RENDER_STATUSES = ["pending", "processing"] as const;
@@ -544,6 +551,90 @@ export async function runCommercialReconciliation(
         actual: statementRefinements,
         detail: "Account Statement refinement count does not match ledger scope",
       });
+    }
+
+    const cycleBalance = computeBillingCycleBalanceSummary({
+      allowance,
+      creditsAddedInCycle: statementCtx.totalCreditsAddedInCycle,
+      creditsUsedInCycle: balance.used,
+      liveRemaining: balance.remaining,
+    });
+
+    if (!cycleBalance.matchesLiveRemaining) {
+      pushMismatch(mismatches, {
+        domain: "accountStatement",
+        check: "statement_cycle_balance_equation",
+        expected: balance.remaining,
+        actual: cycleBalance.computedClosing,
+        detail:
+          "Membership allowance + cycle credits added − cycle credits used does not match live remaining balance",
+      });
+    }
+
+    const monthlyRows = computeMonthlySummaryRows(statementCtx);
+    const currentMonthKey = formatMonthKey(statementCtx.generatedAt);
+    const currentMonthRow = monthlyRows.find(
+      (row) => row.monthKey === currentMonthKey,
+    );
+
+    if (
+      currentMonthRow &&
+      !numbersEqual(currentMonthRow.closingBalance, balance.remaining)
+    ) {
+      pushMismatch(mismatches, {
+        domain: "accountStatement",
+        check: "statement_current_month_closing",
+        expected: balance.remaining,
+        actual: currentMonthRow.closingBalance,
+        detail: "Monthly Summary current-month closing does not match live remaining balance",
+      });
+    }
+
+    for (const row of monthlyRows) {
+      const expectedClosing = Math.max(
+        0,
+        row.openingBalance + row.creditsAdded - row.creditsUsed,
+      );
+      const isCurrentMonth = row.monthKey === currentMonthKey;
+      const actualClosing = row.closingBalance;
+
+      if (
+        !isCurrentMonth &&
+        !numbersEqual(actualClosing, expectedClosing)
+      ) {
+        pushMismatch(mismatches, {
+          domain: "accountStatement",
+          check: "statement_monthly_balance_arithmetic",
+          expected: expectedClosing,
+          actual: actualClosing,
+          detail: `Monthly Summary balance arithmetic mismatch for ${row.monthKey}`,
+        });
+      }
+    }
+
+    if (
+      !isStudioAdmin(user) &&
+      statementCtx.transactions.some((tx) => tx.createdAt >= statementCtx.cycleStart)
+    ) {
+      const ledgerFinal = finalLedgerRunningBalance({
+        allowance,
+        tier: user.subscriptionTier,
+        isAdmin: false,
+        generatedAt: statementCtx.generatedAt,
+        transactions: statementCtx.transactions,
+        liveRemaining: balance.remaining,
+      });
+
+      if (!numbersEqual(ledgerFinal, balance.remaining)) {
+        pushMismatch(mismatches, {
+          domain: "accountStatement",
+          check: "statement_ledger_final_running_balance",
+          expected: balance.remaining,
+          actual: ledgerFinal,
+          detail:
+            "Final Studio Credit Ledger running balance does not match live remaining balance",
+        });
+      }
     }
   } else {
     pushMismatch(mismatches, {
