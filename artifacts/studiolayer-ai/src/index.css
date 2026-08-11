@@ -840,6 +840,13 @@
       padding-inline: var(--sl-gutter);
     }
 
+    /* Final card in an odd-count spread: editorial center composition */
+    .sl-talent-spread-grid > .sl-talent-card--scroll:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+      justify-self: center;
+      width: calc((100% - 0.75rem) / 2) !important;
+    }
+
     .sl-talent-card--scroll {
       width: 100% !important;
       flex: unset;
