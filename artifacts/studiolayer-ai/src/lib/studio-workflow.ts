@@ -147,7 +147,7 @@ export function normalizeStudioWorkflow(raw: Partial<StudioWorkflow> | null | un
     customCampaign: raw?.customCampaign === true,
     customImageCount: isCustomImageCount(raw?.customImageCount)
       ? raw.customImageCount
-      : CUSTOM_CAMPAIGN_MIN,,
+      : CUSTOM_CAMPAIGN_MIN,
     usedPoses: normalizeUsedPoses(raw?.usedPoses),
   };
 
