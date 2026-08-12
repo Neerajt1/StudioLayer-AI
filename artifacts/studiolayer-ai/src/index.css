@@ -3171,12 +3171,15 @@
     gap: 0.75rem;
   }
 
-  .sl-shoot-detail-body .sl-fixed-batch-viewport--scrollable {
+  .sl-shoot-detail-body .sl-fixed-batch-viewport {
     max-height: min(62vh, 680px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .sl-shoot-detail-body .sl-fixed-batch-viewport-grid.sl-shoot-detail-grid {
-    padding: 1.25rem 1.5rem 0;
+    padding: 1.25rem 1.5rem 1.25rem;
   }
 
   @keyframes sl-expandable-batch-reveal {
@@ -4313,6 +4316,8 @@
   }
 
   .sl-shoot-detail-dialog {
+    display: flex;
+    flex-direction: column;
     max-height: min(92vh, 900px);
     overflow: hidden;
   }
@@ -4405,7 +4410,38 @@
   }
 
   .sl-shoot-detail-body {
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 0 0 1.5rem;
+  }
+
+  /*
+    Mobile shoot detail: one scroll container on the body so all image rows and
+    controls stay reachable without nested scroll or page bleed-through.
+    Desktop rules above are unchanged (min-width: 640px).
+  */
+  @media (max-width: 639px) {
+    .sl-shoot-detail-dialog.sl-dialog-content {
+      overflow: hidden;
+      max-height: min(92dvh, calc(100dvh - 2rem));
+    }
+
+    .sl-shoot-detail-body {
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding: 0;
+    }
+
+    .sl-shoot-detail-body .sl-fixed-batch-viewport,
+    .sl-shoot-detail-body .sl-fixed-batch-viewport--scrollable {
+      max-height: none;
+      overflow: visible;
+    }
+
+    .sl-shoot-detail-body .sl-fixed-batch-viewport-grid.sl-shoot-detail-grid {
+      padding: 1.25rem 1.5rem 1.5rem;
+    }
   }
 
   .sl-shoot-detail-grid {

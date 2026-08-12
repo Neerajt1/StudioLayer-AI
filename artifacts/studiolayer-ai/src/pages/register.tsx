@@ -11,6 +11,7 @@ import {
   AuthField,
   AuthFormHeader,
   AuthInput,
+  AuthPasswordInput,
   AuthPageFrame,
   AuthSecondaryNav,
 } from '@/components/auth/auth-editorial';
@@ -118,9 +119,8 @@ export default function RegisterPage() {
             hint={passwordStarted ? 'Minimum 8 characters' : undefined}
             hintTone={passwordStarted && passwordValid ? 'valid' : 'muted'}
           >
-            <AuthInput
+            <AuthPasswordInput
               id="password"
-              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -128,6 +128,7 @@ export default function RegisterPage() {
               disabled={registerMutation.isPending}
               autoComplete="new-password"
               data-testid="input-password"
+              toggleTestId="toggle-password-visibility"
             />
           </AuthField>
 
@@ -141,15 +142,15 @@ export default function RegisterPage() {
             }
             hintTone={confirmStarted && !passwordsMatch ? 'error' : 'muted'}
           >
-            <AuthInput
+            <AuthPasswordInput
               id="confirmPassword"
-              type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
               disabled={registerMutation.isPending}
               autoComplete="new-password"
               data-testid="input-confirm-password"
+              toggleTestId="toggle-confirm-password-visibility"
             />
           </AuthField>
 

@@ -5,6 +5,7 @@ import { db, usersTable } from "@workspace/db";
 import { RegisterBody, LoginBody } from "@workspace/api-zod";
 import { MembershipCreditAllowances } from "@workspace/studio-credit-engine";
 import { deleteStudioAccount, StudioDeletionError } from "../services/delete-studio.js";
+import { sendWelcomeEmail } from "../services/email/welcome-email.js";
 import { logger } from "../lib/logger.js";
 
 const router: IRouter = Router();
@@ -51,6 +52,8 @@ router.post("/auth/register", async (req, res): Promise<void> => {
     .returning();
 
   req.session!.userId = user.id;
+
+  void sendWelcomeEmail({ email: user.email, name: user.name });
 
   res.status(201).json(mapUser(user));
 });

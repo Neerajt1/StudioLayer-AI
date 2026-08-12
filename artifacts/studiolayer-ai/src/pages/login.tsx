@@ -9,6 +9,7 @@ import {
   AuthField,
   AuthFormHeader,
   AuthInput,
+  AuthPasswordInput,
   AuthPageFrame,
   AuthSecondaryNav,
   AuthTextLink,
@@ -63,15 +64,15 @@ export default function LoginPage() {
             </AuthField>
 
             <AuthField id="password" label="Password">
-              <AuthInput
+              <AuthPasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loginMutation.isPending}
                 autoComplete="current-password"
                 data-testid="input-password"
+                toggleTestId="toggle-password-visibility"
               />
             </AuthField>
 

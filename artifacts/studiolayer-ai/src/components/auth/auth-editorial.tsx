@@ -2,7 +2,8 @@
 // Auth editorial primitives — Login / Register presentation only
 // ---------------------------------------------------------------------------
 
-import type { ComponentProps, ReactNode } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Link } from 'wouter';
 import { BrandLogo } from '@/components/brand/BrandLogo';
 import {
@@ -122,6 +123,45 @@ export function AuthField({ id, label, hint, hintTone = 'muted', children }: Aut
 
 export function AuthInput(props: ComponentProps<typeof Input>) {
   return <Input className={cn(authInputClassName, props.className)} {...props} />;
+}
+
+interface AuthPasswordInputProps extends Omit<ComponentProps<typeof Input>, 'type'> {
+  toggleTestId?: string;
+}
+
+export function AuthPasswordInput({
+  className,
+  disabled,
+  toggleTestId,
+  ...props
+}: AuthPasswordInputProps) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className="relative">
+      <Input
+        {...props}
+        type={visible ? 'text' : 'password'}
+        disabled={disabled}
+        className={cn(authInputClassName, 'pr-10', className)}
+      />
+      <button
+        type="button"
+        className="absolute right-0 top-1/2 inline-flex -translate-y-1/2 items-center justify-center p-1 text-muted-foreground transition-colors hover:text-[#2D2D2D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6E896A] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-40"
+        onClick={() => setVisible((current) => !current)}
+        disabled={disabled}
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        title={visible ? 'Hide password' : 'Show password'}
+        data-testid={toggleTestId}
+      >
+        {visible ? (
+          <EyeOff className="size-4" aria-hidden />
+        ) : (
+          <Eye className="size-4" aria-hidden />
+        )}
+      </button>
+    </div>
+  );
 }
 
 interface AuthLegalFooterProps {
