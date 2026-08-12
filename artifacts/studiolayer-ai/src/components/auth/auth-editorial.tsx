@@ -155,9 +155,9 @@ export function AuthPasswordInput({
         data-testid={toggleTestId}
       >
         {visible ? (
-          <EyeOff className="size-4" aria-hidden />
-        ) : (
           <Eye className="size-4" aria-hidden />
+        ) : (
+          <EyeOff className="size-4" aria-hidden />
         )}
       </button>
     </div>
