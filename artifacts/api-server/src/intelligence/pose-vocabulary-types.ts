@@ -139,6 +139,8 @@ export interface PoseVocabularyMetadata {
 }
 
 export interface PoseCatalogSpec {
+  poseId?: string;
+  active?: boolean;
   name: string;
   description: string;
   category: string;
@@ -174,6 +176,8 @@ export interface PoseCatalogSpec {
 }
 
 export interface PoseDefinition extends PoseIntelligenceMetadata, PoseVocabularyMetadata {
+  poseId?: string;
+  active?: boolean;
   name: string;
   genderPool: PoseGenderPool;
   collections: ShootType[];
@@ -229,6 +233,8 @@ export const POSE_SELECTION_CLASS_LABELS: Record<PoseSelectionClass, string> = {
 
 export function buildPoseDefinition(spec: PoseCatalogSpec): PoseDefinition {
   return {
+    poseId: spec.poseId,
+    active: spec.active ?? true,
     name: spec.name,
     description: spec.description,
     category: spec.category,

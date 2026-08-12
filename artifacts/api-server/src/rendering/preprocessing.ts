@@ -55,6 +55,20 @@ function resolveIdentitiesPublicDir(): string {
   return candidates[0]!;
 }
 
+function resolvePoseReferencesPublicDir(): string {
+  const candidates = [
+    path.resolve(process.cwd(), "../studiolayer-ai/public/pose-references"),
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../studiolayer-ai/public/pose-references"),
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../studiolayer-ai/public/pose-references"),
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+
+  return candidates[0]!;
+}
+
 function mimeTypeForIdentityFile(filename: string): string {
   switch (path.extname(filename).slice(1).toLowerCase()) {
     case "jpg":
@@ -103,6 +117,44 @@ export function loadStudioTalentImageAsDataUri(
   logger.info(
     { renderId, relativePath, sizeBytes: buffer.length, mimeType },
     "preprocessing: loaded Studio Talent image as base64 data URI",
+  );
+
+  return dataUri;
+}
+
+/**
+ * Loads a Pose Master reference PNG from the frontend public pose-references
+ * folder and returns a base64 data URI for OpenRouter (body-pose reference only).
+ */
+export function loadPoseReferenceImageAsDataUri(
+  relativePath: string,
+  renderId?: number,
+): string {
+  const filename = path.basename(relativePath);
+  const filePath = path.join(resolvePoseReferencesPublicDir(), filename);
+
+  let buffer: Buffer;
+  try {
+    buffer = readFileSync(filePath);
+  } catch (error) {
+    const err = new Error(
+      `preprocessing: Pose Master reference image not found on disk — ${relativePath}`,
+      { cause: error },
+    );
+    traceRenderFailure("Pose Master reference image load", err, {
+      renderId,
+      relativePath,
+      filePath,
+    });
+    throw err;
+  }
+
+  const mimeType = mimeTypeForIdentityFile(filename);
+  const dataUri = `data:${mimeType};base64,${buffer.toString("base64")}`;
+
+  logger.info(
+    { renderId, relativePath, sizeBytes: buffer.length, mimeType },
+    "preprocessing: loaded Pose Master reference as base64 data URI",
   );
 
   return dataUri;

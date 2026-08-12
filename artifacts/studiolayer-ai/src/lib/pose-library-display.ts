@@ -3,18 +3,39 @@ import poseFigureLayoutsData from '@/data/pose-figure-layouts.json';
 import poseReferenceManifest from '@/data/pose-reference-manifest.json';
 import poseIllustrationManifest from '@/data/pose-illustration-manifest.json';
 import poseCatalogBridge from '@/data/pose-catalog-bridge.json';
+import poseCanonicalRegistry from '@/data/pose-canonical-registry.json';
 
-/** Display-only pose list for the Phase 5C prototype — names only, no planner metadata. */
+/** Canonical Excel pose names in Pose1–Pose75 order. */
 export const POSE_LIBRARY_DISPLAY_NAMES: readonly string[] = poseLibraryNames;
 
-/** All 75 pose illustration URLs keyed by catalog pose name. */
+/** Canonical registry — authoritative Pose ID → name → visual → definition link. */
+export const POSE_CANONICAL_REGISTRY = poseCanonicalRegistry;
+
+export interface CanonicalPoseEntry {
+  poseId: string;
+  name: string;
+  description: string;
+  filename: string;
+  visualPath: string;
+}
+
+function poseNumber(poseId: string): number {
+  return Number(poseId.replace(/^Pose/i, ''));
+}
+
+/** All 75 canonical poses ordered by Pose ID. */
+export const CANONICAL_POSE_ENTRIES: readonly CanonicalPoseEntry[] = (
+  poseCanonicalRegistry.poses as CanonicalPoseEntry[]
+).slice().sort((a, b) => poseNumber(a.poseId) - poseNumber(b.poseId));
+
+/** All 75 pose illustration URLs keyed by canonical Excel pose name. */
 export const POSE_REFERENCE_IMAGES: Readonly<Record<string, string>> =
   poseReferenceManifest.images;
 
-/** Final Pose1–Pose75 illustration intelligence layer (Phase 5C). */
+/** Final Pose1–Pose75 illustration intelligence layer. */
 export const POSE_ILLUSTRATION_MANIFEST = poseIllustrationManifest;
 
-/** Catalog name ↔ PoseN.png bridge for planner/display integration. */
+/** 1:1 Pose ID ↔ canonical name bridge. */
 export const POSE_CATALOG_BRIDGE = poseCatalogBridge;
 
 export function getPoseIllustrationId(poseName: string): string | null {
@@ -27,8 +48,13 @@ export function getPoseIllustrationEntry(poseName: string) {
   return poseIllustrationManifest.poses.find((p) => p.poseId === poseId) ?? null;
 }
 
-export function getPoseReferenceImageUrl(poseName: string): string | null {
-  return POSE_REFERENCE_IMAGES[poseName] ?? null;
+export function getPoseReferenceImageUrl(poseNameOrId: string): string | null {
+  const byName = POSE_REFERENCE_IMAGES[poseNameOrId];
+  if (byName) return byName;
+
+  const poseId = poseNameOrId.trim();
+  const canonicalName = (poseCatalogBridge.poseIdToCatalogName as Record<string, string>)[poseId];
+  return canonicalName ? POSE_REFERENCE_IMAGES[canonicalName] ?? null : null;
 }
 
 /** Per-pose illustration fitting inside a locked contact-sheet slot. */
@@ -79,14 +105,6 @@ const POSE_CARD_COMPOSITION_TEMPLATES = [
   'sl-pose-library-card-art--comp-b',
   'sl-pose-library-card-art--comp-c',
   'sl-pose-library-card-art--comp-d',
-  'sl-pose-library-card-art--comp-e',
-  'sl-pose-library-card-art--comp-f',
-  'sl-pose-library-card-art--comp-g',
-  'sl-pose-library-card-art--comp-h',
-  'sl-pose-library-card-art--comp-i',
-  'sl-pose-library-card-art--comp-j',
-  'sl-pose-library-card-art--comp-k',
-  'sl-pose-library-card-art--comp-l',
 ] as const;
 
 export function getPoseCardFrameVariant(poseIndex: number): string {

@@ -44,10 +44,19 @@ import {
   PipelineStage,
   type PipelineTraceContext,
 } from "../lib/render-pipeline-observability.js";
-import { runIntelligenceAnalysis, buildShotPromptsWithPlan, imageCountToShootType } from "../intelligence";
+import {
+  runIntelligenceAnalysis,
+  buildShotPromptsWithPlan,
+  buildShotPromptAtSlot,
+  imageCountToShootType,
+} from "../intelligence";
 import type { ShootType as PoseShootType } from "../intelligence/pose-library";
 import type { GenerationType } from "@workspace/studio-credit-engine";
 import type { PoseFamily, PoseName } from "../intelligence/pose-library";
+import { getAllPoseDefinitions, getPoseDefinition } from "../intelligence/pose-library";
+import type { PlannedPose } from "../intelligence/pose-planner";
+import type { RecentPoseSelection } from "../intelligence/pose-selection-engine";
+import type { GarmentProfile } from "../intelligence/types";
 import { loadRecentPoseSelections } from "./pose-history-service";
 import {
   buildRefinementBrief,
@@ -61,6 +70,7 @@ import {
   mapStyleModeToTemplate,
   isLocalIdentityImageUrl,
   loadStudioTalentImageAsDataUri,
+  loadPoseReferenceImageAsDataUri,
 }                                    from "../rendering/preprocessing";
 import { mapToFashnCategory }        from "../rendering/types";
 import { uploadBase64Image }         from "../rendering/image-storage";
@@ -76,6 +86,138 @@ function generationTypeToPoseShootType(generationType: GenerationType): PoseShoo
 function resolvePoseShootType(shots: number, generationType?: GenerationType): PoseShootType {
   if (generationType) return generationTypeToPoseShootType(generationType);
   return imageCountToShootType(shots);
+}
+
+/** Resolve an explicitly selected Direct Shoot pose by canonical name or Pose ID. */
+function resolveDirectedPoseDefinition(poseNameOrId: string) {
+  return getPoseDefinition(poseNameOrId);
+}
+
+/**
+ * Hard-force a manually directed pose into a global shot slot.
+ * Explicit user selection bypasses Hero/Campaign/Editorial eligibility filters.
+ */
+function resolveDirectedPoseAtSlot(
+  basePrompt: string,
+  profile: GarmentProfile,
+  options: {
+    shootType: PoseShootType;
+    poseName: string;
+    slotIndex: number;
+  },
+): { prompt: string; plannedPose: PlannedPose; planNote?: string } | null {
+  const { shootType, poseName, slotIndex } = options;
+
+  const definition = resolveDirectedPoseDefinition(poseName);
+  if (definition) {
+    // Prompt lookup is Pose-ID keyed — never pass Excel display name here.
+    const poseId = definition.poseId ?? poseName;
+    return {
+      prompt: buildShotPromptAtSlot(
+        basePrompt,
+        profile,
+        shootType,
+        poseId,
+        slotIndex,
+        { manualDirected: true },
+      ),
+      plannedPose: {
+        name: definition.name,
+        family: definition.poseFamily,
+        selectionClass: definition.selectionClass,
+        poseId: definition.poseId ?? poseId,
+      },
+    };
+  }
+
+  return null;
+}
+
+function buildShotPlanWithDirectedPoses(
+  basePrompt: string,
+  profile: GarmentProfile,
+  options: {
+    shootType: PoseShootType;
+    modelGender?: string | null;
+    recentPoseSelections?: RecentPoseSelection[];
+    shots: number;
+    useCampaignComposition: boolean;
+    directedPoses?: string[];
+  },
+) {
+  const {
+    shootType,
+    modelGender,
+    recentPoseSelections,
+    shots,
+    useCampaignComposition,
+    directedPoses,
+  } = options;
+
+  const directed = directedPoses
+    ?.filter((name) => name.trim().length > 0)
+    .slice(0, shots) ?? [];
+
+  if (directed.length === 0) {
+    return buildShotPromptsWithPlan(basePrompt, profile, {
+      shootType,
+      modelGender,
+      recentPoseSelections,
+      count: shots,
+      useCampaignComposition,
+    });
+  }
+
+  const prompts: string[] = [];
+  const plannedPoses: PlannedPose[] = [];
+  const planNotes: string[] = [];
+
+  for (let slotIndex = 0; slotIndex < directed.length; slotIndex++) {
+    const directedName = directed[slotIndex]!;
+    const resolved = resolveDirectedPoseAtSlot(basePrompt, profile, {
+      shootType,
+      poseName: directedName,
+      slotIndex,
+    });
+    if (!resolved) continue;
+    prompts.push(resolved.prompt);
+    plannedPoses.push(resolved.plannedPose);
+    if (resolved.planNote) {
+      planNotes.push(resolved.planNote);
+      logger.warn(
+        { directedPose: directedName, slotIndex, shootType },
+        resolved.planNote,
+      );
+    }
+  }
+
+  const autoCount = shots - directed.length;
+  if (autoCount > 0) {
+    const autoPlan = buildShotPromptsWithPlan(basePrompt, profile, {
+      shootType,
+      modelGender,
+      recentPoseSelections,
+      count: autoCount,
+      usedPoses: directed,
+      useCampaignComposition,
+    });
+
+    for (let autoIndex = 0; autoIndex < autoPlan.prompts.length; autoIndex++) {
+      const plannedPose = autoPlan.plannedPoses[autoIndex];
+      if (!plannedPose) continue;
+      const slotIndex = directed.length + autoIndex;
+      const autoFillPoseId =
+        getPoseDefinition(plannedPose.name)?.poseId ?? plannedPose.name;
+      prompts.push(
+        buildShotPromptAtSlot(basePrompt, profile, shootType, autoFillPoseId, slotIndex),
+      );
+      plannedPoses.push(plannedPose);
+    }
+
+    planNotes.push(...autoPlan.planNotes);
+  }
+
+  return { prompts, plannedPoses, planNotes };
 }
 
 // ---------------------------------------------------------------------------
@@ -326,16 +468,42 @@ export async function runAIPipeline(params: {
 
     const shotPlan =
       routeDecision.supportsPerShotPrompts && !resolvedRefinementType
-        ? buildShotPromptsWithPlan(basePrompt, intelligenceResult.profile, {
+        ? buildShotPlanWithDirectedPoses(basePrompt, intelligenceResult.profile, {
             shootType,
             modelGender,
             recentPoseSelections,
-            count: shots,
+            shots,
             useCampaignComposition: params.customCampaign === true,
+            directedPoses: usedPoses,
           })
         : undefined;
 
     const perShotPrompts = shotPlan?.prompts;
+
+    const perShotPoseReferenceUrls =
+      shotPlan && !resolvedRefinementType
+        ? shotPlan.plannedPoses.map((planned) => {
+            const lookupKey = planned.poseId ?? planned.name;
+            const definition = getPoseDefinition(lookupKey);
+            const relativePath = definition?.poseReferenceImage;
+            if (!relativePath) {
+              logger.warn(
+                { renderId, poseKey: lookupKey },
+                "AI pipeline: Pose Master visual reference path missing",
+              );
+              return null;
+            }
+            try {
+              return loadPoseReferenceImageAsDataUri(relativePath, renderId);
+            } catch (error) {
+              logger.warn(
+                { renderId, poseKey: lookupKey, relativePath, err: error },
+                "AI pipeline: failed to load Pose Master visual reference — continuing without it",
+              );
+              return null;
+            }
+          })
+        : undefined;
 
     if (perShotPrompts) {
       logger.info(
@@ -344,6 +512,7 @@ export async function runAIPipeline(params: {
           generationSessionId: pipelineTrace.generationSessionId,
           shots,
           perShotPromptCount: perShotPrompts.length,
+          poseReferenceCount: perShotPoseReferenceUrls?.filter(Boolean).length ?? 0,
           diversityMode: resolvePoseShootType(shots, generationType),
         },
         "Creative Director: per-shot pose diversity briefs generated",
@@ -362,6 +531,7 @@ export async function runAIPipeline(params: {
       prompt: resolvedRefinementType ? "" : basePrompt,
       shots,
       perShotPrompts,
+      perShotPoseReferenceUrls,
       previousOutputUrl: previousOutputUrl ?? undefined,
       refinementInstruction,
       pipelineTrace,

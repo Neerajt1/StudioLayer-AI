@@ -9,7 +9,7 @@
 export { RenderOrchestrator, getOrchestrator } from "./render-orchestrator";
 
 // Shared preprocessing utilities — used by orchestrator and OpenRouter pipeline
-export { prepareGarmentImage, resolveModelImage, mapStyleModeToTemplate, isLocalIdentityImageUrl, loadStudioTalentImageAsDataUri } from "./preprocessing";
+export { prepareGarmentImage, resolveModelImage, mapStyleModeToTemplate, isLocalIdentityImageUrl, loadStudioTalentImageAsDataUri, loadPoseReferenceImageAsDataUri } from "./preprocessing";
 export type { ModelResolutionResult } from "./preprocessing";
 
 // Image storage — base64 data-URI → Cloudflare R2 public HTTPS URL

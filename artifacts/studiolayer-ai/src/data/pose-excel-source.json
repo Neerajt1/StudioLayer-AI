@@ -1,0 +1,458 @@
+{
+  "source": "StudioLayer_75_Pose_Master_Specification_v3_VISUALLY_VERIFIED.xlsx",
+  "authoritativeWorksheet": "Pose Master",
+  "authoritativePath": "Pose Master/StudioLayer_75_Pose_Master_Specification_v3_VISUALLY_VERIFIED.xlsx",
+  "reconciledAt": "2026-08-12T14:13:12.043894Z",
+  "records": [
+    {
+      "poseNo": "Pose1",
+      "poseName": "Classic Three-Quarter Stand",
+      "gender": "Female",
+      "description": "Female model in a relaxed three-quarter standing pose, subject's left hand in trouser pocket, opposite arm relaxed, one leg forward and the other set back with the rear heel raised."
+    },
+    {
+      "poseNo": "Pose2",
+      "poseName": "Sculptural Straight Stand",
+      "gender": "Female",
+      "description": "Female model standing tall and symmetrical, facing forward, both arms relaxed naturally at her sides and both feet grounded."
+    },
+    {
+      "poseNo": "Pose3",
+      "poseName": "Hand-in-Pocket Confidence",
+      "gender": "Female",
+      "description": "Female model in a confident three-quarter stand with subject's right hand relaxed and subject's left hand in a trouser pocket, legs offset with one heel lifted."
+    },
+    {
+      "poseNo": "Pose4",
+      "poseName": "One-Leg half up backside",
+      "gender": "Female",
+      "description": "Female model standing on one leg with the opposite leg bent backward and lifted, arms relaxed, torso turned slightly and head softly angled toward camera."
+    },
+    {
+      "poseNo": "Pose5",
+      "poseName": "Cross-Ankle Stand",
+      "gender": "Female",
+      "description": "Female model in a relaxed cross-ankle standing pose, arms down naturally, one foot planted while the other crosses behind with the heel raised."
+    },
+    {
+      "poseNo": "Pose6",
+      "poseName": "Shoulder-Turn Pose",
+      "gender": "Female",
+      "description": "Female model in a shoulder-turn three-quarter stance, subject's left arm bent with hand at the trouser pocket/hip while the opposite arm hangs naturally."
+    },
+    {
+      "poseNo": "Pose7",
+      "poseName": "Chair Half Seated",
+      "gender": "Female",
+      "description": "Female model half-seated on a chair, torso upright, one knee raised forward, one hand relaxed near thigh and the other contacting the chair for support."
+    },
+    {
+      "poseNo": "Pose8",
+      "poseName": "Floor Long-Leg Pose",
+      "gender": "Female",
+      "description": "Female model seated on the floor with one knee raised and the other leg extended long, one hand braced on the floor and the torso upright."
+    },
+    {
+      "poseNo": "Pose9",
+      "poseName": "Arms Folded Minimal",
+      "gender": "Female",
+      "description": "Female model standing frontally with both arms folded across the torso, feet grounded and posture minimal and symmetrical."
+    },
+    {
+      "poseNo": "Pose10",
+      "poseName": "Jacket Lapel Hold",
+      "gender": "Female",
+      "description": "Female model standing in an editorial jacket pose, one hand gripping the jacket lapel while the other arm hangs naturally."
+    },
+    {
+      "poseNo": "Pose11",
+      "poseName": "Sleeve Adjustment",
+      "gender": "Female",
+      "description": "Female model standing upright while one hand adjusts the opposite jacket sleeve/cuff, with the other arm relaxed."
+    },
+    {
+      "poseNo": "Pose12",
+      "poseName": "Trouser Waist Hold",
+      "gender": "Female",
+      "description": "Female model standing with both hands holding the trouser waistband at the waist, creating a clean fashion waistline pose."
+    },
+    {
+      "poseNo": "Pose13",
+      "poseName": "Relaxed Side Lean",
+      "gender": "Female",
+      "description": "Female model in a relaxed side-lean stance with torso subtly angled, arms loose and legs offset to create a soft editorial line."
+    },
+    {
+      "poseNo": "Pose14",
+      "poseName": "Long-Line Profile",
+      "gender": "Female",
+      "description": "Female model in a clean full-profile standing pose, elongated through torso and legs, with one hand near the waist and the other arm relaxed."
+    },
+    {
+      "poseNo": "Pose15",
+      "poseName": "Back Three-Quarter Turn",
+      "gender": "Female",
+      "description": "Female model shown from a back three-quarter angle, head turned over the shoulder toward camera, one arm relaxed and the other near the hip."
+    },
+    {
+      "poseNo": "Pose16",
+      "poseName": "Walking Toward Camera",
+      "gender": "Female",
+      "description": "Female model walking toward camera in a natural fashion stride, arms counter-swinging and legs in opposing walking phases."
+    },
+    {
+      "poseNo": "Pose17",
+      "poseName": "Walking Away",
+      "gender": "Female",
+      "description": "Female model walking away from camera, body primarily rear-facing, legs in stride and arms naturally relaxed, with only a subtle head turn."
+    },
+    {
+      "poseNo": "Pose18",
+      "poseName": "Mid-Step Side Walk",
+      "gender": "Female",
+      "description": "Female model captured mid-step in a side-oriented fashion walk, front leg extended and rear heel lifted, arms swinging naturally."
+    },
+    {
+      "poseNo": "Pose19",
+      "poseName": "Wide-Striding Editorial Walk",
+      "gender": "Female",
+      "description": "Female model in a wide-striding editorial runway walk with long opposing leg lines and natural arm swing."
+    },
+    {
+      "poseNo": "Pose20",
+      "poseName": "Turning While Walking",
+      "gender": "Female",
+      "description": "Female model turning while walking, with the torso and head rotating relative to the stride and both arms moving naturally."
+    },
+    {
+      "poseNo": "Pose21",
+      "poseName": "Coat-in-Motion Walk",
+      "gender": "Female",
+      "description": "Female model walking with a long coat in motion, one hand lightly controlling the coat while the opposite arm swings naturally."
+    },
+    {
+      "poseNo": "Pose22",
+      "poseName": "Skirt-Sweep Walk",
+      "gender": "Female",
+      "description": "Female model walking while one hand sweeps the flowing skirt outward, creating a pronounced fabric arc around a forward stride."
+    },
+    {
+      "poseNo": "Pose23",
+      "poseName": "Cross-Step Runway Walk",
+      "gender": "Male",
+      "description": "Male model executing a clean runway cross-step, front foot crossing the centerline while the arms remain naturally relaxed."
+    },
+    {
+      "poseNo": "Pose24",
+      "poseName": "Walking With Bag",
+      "gender": "Female",
+      "description": "Female model walking with a handbag held at her side, legs in a natural stride and the opposite arm relaxed."
+    },
+    {
+      "poseNo": "Pose25",
+      "poseName": "Pause Mid-Walk",
+      "gender": "Male",
+      "description": "Male model paused mid-walk in a three-quarter stance, one leg forward, the other trailing, with arms relaxed and one hand near the trouser pocket."
+    },
+    {
+      "poseNo": "Pose26",
+      "poseName": "Classic Stool Sit",
+      "gender": "Female",
+      "description": "Female model seated upright on a tall stool, knees separated, both hands resting naturally near the thighs and feet supported."
+    },
+    {
+      "poseNo": "Pose27",
+      "poseName": "Stool Forward Lean",
+      "gender": "Female",
+      "description": "Female model seated on a stool and leaning forward, forearms/hands close to the knees, creating a compact editorial seated silhouette."
+    },
+    {
+      "poseNo": "Pose28",
+      "poseName": "Cross-Leg Stool Pose",
+      "gender": "Male",
+      "description": "Male model seated on a stool with one leg crossed over the other, torso relaxed and hands resting naturally around the lap."
+    },
+    {
+      "poseNo": "Pose29",
+      "poseName": "Sideways Stool Sit",
+      "gender": "Female",
+      "description": "Female model seated sideways on a stool, torso upright, legs angled off-axis and arms relaxed to maintain an editorial lateral silhouette."
+    },
+    {
+      "poseNo": "Pose30",
+      "poseName": "Chair Relaxed Sit",
+      "gender": "Male",
+      "description": "Male model in a relaxed chair sit, one arm supported on the chair, legs offset/crossed and torso comfortably reclined."
+    },
+    {
+      "poseNo": "Pose31",
+      "poseName": "Chair Forward Lean",
+      "gender": "Female",
+      "description": "Female model seated on a chair and leaning forward, both arms descending toward the knees, feet planted and torso compact."
+    },
+    {
+      "poseNo": "Pose32",
+      "poseName": "Cross-Leg Chair Pose",
+      "gender": "Male",
+      "description": "Male model seated in a chair with legs crossed and one hand supporting the side of his head, creating a relaxed editorial pose."
+    },
+    {
+      "poseNo": "Pose33",
+      "poseName": "Edge-of-Chair Pose",
+      "gender": "Male",
+      "description": "Male model seated at the edge of a chair, torso slightly forward, feet grounded and hands relaxed near the thighs/knees."
+    },
+    {
+      "poseNo": "Pose34",
+      "poseName": "Reclined Chair Pose",
+      "gender": "Female",
+      "description": "Female model reclined comfortably in a chair, one hand near her head and the other supported by the chair, legs relaxed and offset."
+    },
+    {
+      "poseNo": "Pose35",
+      "poseName": "Seated Side Profile",
+      "gender": "Female",
+      "description": "Female model seated in side profile on a chair, one hand supporting her cheek while the legs angle naturally beneath the body."
+    },
+    {
+      "poseNo": "Pose36",
+      "poseName": "Floor Cross-Leg Sit",
+      "gender": "Male",
+      "description": "Male model seated cross-legged on the floor, one hand supporting the head and the other resting near the lower leg/ankle."
+    },
+    {
+      "poseNo": "Pose37",
+      "poseName": "One-Knee Floor Pose",
+      "gender": "Female",
+      "description": "Female model seated on the floor with one knee raised, the other leg folded beneath, one hand supporting the face and the other near the knee."
+    },
+    {
+      "poseNo": "Pose38",
+      "poseName": "Side-Sit Floor Pose",
+      "gender": "Female",
+      "description": "Female model in a relaxed side-sit on the floor, legs folded to one side and hands resting naturally for balance and composition."
+    },
+    {
+      "poseNo": "Pose39",
+      "poseName": "Kneeling Editorial Pose",
+      "gender": "Female",
+      "description": "Female model kneeling on the floor with both knees down, torso upright and hands relaxed near the thighs."
+    },
+    {
+      "poseNo": "Pose40",
+      "poseName": "One-Knee Fashion Pose",
+      "gender": "Female",
+      "description": "Female model in a one-knee fashion pose, one knee grounded and the opposite foot planted forward, torso upright and arms relaxed."
+    },
+    {
+      "poseNo": "Pose41",
+      "poseName": "Reclining Floor Pose",
+      "gender": "Male",
+      "description": "Male model reclining on the floor, one arm braced behind/side for support, one leg bent and the other extended/angled."
+    },
+    {
+      "poseNo": "Pose42",
+      "poseName": "Floor Long-Leg Pose",
+      "gender": "Male",
+      "description": "Male model seated low on the floor with both legs extended long in front, one hand braced for support and torso upright."
+    },
+    {
+      "poseNo": "Pose43",
+      "poseName": "Folded-Leg Relaxed Pose",
+      "gender": "Female",
+      "description": "Female model seated on the floor with legs folded, one hand supporting her cheek and the other resting across a knee."
+    },
+    {
+      "poseNo": "Pose44",
+      "poseName": "Dramatic Coat Sweep",
+      "gender": "Female",
+      "description": "Female model walking in a dramatic coat-sweep pose, one hand controlling the coat while the fabric billows broadly and the legs remain in stride."
+    },
+    {
+      "poseNo": "Pose45",
+      "poseName": "Garment-Hold Editorial",
+      "gender": "Female",
+      "description": "Female model standing while holding both sides of the dress outward, deliberately revealing the garment silhouette and drape."
+    },
+    {
+      "poseNo": "Pose46",
+      "poseName": "Shoulder-Back Power Pose",
+      "gender": "Female",
+      "description": "Female model standing tall with shoulders pulled back and chest open, hands near the trouser pockets and legs long and grounded."
+    },
+    {
+      "poseNo": "Pose47",
+      "poseName": "Looking Over Shoulder",
+      "gender": "Male",
+      "description": "Male model walking away in a rear three-quarter view while turning his head back over the shoulder toward camera."
+    },
+    {
+      "poseNo": "Pose48",
+      "poseName": "Head-Tilt Editorial",
+      "gender": "Female",
+      "description": "Female model standing in a relaxed three-quarter pose with a clear head tilt, one hand near/in the trouser pocket and legs offset."
+    },
+    {
+      "poseNo": "Pose49",
+      "poseName": "Arm-Extended Silhouette",
+      "gender": "Female",
+      "description": "Female model standing in three-quarter view with one arm naturally extended away from the body, creating a clean silhouette and negative space."
+    },
+    {
+      "poseNo": "Pose50",
+      "poseName": "The Floating Suspended",
+      "gender": "Female",
+      "description": "Female model suspended mid-action with both feet off the ground, one leg bent and the other extended, arms balancing the leap and fabric appearing weightless."
+    },
+    {
+      "poseNo": "Pose51",
+      "poseName": "Contrapposto Power Pose",
+      "gender": "Female",
+      "description": "Female model in a strong contrapposto stance, weight settled onto one leg, the opposite leg relaxed/offset and one hand in the trouser pocket."
+    },
+    {
+      "poseNo": "Pose52",
+      "poseName": "Garment-in-Wind Pose",
+      "gender": "Female",
+      "description": "Female model walking as if caught by a gentle studio breeze, one hand raised near the head and the other interacting with the moving garment."
+    },
+    {
+      "poseNo": "Pose53",
+      "poseName": "Three-Quarter Portrait",
+      "gender": "Female",
+      "description": "Female model shown from approximately mid-torso upward in three-quarter view, with hands interacting subtly with the jacket/shoulder area."
+    },
+    {
+      "poseNo": "Pose54",
+      "poseName": "Straight-On Portrait",
+      "gender": "Male",
+      "description": "Male model facing camera directly in a clean straight-on editorial portrait, shoulders square and gaze forward."
+    },
+    {
+      "poseNo": "Pose55",
+      "poseName": "The Collarbone Frame",
+      "gender": "Male",
+      "description": "Male model shrugging the shoulders high and forward while looking down, with both hands framing/adjusting the collar area."
+    },
+    {
+      "poseNo": "Pose56",
+      "poseName": "Back-of-Head / Shoulder View",
+      "gender": "Female",
+      "description": "Female model viewed from behind with the back of the head and shoulders dominant and the face turned slightly away."
+    },
+    {
+      "poseNo": "Pose57",
+      "poseName": "Jacket Detail Portrait",
+      "gender": "Male",
+      "description": "Male model shown from chest upward with emphasis on jacket collar and neckline, one or both hands interacting with the jacket front."
+    },
+    {
+      "poseNo": "Pose58",
+      "poseName": "Hands-and-Garment Detail",
+      "gender": "Female",
+      "description": "Female model in a close editorial crop emphasizing both hands interacting with and adjusting the garment; the hand-to-garment contacts are critical."
+    },
+    {
+      "poseNo": "Pose59",
+      "poseName": "Waist-Up Editorial",
+      "gender": "Female",
+      "description": "Female model shown waist-up in a relaxed three-quarter pose, with hands naturally framing the waist/trouser pockets."
+    },
+    {
+      "poseNo": "Pose60",
+      "poseName": "Face-and-Shoulder Fashion Crop",
+      "gender": "Female",
+      "description": "Female model in an elegant close face-and-shoulder fashion crop, emphasizing face, shoulder line and garment construction without a dreamy mood."
+    },
+    {
+      "poseNo": "Pose61",
+      "poseName": "Male Classic Three-Quarter",
+      "gender": "Male",
+      "description": "Male model in a classic three-quarter stance, one hand in the trouser pocket, the other arm relaxed, with a subtle crossed/offset leg line."
+    },
+    {
+      "poseNo": "Pose62",
+      "poseName": "Male Strong Contrapposto",
+      "gender": "Male",
+      "description": "Male model in a strong contrapposto stance, one hand in the trouser pocket and the other holding a jacket draped over the shoulder."
+    },
+    {
+      "poseNo": "Pose63",
+      "poseName": "Male Jacket Adjustment",
+      "gender": "Male",
+      "description": "Male model standing while adjusting the front of his jacket with both hands, creating a controlled tailored silhouette."
+    },
+    {
+      "poseNo": "Pose64",
+      "poseName": "Male Double-Pocket Pose",
+      "gender": "Male",
+      "description": "Male model standing casually with both hands in trouser pockets, legs relaxed and slightly crossed/offset."
+    },
+    {
+      "poseNo": "Pose65",
+      "poseName": "Male Sleeve Adjustment",
+      "gender": "Male",
+      "description": "Male model standing in a three-quarter pose while one hand adjusts the opposite sleeve/cuff and the other arm remains relaxed."
+    },
+    {
+      "poseNo": "Pose66",
+      "poseName": "Male Shoulder Turn",
+      "gender": "Male",
+      "description": "Male model facing forward with the shoulders rotated slightly away, creating a subtle shoulder-turn editorial pose."
+    },
+    {
+      "poseNo": "Pose67",
+      "poseName": "Male Back Three-Quarter",
+      "gender": "Male",
+      "description": "Male model shown from a back three-quarter angle with the head turned over the shoulder toward camera and the legs offset naturally."
+    },
+    {
+      "poseNo": "Pose68",
+      "poseName": "Male Full Profile",
+      "gender": "Male",
+      "description": "Male model in a clean full side profile, standing tall with arms relaxed and one leg slightly behind the other."
+    },
+    {
+      "poseNo": "Pose69",
+      "poseName": "Male Walking Toward Camera",
+      "gender": "Male",
+      "description": "Male model walking confidently toward camera with a natural stride, arms counter-swinging and legs in opposing phases."
+    },
+    {
+      "poseNo": "Pose70",
+      "poseName": "Male Side Walking Pose",
+      "gender": "Male",
+      "description": "Male model captured mid-stride in side profile, front leg advancing and rear heel lifted, arms moving naturally."
+    },
+    {
+      "poseNo": "Pose71",
+      "poseName": "Male Turning Walk",
+      "gender": "Male",
+      "description": "Male model walking while turning his upper body toward camera, with legs remaining in a natural stride and arms relaxed."
+    },
+    {
+      "poseNo": "Pose72",
+      "poseName": "Female Sandle fix Pose",
+      "gender": "Female",
+      "description": "Female model seated on a block, leaning forward to adjust her sandal, with one leg raised/working and the other providing support."
+    },
+    {
+      "poseNo": "Pose73",
+      "poseName": "Female Stool Editorial",
+      "gender": "Female",
+      "description": "Female model seated on a tall stool in a relaxed sophisticated pose, one hand supporting the cheek/head and legs arranged in an elegant crossed/offset position."
+    },
+    {
+      "poseNo": "Pose74",
+      "poseName": "Female Forward Lean Sit",
+      "gender": "Female",
+      "description": "Female model seated and leaning slightly forward with both forearms/hands resting naturally near the knees and both feet grounded."
+    },
+    {
+      "poseNo": "Pose75",
+      "poseName": "Female Relaxed sitting Pose",
+      "gender": "Female",
+      "description": "Female model seated on the floor in a relaxed editorial posture, one knee raised, the other leg folded, one hand supporting the face and the other resting near the knee."
+    }
+  ]
+}

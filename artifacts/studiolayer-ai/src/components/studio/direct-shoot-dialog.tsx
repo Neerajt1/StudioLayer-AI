@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,8 @@ interface DirectShootDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shootImageCount: number;
+  onConfirm?: (selectedPoseIds: string[]) => void;
+  onDismiss?: () => void;
 }
 
 /** Cleared on open so stale experiment modes cannot persist. */
@@ -24,8 +26,11 @@ export function DirectShootDialog({
   open,
   onOpenChange,
   shootImageCount,
+  onConfirm,
+  onDismiss,
 }: DirectShootDialogProps) {
-  const [selectedPoses, setSelectedPoses] = useState<string[]>([]);
+  const [selectedPoseIds, setSelectedPoseIds] = useState<string[]>([]);
+  const confirmedThisSessionRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -36,32 +41,42 @@ export function DirectShootDialog({
 
   useEffect(() => {
     if (!open) {
-      setSelectedPoses([]);
+      setSelectedPoseIds([]);
       return;
     }
+    confirmedThisSessionRef.current = false;
     if (typeof window !== 'undefined') {
       window.sessionStorage.removeItem(LEGACY_LAYOUT_STORAGE_KEY);
     }
   }, [open]);
 
-  const selectionLimitReached = selectedPoses.length >= shootImageCount;
-  const selectedCount = selectedPoses.length;
+  const isSingleShotSelection = shootImageCount === 1;
+  const selectionLimitReached = selectedPoseIds.length >= shootImageCount;
+  const tileSelectionLimitReached = !isSingleShotSelection && selectionLimitReached;
+  const selectedCount = selectedPoseIds.length;
   const remainingCount = Math.max(0, shootImageCount - selectedCount);
   const allSelected = selectedCount === shootImageCount && shootImageCount > 0;
 
   const togglePose = useCallback(
-    (poseName: string) => {
-      setSelectedPoses((current) => {
-        if (current.includes(poseName)) {
-          return current.filter((name) => name !== poseName);
+    (poseId: string) => {
+      setSelectedPoseIds((current) => {
+        if (isSingleShotSelection) {
+          if (current.includes(poseId)) {
+            return current.filter((id) => id !== poseId);
+          }
+          return [poseId];
+        }
+
+        if (current.includes(poseId)) {
+          return current.filter((id) => id !== poseId);
         }
         if (current.length >= shootImageCount) {
           return current;
         }
-        return [...current, poseName];
+        return [...current, poseId];
       });
     },
-    [shootImageCount],
+    [isSingleShotSelection, shootImageCount],
   );
 
   const selectionPrimaryLabel = useMemo(() => {
@@ -75,22 +90,35 @@ export function DirectShootDialog({
 
   const ctaLabel = useMemo(() => {
     if (allSelected) {
-      return 'DIRECT THIS SHOOT';
+      return 'CONFIRM POSES';
     }
     if (selectedCount === 0) {
-      return 'DIRECT WITH SELECTED + AUTO-SELECT REMAINING →';
+      return `SELECT ${shootImageCount} POSE${shootImageCount === 1 ? '' : 'S'}`;
     }
-    return `DIRECT WITH ${selectedCount} + AUTO-SELECT ${remainingCount} →`;
-  }, [allSelected, selectedCount, remainingCount]);
+    return `SELECT ${remainingCount} MORE`;
+  }, [allSelected, selectedCount, remainingCount, shootImageCount]);
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen && !confirmedThisSessionRef.current) {
+        onDismiss?.();
+      }
+      onOpenChange(nextOpen);
+    },
+    [onDismiss, onOpenChange],
+  );
 
   const handleDirectShoot = () => {
+    if (!allSelected) return;
+    confirmedThisSessionRef.current = true;
+    onConfirm?.(selectedPoseIds);
     onOpenChange(false);
   };
 
   const isMobilePresentation = useDirectShootMobilePresentation();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sl-direct-shoot-dialog gap-0 overflow-hidden border border-border bg-card p-0 sm:max-w-none">
         <DialogHeader className="sl-direct-shoot-header">
           <DialogTitle className="sl-direct-shoot-title">Direct Your Shoot</DialogTitle>
@@ -112,14 +140,14 @@ export function DirectShootDialog({
         >
           {isMobilePresentation ? (
             <DirectShootMobileBoard
-              selectedPoses={selectedPoses}
-              selectionLimitReached={selectionLimitReached}
+              selectedPoseIds={selectedPoseIds}
+              selectionLimitReached={tileSelectionLimitReached}
               onTogglePose={togglePose}
             />
           ) : (
             <DirectShootPoseBoard
-              selectedPoses={selectedPoses}
-              selectionLimitReached={selectionLimitReached}
+              selectedPoseIds={selectedPoseIds}
+              selectionLimitReached={tileSelectionLimitReached}
               onTogglePose={togglePose}
             />
           )}
@@ -130,13 +158,14 @@ export function DirectShootDialog({
             <p className="sl-direct-shoot-selection-count">{selectionPrimaryLabel}</p>
             {showRemainingMessage ? (
               <p className="sl-direct-shoot-remaining">
-                StudioLayer AI chooses the remaining {remainingCount}.
+                Select {remainingCount} more pose{remainingCount === 1 ? '' : 's'} to continue.
               </p>
             ) : null}
           </div>
           <button
             type="button"
             className="sl-direct-shoot-cta"
+            disabled={!allSelected}
             onClick={handleDirectShoot}
           >
             {ctaLabel}

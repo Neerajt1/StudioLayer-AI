@@ -1,37 +1,36 @@
 import { useMemo } from 'react';
-import { POSE_LIBRARY_DISPLAY_NAMES } from '@/lib/pose-library-display';
 import {
-  CURATED_BOARD_ASPECT_RATIO,
-  getAllCuratedPlacements,
-  getCuratedPlacementStyle,
-} from '@/lib/direct-shoot-curated-layout';
+  CANONICAL_BOARD_ASPECT_RATIO,
+  getAllCanonicalPlacements,
+  getCanonicalPlacementStyle,
+} from '@/lib/direct-shoot-canonical-layout';
+import { CANONICAL_POSE_ENTRIES } from '@/lib/pose-library-display';
 import { DirectShootPoseTile } from '@/components/studio/direct-shoot-pose-tile';
 
 interface DirectShootPoseBoardProps {
-  selectedPoses: string[];
+  selectedPoseIds: string[];
   selectionLimitReached: boolean;
-  onTogglePose: (poseName: string) => void;
+  onTogglePose: (poseId: string) => void;
 }
 
 /**
- * Phase-1 Direct Shoot pose library — controlled editorial grid on a white canvas.
- * 75 individual PoseN.png tiles in deterministic row/band layout.
+ * Direct Shoot pose library — canonical Pose1–Pose75 editorial grid.
  */
 export function DirectShootPoseBoard({
-  selectedPoses,
+  selectedPoseIds,
   selectionLimitReached,
   onTogglePose,
 }: DirectShootPoseBoardProps) {
-  const placements = useMemo(
-    () =>
-      getAllCuratedPlacements().sort(
-        (a, b) => a.placement.zIndex - b.placement.zIndex,
-      ),
+  const entryById = useMemo(
+    () => new Map(CANONICAL_POSE_ENTRIES.map((entry) => [entry.poseId, entry])),
     [],
   );
 
-  const poseOrder = useMemo(
-    () => new Set(POSE_LIBRARY_DISPLAY_NAMES),
+  const placements = useMemo(
+    () =>
+      getAllCanonicalPlacements().sort(
+        (a, b) => a.placement.zIndex - b.placement.zIndex,
+      ),
     [],
   );
 
@@ -39,21 +38,27 @@ export function DirectShootPoseBoard({
     <div className="sl-direct-shoot-pose-board-shell">
       <div
         className="sl-direct-shoot-pose-board"
-        style={{ aspectRatio: String(CURATED_BOARD_ASPECT_RATIO) }}
+        style={{ aspectRatio: String(CANONICAL_BOARD_ASPECT_RATIO) }}
         role="list"
         aria-label="Pose library board"
-        data-pose-count={poseOrder.size}
+        data-pose-count={CANONICAL_POSE_ENTRIES.length}
       >
-        {placements.map(({ poseName, placement }) => (
-          <DirectShootPoseTile
-            key={poseName}
-            poseName={poseName}
-            placementStyle={getCuratedPlacementStyle(placement)}
-            selected={selectedPoses.includes(poseName)}
-            disabled={selectionLimitReached}
-            onToggle={() => onTogglePose(poseName)}
-          />
-        ))}
+        {placements.map(({ poseId, placement }) => {
+          const entry = entryById.get(poseId);
+          if (!entry) return null;
+
+          return (
+            <DirectShootPoseTile
+              key={poseId}
+              poseId={entry.poseId}
+              poseName={entry.name}
+              placementStyle={getCanonicalPlacementStyle(placement)}
+              selected={selectedPoseIds.includes(poseId)}
+              disabled={selectionLimitReached}
+              onToggle={() => onTogglePose(poseId)}
+            />
+          );
+        })}
       </div>
     </div>
   );

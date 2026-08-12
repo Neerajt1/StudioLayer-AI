@@ -2,6 +2,7 @@ import { getPoseReferenceImageUrl } from '@/lib/pose-library-display';
 import { cn } from '@/lib/utils';
 
 interface DirectShootPoseTileProps {
+  poseId: string;
   poseName: string;
   placementStyle: Record<string, string | number>;
   selected: boolean;
@@ -10,13 +11,14 @@ interface DirectShootPoseTileProps {
 }
 
 export function DirectShootPoseTile({
+  poseId,
   poseName,
   placementStyle,
   selected,
   disabled,
   onToggle,
 }: DirectShootPoseTileProps) {
-  const imageUrl = getPoseReferenceImageUrl(poseName);
+  const imageUrl = getPoseReferenceImageUrl(poseId);
 
   return (
     <button

@@ -16,6 +16,7 @@ export {
   buildHeroShotPrompt,
   buildShotPrompts,
   buildShotPromptsWithPlan,
+  buildShotPromptAtSlot,
   CANONICAL_CAMERA_ANGLES,
   CANONICAL_POSES,
 } from "./creative-director";

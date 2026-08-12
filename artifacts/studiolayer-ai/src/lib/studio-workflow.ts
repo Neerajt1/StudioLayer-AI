@@ -28,6 +28,8 @@ export interface StudioWorkflow {
   /** Custom Campaign mode — variable 4–20 image batch at Campaign per-image pricing. */
   customCampaign: boolean;
   customImageCount: number;
+  /** Canonical Pose IDs selected in Direct Shoot (required before generation). */
+  usedPoses?: string[];
 }
 
 export const DEFAULT_GARMENT_LENGTH_SELECTION: Exclude<GarmentLengthSelection, 'auto'> = 'mini';
@@ -55,12 +57,15 @@ export const GARMENT_LENGTH_OPTIONS: ReadonlyArray<{
   { value: 'floor', label: 'Floor Length' },
 ];
 
-export type WorkflowMissingField = 'garment' | 'category' | 'talent';
+export type WorkflowMissingField = 'garment' | 'category' | 'talent' | 'poses';
 
 export interface StudioWorkflowValidation {
   hasGarment: boolean;
   hasCategory: boolean;
   hasTalent: boolean;
+  hasPoses: boolean;
+  requiredPoseCount: number;
+  selectedPoseCount: number;
   isComplete: boolean;
   firstMissing: WorkflowMissingField | null;
   message: string | null;
@@ -113,8 +118,25 @@ function isCustomImageCount(value: unknown): value is number {
     && value <= CUSTOM_CAMPAIGN_MAX;
 }
 
+
+function normalizeUsedPoses(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const poses = raw.filter((pose) => typeof pose === 'string' && pose.trim().length > 0);
+  return poses.length > 0 ? poses : undefined;
+}
+
+/** Trim manual pose selection when shoot type or image count shrinks. */
+export function trimUsedPosesToShotCount(
+  usedPoses: string[] | undefined,
+  shotCount: number,
+): string[] | undefined {
+  if (!usedPoses?.length || shotCount <= 0) return undefined;
+  const trimmed = usedPoses.slice(0, shotCount);
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export function normalizeStudioWorkflow(raw: Partial<StudioWorkflow> | null | undefined): StudioWorkflow {
-  return {
+  const workflow = {
     sourceImageUrl: typeof raw?.sourceImageUrl === 'string' ? raw.sourceImageUrl : '',
     garmentPlacement: isGarmentPlacement(raw?.garmentPlacement) ? raw.garmentPlacement : '',
     garmentLengthSelection: isManualGarmentLengthSelection(raw?.garmentLengthSelection)
@@ -125,7 +147,16 @@ export function normalizeStudioWorkflow(raw: Partial<StudioWorkflow> | null | un
     customCampaign: raw?.customCampaign === true,
     customImageCount: isCustomImageCount(raw?.customImageCount)
       ? raw.customImageCount
-      : CUSTOM_CAMPAIGN_MIN,
+      : CUSTOM_CAMPAIGN_MIN,,
+    usedPoses: normalizeUsedPoses(raw?.usedPoses),
+  };
+
+  return {
+    ...workflow,
+    usedPoses: trimUsedPosesToShotCount(
+      workflow.usedPoses,
+      resolveWorkflowImageCount(workflow),
+    ),
   };
 }
 
@@ -137,13 +168,19 @@ export function validateStudioWorkflow(workflow: StudioWorkflow): StudioWorkflow
   const hasGarment = Boolean(workflow.sourceImageUrl);
   const hasCategory = Boolean(workflow.garmentPlacement);
   const hasTalent = Boolean(workflow.talentId);
-  const isComplete = hasGarment && hasCategory && hasTalent;
+  const requiredPoseCount = resolveWorkflowImageCount(workflow);
+  const selectedPoseCount = workflow.usedPoses?.length ?? 0;
+  const hasPoses = selectedPoseCount === requiredPoseCount && requiredPoseCount > 0;
+  const isComplete = hasGarment && hasCategory && hasTalent && hasPoses;
 
   if (!hasGarment) {
     return {
       hasGarment,
       hasCategory,
       hasTalent,
+      hasPoses,
+      requiredPoseCount,
+      selectedPoseCount,
       isComplete,
       firstMissing: 'garment',
       message: 'Upload a garment photo to begin creating.',
@@ -155,6 +192,9 @@ export function validateStudioWorkflow(workflow: StudioWorkflow): StudioWorkflow
       hasGarment,
       hasCategory,
       hasTalent,
+      hasPoses,
+      requiredPoseCount,
+      selectedPoseCount,
       isComplete,
       firstMissing: 'talent',
       message: 'Select Your Model from the library.',
@@ -166,9 +206,29 @@ export function validateStudioWorkflow(workflow: StudioWorkflow): StudioWorkflow
       hasGarment,
       hasCategory,
       hasTalent,
+      hasPoses,
+      requiredPoseCount,
+      selectedPoseCount,
       isComplete,
       firstMissing: 'category',
       message: 'Select what type of garment this is.',
+    };
+  }
+
+  if (!hasPoses) {
+    return {
+      hasGarment,
+      hasCategory,
+      hasTalent,
+      hasPoses,
+      requiredPoseCount,
+      selectedPoseCount,
+      isComplete,
+      firstMissing: 'poses',
+      message:
+        requiredPoseCount === 1
+          ? 'Choose a pose for your shoot.'
+          : `Choose ${requiredPoseCount} poses for your shoot.`,
     };
   }
 
@@ -176,6 +236,9 @@ export function validateStudioWorkflow(workflow: StudioWorkflow): StudioWorkflow
     hasGarment,
     hasCategory,
     hasTalent,
+    hasPoses,
+    requiredPoseCount,
+    selectedPoseCount,
     isComplete,
     firstMissing: null,
     message: null,
@@ -211,6 +274,9 @@ export function buildGenerationRequest(
     imageDimensions: 'portrait_45' as const,
     imageCount: resolveWorkflowImageCount(workflow),
     ...(workflow.customCampaign ? { customCampaign: true as const } : {}),
+    ...(workflow.usedPoses && workflow.usedPoses.length > 0
+      ? { usedPoses: workflow.usedPoses }
+      : {}),
   };
 }
 

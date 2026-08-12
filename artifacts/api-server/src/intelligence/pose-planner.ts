@@ -14,6 +14,7 @@ import {
   type PoseSelectionClass,
   type ShootType,
   POCKET_ALTERNATIVE_POSES,
+  getAutomaticSelectionFallbackPose,
   getPoseDefinition,
   getPosesInCollection,
 } from "./pose-library";
@@ -64,6 +65,8 @@ export interface PlannedPose {
   name: PoseName;
   family: PoseFamily;
   selectionClass: PoseSelectionClass;
+  /** Canonical Pose ID when known — preferred for visual reference lookup. */
+  poseId?: string;
 }
 
 export interface PosePlanResult {
@@ -128,6 +131,7 @@ function filterCompatiblePoses(
     if (!tagsCompatible(pose, ctx.garmentTags)) return false;
     if (pose.requiresPockets && !ctx.hasPockets) return false;
     if (ctx.usedPoses.has(pose.name.toLowerCase())) return false;
+    if (pose.poseId && ctx.usedPoses.has(pose.poseId.toLowerCase())) return false;
     return true;
   });
 }
@@ -296,7 +300,7 @@ function resolvePocketPose(
 ): PoseDefinition {
   if (!pose.requiresPockets || hasPockets) return pose;
   const altName = POCKET_ALTERNATIVE_POSES[alternativeIndex % POCKET_ALTERNATIVE_POSES.length]!;
-  return getPoseDefinition(altName) ?? getPoseDefinition("Hip Shift")!;
+  return getPoseDefinition(altName) ?? getAutomaticSelectionFallbackPose();
 }
 
 /**
@@ -343,13 +347,14 @@ export function planPosesForShoot(ctx: PosePlannerContext): PosePlanResult {
   }
 
   if (compatible.length === 0) {
-    planNotes.push("No compatible poses — Relaxed Front fallback");
-    const fallback = getPoseDefinition("Relaxed Front")!;
+    planNotes.push("No compatible poses — canonical fallback");
+    const fallback = getAutomaticSelectionFallbackPose();
     return {
       poses: Array.from({ length: count }, () => ({
         name: fallback.name,
         family: fallback.poseFamily,
         selectionClass: fallback.selectionClass,
+        poseId: fallback.poseId,
       })),
       planNotes,
     };
@@ -411,7 +416,7 @@ export function planPosesForShoot(ctx: PosePlannerContext): PosePlanResult {
   }
 
   while (selected.length < count) {
-    const fallback = getPoseDefinition("Relaxed Front");
+    const fallback = getAutomaticSelectionFallbackPose();
     if (fallback && !selected.some((s) => s.name === fallback.name)) {
       selected.push(fallback);
     } else {
@@ -437,6 +442,7 @@ export function planPosesForShoot(ctx: PosePlannerContext): PosePlanResult {
       name: p.name,
       family: p.poseFamily,
       selectionClass: p.selectionClass,
+      poseId: p.poseId,
     })),
     planNotes,
   };
@@ -521,13 +527,14 @@ export function planPosesWithBucketSlots(
   }
 
   if (compatible.length === 0) {
-    planNotes.push("No compatible poses — Relaxed Front fallback");
-    const fallback = getPoseDefinition("Relaxed Front")!;
+    planNotes.push("No compatible poses — canonical fallback");
+    const fallback = getAutomaticSelectionFallbackPose();
     return {
       poses: Array.from({ length: count }, () => ({
         name: fallback.name,
         family: fallback.poseFamily,
         selectionClass: fallback.selectionClass,
+        poseId: fallback.poseId,
       })),
       planNotes,
     };
@@ -596,7 +603,7 @@ export function planPosesWithBucketSlots(
   }
 
   while (selected.length < count) {
-    const fallback = getPoseDefinition("Relaxed Front");
+    const fallback = getAutomaticSelectionFallbackPose();
     if (fallback && !selected.some((s) => s.name === fallback.name)) {
       selected.push(fallback);
     } else {
@@ -625,6 +632,7 @@ export function planPosesWithBucketSlots(
       name: p.name,
       family: p.poseFamily,
       selectionClass: p.selectionClass,
+      poseId: p.poseId,
     })),
     planNotes,
   };

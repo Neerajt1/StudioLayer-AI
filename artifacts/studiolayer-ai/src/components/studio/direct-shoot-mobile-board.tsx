@@ -1,18 +1,17 @@
-import { POSE_LIBRARY_DISPLAY_NAMES } from '@/lib/pose-library-display';
+import { CANONICAL_POSE_ENTRIES } from '@/lib/pose-library-display';
 import { DirectShootMobileTile } from '@/components/studio/direct-shoot-mobile-tile';
 
 interface DirectShootMobileBoardProps {
-  selectedPoses: string[];
+  selectedPoseIds: string[];
   selectionLimitReached: boolean;
-  onTogglePose: (poseName: string) => void;
+  onTogglePose: (poseId: string) => void;
 }
 
 /**
- * Phase-1 Direct Shoot — touch-first mobile pose library.
- * Two-column grid of individual PoseN.png tiles for phones (<640px).
+ * Direct Shoot — touch-first mobile pose library (canonical Pose1–Pose75).
  */
 export function DirectShootMobileBoard({
-  selectedPoses,
+  selectedPoseIds,
   selectionLimitReached,
   onTogglePose,
 }: DirectShootMobileBoardProps) {
@@ -21,15 +20,16 @@ export function DirectShootMobileBoard({
       className="sl-direct-shoot-mobile-board"
       role="list"
       aria-label="Pose library"
-      data-pose-count={POSE_LIBRARY_DISPLAY_NAMES.length}
+      data-pose-count={CANONICAL_POSE_ENTRIES.length}
     >
-      {POSE_LIBRARY_DISPLAY_NAMES.map((poseName) => (
+      {CANONICAL_POSE_ENTRIES.map(({ poseId, name: poseName }) => (
         <DirectShootMobileTile
-          key={poseName}
+          key={poseId}
+          poseId={poseId}
           poseName={poseName}
-          selected={selectedPoses.includes(poseName)}
+          selected={selectedPoseIds.includes(poseId)}
           disabled={selectionLimitReached}
-          onToggle={() => onTogglePose(poseName)}
+          onToggle={() => onTogglePose(poseId)}
         />
       ))}
     </div>

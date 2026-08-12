@@ -106,6 +106,7 @@ async function callOpenRouter(
   pipelineTrace: PipelineTraceContext | undefined,
   previousOutputUrl?: string,
   refinementInstruction?: string,
+  poseReferenceImageUrl?: string,
 ): Promise<{ urls: string[]; httpStatus: number; fetchDurationMs: number; parseDurationMs: number }> {
   const provider = OPENROUTER_RENDERING_CONFIG.provider;
   const model = OPENROUTER_RENDERING_CONFIG.defaultModel;
@@ -165,6 +166,15 @@ async function callOpenRouter(
             detail: "high" as const,
           },
         },
+        ...(poseReferenceImageUrl
+          ? [{
+              type: "image_url" as const,
+              image_url: {
+                url: poseReferenceImageUrl,
+                detail: "high" as const,
+              },
+            }]
+          : []),
         ...(previousOutputUrl
           ? [{
               type: "image_url" as const,
@@ -291,6 +301,7 @@ async function generateSingleShot(
   pipelineTrace: PipelineTraceContext | undefined,
   previousOutputUrl?: string,
   refinementInstruction?: string,
+  poseReferenceImageUrl?: string,
 ): Promise<string | null> {
   const { timeoutMs, retryCount } = OPENROUTER_RENDERING_CONFIG;
   const provider = OPENROUTER_RENDERING_CONFIG.provider;
@@ -312,6 +323,7 @@ async function generateSingleShot(
         pipelineTrace,
         previousOutputUrl,
         refinementInstruction,
+        poseReferenceImageUrl,
       );
       const durationMs = Date.now() - t0;
 
@@ -437,6 +449,7 @@ export class OpenRouterProvider implements RenderingProvider {
       prompt,
       shots,
       perShotPrompts,
+      perShotPoseReferenceUrls,
       previousOutputUrl,
       refinementInstruction,
       pipelineTrace,
@@ -452,6 +465,9 @@ export class OpenRouterProvider implements RenderingProvider {
         shots,
         isRefinement: !!previousOutputUrl,
         editorialDiversity: hasPerShotPrompts,
+        poseReferenceShots: Array.isArray(perShotPoseReferenceUrls)
+          ? perShotPoseReferenceUrls.filter(Boolean).length
+          : 0,
       },
       "OpenRouterProvider: starting generation"
     );
@@ -468,6 +484,7 @@ export class OpenRouterProvider implements RenderingProvider {
       Array.from({ length: shots }, (_, i) => {
         // Each editorial shot gets its own brief; all other modes share prompt.
         const shotPrompt = hasPerShotPrompts ? (perShotPrompts[i] ?? prompt) : prompt;
+        const poseReferenceImageUrl = perShotPoseReferenceUrls?.[i] ?? undefined;
 
         return new Promise<string | null>((resolve) => {
           setTimeout(
@@ -481,6 +498,7 @@ export class OpenRouterProvider implements RenderingProvider {
                 pipelineTrace,
                 previousOutputUrl,
                 refinementInstruction,
+                poseReferenceImageUrl || undefined,
               )
                 .then(resolve)
                 .catch(() => resolve(null)),

@@ -30,6 +30,12 @@ export interface PhotoshootInput {
    */
   perShotPrompts?: string[];
   /**
+   * Optional per-shot Pose Master visual references (data URIs or URLs).
+   * When provided, shot[i] attaches perShotPoseReferenceUrls[i] as
+   * Reference Image 3 — BODY POSE ONLY (not identity/garment/styling).
+   */
+  perShotPoseReferenceUrls?: Array<string | null | undefined>;
+  /**
    * URL of the previously generated output image (refinement mode).
    * When set, the provider includes it as Reference Image 3 for visual context.
    */
@@ -78,6 +84,12 @@ export interface ProviderInput {
    * When provided and length === shots, shot[i] uses perShotPrompts[i].
    */
   perShotPrompts?: string[];
+  /**
+   * Optional per-shot Pose Master visual references (data URIs or URLs).
+   * When provided, shot[i] attaches perShotPoseReferenceUrls[i] as
+   * Reference Image 3 — BODY POSE ONLY.
+   */
+  perShotPoseReferenceUrls?: Array<string | null | undefined>;
   /** Previous output image URL for refinement (Reference Image 3). */
   previousOutputUrl?: string;
   /** Pre-built refinement instruction appended to the garment instruction. */

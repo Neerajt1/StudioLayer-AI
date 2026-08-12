@@ -1,0 +1,682 @@
+{
+  "version": "CANONICAL-POSE-MASTER-V3",
+  "generatedAt": "2026-08-12T14:13:12.043894Z",
+  "boardAspectRatio": 0.0769,
+  "placements": {
+    "Pose50": {
+      "left": 33.398,
+      "top": 0.992,
+      "width": 34.961,
+      "height": 5.589,
+      "zIndex": 1,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose58": {
+      "left": 39.844,
+      "top": 9.195,
+      "width": 20.41,
+      "height": 4.695,
+      "zIndex": 2,
+      "objectPosition": "0% 100%",
+      "transformOrigin": "left bottom"
+    },
+    "Pose27": {
+      "left": 5.469,
+      "top": 9.638,
+      "width": 23.926,
+      "height": 4.177,
+      "zIndex": 3,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose29": {
+      "left": 64.453,
+      "top": 9.698,
+      "width": 25.293,
+      "height": 4.064,
+      "zIndex": 4,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose61": {
+      "left": 76.66,
+      "top": 15.52,
+      "width": 16.309,
+      "height": 3.824,
+      "zIndex": 5,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose3": {
+      "left": 3.906,
+      "top": 15.633,
+      "width": 14.16,
+      "height": 3.606,
+      "zIndex": 6,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose4": {
+      "left": 50.879,
+      "top": 15.64,
+      "width": 22.266,
+      "height": 4.132,
+      "zIndex": 7,
+      "objectPosition": "100% 100%",
+      "transformOrigin": "right bottom"
+    },
+    "Pose23": {
+      "left": 23.926,
+      "top": 16.016,
+      "width": 23.34,
+      "height": 4.026,
+      "zIndex": 8,
+      "objectPosition": "100% 100%",
+      "transformOrigin": "right bottom"
+    },
+    "Pose72": {
+      "left": 71.094,
+      "top": 19.516,
+      "width": 26.465,
+      "height": 3.531,
+      "zIndex": 9,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose32": {
+      "left": 38.184,
+      "top": 19.576,
+      "width": 25.684,
+      "height": 3.441,
+      "zIndex": 10,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose37": {
+      "left": 7.52,
+      "top": 19.959,
+      "width": 24.707,
+      "height": 3.005,
+      "zIndex": 11,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose6": {
+      "left": 46.973,
+      "top": 23.22,
+      "width": 12.012,
+      "height": 3.538,
+      "zIndex": 12,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose47": {
+      "left": 4.492,
+      "top": 23.317,
+      "width": 15.039,
+      "height": 3.996,
+      "zIndex": 13,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose33": {
+      "left": 62.988,
+      "top": 23.46,
+      "width": 26.562,
+      "height": 3.471,
+      "zIndex": 14,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose22": {
+      "left": 22.266,
+      "top": 24.767,
+      "width": 26.465,
+      "height": 3.929,
+      "zIndex": 15,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose5": {
+      "left": 81.738,
+      "top": 26.72,
+      "width": 15.234,
+      "height": 4.019,
+      "zIndex": 16,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose74": {
+      "left": 50.977,
+      "top": 26.908,
+      "width": 26.27,
+      "height": 3.831,
+      "zIndex": 17,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose41": {
+      "left": 0.391,
+      "top": 28.425,
+      "width": 44.336,
+      "height": 2.314,
+      "zIndex": 18,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose54": {
+      "left": 25.781,
+      "top": 30.889,
+      "width": 16.992,
+      "height": 3.989,
+      "zIndex": 19,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose1": {
+      "left": 57.129,
+      "top": 30.889,
+      "width": 14.941,
+      "height": 3.681,
+      "zIndex": 20,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose2": {
+      "left": 76.367,
+      "top": 30.919,
+      "width": 14.844,
+      "height": 3.621,
+      "zIndex": 21,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose10": {
+      "left": 5.566,
+      "top": 31.01,
+      "width": 14.16,
+      "height": 3.703,
+      "zIndex": 22,
+      "objectPosition": "0% 100%",
+      "transformOrigin": "left bottom"
+    },
+    "Pose26": {
+      "left": 37.598,
+      "top": 33.639,
+      "width": 20.605,
+      "height": 3.966,
+      "zIndex": 23,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose12": {
+      "left": 78.516,
+      "top": 34.6,
+      "width": 16.113,
+      "height": 3.673,
+      "zIndex": 24,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose21": {
+      "left": 1.66,
+      "top": 34.848,
+      "width": 30.469,
+      "height": 3.583,
+      "zIndex": 25,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose39": {
+      "left": 57.031,
+      "top": 35.494,
+      "width": 21.777,
+      "height": 2.937,
+      "zIndex": 26,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose9": {
+      "left": 79.102,
+      "top": 38.537,
+      "width": 14.941,
+      "height": 4.237,
+      "zIndex": 27,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose66": {
+      "left": 31.25,
+      "top": 38.559,
+      "width": 18.555,
+      "height": 4.244,
+      "zIndex": 28,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose49": {
+      "left": 6.348,
+      "top": 38.702,
+      "width": 22.754,
+      "height": 3.921,
+      "zIndex": 29,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose73": {
+      "left": 54.395,
+      "top": 39.115,
+      "width": 20.898,
+      "height": 3.876,
+      "zIndex": 30,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose30": {
+      "left": 3.418,
+      "top": 42.751,
+      "width": 25.977,
+      "height": 3.358,
+      "zIndex": 31,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose31": {
+      "left": 36.719,
+      "top": 42.834,
+      "width": 25.098,
+      "height": 3.29,
+      "zIndex": 32,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose36": {
+      "left": 69.141,
+      "top": 43.367,
+      "width": 25.0,
+      "height": 2.734,
+      "zIndex": 33,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose52": {
+      "left": 9.57,
+      "top": 46.259,
+      "width": 30.371,
+      "height": 4.282,
+      "zIndex": 34,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose62": {
+      "left": 46.191,
+      "top": 46.282,
+      "width": 21.875,
+      "height": 4.507,
+      "zIndex": 35,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose8": {
+      "left": 68.945,
+      "top": 46.665,
+      "width": 30.566,
+      "height": 3.741,
+      "zIndex": 36,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose20": {
+      "left": 0.391,
+      "top": 50.075,
+      "width": 26.953,
+      "height": 3.711,
+      "zIndex": 37,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose57": {
+      "left": 71.094,
+      "top": 50.526,
+      "width": 28.516,
+      "height": 3.29,
+      "zIndex": 38,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose53": {
+      "left": 32.52,
+      "top": 50.766,
+      "width": 26.562,
+      "height": 3.05,
+      "zIndex": 39,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose51": {
+      "left": 3.711,
+      "top": 53.921,
+      "width": 15.82,
+      "height": 3.726,
+      "zIndex": 40,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose17": {
+      "left": 78.027,
+      "top": 53.921,
+      "width": 20.508,
+      "height": 4.319,
+      "zIndex": 41,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose55": {
+      "left": 24.023,
+      "top": 54.162,
+      "width": 25.781,
+      "height": 4.319,
+      "zIndex": 42,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose75": {
+      "left": 52.734,
+      "top": 54.823,
+      "width": 23.34,
+      "height": 2.997,
+      "zIndex": 43,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose68": {
+      "left": 2.246,
+      "top": 57.444,
+      "width": 31.152,
+      "height": 4.049,
+      "zIndex": 44,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose35": {
+      "left": 63.867,
+      "top": 57.677,
+      "width": 31.152,
+      "height": 3.733,
+      "zIndex": 45,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose59": {
+      "left": 35.449,
+      "top": 58.436,
+      "width": 26.562,
+      "height": 3.072,
+      "zIndex": 46,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose7": {
+      "left": 52.832,
+      "top": 61.659,
+      "width": 25.684,
+      "height": 3.824,
+      "zIndex": 47,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose56": {
+      "left": 0.391,
+      "top": 61.741,
+      "width": 24.121,
+      "height": 4.109,
+      "zIndex": 48,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose15": {
+      "left": 82.422,
+      "top": 61.877,
+      "width": 13.574,
+      "height": 3.831,
+      "zIndex": 49,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose65": {
+      "left": 28.223,
+      "top": 62.282,
+      "width": 19.727,
+      "height": 4.372,
+      "zIndex": 50,
+      "objectPosition": "0% 100%",
+      "transformOrigin": "left bottom"
+    },
+    "Pose18": {
+      "left": 8.691,
+      "top": 65.377,
+      "width": 29.492,
+      "height": 3.786,
+      "zIndex": 51,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose67": {
+      "left": 74.609,
+      "top": 65.422,
+      "width": 14.062,
+      "height": 3.756,
+      "zIndex": 52,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose60": {
+      "left": 42.285,
+      "top": 66.384,
+      "width": 23.34,
+      "height": 2.817,
+      "zIndex": 53,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose70": {
+      "left": 49.316,
+      "top": 69.321,
+      "width": 26.855,
+      "height": 3.921,
+      "zIndex": 54,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose13": {
+      "left": 80.664,
+      "top": 69.321,
+      "width": 18.359,
+      "height": 3.981,
+      "zIndex": 55,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose43": {
+      "left": 4.395,
+      "top": 69.524,
+      "width": 24.316,
+      "height": 2.922,
+      "zIndex": 56,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose11": {
+      "left": 30.273,
+      "top": 69.569,
+      "width": 15.332,
+      "height": 4.207,
+      "zIndex": 57,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose28": {
+      "left": 8.203,
+      "top": 72.604,
+      "width": 22.07,
+      "height": 4.289,
+      "zIndex": 58,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose71": {
+      "left": 69.336,
+      "top": 73.227,
+      "width": 26.953,
+      "height": 3.651,
+      "zIndex": 59,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose19": {
+      "left": 34.473,
+      "top": 73.242,
+      "width": 31.445,
+      "height": 3.651,
+      "zIndex": 60,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose40": {
+      "left": 57.715,
+      "top": 77.284,
+      "width": 23.145,
+      "height": 2.96,
+      "zIndex": 61,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose42": {
+      "left": 5.273,
+      "top": 77.689,
+      "width": 45.898,
+      "height": 2.419,
+      "zIndex": 62,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose25": {
+      "left": 62.305,
+      "top": 80.296,
+      "width": 18.75,
+      "height": 4.289,
+      "zIndex": 63,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose46": {
+      "left": 14.746,
+      "top": 80.303,
+      "width": 23.73,
+      "height": 4.282,
+      "zIndex": 64,
+      "objectPosition": "100% 100%",
+      "transformOrigin": "right bottom"
+    },
+    "Pose14": {
+      "left": 1.66,
+      "top": 80.334,
+      "width": 13.281,
+      "height": 4.237,
+      "zIndex": 65,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose24": {
+      "left": 36.914,
+      "top": 80.446,
+      "width": 27.148,
+      "height": 4.139,
+      "zIndex": 66,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose16": {
+      "left": 83.594,
+      "top": 80.454,
+      "width": 15.82,
+      "height": 4.049,
+      "zIndex": 67,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose48": {
+      "left": 74.121,
+      "top": 84.615,
+      "width": 18.262,
+      "height": 4.199,
+      "zIndex": 68,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose38": {
+      "left": 24.707,
+      "top": 85.089,
+      "width": 27.441,
+      "height": 2.9,
+      "zIndex": 69,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose63": {
+      "left": 1.758,
+      "top": 87.282,
+      "width": 24.414,
+      "height": 4.995,
+      "zIndex": 70,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose64": {
+      "left": 53.516,
+      "top": 87.417,
+      "width": 21.387,
+      "height": 4.86,
+      "zIndex": 71,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose34": {
+      "left": 25.586,
+      "top": 88.462,
+      "width": 27.93,
+      "height": 3.741,
+      "zIndex": 72,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose45": {
+      "left": 72.852,
+      "top": 88.747,
+      "width": 25.586,
+      "height": 3.531,
+      "zIndex": 73,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose69": {
+      "left": 21.582,
+      "top": 93.254,
+      "width": 26.465,
+      "height": 5.544,
+      "zIndex": 74,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    },
+    "Pose44": {
+      "left": 46.68,
+      "top": 93.525,
+      "width": 41.699,
+      "height": 5.243,
+      "zIndex": 75,
+      "objectPosition": "center bottom",
+      "transformOrigin": "center bottom"
+    }
+  }
+}

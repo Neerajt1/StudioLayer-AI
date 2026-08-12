@@ -107,6 +107,7 @@ export class RenderingEngine {
       prompt: finalPrompt,
       shots,
       perShotPrompts: input.perShotPrompts,
+      perShotPoseReferenceUrls: input.perShotPoseReferenceUrls,
       previousOutputUrl: input.previousOutputUrl,
       refinementInstruction: input.refinementInstruction,
       pipelineTrace: input.pipelineTrace,

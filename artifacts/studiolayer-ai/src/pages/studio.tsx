@@ -85,6 +85,7 @@ import {
   canGenerateStudioWorkflow,
   GARMENT_LENGTH_OPTIONS,
   resolveWorkflowImageCount,
+  trimUsedPosesToShotCount,
   validateStudioWorkflow,
 } from '@/lib/studio-workflow';
 import { StudioRefinePanel } from '@/components/studio/studio-refine-panel';
@@ -546,7 +547,11 @@ export default function StudioPage() {
       setShowProRequiredDialog(true);
       return;
     }
-    patchWorkflow({ imageCount: value, customCampaign: false });
+    patchWorkflow({
+      imageCount: value,
+      customCampaign: false,
+      usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, value),
+    });
   };
 
   const handleCustomCampaignSelect = () => {
@@ -555,12 +560,30 @@ export default function StudioPage() {
       setShowProRequiredDialog(true);
       return;
     }
-    patchWorkflow({ customCampaign: true });
+    patchWorkflow({
+      customCampaign: true,
+      usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, workflow.customImageCount),
+    });
   };
 
   const handleCustomImageCountChange = (count: number) => {
-    patchWorkflow({ customCampaign: true, customImageCount: count });
+    patchWorkflow({
+      customCampaign: true,
+      customImageCount: count,
+      usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, count),
+    });
   };
+
+  const handleDirectShootConfirm = (selectedPoseIds: string[]) => {
+    patchWorkflow({
+      usedPoses: selectedPoseIds.length > 0 ? selectedPoseIds : undefined,
+    });
+  };
+
+  const handleDirectShootDismiss = () => {
+    patchWorkflow({ usedPoses: undefined });
+  };
+
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -1149,8 +1172,7 @@ export default function StudioPage() {
                     disabled={isGenerationBusy}
                     onClick={() => setDirectShootOpen(true)}
                   >
-                    <span className="sl-direct-shoot-trigger-mark" aria-hidden>✦</span>
-                    I&apos;ll Direct the Shoot
+                    CHOOSE POSE
                   </button>
                 </div>
               </section>
@@ -1376,7 +1398,11 @@ export default function StudioPage() {
             </Link>
             <StudioWorkspaceButton
               onClick={() => {
-                patchWorkflow({ imageCount: 1, customCampaign: false });
+                patchWorkflow({
+                  imageCount: 1,
+                  customCampaign: false,
+                  usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, 1),
+                });
                 setShowProRequiredDialog(false);
               }}
             >
@@ -1390,6 +1416,8 @@ export default function StudioPage() {
         open={directShootOpen}
         onOpenChange={setDirectShootOpen}
         shootImageCount={shootImageCount}
+        onConfirm={handleDirectShootConfirm}
+        onDismiss={handleDirectShootDismiss}
       />
 
       <StudioCustomCropDialog

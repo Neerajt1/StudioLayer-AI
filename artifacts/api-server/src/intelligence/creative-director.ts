@@ -43,6 +43,7 @@ import {
   buildCampaignShotPrompts,
   buildEditorialShotPrompts,
   buildHeroShotPrompt,
+  buildShotPromptAtSlot,
   neutralizeBasePromptPose,
 } from "./pose-selection-engine";
 
@@ -53,6 +54,7 @@ export {
   buildCampaignShotPrompts,
   buildEditorialShotPrompts,
   buildHeroShotPrompt,
+  buildShotPromptAtSlot,
   neutralizeBasePromptPose,
 };
 

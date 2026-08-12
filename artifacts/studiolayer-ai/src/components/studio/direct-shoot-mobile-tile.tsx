@@ -6,6 +6,7 @@ import {
 import { cn } from '@/lib/utils';
 
 interface DirectShootMobileTileProps {
+  poseId: string;
   poseName: string;
   selected: boolean;
   disabled: boolean;
@@ -13,12 +14,13 @@ interface DirectShootMobileTileProps {
 }
 
 export function DirectShootMobileTile({
+  poseId,
   poseName,
   selected,
   disabled,
   onToggle,
 }: DirectShootMobileTileProps) {
-  const imageUrl = getPoseReferenceImageUrl(poseName);
+  const imageUrl = getPoseReferenceImageUrl(poseId);
   const figureLayout = getPoseFigureLayout(poseName);
 
   return (
