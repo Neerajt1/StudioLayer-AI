@@ -5,6 +5,9 @@
 import {
   CUSTOM_CAMPAIGN_MAX,
   CUSTOM_CAMPAIGN_MIN,
+  DEFAULT_OUTPUT_RESOLUTION,
+  normalizeOutputResolution,
+  type OutputResolution,
 } from '@workspace/studio-credit-engine';
 
 export type GarmentPlacement = 'upper_body' | 'lower_body' | 'full_body' | '';
@@ -28,6 +31,8 @@ export interface StudioWorkflow {
   /** Custom Campaign mode — variable 4–20 image batch at Campaign per-image pricing. */
   customCampaign: boolean;
   customImageCount: number;
+  /** Native output resolution — 2K (default) or 4K. */
+  outputResolution: OutputResolution;
   /** Canonical Pose IDs selected in Direct Shoot (required before generation). */
   usedPoses?: string[];
 }
@@ -42,6 +47,7 @@ export const EMPTY_STUDIO_WORKFLOW: StudioWorkflow = {
   imageCount: 1,
   customCampaign: false,
   customImageCount: CUSTOM_CAMPAIGN_MIN,
+  outputResolution: DEFAULT_OUTPUT_RESOLUTION,
 };
 
 export const GARMENT_LENGTH_OPTIONS: ReadonlyArray<{
@@ -118,7 +124,6 @@ function isCustomImageCount(value: unknown): value is number {
     && value <= CUSTOM_CAMPAIGN_MAX;
 }
 
-
 function normalizeUsedPoses(raw: unknown): string[] | undefined {
   if (!Array.isArray(raw)) return undefined;
   const poses = raw.filter((pose) => typeof pose === 'string' && pose.trim().length > 0);
@@ -148,6 +153,7 @@ export function normalizeStudioWorkflow(raw: Partial<StudioWorkflow> | null | un
     customImageCount: isCustomImageCount(raw?.customImageCount)
       ? raw.customImageCount
       : CUSTOM_CAMPAIGN_MIN,
+    outputResolution: normalizeOutputResolution(raw?.outputResolution),
     usedPoses: normalizeUsedPoses(raw?.usedPoses),
   };
 
@@ -273,6 +279,7 @@ export function buildGenerationRequest(
     smartLighting: true,
     imageDimensions: 'portrait_45' as const,
     imageCount: resolveWorkflowImageCount(workflow),
+    outputResolution: workflow.outputResolution,
     ...(workflow.customCampaign ? { customCampaign: true as const } : {}),
     ...(workflow.usedPoses && workflow.usedPoses.length > 0
       ? { usedPoses: workflow.usedPoses }

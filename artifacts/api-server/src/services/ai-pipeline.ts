@@ -257,6 +257,8 @@ export async function runAIPipeline(params: {
   generationType?:     GenerationType;
   /** Custom Campaign (4–20) — enables bucket recipe composition (Phase 5). */
   customCampaign?:     boolean;
+  /** Native output resolution — 2K (default) or 4K. Refinements ignore this. */
+  outputResolution?:   import("@workspace/studio-credit-engine").OutputResolution;
   /**
    * URL of the previously generated output image (refinement mode).
    * When set, the provider includes it as Reference Image 3.
@@ -535,6 +537,7 @@ export async function runAIPipeline(params: {
       previousOutputUrl: previousOutputUrl ?? undefined,
       refinementInstruction,
       pipelineTrace,
+      outputResolution: params.outputResolution ?? "2K",
     });
 
     if (photoshootResult.images.length === 0) {

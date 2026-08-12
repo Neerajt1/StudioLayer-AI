@@ -54,6 +54,7 @@ import {
 } from '@/components/studio/studio-image-inspector';
 import { ShootTypeSelector } from '@/components/studio/shoot-type-selector';
 import { CustomCampaignControl } from '@/components/studio/custom-campaign-control';
+import { ResolutionSelector } from '@/components/studio/resolution-selector';
 import { DirectShootDialog } from '@/components/studio/direct-shoot-dialog';
 import {
   FixedBatchViewport,
@@ -374,6 +375,7 @@ export default function StudioPage() {
   const generationCreditCost = resolveGenerationCreditCost({
     imageCount: resolveWorkflowImageCount(workflow),
     customCampaign: workflow.customCampaign,
+    outputResolution: workflow.outputResolution,
   });
 
   const shootImageCount = resolveWorkflowImageCount(workflow);
@@ -583,7 +585,6 @@ export default function StudioPage() {
   const handleDirectShootDismiss = () => {
     patchWorkflow({ usedPoses: undefined });
   };
-
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -1162,6 +1163,11 @@ export default function StudioPage() {
                     disabled={isGenerationBusy}
                     onSelect={handleCustomCampaignSelect}
                     onImageCountChange={handleCustomImageCountChange}
+                  />
+                  <ResolutionSelector
+                    value={workflow.outputResolution}
+                    disabled={isGenerationBusy}
+                    onChange={(outputResolution) => patchWorkflow({ outputResolution })}
                   />
                   <p className="sl-shoot-type-credit-total">
                     {formatStudioCredits(generationCreditCost)}

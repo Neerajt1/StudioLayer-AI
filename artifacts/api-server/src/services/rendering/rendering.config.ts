@@ -157,12 +157,34 @@ Model identity, pose, body position, limb placement, hand position, leg position
 Reference Image 1 confirms garment fidelity — preserve it exactly except where the refinement explicitly permits quality improvement.`,
 
   /**
+   * Gemini Flash Preview — required for native 4K via OpenRouter chat/completions.
+   * Stable google/gemini-3.1-flash-image rejects image_size: "4K".
+   */
+  flashPreviewModel:
+    process.env["OR_RENDER_4K_MODEL"] ?? "google/gemini-3.1-flash-image-preview",
+
+  /** Platform aspect ratio passed to OpenRouter image_config. */
+  outputAspectRatio: "4:5" as const,
+
+  /**
    * OpenRouter API base URL.
    * Do not change — uses the user's own OPENROUTER_API_KEY, not the
    * Replit AI Integration managed key (which does not support image generation).
    */
   baseUrl: "https://openrouter.ai/api/v1",
 } as const;
+
+export type NativeOutputResolution = "2K" | "4K";
+
+/** Select the OpenRouter model slug for the requested native resolution tier. */
+export function resolveOpenRouterModelForResolution(
+  resolution: NativeOutputResolution,
+): string {
+  if (resolution === "4K") {
+    return OPENROUTER_RENDERING_CONFIG.flashPreviewModel;
+  }
+  return OPENROUTER_RENDERING_CONFIG.defaultModel;
+}
 
 /**
  * Build the refinement instruction block appended to the garment instruction

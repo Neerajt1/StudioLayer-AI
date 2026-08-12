@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
 import { eq, and, desc, ne, inArray } from "drizzle-orm";
-import { creditCostForGenerationType, creditCostPerCompletedImageInBatch, isValidCustomCampaignImageCount } from "@workspace/studio-credit-engine";
+import { creditCostForGenerationType, creditCostPerCompletedImageInBatch, isValidCustomCampaignImageCount, normalizeOutputResolution, type OutputResolution } from "@workspace/studio-credit-engine";
 import { db, rendersTable, usersTable, renderDeletionEventsTable } from "@workspace/db";
 import { CreateRenderBody, GetRenderParams } from "@workspace/api-zod";
 import { runAIPipeline } from "../services/ai-pipeline";
@@ -215,6 +215,7 @@ router.post("/renders", async (req, res): Promise<void> => {
     outfitStyle,
     imageCount,
     customCampaign,
+    outputResolution: rawOutputResolution,
     refinementPrompt,
     refinementType,
     parentRenderId,
@@ -240,6 +241,9 @@ router.post("/renders", async (req, res): Promise<void> => {
   }
 
   const isRefinement = Boolean(parentRenderId && validatedRefinementType);
+  const outputResolution: OutputResolution = isRefinement
+    ? "2K"
+    : normalizeOutputResolution(rawOutputResolution);
   const imageCountValidation = validateGenerationImageCount({
     imageCount: isRefinement ? 1 : imageCount,
     customCampaign: isRefinement ? false : customCampaign,
@@ -306,6 +310,7 @@ router.post("/renders", async (req, res): Promise<void> => {
           imageCount: shots,
           isRefinement,
           customCampaign: isCustomCampaign,
+          outputResolution: isRefinement ? "2K" : outputResolution,
         });
 
         if (!creditCheck.ok) {
@@ -362,7 +367,10 @@ router.post("/renders", async (req, res): Promise<void> => {
           parentRenderId ?? null,
           parentMetadata,
           shots,
-          { customCampaign: isCustomCampaign },
+          {
+            customCampaign: isCustomCampaign,
+            outputResolution: isRefinement ? "2K" : outputResolution,
+          },
         );
 
         const generationSessionId =
@@ -393,6 +401,7 @@ router.post("/renders", async (req, res): Promise<void> => {
                 studioCreditsUsed: ledgerMetadata.studioCreditsUsed,
                 refinementCount: ledgerMetadata.refinementCount,
                 generationSessionId,
+                outputResolution: isRefinement ? "2K" : outputResolution,
               })
               .returning()
               .then(([row]) => row!),
@@ -429,6 +438,7 @@ router.post("/renders", async (req, res): Promise<void> => {
             imageCount: shots,
             isRefinement,
             customCampaign: isCustomCampaign,
+            outputResolution: isRefinement ? "2K" : outputResolution,
             renderId: insertedRows[0]!.id,
           });
 
@@ -508,6 +518,7 @@ router.post("/renders", async (req, res): Promise<void> => {
       imageCount: shots,
       customCampaign: isCustomCampaign,
       isRefinement,
+      outputResolution: isRefinement ? "2K" : outputResolution,
     });
 
     async function finalizeCreditTransaction(): Promise<void> {
@@ -568,6 +579,7 @@ router.post("/renders", async (req, res): Promise<void> => {
       shots,
       generationType: (insertedRows[0]!.generationType ?? "hero") as GenerationType,
       customCampaign: isCustomCampaign,
+      outputResolution: isRefinement ? "2K" : outputResolution,
       previousOutputUrl,
       refinementPrompt,
       refinementType: validatedRefinementType,

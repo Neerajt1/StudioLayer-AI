@@ -1,9 +1,10 @@
 import {
-  creditCostForCustomCampaign,
-  creditCostForGenerationType,
+  DEFAULT_OUTPUT_RESOLUTION,
   imageCountToGenerationType,
+  resolveGenerationCreditCost,
   type GenerationType,
   type ImageCount,
+  type OutputResolution,
 } from "@workspace/studio-credit-engine";
 
 export type { GenerationType };
@@ -25,7 +26,7 @@ export function resolveRenderLedgerMetadata(
   parentRenderId: number | null | undefined,
   parentMetadata: RenderLedgerMetadata | null,
   imageCount: number,
-  options?: { customCampaign?: boolean },
+  options?: { customCampaign?: boolean; outputResolution?: OutputResolution },
 ): RenderLedgerMetadata {
   if (parentRenderId != null && parentMetadata) {
     return {
@@ -35,10 +36,16 @@ export function resolveRenderLedgerMetadata(
     };
   }
 
+  const outputResolution = options?.outputResolution ?? DEFAULT_OUTPUT_RESOLUTION;
+
   if (options?.customCampaign) {
     return {
       generationType: "campaign",
-      studioCreditsUsed: creditCostForCustomCampaign(imageCount),
+      studioCreditsUsed: resolveGenerationCreditCost({
+        imageCount,
+        customCampaign: true,
+        outputResolution,
+      }),
       refinementCount: 0,
     };
   }
@@ -46,7 +53,10 @@ export function resolveRenderLedgerMetadata(
   const generationType = imageCountToGenerationType(imageCount as ImageCount);
   return {
     generationType,
-    studioCreditsUsed: creditCostForGenerationType(generationType),
+    studioCreditsUsed: resolveGenerationCreditCost({
+      imageCount,
+      outputResolution,
+    }),
     refinementCount: 0,
   };
 }

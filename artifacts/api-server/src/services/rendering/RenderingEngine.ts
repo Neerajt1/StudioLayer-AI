@@ -111,6 +111,7 @@ export class RenderingEngine {
       previousOutputUrl: input.previousOutputUrl,
       refinementInstruction: input.refinementInstruction,
       pipelineTrace: input.pipelineTrace,
+      outputResolution: input.outputResolution,
     });
 
     const durationMs = Date.now() - t0;

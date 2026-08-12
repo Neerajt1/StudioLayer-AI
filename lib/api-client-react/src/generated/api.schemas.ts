@@ -377,6 +377,8 @@ export interface RenderInput {
   imageCount?: number;
   /** When true, generates a Custom Campaign batch at the specified imageCount (4–20). Uses Campaign per-image pricing. Editorial preset (imageCount=4 without this flag) remains unchanged. */
   customCampaign?: boolean;
+  /** Native output resolution selected before generation. 2K (default) costs 1 Studio Credit per successful image. 4K costs 2 Studio Credits per successful image. Refinements ignore this field and continue to cost 1 credit. */
+  outputResolution?: '2K' | '4K';
   /** Deprecated — use refinementType. Legacy button-label mapping still accepted for V1 refinements only. */
   refinementPrompt?: string;
   /** Batch 21 reliable refine selection. Requires parentRenderId. Each refinement consumes exactly 1 Studio Credit. */

@@ -35,6 +35,7 @@ function render(partial: Partial<Render> & Pick<Render, "id">): Render {
     sourceAssetVersion: null,
     cropPreset: null,
     generationType: "editorial",
+    outputResolution: "2K",
     studioCreditsUsed: 1,
     refinementCount: 0,
     generationSessionId: "editorial-4",

@@ -28,6 +28,7 @@ function render(
     sourceAssetVersion: null,
     cropPreset: null,
     generationType: "editorial",
+    outputResolution: "2K",
     studioCreditsUsed: 1,
     refinementCount: 0,
     generationSessionId: "session-1",

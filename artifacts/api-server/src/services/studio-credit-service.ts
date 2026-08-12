@@ -33,12 +33,14 @@ function creditCostForRequest(
   isRefinement: boolean,
   isRegenerate = false,
   customCampaign = false,
+  outputResolution: import("@workspace/studio-credit-engine").OutputResolution = "2K",
 ): number {
   return resolveGenerationCreditCost({
     imageCount,
     customCampaign,
     isRefinement,
     isRegenerate,
+    outputResolution,
   });
 }
 
@@ -239,6 +241,7 @@ export async function assertStudioCreditsAvailable(input: {
   imageCount: number;
   isRefinement: boolean;
   customCampaign?: boolean;
+  outputResolution?: import("@workspace/studio-credit-engine").OutputResolution;
 }): Promise<{ ok: true } | { ok: false; message: string }> {
   if (isStudioAdmin(input)) return { ok: true };
 
@@ -247,6 +250,7 @@ export async function assertStudioCreditsAvailable(input: {
     input.isRefinement,
     false,
     input.customCampaign,
+    input.outputResolution ?? "2K",
   );
 
   const balance = await getStudioCreditBalance({
@@ -317,6 +321,7 @@ export async function beginGenerationCreditTransaction(input: {
   isRefinement: boolean;
   isRegenerate?: boolean;
   customCampaign?: boolean;
+  outputResolution?: import("@workspace/studio-credit-engine").OutputResolution;
   renderId: number;
 }): Promise<string> {
   const amount = creditCostForRequest(
@@ -324,6 +329,7 @@ export async function beginGenerationCreditTransaction(input: {
     input.isRefinement,
     input.isRegenerate,
     input.customCampaign,
+    input.outputResolution ?? "2K",
   );
   const reasonCode = reasonCodeForRequest(
     input.imageCount,

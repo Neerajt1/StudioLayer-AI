@@ -1,4 +1,8 @@
 import type { BillingCycleLedgerStats } from "@workspace/studio-credit-engine";
+import {
+  normalizeOutputResolution,
+  resolutionCreditMultiplier,
+} from "@workspace/studio-credit-engine";
 import type {
   Render,
   RenderDeletionEvent,
@@ -242,6 +246,33 @@ function isKnownFailedResult(result: ActivityResult): boolean {
 }
 
 /**
+ * Credits per completed generation image in this session.
+ * Derived from surviving render.outputResolution when available;
+ * otherwise inferred from ledger charge ÷ known completed count.
+ * Defaults to 1 (legacy 2K / pre-resolution rows).
+ */
+function resolveCreditsPerCompletedImage(
+  roots: readonly SessionRootSlot[],
+  txCredits: number,
+  knownCompleted: number,
+): number {
+  for (const slot of roots) {
+    if (slot.render?.outputResolution) {
+      return resolutionCreditMultiplier(
+        normalizeOutputResolution(slot.render.outputResolution),
+      );
+    }
+  }
+
+  if (knownCompleted > 0 && txCredits > 0 && txCredits % knownCompleted === 0) {
+    const inferred = txCredits / knownCompleted;
+    if (inferred === 1 || inferred === 2) return inferred;
+  }
+
+  return 1;
+}
+
+/**
  * Reconstructs per-root generation outcomes for a session.
  *
  * Surviving renders use terminal render status. Deleted roots are inferred only
@@ -266,11 +297,20 @@ function resolveSessionRootOutcomes(
     }
   }
 
+  const creditsPerImage = resolveCreditsPerCompletedImage(
+    sorted,
+    txCredits,
+    knownCompleted,
+  );
+
   if (hasChargeTx) {
     const deletedCount = sorted.filter((slot) => slot.render == null).length;
-    const remainingCompletedQuota = txCredits - knownCompleted;
+    const remainingCompletedQuota =
+      (txCredits - knownCompleted * creditsPerImage) / creditsPerImage;
     const constraintViolated =
-      remainingCompletedQuota < 0 || remainingCompletedQuota > deletedCount;
+      !Number.isInteger(remainingCompletedQuota)
+      || remainingCompletedQuota < 0
+      || remainingCompletedQuota > deletedCount;
 
     let quota = constraintViolated ? 0 : remainingCompletedQuota;
 
@@ -343,7 +383,7 @@ function resolveSessionRootOutcomes(
     const slot = sorted[0]!;
     const outcome = outcomes.get(slot.renderId)!;
     if (isKnownCompletedResult(outcome.result)) {
-      outcome.creditsUsed = 1;
+      outcome.creditsUsed = hasChargeTx ? txCredits : creditsPerImage;
     }
     return outcomes;
   }
@@ -353,10 +393,10 @@ function resolveSessionRootOutcomes(
     for (const slot of sorted) {
       const outcome = outcomes.get(slot.renderId)!;
       if (isKnownCompletedResult(outcome.result)) {
-        outcome.creditsUsed = creditsAssigned < txCredits ? 1 : 0;
-        if (outcome.creditsUsed === 1) {
-          creditsAssigned += 1;
-        }
+        const assign =
+          creditsAssigned + creditsPerImage <= txCredits ? creditsPerImage : 0;
+        outcome.creditsUsed = assign;
+        creditsAssigned += assign;
       }
     }
     return outcomes;
@@ -366,7 +406,7 @@ function resolveSessionRootOutcomes(
     for (const slot of sorted) {
       const outcome = outcomes.get(slot.renderId)!;
       if (isKnownCompletedResult(outcome.result)) {
-        outcome.creditsUsed = 1;
+        outcome.creditsUsed = creditsPerImage;
       }
     }
   }

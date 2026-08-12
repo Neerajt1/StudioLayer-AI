@@ -1,0 +1,1 @@
+ALTER TABLE renders ADD COLUMN IF NOT EXISTS output_resolution text NOT NULL DEFAULT '2K';

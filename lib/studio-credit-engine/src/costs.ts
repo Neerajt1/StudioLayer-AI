@@ -6,6 +6,11 @@ import {
   type ImageCount,
 } from './rules';
 import {
+  DEFAULT_OUTPUT_RESOLUTION,
+  resolutionCreditMultiplier,
+  type OutputResolution,
+} from './resolution';
+import {
   StudioCreditReasonCode,
   type StudioCreditReasonCodeValue,
 } from './reason-codes';
@@ -47,10 +52,13 @@ export function resolveGenerationCreditCost(input: {
   customCampaign?: boolean;
   isRefinement?: boolean;
   isRegenerate?: boolean;
+  outputResolution?: OutputResolution;
 }): number {
   if (input.isRegenerate || input.isRefinement) return creditCostForRefine();
-  if (input.customCampaign) return creditCostForCustomCampaign(input.imageCount);
-  return creditCostForImageCount(input.imageCount as ImageCount);
+  const base = input.customCampaign
+    ? creditCostForCustomCampaign(input.imageCount)
+    : creditCostForImageCount(input.imageCount as ImageCount);
+  return base * resolutionCreditMultiplier(input.outputResolution ?? DEFAULT_OUTPUT_RESOLUTION);
 }
 
 /** Per-image credit cost within a generation batch (partial-success billing). */
@@ -58,12 +66,14 @@ export function creditCostPerCompletedImageInBatch(input: {
   imageCount: number;
   customCampaign?: boolean;
   isRefinement?: boolean;
+  outputResolution?: OutputResolution;
 }): number {
   if (input.isRefinement) return creditCostForRefine();
   const total = resolveGenerationCreditCost({
     imageCount: input.imageCount,
     customCampaign: input.customCampaign,
     isRefinement: false,
+    outputResolution: input.outputResolution,
   });
   return total / input.imageCount;
 }

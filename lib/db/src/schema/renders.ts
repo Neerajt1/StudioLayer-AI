@@ -45,6 +45,8 @@ export const rendersTable = pgTable("renders", {
   cropPreset: text("crop_preset"),
   /** Hero | Campaign | Editorial — set automatically from workspace generation type. */
   generationType: text("generation_type").notNull().default("hero"),
+  /** Native output resolution tier — 2K (default) or 4K. */
+  outputResolution: text("output_resolution").notNull().default("2K"),
   /** Studio Credits consumed along the lineage to produce this render. */
   studioCreditsUsed: integer("studio_credits_used").notNull().default(1),
   /** Refinement steps in the lineage (excludes the original generation). */

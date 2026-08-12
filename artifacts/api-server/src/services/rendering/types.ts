@@ -47,6 +47,8 @@ export interface PhotoshootInput {
   refinementInstruction?: string;
   /** Pipeline observability context — diagnostics only, no behavior change. */
   pipelineTrace?: import("../../lib/render-pipeline-observability.js").PipelineTraceContext;
+  /** Native output resolution tier — 2K (default) or 4K. Refinements ignore this. */
+  outputResolution?: import("./rendering.config.js").NativeOutputResolution;
 }
 
 /** A single generated image returned by the engine. */
@@ -96,6 +98,8 @@ export interface ProviderInput {
   refinementInstruction?: string;
   /** Pipeline observability context — diagnostics only, no behavior change. */
   pipelineTrace?: import("../../lib/render-pipeline-observability.js").PipelineTraceContext;
+  /** Native output resolution tier — 2K (default) or 4K. Refinements ignore this. */
+  outputResolution?: import("./rendering.config.js").NativeOutputResolution;
 }
 
 /** Contract every rendering provider must satisfy. */

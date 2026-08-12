@@ -8,6 +8,13 @@ export {
 } from './rules';
 
 export {
+  DEFAULT_OUTPUT_RESOLUTION,
+  normalizeOutputResolution,
+  resolutionCreditMultiplier,
+  type OutputResolution,
+} from './resolution';
+
+export {
   StudioCreditReasonCode,
   STUDIO_CREDIT_USAGE_REASON_CODES,
   type StudioCreditReasonCodeValue,

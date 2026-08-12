@@ -36,6 +36,7 @@ function render(partial: Partial<Render> & Pick<Render, "id">): Render {
     sourceAssetVersion: null,
     cropPreset: null,
     generationType: "editorial",
+    outputResolution: "2K",
     studioCreditsUsed: 1,
     refinementCount: 0,
     generationSessionId: "session-editorial",
@@ -114,6 +115,36 @@ describe("master creative activity architecture", () => {
     assert.equal(rows[0]!.outputLabel, "1/1");
     assert.equal(rows[0]!.creditsUsed, 1);
     assert.equal(rows[0]!.sessionStatus, "Completed");
+  });
+
+  it("1b. Hero 4K → 1 output row → 2 credits (not 2 rows)", () => {
+    const ctx = baseContext({
+      renders: [
+        render({
+          id: 1,
+          generationType: "hero",
+          generationSessionId: "hero-4k",
+          outputResolution: "4K",
+          studioCreditsUsed: 2,
+        }),
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -2,
+          renderId: 1,
+        }),
+      ],
+    });
+
+    const master = buildMasterCreativeActivity(ctx);
+    const rows = generationRows(master.rows);
+
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]!.creditsUsed, 2);
+    assert.equal(rows[0]!.billableImage, true);
+    assert.equal(sumMasterCreditsUsed(master.rows), 2);
   });
 
   it("2. Campaign → 2 output rows → 2 credits", () => {

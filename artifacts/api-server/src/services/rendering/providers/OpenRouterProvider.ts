@@ -20,7 +20,9 @@ import {
   type PipelineTraceContext,
 } from "../../../lib/render-pipeline-observability.js";
 import { traceRenderFailure } from "../../../lib/render-pipeline-trace.js";
-import { OPENROUTER_RENDERING_CONFIG } from "../rendering.config.js";
+import { OPENROUTER_RENDERING_CONFIG, resolveOpenRouterModelForResolution } from "../rendering.config.js";
+import type { NativeOutputResolution } from "../rendering.config.js";
+import { validateNativeResolutionFromDataUri } from "../native-resolution.js";
 import type {
   RenderingProvider,
   ProviderInput,
@@ -106,10 +108,15 @@ async function callOpenRouter(
   pipelineTrace: PipelineTraceContext | undefined,
   previousOutputUrl?: string,
   refinementInstruction?: string,
+  outputResolution: NativeOutputResolution = "2K",
   poseReferenceImageUrl?: string,
 ): Promise<{ urls: string[]; httpStatus: number; fetchDurationMs: number; parseDurationMs: number }> {
   const provider = OPENROUTER_RENDERING_CONFIG.provider;
-  const model = OPENROUTER_RENDERING_CONFIG.defaultModel;
+  const isRefinementEdit =
+    Boolean(refinementInstruction) && Boolean(previousOutputUrl);
+  const model = isRefinementEdit
+    ? OPENROUTER_RENDERING_CONFIG.defaultModel
+    : resolveOpenRouterModelForResolution(outputResolution);
   const fetchStartedAt = Date.now();
 
   if (pipelineTrace) {
@@ -126,9 +133,6 @@ async function callOpenRouter(
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  const isRefinementEdit =
-    Boolean(refinementInstruction) && Boolean(previousOutputUrl);
 
   const primaryInstruction = isRefinementEdit
     ? `${OPENROUTER_RENDERING_CONFIG.refinementEditInstruction}\n\n${refinementInstruction}`
@@ -198,7 +202,7 @@ async function callOpenRouter(
         "X-Title": "StudioLayer AI",
       },
       body: JSON.stringify({
-        model: OPENROUTER_RENDERING_CONFIG.defaultModel,
+        model,
         messages: [
           {
             role: "user",
@@ -214,6 +218,15 @@ async function callOpenRouter(
             ],
           },
         ],
+        ...(!isRefinementEdit
+          ? {
+              modalities: ["image", "text"],
+              image_config: {
+                aspect_ratio: OPENROUTER_RENDERING_CONFIG.outputAspectRatio,
+                image_size: outputResolution,
+              },
+            }
+          : {}),
       }),
     });
   } finally {
@@ -268,6 +281,14 @@ async function callOpenRouter(
   const urls = extractImageUrls(data);
   const parseDurationMs = Date.now() - parseStartedAt;
 
+  if (!isRefinementEdit) {
+    for (const url of urls) {
+      if (url.startsWith("data:")) {
+        validateNativeResolutionFromDataUri(url, outputResolution);
+      }
+    }
+  }
+
   if (pipelineTrace) {
     logOpenRouterRequest(pipelineTrace, "image_download_completed", {
       shotIndex,
@@ -301,11 +322,16 @@ async function generateSingleShot(
   pipelineTrace: PipelineTraceContext | undefined,
   previousOutputUrl?: string,
   refinementInstruction?: string,
+  outputResolution: NativeOutputResolution = "2K",
   poseReferenceImageUrl?: string,
 ): Promise<string | null> {
   const { timeoutMs, retryCount } = OPENROUTER_RENDERING_CONFIG;
   const provider = OPENROUTER_RENDERING_CONFIG.provider;
-  const model = OPENROUTER_RENDERING_CONFIG.defaultModel;
+  const isRefinementEdit =
+    Boolean(refinementInstruction) && Boolean(previousOutputUrl);
+  const model = isRefinementEdit
+    ? OPENROUTER_RENDERING_CONFIG.defaultModel
+    : resolveOpenRouterModelForResolution(outputResolution);
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= retryCount; attempt++) {
@@ -323,6 +349,7 @@ async function generateSingleShot(
         pipelineTrace,
         previousOutputUrl,
         refinementInstruction,
+        outputResolution,
         poseReferenceImageUrl,
       );
       const durationMs = Date.now() - t0;
@@ -453,15 +480,18 @@ export class OpenRouterProvider implements RenderingProvider {
       previousOutputUrl,
       refinementInstruction,
       pipelineTrace,
+      outputResolution = "2K",
     } = input;
 
     const hasPerShotPrompts =
       Array.isArray(perShotPrompts) && perShotPrompts.length === shots;
+    const resolvedModel = resolveOpenRouterModelForResolution(outputResolution);
 
     logger.info(
       {
         provider: this.name,
-        model: this.model,
+        model: resolvedModel,
+        outputResolution,
         shots,
         isRefinement: !!previousOutputUrl,
         editorialDiversity: hasPerShotPrompts,
@@ -498,6 +528,7 @@ export class OpenRouterProvider implements RenderingProvider {
                 pipelineTrace,
                 previousOutputUrl,
                 refinementInstruction,
+                outputResolution,
                 poseReferenceImageUrl || undefined,
               )
                 .then(resolve)
