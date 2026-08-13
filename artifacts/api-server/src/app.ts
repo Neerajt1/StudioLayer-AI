@@ -33,7 +33,18 @@ app.use(
 app.use(cors({ origin: true, credentials: true }));
 // Raise the JSON body limit to 20 MB — garment images are sent as base64 Data URIs
 // which can easily reach 5–15 MB before compression.
-app.use(express.json({ limit: '20mb' }));
+// Preserve raw bytes for Razorpay webhook HMAC verification (must not re-serialize).
+app.use(
+  express.json({
+    limit: "20mb",
+    verify: (req, _res, buf) => {
+      const url = (req as express.Request).originalUrl ?? req.url;
+      if (url === "/api/payments/razorpay/webhook") {
+        (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+      }
+    },
+  }),
+);
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.set('trust proxy', 1);
 

@@ -18,6 +18,8 @@ tags:
     description: Model identity library
   - name: support
     description: Support ticket operations
+  - name: payments
+    description: Razorpay membership subscription operations
 paths:
   /healthz:
     get:
@@ -338,6 +340,48 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /payments/subscriptions:
+    post:
+      operationId: createMembershipSubscription
+      tags: [payments]
+      summary: Create a Razorpay membership subscription
+      description: >
+        Authenticated endpoint that creates a Razorpay subscription for Studio Basic
+        or Studio Pro. Maps the StudioLayer plan identifier server-side to the
+        configured Razorpay Plan ID. Returns public checkout fields only
+        (never RAZORPAY_KEY_SECRET). Credits are granted only via verified webhooks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMembershipSubscriptionInput"
+      responses:
+        "201":
+          description: Subscription created or existing open subscription returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MembershipSubscriptionCheckout"
+        "400":
+          description: Invalid plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Razorpay upstream failure
           content:
             application/json:
               schema:
@@ -764,3 +808,41 @@ components:
         - userEmail
         - message
         - createdAt
+
+    CreateMembershipSubscriptionInput:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [basic, pro]
+          description: StudioLayer plan identifier (never a raw Razorpay plan_id)
+      required:
+        - plan
+
+    MembershipSubscriptionCheckout:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+          description: Razorpay subscription id for Checkout
+        keyId:
+          type: string
+          description: Public Razorpay Key ID (never the secret)
+        plan:
+          type: string
+          enum: [basic, pro]
+        studioTier:
+          type: string
+          enum: [pro, enterprise]
+          description: Internal DB tier (pro=Basic, enterprise=Pro)
+        status:
+          type: string
+        shortUrl:
+          type: ["string", "null"]
+      required:
+        - subscriptionId
+        - keyId
+        - plan
+        - studioTier
+        - status
+        - shortUrl

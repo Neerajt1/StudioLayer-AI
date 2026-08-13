@@ -4,4 +4,5 @@ export * from "./support-tickets";
 export * from "./studio-credit-transactions";
 export * from "./studio-credit-allocations";
 export * from "./studio-credit-allocation-consumptions";
+export * from "./studio-razorpay-subscriptions";
 export * from "./render-deletion-events";

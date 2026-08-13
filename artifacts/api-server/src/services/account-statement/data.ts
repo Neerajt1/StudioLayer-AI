@@ -8,6 +8,7 @@ import {
   db,
   renderDeletionEventsTable,
   rendersTable,
+  studioCreditAllocationsTable,
   studioCreditTransactionsTable,
   usersTable,
   type Render,
@@ -54,6 +55,8 @@ export interface AccountStatementContext {
   cycleStats: Awaited<ReturnType<typeof getBillingCycleActivityStats>>;
   cycleStart: Date;
   transactions: StudioCreditTransaction[];
+  /** Allocation lots for Razorpay / explicit membership period boundaries. */
+  membershipPeriodHints: StatementBalanceContext["membershipPeriodHints"];
   renders: Render[];
   deletionEvents: RenderDeletionEvent[];
   creditsPurchasedInCycle: number;
@@ -218,6 +221,7 @@ function statementBalanceContext(
     generatedAt: ctx.generatedAt,
     transactions: ctx.transactions,
     liveRemaining: ctx.balance.remaining,
+    membershipPeriodHints: ctx.membershipPeriodHints,
   };
 }
 
@@ -245,7 +249,7 @@ export async function loadAccountStatementContext(
   const allowance = membershipAllowanceForTier(user.subscriptionTier, limit);
   const isAdmin = isStudioAdmin(user);
 
-  const [balance, cycleStats, transactions, renders, deletionEvents] =
+  const [balance, cycleStats, transactions, renders, deletionEvents, allocations] =
     await Promise.all([
       getStudioCreditBalance({
         userId,
@@ -280,7 +284,22 @@ export async function loadAccountStatementContext(
         .from(renderDeletionEventsTable)
         .where(eq(renderDeletionEventsTable.userId, userId))
         .orderBy(asc(renderDeletionEventsTable.deletedAt)),
+      db
+        .select()
+        .from(studioCreditAllocationsTable)
+        .where(eq(studioCreditAllocationsTable.userId, userId))
+        .orderBy(asc(studioCreditAllocationsTable.startsAt)),
     ]);
+
+  const membershipPeriodHints = allocations
+    .filter((row) => isMembershipAllocationReasonCode(row.reasonCode))
+    .map((row) => ({
+      ledgerTransactionId: row.ledgerTransactionId,
+      startsAt: row.startsAt,
+      expiresAt: row.expiresAt,
+      periodKey: row.periodKey,
+      originalAmount: row.originalAmount,
+    }));
 
   const cycleTransactions = transactions.filter(
     (tx) => tx.createdAt >= cycleStart,
@@ -319,6 +338,7 @@ export async function loadAccountStatementContext(
     cycleStats,
     cycleStart,
     transactions,
+    membershipPeriodHints,
     renders,
     deletionEvents,
     creditsPurchasedInCycle,

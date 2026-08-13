@@ -29,6 +29,13 @@ type AccountStatementContext = {
   };
   cycleStart: Date;
   transactions: StudioCreditTransaction[];
+  membershipPeriodHints: Array<{
+    ledgerTransactionId: string | null;
+    startsAt: Date;
+    expiresAt: Date | null;
+    periodKey?: string | null;
+    originalAmount: number;
+  }>;
   renders: Render[];
   deletionEvents: [];
   creditsPurchasedInCycle: number;
@@ -109,6 +116,7 @@ function baseContext(
     },
     cycleStart: new Date(Date.UTC(2026, 7, 1)),
     transactions: [],
+    membershipPeriodHints: [],
     renders: [],
     deletionEvents: [],
     creditsPurchasedInCycle: 0,

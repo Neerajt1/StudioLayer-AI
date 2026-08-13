@@ -15,6 +15,7 @@ import type { RenderInputModelDemographics } from './renderInputModelDemographic
 import type { RenderInputModelGender } from './renderInputModelGender';
 import type { RenderInputModelPersona } from './renderInputModelPersona';
 import type { RenderInputModelPose } from './renderInputModelPose';
+import type { RenderInputOutputResolution } from './renderInputOutputResolution';
 import type { RenderInputRefinementType } from './renderInputRefinementType';
 
 export interface RenderInput {
@@ -43,7 +44,7 @@ export interface RenderInput {
   /** When true, generates a Custom Campaign batch at the specified imageCount (4–20). Uses Campaign per-image pricing. Editorial preset (imageCount=4 without this flag) remains unchanged. */
   customCampaign?: boolean;
   /** Native output resolution selected before generation. 2K (default) costs 1 Studio Credit per successful image. 4K costs 2 Studio Credits per successful image. Refinements ignore this field and continue to cost 1 credit. */
-  outputResolution?: '2K' | '4K';
+  outputResolution?: RenderInputOutputResolution;
   /** Deprecated — use refinementType. Legacy button-label mapping still accepted for V1 refinements only. */
   refinementPrompt?: string;
   /** Batch 21 reliable refine selection. Requires parentRenderId. Each refinement consumes exactly 1 Studio Credit. */

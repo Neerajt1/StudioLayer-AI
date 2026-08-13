@@ -7,11 +7,16 @@
  */
 
 export * from './billingCycleStats';
+export * from './createMembershipSubscriptionInput';
+export * from './createMembershipSubscriptionInputPlan';
 export * from './errorResponse';
 export * from './healthStatus';
 export * from './identity';
 export * from './identityGender';
 export * from './loginInput';
+export * from './membershipSubscriptionCheckout';
+export * from './membershipSubscriptionCheckoutPlan';
+export * from './membershipSubscriptionCheckoutStudioTier';
 export * from './registerInput';
 export * from './render';
 export * from './renderAssetLineage';
@@ -29,6 +34,7 @@ export * from './renderInputModelDemographics';
 export * from './renderInputModelGender';
 export * from './renderInputModelPersona';
 export * from './renderInputModelPose';
+export * from './renderInputOutputResolution';
 export * from './renderInputRefinementType';
 export * from './renderLocationEnvironment';
 export * from './renderModelPersona';

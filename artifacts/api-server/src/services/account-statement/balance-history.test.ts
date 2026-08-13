@@ -250,3 +250,177 @@ describe("computeBillingCycleBalanceSummary", () => {
     assert.equal(summary.matchesLiveRemaining, true);
   });
 });
+
+describe("Razorpay allocation-period statement balances", () => {
+  it("25. statement agrees with allocation-based live balance for Razorpay period", () => {
+    const startsAt = new Date("2026-08-18T00:00:00.000Z");
+    const expiresAt = new Date("2026-09-17T00:00:00.000Z");
+    const ctx = balanceCtx({
+      liveRemaining: 30,
+      membershipPeriodHints: [
+        {
+          ledgerTransactionId: "tx-grant",
+          startsAt,
+          expiresAt,
+          periodKey: "rzp:sub:1:2",
+          originalAmount: 120,
+        },
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          transactionId: "tx-grant",
+          reasonCode: StudioCreditReasonCode.MEMBERSHIP_ALLOCATION,
+          amount: 120,
+          createdAt: startsAt,
+        }),
+        usageTx({
+          id: 2,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -90,
+          createdAt: new Date("2026-08-20T10:00:00.000Z"),
+        }),
+      ],
+    });
+
+    assert.deepEqual(computeLedgerRunningBalances(ctx), [120, 30]);
+    assert.equal(finalLedgerRunningBalance(ctx), 30);
+    assert.equal(finalLedgerRunningBalance(ctx), ctx.liveRemaining);
+  });
+
+  it("23. membership remainder expires; next period is fresh 120 not 150", () => {
+    const ctx = balanceCtx({
+      liveRemaining: 120,
+      membershipPeriodHints: [
+        {
+          ledgerTransactionId: "tx-p1",
+          startsAt: new Date("2026-08-18T00:00:00.000Z"),
+          expiresAt: new Date("2026-09-17T00:00:00.000Z"),
+          periodKey: "rzp:sub:p1",
+          originalAmount: 120,
+        },
+        {
+          ledgerTransactionId: "tx-p2",
+          startsAt: new Date("2026-09-17T00:00:00.000Z"),
+          expiresAt: new Date("2026-10-17T00:00:00.000Z"),
+          periodKey: "rzp:sub:p2",
+          originalAmount: 120,
+        },
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          transactionId: "tx-p1",
+          reasonCode: StudioCreditReasonCode.MEMBERSHIP_ALLOCATION,
+          amount: 120,
+          createdAt: new Date("2026-08-18T00:00:00.000Z"),
+        }),
+        usageTx({
+          id: 2,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -90,
+          createdAt: new Date("2026-08-20T00:00:00.000Z"),
+        }),
+        usageTx({
+          id: 3,
+          transactionId: "tx-p2",
+          reasonCode: StudioCreditReasonCode.MEMBERSHIP_ALLOCATION,
+          amount: 120,
+          createdAt: new Date("2026-09-17T00:00:00.000Z"),
+        }),
+      ],
+    });
+
+    assert.deepEqual(computeLedgerRunningBalances(ctx), [120, 30, 120]);
+  });
+
+  it("26. Top-Up survives Razorpay membership boundary", () => {
+    const ctx = balanceCtx({
+      liveRemaining: 145,
+      membershipPeriodHints: [
+        {
+          ledgerTransactionId: "tx-m1",
+          startsAt: new Date("2026-08-18T00:00:00.000Z"),
+          expiresAt: new Date("2026-09-17T00:00:00.000Z"),
+          originalAmount: 120,
+        },
+        {
+          ledgerTransactionId: "tx-m2",
+          startsAt: new Date("2026-09-17T00:00:00.000Z"),
+          expiresAt: new Date("2026-10-17T00:00:00.000Z"),
+          originalAmount: 120,
+        },
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          transactionId: "tx-m1",
+          reasonCode: StudioCreditReasonCode.MEMBERSHIP_ALLOCATION,
+          amount: 120,
+          createdAt: new Date("2026-08-18T00:00:00.000Z"),
+        }),
+        usageTx({
+          id: 2,
+          reasonCode: StudioCreditReasonCode.TOP_UP_ALLOCATION,
+          amount: 35,
+          createdAt: new Date("2026-08-19T00:00:00.000Z"),
+        }),
+        usageTx({
+          id: 3,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -10,
+          createdAt: new Date("2026-08-20T00:00:00.000Z"),
+        }),
+        usageTx({
+          id: 4,
+          transactionId: "tx-m2",
+          reasonCode: StudioCreditReasonCode.MEMBERSHIP_ALLOCATION,
+          amount: 120,
+          createdAt: new Date("2026-09-17T00:00:00.000Z"),
+        }),
+      ],
+    });
+
+    // 120; +35=155; -10 from top-up → 145; period end zeroes membership → 25 then +120 membership = 145
+    assert.deepEqual(computeLedgerRunningBalances(ctx), [120, 155, 145, 145]);
+  });
+
+  it("27. Pass expires after 7 days in statement running balance", () => {
+    const passAt = new Date("2026-08-18T00:00:00.000Z");
+    const ctx = balanceCtx({
+      liveRemaining: 120,
+      membershipPeriodHints: [
+        {
+          ledgerTransactionId: "tx-m",
+          startsAt: passAt,
+          expiresAt: new Date("2026-09-17T00:00:00.000Z"),
+          originalAmount: 120,
+        },
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          transactionId: "tx-m",
+          reasonCode: StudioCreditReasonCode.MEMBERSHIP_ALLOCATION,
+          amount: 120,
+          createdAt: passAt,
+        }),
+        usageTx({
+          id: 2,
+          reasonCode: StudioCreditReasonCode.STUDIO_PASS_ALLOCATION,
+          amount: 50,
+          createdAt: passAt,
+        }),
+        usageTx({
+          id: 3,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -1,
+          createdAt: new Date("2026-08-26T00:00:00.000Z"),
+        }),
+      ],
+    });
+
+    // Day 0: 120; +50 pass = 170; day 8: pass expired → 120, then -1 → 119
+    assert.deepEqual(computeLedgerRunningBalances(ctx), [120, 170, 119]);
+  });
+});

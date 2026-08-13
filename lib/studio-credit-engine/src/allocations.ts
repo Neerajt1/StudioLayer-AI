@@ -27,6 +27,10 @@ export const STUDIO_PASS_VALIDITY_DAYS = 7;
  * When true (default until Razorpay is live), paid members without an active
  * membership lot covering `now` still receive an implicit membership pool of
  * `allowance − completed usage in the temporary UTC legacy window`.
+ *
+ * Production cutover: set STUDIO_CREDIT_LEGACY_MEMBERSHIP_BRIDGE=false once
+ * Razorpay membership grants are authoritative. While ON, computeLegacyMembershipBridgeCredits
+ * returns 0 whenever hasActiveMembershipLot is true (Razorpay lots win).
  */
 export const STUDIO_CREDIT_LEGACY_MEMBERSHIP_BRIDGE_ENV =
   'STUDIO_CREDIT_LEGACY_MEMBERSHIP_BRIDGE';

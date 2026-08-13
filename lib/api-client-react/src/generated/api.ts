@@ -20,10 +20,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CreateMembershipSubscriptionInput,
   ErrorResponse,
   HealthStatus,
   Identity,
   LoginInput,
+  MembershipSubscriptionCheckout,
   RegisterInput,
   Render,
   RenderInput,
@@ -1090,5 +1092,77 @@ export const useCreateSupportTicket = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getCreateSupportTicketMutationOptions(options));
+    }
+
+export const getCreateMembershipSubscriptionUrl = () => {
+
+
+
+
+  return `/api/payments/subscriptions`
+}
+
+/**
+ * Authenticated endpoint that creates a Razorpay subscription for Studio Basic or Studio Pro. Maps the StudioLayer plan identifier server-side to the configured Razorpay Plan ID. Returns public checkout fields only (never RAZORPAY_KEY_SECRET). Credits are granted only via verified webhooks.
+ * @summary Create a Razorpay membership subscription
+ */
+export const createMembershipSubscription = async (createMembershipSubscriptionInput: CreateMembershipSubscriptionInput, options?: Parameters<typeof customFetch>[1]): Promise<MembershipSubscriptionCheckout> => {
+
+  return customFetch<MembershipSubscriptionCheckout>(getCreateMembershipSubscriptionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createMembershipSubscriptionInput)
+  }
+);}
+
+
+
+
+
+export const getCreateMembershipSubscriptionMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMembershipSubscription>>, TError,{data: BodyType<CreateMembershipSubscriptionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMembershipSubscription>>, TError,{data: BodyType<CreateMembershipSubscriptionInput>}, TContext> => {
+
+const mutationKey = ['createMembershipSubscription'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMembershipSubscription>>, {data: BodyType<CreateMembershipSubscriptionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMembershipSubscription(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMembershipSubscriptionMutationResult = NonNullable<Awaited<ReturnType<typeof createMembershipSubscription>>>
+    export type CreateMembershipSubscriptionMutationBody = BodyType<CreateMembershipSubscriptionInput>
+    export type CreateMembershipSubscriptionMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a Razorpay membership subscription
+ */
+export const useCreateMembershipSubscription = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMembershipSubscription>>, TError,{data: BodyType<CreateMembershipSubscriptionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMembershipSubscription>>,
+        TError,
+        {data: BodyType<CreateMembershipSubscriptionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMembershipSubscriptionMutationOptions(options));
     }
 

@@ -280,6 +280,41 @@ describe('pending holds and bridge', () => {
     );
   });
 
+  it('28. legacy bridge does not double-grant when Razorpay membership lot exists', () => {
+    const now = new Date('2026-08-20T00:00:00.000Z');
+    const razorpayLot = lot({
+      id: 9,
+      reasonCode: StudioCreditReasonCode.MEMBERSHIP_ALLOCATION,
+      remainingAmount: 120,
+      startsAt: new Date('2026-08-18T00:00:00.000Z'),
+      expiresAt: new Date('2026-09-17T00:00:00.000Z'),
+      periodKey: 'rzp:sub_x:1:2',
+    });
+    assert.equal(hasActiveMembershipLotCoveringNow([razorpayLot], now), true);
+    assert.equal(
+      computeLegacyMembershipBridgeCredits({
+        bridgeEnabled: true,
+        hasActiveMembershipLot: true,
+        membershipAllowance: 120,
+        completedUsageInLegacyWindow: 0,
+      }),
+      0,
+    );
+    assert.equal(
+      sumSpendableAllocationCredits([razorpayLot], now) +
+        computeLegacyMembershipBridgeCredits({
+          bridgeEnabled: true,
+          hasActiveMembershipLot: hasActiveMembershipLotCoveringNow(
+            [razorpayLot],
+            now,
+          ),
+          membershipAllowance: 120,
+          completedUsageInLegacyWindow: 0,
+        }),
+      120,
+    );
+  });
+
   it('6. next cycle fresh allocation is independent of prior remainder', () => {
     const now = new Date('2026-09-01T00:00:00.000Z');
     const priorRemainder = lot({

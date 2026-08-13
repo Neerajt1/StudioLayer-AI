@@ -44,6 +44,7 @@ function baseContext(): AccountStatementContext {
     },
     cycleStart,
     transactions: [],
+    membershipPeriodHints: [],
     renders: [],
     deletionEvents: [],
     creditsPurchasedInCycle: 0,

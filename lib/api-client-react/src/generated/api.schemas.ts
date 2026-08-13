@@ -341,6 +341,17 @@ export const RenderInputGarmentLengthSelection = {
 } as const;
 
 /**
+ * Native output resolution selected before generation. 2K (default) costs 1 Studio Credit per successful image. 4K costs 2 Studio Credits per successful image. Refinements ignore this field and continue to cost 1 credit.
+ */
+export type RenderInputOutputResolution = typeof RenderInputOutputResolution[keyof typeof RenderInputOutputResolution];
+
+
+export const RenderInputOutputResolution = {
+  '2K': '2K',
+  '4K': '4K',
+} as const;
+
+/**
  * Batch 21 reliable refine selection. Requires parentRenderId. Each refinement consumes exactly 1 Studio Credit.
  */
 export type RenderInputRefinementType = typeof RenderInputRefinementType[keyof typeof RenderInputRefinementType];
@@ -378,7 +389,7 @@ export interface RenderInput {
   /** When true, generates a Custom Campaign batch at the specified imageCount (4–20). Uses Campaign per-image pricing. Editorial preset (imageCount=4 without this flag) remains unchanged. */
   customCampaign?: boolean;
   /** Native output resolution selected before generation. 2K (default) costs 1 Studio Credit per successful image. 4K costs 2 Studio Credits per successful image. Refinements ignore this field and continue to cost 1 credit. */
-  outputResolution?: '2K' | '4K';
+  outputResolution?: RenderInputOutputResolution;
   /** Deprecated — use refinementType. Legacy button-label mapping still accepted for V1 refinements only. */
   refinementPrompt?: string;
   /** Batch 21 reliable refine selection. Requires parentRenderId. Each refinement consumes exactly 1 Studio Credit. */
@@ -436,5 +447,53 @@ export interface SupportTicket {
   userEmail: string;
   message: string;
   createdAt: string;
+}
+
+/**
+ * StudioLayer plan identifier (never a raw Razorpay plan_id)
+ */
+export type CreateMembershipSubscriptionInputPlan = typeof CreateMembershipSubscriptionInputPlan[keyof typeof CreateMembershipSubscriptionInputPlan];
+
+
+export const CreateMembershipSubscriptionInputPlan = {
+  basic: 'basic',
+  pro: 'pro',
+} as const;
+
+export interface CreateMembershipSubscriptionInput {
+  /** StudioLayer plan identifier (never a raw Razorpay plan_id) */
+  plan: CreateMembershipSubscriptionInputPlan;
+}
+
+export type MembershipSubscriptionCheckoutPlan = typeof MembershipSubscriptionCheckoutPlan[keyof typeof MembershipSubscriptionCheckoutPlan];
+
+
+export const MembershipSubscriptionCheckoutPlan = {
+  basic: 'basic',
+  pro: 'pro',
+} as const;
+
+/**
+ * Internal DB tier (pro=Basic, enterprise=Pro)
+ */
+export type MembershipSubscriptionCheckoutStudioTier = typeof MembershipSubscriptionCheckoutStudioTier[keyof typeof MembershipSubscriptionCheckoutStudioTier];
+
+
+export const MembershipSubscriptionCheckoutStudioTier = {
+  pro: 'pro',
+  enterprise: 'enterprise',
+} as const;
+
+export interface MembershipSubscriptionCheckout {
+  /** Razorpay subscription id for Checkout */
+  subscriptionId: string;
+  /** Public Razorpay Key ID (never the secret) */
+  keyId: string;
+  plan: MembershipSubscriptionCheckoutPlan;
+  /** Internal DB tier (pro=Basic, enterprise=Pro) */
+  studioTier: MembershipSubscriptionCheckoutStudioTier;
+  status: string;
+  /** @nullable */
+  shortUrl: string | null;
 }
 

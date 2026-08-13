@@ -106,6 +106,7 @@ function baseContext(
     },
     cycleStart,
     transactions: [],
+    membershipPeriodHints: [],
     renders: [],
     deletionEvents: [],
     creditsPurchasedInCycle: 0,

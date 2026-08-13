@@ -308,6 +308,16 @@ async function lazyExpireAllocationLots(
 /**
  * Idempotent legacy seed for paid members missing a current-period membership lot.
  * Does not invent a payment ledger row.
+ *
+ * Razorpay precedence: if any spendable membership lot already covers `now`
+ * (including Razorpay-granted lots), this function returns without seeding.
+ * That prevents double entitlement when Razorpay allocations are authoritative.
+ *
+ * Production cutover (do NOT flip in this hardening PR via Railway):
+ * set STUDIO_CREDIT_LEGACY_MEMBERSHIP_BRIDGE=false once Razorpay membership
+ * grants are live for all paid users, so the UTC-month implicit bridge cannot
+ * reappear beside Razorpay period lots. Leave the bridge ON until that cutover
+ * so legacy paid members without Razorpay lots are not stranded.
  */
 export async function ensureLegacyMembershipAllocation(input: {
   userId: number;

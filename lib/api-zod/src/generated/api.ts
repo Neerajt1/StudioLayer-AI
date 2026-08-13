@@ -316,3 +316,21 @@ export const CreateSupportTicketResponse = zod.object({
 })
 
 
+/**
+ * Authenticated endpoint that creates a Razorpay subscription for Studio Basic or Studio Pro. Maps the StudioLayer plan identifier server-side to the configured Razorpay Plan ID. Returns public checkout fields only (never RAZORPAY_KEY_SECRET). Credits are granted only via verified webhooks.
+ * @summary Create a Razorpay membership subscription
+ */
+export const CreateMembershipSubscriptionBody = zod.object({
+  "plan": zod.enum(['basic', 'pro']).describe('StudioLayer plan identifier (never a raw Razorpay plan_id)')
+})
+
+export const CreateMembershipSubscriptionResponse = zod.object({
+  "subscriptionId": zod.string().describe('Razorpay subscription id for Checkout'),
+  "keyId": zod.string().describe('Public Razorpay Key ID (never the secret)'),
+  "plan": zod.enum(['basic', 'pro']),
+  "studioTier": zod.enum(['pro', 'enterprise']).describe('Internal DB tier (pro=Basic, enterprise=Pro)'),
+  "status": zod.string(),
+  "shortUrl": zod.string().nullable()
+})
+
+
