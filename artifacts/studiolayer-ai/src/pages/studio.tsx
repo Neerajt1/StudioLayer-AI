@@ -35,7 +35,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Camera } from 'lucide-react';
+import { Camera, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SelectedTalentSummary } from '@/components/studio/selected-talent-summary';
 import { StudioBrandWatermark } from '@/components/studio/studio-brand-watermark';
@@ -65,6 +65,11 @@ import {
 } from '@/components/studio/studio-workspace-controls';
 import { EditorialPageHeader } from '@/components/design-system/editorial-page-header';
 import { AccountStatementDownloadLink } from '@/components/account/account-statement-download-link';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { ModelIdentity } from '@/components/studio/talent/types';
 import { cn } from '@/lib/utils';
 import { fetchEditorialImageBlob } from '@/lib/download-image';
@@ -1032,7 +1037,28 @@ export default function StudioPage() {
             supporting="Garment to Campaign"
             tagline="Professional fashion photography in minutes"
             className="sl-page-header--workspace"
-            aside={<AccountStatementDownloadLink variant="header" />}
+            aside={(
+              <div className="sl-workspace-header-actions">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <StudioWorkspaceButton
+                      variant="icon"
+                      className="sl-workspace-refresh"
+                      onClick={handleNewPhotoshoot}
+                      disabled={isGenerationBusy}
+                      aria-label="Refresh"
+                      data-testid="button-new-photoshoot"
+                    >
+                      <RefreshCw className="size-3.5" aria-hidden />
+                    </StudioWorkspaceButton>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="sl-workspace-refresh-tooltip">
+                    Refresh
+                  </TooltipContent>
+                </Tooltip>
+                <AccountStatementDownloadLink variant="header" />
+              </div>
+            )}
           />
 
           <div className="relative">
