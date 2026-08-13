@@ -1,7 +1,8 @@
 import type { StudioCreditTransaction } from "@workspace/db";
+import { StudioCreditReasonCode } from "@workspace/studio-credit-engine";
 import { formatMonthKey, isUsageReasonCode } from "./labels.js";
 
-/** Paid memberships reset the credit pool on each UTC billing-cycle boundary. */
+/** Paid memberships reset the membership pool on each UTC billing-cycle boundary. */
 export function membershipResetsEachBillingCycle(tier: string): boolean {
   return tier !== "free";
 }
@@ -41,10 +42,58 @@ export interface MonthlyBalanceFields {
   closingBalance: number;
 }
 
+type PoolKind = "membership" | "pass" | "topUp" | "other";
+
+function poolKindForReason(reasonCode: string): PoolKind {
+  if (reasonCode === StudioCreditReasonCode.MEMBERSHIP_ALLOCATION) {
+    return "membership";
+  }
+  if (reasonCode === StudioCreditReasonCode.STUDIO_PASS_ALLOCATION) {
+    return "pass";
+  }
+  if (reasonCode === StudioCreditReasonCode.TOP_UP_ALLOCATION) {
+    return "topUp";
+  }
+  return "other";
+}
+
+/**
+ * Apply usage against carry pools first (Pass → Top-Up → other → Membership),
+ * matching live allocation consumption order.
+ */
+function applyUsageToPools(
+  pools: { membership: number; pass: number; topUp: number; other: number },
+  usageAbs: number,
+): void {
+  let remaining = Math.max(0, usageAbs);
+  const order: Array<keyof typeof pools> = [
+    "pass",
+    "topUp",
+    "other",
+    "membership",
+  ];
+  for (const key of order) {
+    if (remaining <= 0) break;
+    const take = Math.min(pools[key], remaining);
+    pools[key] -= take;
+    remaining -= take;
+  }
+}
+
+function totalPools(pools: {
+  membership: number;
+  pass: number;
+  topUp: number;
+  other: number;
+}): number {
+  return pools.membership + pools.pass + pools.topUp + pools.other;
+}
+
 /**
  * Running balance after each completed transaction in chronological order.
  *
- * Paid tiers: pool resets to membership allowance at each UTC month boundary.
+ * Paid tiers: membership pool refreshes at each UTC month boundary (no
+ * carry-forward). Top-Up and unexpired Pass credits carry across boundaries.
  * Complimentary tier: single lifetime pool — unused credits are not replenished.
  */
 export function computeLedgerRunningBalances(
@@ -55,7 +104,12 @@ export function computeLedgerRunningBalances(
   }
 
   const resets = membershipResetsEachBillingCycle(ctx.tier);
-  let running = ctx.allowance;
+  const pools = {
+    membership: resets ? 0 : ctx.allowance,
+    pass: 0,
+    topUp: 0,
+    other: 0,
+  };
   let currentCycleMonth: string | null = null;
   const balances: number[] = [];
 
@@ -64,12 +118,23 @@ export function computeLedgerRunningBalances(
 
     if (resets && txMonth !== currentCycleMonth) {
       currentCycleMonth = txMonth;
-      running = ctx.allowance;
+      // Membership no-carry-forward; Pass/Top-Up survive.
+      pools.membership = ctx.allowance;
     }
 
-    running += completedTransactionBalanceEffect(tx);
-    running = Math.max(0, running);
-    balances.push(running);
+    if (tx.amount > 0) {
+      const kind = poolKindForReason(tx.reasonCode);
+      if (kind === "membership") {
+        // Explicit membership grant replaces implicit allowance for that period.
+        pools.membership = tx.amount;
+      } else {
+        pools[kind] += tx.amount;
+      }
+    } else if (tx.amount < 0) {
+      applyUsageToPools(pools, Math.abs(tx.amount));
+    }
+
+    balances.push(Math.max(0, totalPools(pools)));
   }
 
   return balances;
@@ -92,7 +157,8 @@ export interface MonthlyActivityTotals {
 /**
  * Derive opening/closing balances for monthly summary rows.
  *
- * Paid tiers: each UTC month opens with the membership allowance (no carry-forward).
+ * Paid tiers: each UTC month opens with membership allowance + carried
+ * Top-Up/Pass remainder (membership itself never carries).
  * Complimentary tier: opening chains from the prior month's closing balance.
  */
 export function applyMonthlyBalanceFields(
@@ -107,9 +173,13 @@ export function applyMonthlyBalanceFields(
   const resets = membershipResetsEachBillingCycle(ctx.tier);
   const results: MonthlyBalanceFields[] = [];
   let complimentaryOpening = ctx.allowance;
+  let purchasedCarry = 0;
 
   for (const row of rows) {
-    const openingBalance = resets ? ctx.allowance : complimentaryOpening;
+    const openingBalance = resets
+      ? ctx.allowance + purchasedCarry
+      : complimentaryOpening;
+
     let closingBalance = Math.max(
       0,
       openingBalance + row.creditsAdded - row.creditsUsed,
@@ -123,25 +193,43 @@ export function applyMonthlyBalanceFields(
 
     if (!resets) {
       complimentaryOpening = closingBalance;
+    } else {
+      // Expire unused membership; carry only non-membership remainder.
+      const membershipPool = ctx.allowance;
+      let flexible = purchasedCarry + row.creditsAdded;
+      let used = row.creditsUsed;
+      const fromFlexible = Math.min(used, flexible);
+      flexible -= fromFlexible;
+      used -= fromFlexible;
+      const membershipLeft = Math.max(0, membershipPool - used);
+      void membershipLeft; // expired at boundary — intentionally not carried
+      purchasedCarry = Math.max(0, flexible);
     }
   }
 
   return results;
 }
 
-/** Current billing-cycle balance check: allowance + ledger additions − usage. */
+/**
+ * Current billing-cycle balance check.
+ * Membership allowance + purchased/promo additions − usage − pending holds.
+ * Do not include membership_allocation ledger rows in creditsAddedInCycle —
+ * those would double-count against allowance.
+ */
 export function computeBillingCycleBalanceSummary(ctx: {
   allowance: number;
   creditsAddedInCycle: number;
   creditsUsedInCycle: number;
   liveRemaining: number;
+  pendingHeld?: number;
 }): {
   computedClosing: number;
   matchesLiveRemaining: boolean;
 } {
+  const pendingHeld = Math.max(0, ctx.pendingHeld ?? 0);
   const computedClosing = Math.max(
     0,
-    ctx.allowance + ctx.creditsAddedInCycle - ctx.creditsUsedInCycle,
+    ctx.allowance + ctx.creditsAddedInCycle - ctx.creditsUsedInCycle - pendingHeld,
   );
 
   return {

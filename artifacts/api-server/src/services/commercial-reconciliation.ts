@@ -25,6 +25,7 @@ import {
 import {
   billingCycleStart,
   getStudioCreditBalance,
+  sumPendingStudioCreditsHeld,
   sumStudioCreditsUsed,
 } from "./studio-credit-service.js";
 import { getBillingCycleActivityStats } from "./account-statement/billing-cycle-activity.js";
@@ -284,6 +285,7 @@ export async function runCommercialReconciliation(
 
   const [
     balance,
+    pendingHeld,
     cycleStats,
     statementCtx,
     allCompletedTransactions,
@@ -297,6 +299,7 @@ export async function runCommercialReconciliation(
       limit,
       isAdmin: user.isAdmin,
     }),
+    sumPendingStudioCreditsHeld(userId),
     getBillingCycleActivityStats(userId, user.subscriptionTier),
     loadAccountStatementContext(userId),
     db
@@ -553,11 +556,16 @@ export async function runCommercialReconciliation(
       });
     }
 
+    // Exclude membership_allocation ledger rows — allowance already represents
+    // the membership pool. Include purchased + promotional only.
     const cycleBalance = computeBillingCycleBalanceSummary({
       allowance,
-      creditsAddedInCycle: statementCtx.totalCreditsAddedInCycle,
+      creditsAddedInCycle:
+        statementCtx.creditsPurchasedInCycle +
+        statementCtx.promotionalCreditsInCycle,
       creditsUsedInCycle: balance.used,
       liveRemaining: balance.remaining,
+      pendingHeld,
     });
 
     if (!cycleBalance.matchesLiveRemaining) {
@@ -567,7 +575,7 @@ export async function runCommercialReconciliation(
         expected: balance.remaining,
         actual: cycleBalance.computedClosing,
         detail:
-          "Membership allowance + cycle credits added − cycle credits used does not match live remaining balance",
+          "Membership allowance + purchased/promo credits − cycle credits used − pending holds does not match live remaining balance",
       });
     }
 

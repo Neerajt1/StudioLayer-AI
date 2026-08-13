@@ -87,3 +87,31 @@ export {
 } from './billing-cycle-stats';
 
 export { billingCycleStartUtc } from './billing-cycle';
+
+export {
+  StudioCreditAllocationStatus,
+  STUDIO_CREDIT_ALLOCATION_REASON_CODES,
+  STUDIO_PASS_VALIDITY_DAYS,
+  STUDIO_CREDIT_LEGACY_MEMBERSHIP_BRIDGE_ENV,
+  isLegacyMembershipBridgeEnabled,
+  isStudioCreditAllocationReasonCode,
+  expectedCreditsForAllocation,
+  studioPassExpiresAt,
+  legacyUtcMembershipPeriodKey,
+  legacyUtcMembershipPeriodBounds,
+  legacyMembershipSourceReference,
+  razorpayMembershipPeriodKey,
+  isAllocationLotSpendable,
+  compareLotsForConsumption,
+  sumSpendableAllocationCredits,
+  planAllocationConsumption,
+  computeAvailableStudioCredits,
+  hasActiveMembershipLotCoveringNow,
+  computeLegacyMembershipBridgeCredits,
+  allocationStatusAfterRemaining,
+  membershipCreditsDoNotCarryForward,
+  type StudioCreditAllocationStatusValue,
+  type StudioCreditAllocationReasonCode,
+  type CreditAllocationLotLike,
+  type AllocationConsumptionPlanItem,
+} from './allocations';

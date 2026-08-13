@@ -69,7 +69,7 @@ describe("computeLedgerRunningBalances", () => {
     assert.deepEqual(computeLedgerRunningBalances(ctx), [119, 118]);
   });
 
-  it("resets to membership allowance at each UTC month boundary for paid tiers", () => {
+  it("resets membership at each UTC month boundary for paid tiers (no carry-forward)", () => {
     const ctx = balanceCtx({
       transactions: [
         usageTx({
@@ -89,6 +89,35 @@ describe("computeLedgerRunningBalances", () => {
     });
 
     assert.deepEqual(computeLedgerRunningBalances(ctx), [100, 118]);
+  });
+
+  it("carries Top-Up across membership period boundaries", () => {
+    const ctx = balanceCtx({
+      transactions: [
+        usageTx({
+          id: 1,
+          reasonCode: StudioCreditReasonCode.TOP_UP_ALLOCATION,
+          amount: 35,
+          createdAt: new Date("2026-07-20T10:00:00.000Z"),
+        }),
+        usageTx({
+          id: 2,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -10,
+          createdAt: new Date("2026-07-21T10:00:00.000Z"),
+        }),
+        usageTx({
+          id: 3,
+          reasonCode: StudioCreditReasonCode.HERO_GENERATION,
+          amount: -5,
+          createdAt: new Date("2026-08-02T10:00:00.000Z"),
+        }),
+      ],
+      liveRemaining: 150,
+    });
+    // Jul: 120+35=155; -10 hits Top-Up first → 145 (top-up 25 left)
+    // Aug: membership→120 + carried top-up 25 - 5 = 140
+    assert.deepEqual(computeLedgerRunningBalances(ctx), [155, 145, 140]);
   });
 
   it("includes positive ledger additions in running balance", () => {
@@ -149,7 +178,7 @@ describe("computeLedgerRunningBalances", () => {
 });
 
 describe("applyMonthlyBalanceFields", () => {
-  it("uses membership allowance as each paid month opening (no carry-forward)", () => {
+  it("uses membership allowance as each paid month opening (membership no carry-forward)", () => {
     const ctx = balanceCtx({ liveRemaining: 118 });
     const rows = applyMonthlyBalanceFields(ctx, [
       { monthKey: "2026-07", creditsAdded: 0, creditsUsed: 100 },
@@ -161,6 +190,20 @@ describe("applyMonthlyBalanceFields", () => {
     assert.equal(rows[1]!.openingBalance, 120);
     assert.equal(rows[1]!.closingBalance, 118);
     assert.equal(rows[1]!.openingBalance + 0 - 2, rows[1]!.closingBalance);
+  });
+
+  it("carries Top-Up remainder into the next paid month opening", () => {
+    const ctx = balanceCtx({ liveRemaining: 145 });
+    const rows = applyMonthlyBalanceFields(ctx, [
+      { monthKey: "2026-07", creditsAdded: 35, creditsUsed: 10 },
+      { monthKey: "2026-08", creditsAdded: 0, creditsUsed: 0 },
+    ]);
+
+    assert.equal(rows[0]!.openingBalance, 120);
+    assert.equal(rows[0]!.closingBalance, 145);
+    // Top-Up survives after Pass→Top-Up→Membership spend order (25 left).
+    assert.equal(rows[1]!.openingBalance, 145);
+    assert.equal(rows[1]!.closingBalance, 145);
   });
 
   it("chains complimentary opening balances across months", () => {
