@@ -45,6 +45,7 @@ export {
   workspaceCreditTooltipForCustomCampaign,
   galleryGenerationCreditLabel,
   formatStudioCredits,
+  postProductionStudioCreditLabel,
   creativeStepCreditCopy,
 } from './labels';
 
@@ -63,6 +64,9 @@ export {
   membershipAddOnDisplayPrice,
   MembershipAddOnChargeAmounts,
   membershipAddOnCharge,
+  MembershipUpgradeChargeAmounts,
+  membershipUpgradeCharge,
+  membershipUpgradeDisplayPrice,
   type MembershipPricingMarket,
   type StudioAddOnProductId,
 } from './membership';

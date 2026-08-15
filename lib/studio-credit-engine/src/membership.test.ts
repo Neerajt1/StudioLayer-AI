@@ -8,6 +8,8 @@ import {
   membershipAddOnCharge,
   membershipAddOnDisplayPrice,
   membershipPlanDisplayPrice,
+  membershipUpgradeCharge,
+  membershipUpgradeDisplayPrice,
 } from './membership.js';
 
 describe('frozen membership market pricing', () => {
@@ -59,5 +61,18 @@ describe('frozen membership market pricing', () => {
       amount: 2_000,
       currency: 'USD',
     });
+  });
+
+  it('Basic → Pro upgrade difference is frozen at ₹3,000 / $30', () => {
+    assert.deepEqual(membershipUpgradeCharge('india'), {
+      amount: 300_000,
+      currency: 'INR',
+    });
+    assert.deepEqual(membershipUpgradeCharge('international'), {
+      amount: 3_000,
+      currency: 'USD',
+    });
+    assert.equal(membershipUpgradeDisplayPrice('india'), '₹3,000');
+    assert.equal(membershipUpgradeDisplayPrice('international'), '$30');
   });
 });

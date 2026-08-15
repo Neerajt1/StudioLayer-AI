@@ -335,6 +335,39 @@ export const CreateMembershipSubscriptionResponse = zod.object({
 
 
 /**
+ * @summary Get open membership and pending upgrade state
+ */
+export const GetMembershipSubscriptionStatusResponse = zod.object({
+  "studioPlan": zod.union([zod.literal('basic'),zod.literal('pro'),zod.literal(null)]).nullable(),
+  "studioTier": zod.union([zod.literal('pro'),zod.literal('enterprise'),zod.literal(null)]).nullable(),
+  "status": zod.string().nullable(),
+  "pendingUpgradePlan": zod.union([zod.literal('pro'),zod.literal(null)]).nullable(),
+  "currentEnd": zod.coerce.date().nullable(),
+  "subscriptionId": zod.string().nullable()
+})
+
+
+/**
+ * Creates a one-time Razorpay Order for the fixed Basic→Pro difference (₹3,000 / $30). After payment.captured, schedules plan change with schedule_change_at=cycle_end. Does not grant credits on the upgrade payment. Does not create a second subscription. Billing anniversary is preserved. Returns alreadyScheduled when pending upgrade exists.
+ * @summary Start Basic to Pro upgrade checkout (fixed difference)
+ */
+export const UpgradeMembershipToProResponse = zod.object({
+  "subscriptionId": zod.string(),
+  "currentPlan": zod.enum(['basic']),
+  "scheduledPlan": zod.enum(['pro']),
+  "pendingRazorpayPlanId": zod.string().nullable(),
+  "status": zod.string(),
+  "alreadyScheduled": zod.boolean(),
+  "currentEnd": zod.coerce.date().nullable(),
+  "orderId": zod.string().nullable().describe('Razorpay order id when checkout is required'),
+  "keyId": zod.string().nullable().describe('Public Razorpay Key ID when checkout is required'),
+  "amount": zod.number().nullable().describe('Fixed upgrade difference in smallest currency unit'),
+  "currency": zod.union([zod.literal('INR'),zod.literal('USD'),zod.literal(null)]).nullable(),
+  "market": zod.union([zod.literal('india'),zod.literal('international'),zod.literal(null)]).nullable()
+})
+
+
+/**
  * Authenticated endpoint that creates a Razorpay Order (not a subscription) for Studio Pass or Studio Top-Up. Server resolves market → amount/currency. Credits are granted only via verified payment.captured webhooks.
  * @summary Create a one-time Razorpay order for Studio Pass or Top-Up
  */

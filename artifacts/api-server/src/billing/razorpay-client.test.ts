@@ -269,7 +269,7 @@ describe("Razorpay fetch timeout + non-JSON errors", () => {
     const { cancelRazorpaySubscription } = await import("./razorpay-client.js");
     let seenPath = "";
     let seenBody = "";
-    globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = (async (_url: string | URL, init?: RequestInit) => {
       seenPath = String(_url);
       seenBody = String(init?.body ?? "");
       return new Response(
@@ -290,5 +290,68 @@ describe("Razorpay fetch timeout + non-JSON errors", () => {
     assert.equal(result.status, "cancelled");
     assert.match(seenPath, /\/subscriptions\/sub_orphan\/cancel$/);
     assert.equal(JSON.parse(seenBody).cancel_at_cycle_end, false);
+  });
+
+  it("plan change uses PATCH with schedule_change_at cycle_end", async () => {
+    const { updateRazorpaySubscriptionPlan } = await import(
+      "./razorpay-client.js"
+    );
+    let seenPath = "";
+    let seenMethod = "";
+    let seenBody = "";
+    globalThis.fetch = (async (_url: string | URL, init?: RequestInit) => {
+      seenPath = String(_url);
+      seenMethod = String(init?.method ?? "");
+      seenBody = String(init?.body ?? "");
+      return new Response(
+        JSON.stringify({
+          id: "sub_basic",
+          entity: "subscription",
+          plan_id: "plan_basic",
+          status: "active",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }) as typeof fetch;
+
+    await updateRazorpaySubscriptionPlan({
+      subscriptionId: "sub_basic",
+      planId: "plan_pro",
+      scheduleChangeAt: "cycle_end",
+    });
+    assert.equal(seenMethod, "PATCH");
+    assert.match(seenPath, /\/subscriptions\/sub_basic$/);
+    assert.deepEqual(JSON.parse(seenBody), {
+      plan_id: "plan_pro",
+      schedule_change_at: "cycle_end",
+    });
+  });
+
+  it("failed plan-change request surfaces RazorpayApiError", async () => {
+    const { updateRazorpaySubscriptionPlan, RazorpayApiError } = await import(
+      "./razorpay-client.js"
+    );
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          error: { description: "Subscription cannot be updated" },
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      )) as typeof fetch;
+
+    await assert.rejects(
+      () =>
+        updateRazorpaySubscriptionPlan({
+          subscriptionId: "sub_basic",
+          planId: "plan_pro",
+          scheduleChangeAt: "cycle_end",
+        }),
+      (error: unknown) => {
+        assert.ok(error instanceof RazorpayApiError);
+        assert.equal(error.status, 400);
+        assert.match(error.message, /cannot be updated/i);
+        return true;
+      },
+    );
   });
 });

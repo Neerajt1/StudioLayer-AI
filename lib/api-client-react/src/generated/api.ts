@@ -27,6 +27,8 @@ import type {
   Identity,
   LoginInput,
   MembershipSubscriptionCheckout,
+  MembershipSubscriptionStatus,
+  MembershipUpgradeToProResult,
   RegisterInput,
   Render,
   RenderInput,
@@ -1166,6 +1168,155 @@ export const useCreateMembershipSubscription = <TError = ErrorType<ErrorResponse
         TContext
       > => {
       return useMutation(getCreateMembershipSubscriptionMutationOptions(options));
+    }
+
+export const getGetMembershipSubscriptionStatusUrl = () => {
+
+
+
+
+  return `/api/payments/subscriptions/membership`
+}
+
+/**
+ * @summary Get open membership and pending upgrade state
+ */
+export const getMembershipSubscriptionStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<MembershipSubscriptionStatus> => {
+
+  return customFetch<MembershipSubscriptionStatus>(getGetMembershipSubscriptionStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMembershipSubscriptionStatusQueryKey = () => {
+    return [
+    `/api/payments/subscriptions/membership`
+    ] as const;
+    }
+
+
+export const getGetMembershipSubscriptionStatusQueryOptions = <TData = Awaited<ReturnType<typeof getMembershipSubscriptionStatus>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMembershipSubscriptionStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMembershipSubscriptionStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMembershipSubscriptionStatus>>> = ({ signal }) => getMembershipSubscriptionStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMembershipSubscriptionStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMembershipSubscriptionStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getMembershipSubscriptionStatus>>>
+export type GetMembershipSubscriptionStatusQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get open membership and pending upgrade state
+ */
+
+export function useGetMembershipSubscriptionStatus<TData = Awaited<ReturnType<typeof getMembershipSubscriptionStatus>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMembershipSubscriptionStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMembershipSubscriptionStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpgradeMembershipToProUrl = () => {
+
+
+
+
+  return `/api/payments/subscriptions/upgrade-to-pro`
+}
+
+/**
+ * Creates a one-time Razorpay Order for the fixed Basic→Pro difference (₹3,000 / $30). After payment.captured, schedules plan change with schedule_change_at=cycle_end. Does not grant credits on the upgrade payment. Does not create a second subscription. Billing anniversary is preserved. Returns alreadyScheduled when pending upgrade exists.
+ * @summary Start Basic to Pro upgrade checkout (fixed difference)
+ */
+export const upgradeMembershipToPro = async ( options?: Parameters<typeof customFetch>[1]): Promise<MembershipUpgradeToProResult> => {
+
+  return customFetch<MembershipUpgradeToProResult>(getUpgradeMembershipToProUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getUpgradeMembershipToProMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upgradeMembershipToPro>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upgradeMembershipToPro>>, TError,void, TContext> => {
+
+const mutationKey = ['upgradeMembershipToPro'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upgradeMembershipToPro>>, void> = () => {
+
+
+          return  upgradeMembershipToPro(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpgradeMembershipToProMutationResult = NonNullable<Awaited<ReturnType<typeof upgradeMembershipToPro>>>
+
+    export type UpgradeMembershipToProMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Start Basic to Pro upgrade checkout (fixed difference)
+ */
+export const useUpgradeMembershipToPro = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upgradeMembershipToPro>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upgradeMembershipToPro>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getUpgradeMembershipToProMutationOptions(options));
     }
 
 export const getCreateStudioAddOnCheckoutUrl = () => {

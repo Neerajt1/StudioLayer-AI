@@ -498,6 +498,120 @@ export interface MembershipSubscriptionCheckout {
 }
 
 /**
+ * @nullable
+ */
+export type MembershipSubscriptionStatusStudioPlan = typeof MembershipSubscriptionStatusStudioPlan[keyof typeof MembershipSubscriptionStatusStudioPlan] | null;
+
+
+export const MembershipSubscriptionStatusStudioPlan = {
+  basic: 'basic',
+  pro: 'pro',
+} as const;
+
+/**
+ * @nullable
+ */
+export type MembershipSubscriptionStatusStudioTier = typeof MembershipSubscriptionStatusStudioTier[keyof typeof MembershipSubscriptionStatusStudioTier] | null;
+
+
+export const MembershipSubscriptionStatusStudioTier = {
+  pro: 'pro',
+  enterprise: 'enterprise',
+} as const;
+
+/**
+ * @nullable
+ */
+export type MembershipSubscriptionStatusPendingUpgradePlan = typeof MembershipSubscriptionStatusPendingUpgradePlan[keyof typeof MembershipSubscriptionStatusPendingUpgradePlan] | null;
+
+
+export const MembershipSubscriptionStatusPendingUpgradePlan = {
+  pro: 'pro',
+} as const;
+
+export interface MembershipSubscriptionStatus {
+  /** @nullable */
+  studioPlan: MembershipSubscriptionStatusStudioPlan;
+  /** @nullable */
+  studioTier: MembershipSubscriptionStatusStudioTier;
+  /** @nullable */
+  status: string | null;
+  /** @nullable */
+  pendingUpgradePlan: MembershipSubscriptionStatusPendingUpgradePlan;
+  /** @nullable */
+  currentEnd: string | null;
+  /** @nullable */
+  subscriptionId: string | null;
+}
+
+export type MembershipUpgradeToProResultCurrentPlan = typeof MembershipUpgradeToProResultCurrentPlan[keyof typeof MembershipUpgradeToProResultCurrentPlan];
+
+
+export const MembershipUpgradeToProResultCurrentPlan = {
+  basic: 'basic',
+} as const;
+
+export type MembershipUpgradeToProResultScheduledPlan = typeof MembershipUpgradeToProResultScheduledPlan[keyof typeof MembershipUpgradeToProResultScheduledPlan];
+
+
+export const MembershipUpgradeToProResultScheduledPlan = {
+  pro: 'pro',
+} as const;
+
+/**
+ * @nullable
+ */
+export type MembershipUpgradeToProResultCurrency = typeof MembershipUpgradeToProResultCurrency[keyof typeof MembershipUpgradeToProResultCurrency] | null;
+
+
+export const MembershipUpgradeToProResultCurrency = {
+  INR: 'INR',
+  USD: 'USD',
+} as const;
+
+/**
+ * @nullable
+ */
+export type MembershipUpgradeToProResultMarket = typeof MembershipUpgradeToProResultMarket[keyof typeof MembershipUpgradeToProResultMarket] | null;
+
+
+export const MembershipUpgradeToProResultMarket = {
+  india: 'india',
+  international: 'international',
+} as const;
+
+export interface MembershipUpgradeToProResult {
+  subscriptionId: string;
+  currentPlan: MembershipUpgradeToProResultCurrentPlan;
+  scheduledPlan: MembershipUpgradeToProResultScheduledPlan;
+  /** @nullable */
+  pendingRazorpayPlanId: string | null;
+  status: string;
+  alreadyScheduled: boolean;
+  /** @nullable */
+  currentEnd: string | null;
+  /**
+     * Razorpay order id when checkout is required
+     * @nullable
+     */
+  orderId: string | null;
+  /**
+     * Public Razorpay Key ID when checkout is required
+     * @nullable
+     */
+  keyId: string | null;
+  /**
+     * Fixed upgrade difference in smallest currency unit
+     * @nullable
+     */
+  amount: number | null;
+  /** @nullable */
+  currency: MembershipUpgradeToProResultCurrency;
+  /** @nullable */
+  market: MembershipUpgradeToProResultMarket;
+}
+
+/**
  * StudioLayer add-on product (never a raw Razorpay plan_id)
  */
 export type CreateStudioAddOnCheckoutInputProduct = typeof CreateStudioAddOnCheckoutInputProduct[keyof typeof CreateStudioAddOnCheckoutInputProduct];

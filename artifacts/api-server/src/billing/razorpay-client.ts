@@ -256,7 +256,6 @@ export async function createRazorpaySubscription(
   return payload as unknown as RazorpaySubscriptionEntity;
 }
 
-
 /**
  * Create a one-time Razorpay order (Pass / Top-Up — never subscriptions).
  * Official API: POST /v1/orders
@@ -336,6 +335,93 @@ export async function cancelRazorpaySubscription(input: {
     },
   );
   return payload as unknown as RazorpaySubscriptionEntity;
+}
+
+/**
+ * Schedule or apply a Razorpay subscription plan change.
+ * Official API: PATCH /v1/subscriptions/:id
+ * @see https://razorpay.com/docs/api/payments/subscriptions/update-subscription/
+ *
+ * V1 membership upgrades use schedule_change_at: "cycle_end" only
+ * (no mid-cycle prorating).
+ */
+export async function updateRazorpaySubscriptionPlan(input: {
+  subscriptionId: string;
+  planId: string;
+  scheduleChangeAt: "cycle_end";
+}): Promise<RazorpaySubscriptionEntity> {
+  const payload = await razorpayFetch(
+    `/subscriptions/${encodeURIComponent(input.subscriptionId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        plan_id: input.planId,
+        schedule_change_at: input.scheduleChangeAt,
+      }),
+    },
+  );
+
+  if (typeof payload.id !== "string" || !payload.id) {
+    throw new RazorpayApiError(
+      "Razorpay update subscription returned no subscription id",
+      502,
+      JSON.stringify(payload),
+    );
+  }
+
+  return payload as unknown as RazorpaySubscriptionEntity;
+}
+
+/**
+ * Map a Razorpay plan_id back to StudioLayer plan using configured env IDs.
+ * Returns null when the id is unrecognized (do not guess).
+ */
+export function studioPlanForRazorpayPlanId(
+  razorpayPlanId: string,
+): StudioMembershipPlanId | null {
+  const id = razorpayPlanId.trim();
+  if (!id) return null;
+
+  const basicIds = [
+    process.env.RAZORPAY_BASIC_PLAN_ID,
+    process.env.RAZORPAY_BASIC_PLAN_ID_INR,
+    process.env.RAZORPAY_BASIC_PLAN_ID_USD,
+  ]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+
+  const proIds = [
+    process.env.RAZORPAY_PRO_PLAN_ID,
+    process.env.RAZORPAY_PRO_PLAN_ID_INR,
+    process.env.RAZORPAY_PRO_PLAN_ID_USD,
+  ]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+
+  if (basicIds.includes(id)) return "basic";
+  if (proIds.includes(id)) return "pro";
+  return null;
+}
+
+/**
+ * Prefer the currency family of the current Basic plan when upgrading to Pro.
+ */
+export function resolveProPlanIdForUpgrade(input: {
+  currentRazorpayPlanId: string;
+  pricingMarket?: PricingMarket;
+}): string {
+  const current = input.currentRazorpayPlanId.trim();
+  const basicInr = optionalEnv("RAZORPAY_BASIC_PLAN_ID_INR");
+  const basicUsd = optionalEnv("RAZORPAY_BASIC_PLAN_ID_USD");
+
+  if (basicInr && current === basicInr) {
+    return resolveRazorpayPlanId("pro", "india");
+  }
+  if (basicUsd && current === basicUsd) {
+    return resolveRazorpayPlanId("pro", "international");
+  }
+
+  return resolveRazorpayPlanId("pro", input.pricingMarket);
 }
 
 /**

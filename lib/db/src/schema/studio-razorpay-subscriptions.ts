@@ -27,6 +27,14 @@ export const studioRazorpaySubscriptionsTable = pgTable(
     razorpayCustomerId: text("razorpay_customer_id"),
     latestPaymentId: text("latest_payment_id"),
     latestInvoiceId: text("latest_invoice_id"),
+    /** Scheduled Basic → Pro at cycle_end (null when none). */
+    pendingUpgradePlan: text("pending_upgrade_plan"),
+    pendingRazorpayPlanId: text("pending_razorpay_plan_id"),
+    pendingUpgradeScheduledAt: timestamp("pending_upgrade_scheduled_at", {
+      withTimezone: true,
+    }),
+    /** Captured upgrade-difference payment id (idempotency). */
+    pendingUpgradePaymentId: text("pending_upgrade_payment_id"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

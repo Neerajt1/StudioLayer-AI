@@ -90,6 +90,17 @@ describe("payments route auth + webhook session contract", () => {
     assert.ok(grantIdx > 0 && tierIdx > grantIdx);
   });
 
+  it("Basic → Pro upgrade is authenticated and cycle_end only", () => {
+    assert.match(paymentsSource, /\/payments\/subscriptions\/upgrade-to-pro/);
+    assert.match(paymentsSource, /upgradeMembershipToPro/);
+    assert.match(membershipSource, /scheduleChangeAt: "cycle_end"/);
+    assert.match(membershipSource, /createRazorpayOrder/);
+    assert.match(membershipSource, /fulfillMembershipUpgradeFromCapturedPayment/);
+    assert.equal(membershipSource.includes('scheduleChangeAt: "now"'), false);
+    assert.match(logicSource, /resolveBasicToProUpgrade/);
+    assert.match(logicSource, /already_scheduled/);
+  });
+
   it("Pass / Top-Up use one-time Orders + payment.captured grants", () => {
     const addOnsSource = readFileSync(
       path.join(here, "razorpay-add-ons.ts"),

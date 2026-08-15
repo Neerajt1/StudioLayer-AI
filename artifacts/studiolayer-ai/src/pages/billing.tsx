@@ -26,6 +26,7 @@ import {
   formatStudioCredits,
   membershipAddOnDisplayPrice,
   membershipPlanDisplayPrice,
+  membershipUpgradeDisplayPrice,
   type MembershipPricingMarket,
   type StudioAddOnProductId,
 } from '@workspace/studio-credit-engine';
@@ -36,6 +37,12 @@ import {
 } from '@/lib/membership';
 import { fetchPricingMarket, CLIENT_TIMEZONE_HEADER } from '@/lib/fetch-pricing-market';
 import { browserTimeZone } from '@/lib/pricing-market';
+import {
+  fetchMembershipSubscriptionStatus,
+  formatMembershipBillingDate,
+  startStudioProUpgradeCheckout,
+  type MembershipSubscriptionStatus,
+} from '@/lib/membership-upgrade';
 import { createStudioAddOnCheckoutOrder } from '@/lib/studio-add-on-checkout';
 
 const INTRO_SUPPORTING =
@@ -51,7 +58,7 @@ const MEMBERSHIP_TIERS = [
     name: 'Studio Basic',
     subtitle: 'For growing fashion brands',
     credits: formatStudioCredits(MembershipCreditAllowances.basic),
-    outcome: finishedImagesOutcomeLabel(MembershipCreditAllowances.basic),
+    outcome: `Create up to ${MembershipCreditAllowances.basic} images at 2K`,
     features: [
       'Hero',
       'Campaign',
@@ -70,7 +77,7 @@ const MEMBERSHIP_TIERS = [
     name: 'Studio Pro',
     subtitle: 'For creative teams & agencies',
     credits: formatStudioCredits(MembershipCreditAllowances.pro),
-    outcome: finishedImagesOutcomeLabel(MembershipCreditAllowances.pro),
+    outcome: `Create up to ${MembershipCreditAllowances.pro} images at 2K`,
     features: [
       'Hero',
       'Campaign',
@@ -96,7 +103,7 @@ const MEMBERSHIP_FAQ = [
   },
   {
     q: 'When do Studio Credits reset?',
-    a: 'Complimentary Studio includes one one-time Studio Credit. Studio Basic and Studio Pro renew monthly. Studio Pass credits are valid for seven days. Your balance is always visible in your Studio Profile and on this page.',
+    a: 'Complimentary Studio includes one one-time Studio Credit. Studio Basic and Studio Pro renew monthly. Studio Credits from a Studio Pass are valid for seven days. Your balance is always visible in your Studio Profile and on this page.',
   },
 ];
 
@@ -131,6 +138,14 @@ interface MembershipCardProps {
   checkoutBusy: boolean;
   choosingThisPlan: boolean;
   onChoose: (tier: (typeof MEMBERSHIP_TIERS)[number]) => void;
+  upgradeAction?: {
+    label: string;
+    note: string;
+    busyLabel: string;
+    busy: boolean;
+    onUpgrade: () => void;
+    testId: string;
+  } | null;
 }
 
 function MembershipCard({
@@ -140,6 +155,7 @@ function MembershipCard({
   checkoutBusy,
   choosingThisPlan,
   onChoose,
+  upgradeAction = null,
 }: MembershipCardProps) {
   return (
     <div
@@ -160,7 +176,10 @@ function MembershipCard({
             <span>/ month</span>
           </p>
           <p className="sl-membership-tier-credits">{tier.credits}</p>
-          <p className="sl-membership-tier-outcome">{tier.outcome}</p>
+          <p className="sl-membership-tier-outcome">
+            {tier.outcome}
+            <sup>*</sup>
+          </p>
         </div>
         <ul className="sl-membership-tier-features">
           {tier.features.map((feature) => (
@@ -178,6 +197,21 @@ function MembershipCard({
           >
             Current Membership
           </Button>
+        ) : upgradeAction ? (
+          <>
+            <Button
+              className="w-full"
+              variant={tier.recommended ? 'default' : 'outline'}
+              disabled={checkoutBusy || upgradeAction.busy}
+              onClick={upgradeAction.onUpgrade}
+              data-testid={upgradeAction.testId}
+            >
+              {upgradeAction.busy ? upgradeAction.busyLabel : upgradeAction.label}
+            </Button>
+            <p className="mt-2 text-center text-[0.6875rem] font-medium tracking-[0.04em] text-muted-foreground">
+              {upgradeAction.note}
+            </p>
+          </>
         ) : (
           <>
             <Button
@@ -323,11 +357,6 @@ function StudioTopUpCompact({
       >
         {choosing ? 'Opening checkout…' : 'Top Up Credits'}
       </Button>
-      {!eligible ? (
-        <p className="mt-2 text-center text-[0.6875rem] font-medium tracking-[0.04em] text-muted-foreground">
-          Available with an active Studio Basic or Studio Pro membership
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -347,6 +376,9 @@ export default function BillingPage() {
   });
   const [pricingMarket, setPricingMarket] =
     useState<MembershipPricingMarket>('international');
+  const [membershipStatus, setMembershipStatus] =
+    useState<MembershipSubscriptionStatus | null>(null);
+  const [upgradeBusy, setUpgradeBusy] = useState(false);
 
   const [pendingPlan, setPendingPlan] =
     useState<CreateMembershipSubscriptionInputPlan | null>(null);
@@ -365,20 +397,102 @@ export default function BillingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    void fetchMembershipSubscriptionStatus().then((status) => {
+      if (!cancelled) setMembershipStatus(status);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.subscriptionTier]);
+
   const tier = user?.subscriptionTier ?? 'free';
   const usageData = { used: usage?.used ?? 0, limit: usage?.limit ?? null };
   const purchaseBusy =
     pendingPlan != null ||
     pendingAddOn != null ||
-    createSubscription.isPending;
+    createSubscription.isPending ||
+    upgradeBusy;
+  const isBasicMember = tier === 'pro';
   const isPaidMember = tier === 'pro' || tier === 'enterprise';
   const passEligible = !isPaidMember;
   const topUpEligible = isPaidMember;
+  const proUpgradePending =
+    isBasicMember && membershipStatus?.pendingUpgradePlan === 'pro';
 
   const releaseCheckoutLock = () => {
     checkoutInFlightRef.current = false;
     setPendingPlan(null);
     setPendingAddOn(null);
+  };
+
+  const handleUpgradeToPro = async () => {
+    if (upgradeBusy || checkoutInFlightRef.current || proUpgradePending) return;
+    setUpgradeBusy(true);
+    checkoutInFlightRef.current = true;
+    try {
+      const result = await startStudioProUpgradeCheckout();
+
+      if (result.alreadyScheduled) {
+        setMembershipStatus((prev) => ({
+          studioPlan: prev?.studioPlan ?? 'basic',
+          studioTier: prev?.studioTier ?? 'pro',
+          status: result.status,
+          pendingUpgradePlan: 'pro',
+          currentEnd: result.currentEnd,
+          subscriptionId: result.subscriptionId,
+        }));
+        toast({
+          title: 'Upgrade already scheduled',
+          description:
+            'Studio Pro starts on your next billing date. Your Studio Basic membership remains active until then.',
+        });
+        return;
+      }
+
+      if (!result.keyId || !result.orderId || result.amount == null || !result.currency) {
+        throw new Error('Checkout details were incomplete. Please try again.');
+      }
+
+      await openRazorpayOrderCheckout({
+        keyId: result.keyId,
+        orderId: result.orderId,
+        amount: result.amount,
+        currency: result.currency,
+        description: 'Studio Pro upgrade',
+        onSuccess: () => {
+          setMembershipStatus((prev) => ({
+            studioPlan: prev?.studioPlan ?? 'basic',
+            studioTier: prev?.studioTier ?? 'pro',
+            status: result.status,
+            pendingUpgradePlan: prev?.pendingUpgradePlan ?? null,
+            currentEnd: result.currentEnd ?? prev?.currentEnd ?? null,
+            subscriptionId: result.subscriptionId,
+          }));
+          toast({
+            title: 'Payment received',
+            description:
+              'Studio Pro will start on your next billing date once payment is confirmed. No Studio Credits are added today.',
+          });
+          void fetchMembershipSubscriptionStatus().then((status) => {
+            if (status) setMembershipStatus(status);
+          });
+        },
+        onDismiss: () => {},
+      });
+    } catch (error) {
+      toast({
+        title: "We couldn't start the upgrade.",
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Unable to start Studio Pro upgrade.',
+      });
+    } finally {
+      checkoutInFlightRef.current = false;
+      setUpgradeBusy(false);
+    }
   };
 
   const handleChoosePlan = async (
@@ -493,6 +607,14 @@ export default function BillingPage() {
           <div className="sl-membership-plans-row">
             {MEMBERSHIP_TIERS.map((membershipTier) => {
               const active = isActiveTier(tier, membershipTier.id);
+              const showProUpgrade =
+                membershipTier.plan === 'pro' &&
+                isBasicMember &&
+                !active;
+              const upgradePrice = membershipUpgradeDisplayPrice(pricingMarket);
+              const nextBillingLabel = formatMembershipBillingDate(
+                membershipStatus?.currentEnd ?? null,
+              );
               return (
                 <MembershipCard
                   key={membershipTier.id}
@@ -505,6 +627,22 @@ export default function BillingPage() {
                   checkoutBusy={purchaseBusy}
                   choosingThisPlan={pendingPlan === membershipTier.plan}
                   onChoose={handleChoosePlan}
+                  upgradeAction={
+                    showProUpgrade
+                      ? {
+                          label: proUpgradePending
+                            ? 'Upgrade scheduled'
+                            : `Upgrade to Studio Pro · ${upgradePrice}`,
+                          note: proUpgradePending
+                            ? `Your Pro membership starts on your next billing date: ${nextBillingLabel}. Until then, your Studio Basic membership remains active.`
+                            : `Pay ${upgradePrice} today. Your Pro membership starts on your next billing date: ${nextBillingLabel}. Until then, your Studio Basic membership remains active.`,
+                          busyLabel: 'Opening checkout…',
+                          busy: upgradeBusy || proUpgradePending,
+                          onUpgrade: handleUpgradeToPro,
+                          testId: 'button-upgrade-to-pro',
+                        }
+                      : null
+                  }
                 />
               );
             })}

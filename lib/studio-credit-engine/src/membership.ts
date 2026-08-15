@@ -126,6 +126,36 @@ export function membershipAddOnCharge(input: {
   };
 }
 
+/**
+ * Fixed Basic → Pro upgrade difference (GST-inclusive). Charged via one-time Order.
+ * Plan change is scheduled at Razorpay cycle_end — never immediate proration.
+ */
+export const MembershipUpgradeChargeAmounts = {
+  india: {
+    currency: 'INR' as const,
+    amount: 300_000,
+    display: '₹3,000',
+  },
+  international: {
+    currency: 'USD' as const,
+    amount: 3_000,
+    display: '$30',
+  },
+} as const;
+
+export function membershipUpgradeCharge(
+  market: MembershipPricingMarket,
+): { amount: number; currency: 'INR' | 'USD' } {
+  const row = MembershipUpgradeChargeAmounts[market];
+  return { amount: row.amount, currency: row.currency };
+}
+
+export function membershipUpgradeDisplayPrice(
+  market: MembershipPricingMarket,
+): string {
+  return MembershipUpgradeChargeAmounts[market].display;
+}
+
 /** International display defaults for surfaces that are not market-aware yet. */
 export const MembershipDisplayPricing = {
   basicMonthly: MembershipMarketPricing.international.basicMonthly,
