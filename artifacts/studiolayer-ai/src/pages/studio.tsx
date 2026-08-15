@@ -26,6 +26,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useActiveRenders } from '@/hooks/use-active-renders';
 import { withErrorContactHelper } from '@/lib/studio-contact';
 import { formatDownloadPreparingLabel } from '@/lib/download-preparing-label';
+import { zeroStudioCreditBlockToast } from '@/lib/studio-credit-block-copy';
 import { useDownloadInFlight } from '@/hooks/use-download-in-flight';
 import { AppShell } from '@/components/layout/app-shell';
 import { FileUpload } from '@/components/ui/file-upload';
@@ -607,9 +608,10 @@ export default function StudioPage() {
       return;
     }
     if (isStudioCreditLimitBlocked(usage)) {
+      const copy = zeroStudioCreditBlockToast();
       toast({
-        title: 'Studio Credit used',
-        description: 'View Membership to continue creating.',
+        title: copy.title,
+        description: copy.description,
       });
       return;
     }
@@ -696,9 +698,10 @@ export default function StudioPage() {
     if (refinementPending != null && refinementPending.slot === slot && isRefinementProcessing) return;
 
     if (isStudioCreditLimitBlocked(usage) && !resolveStudioAdminFlag(user, usage)) {
+      const copy = zeroStudioCreditBlockToast();
       toast({
-        title: 'Studio Credit used',
-        description: 'View Membership to continue refining.',
+        title: copy.title,
+        description: copy.description,
       });
       return;
     }

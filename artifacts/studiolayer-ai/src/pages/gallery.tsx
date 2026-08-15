@@ -34,6 +34,7 @@ import {
   isStudioCreditLimitBlocked,
   resolveStudioAdminFlag,
 } from '@workspace/studio-credit-engine';
+import { zeroStudioCreditBlockToast } from '@/lib/studio-credit-block-copy';
 import {
   delay,
   GALLERY_EXIT_ANIMATION_MS,
@@ -269,9 +270,10 @@ export default function GalleryPage() {
     if (refineInFlight || createRender.isPending) return;
 
     if (isStudioCreditLimitBlocked(usage) && !resolveStudioAdminFlag(user, usage)) {
+      const copy = zeroStudioCreditBlockToast();
       toast({
-        title: 'Studio Credit used',
-        description: 'View Membership to continue refining.',
+        title: copy.title,
+        description: copy.description,
       });
       return;
     }
