@@ -5,6 +5,7 @@
 import type { ReactNode } from 'react';
 import { Camera, Download, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { workspaceGenerationFailedSlotCopy } from '@/lib/generation-failure-copy';
 import { GenerationProgressIndicator } from '@/components/studio/generation-progress-indicator';
 import { StudioWorkspaceButton } from '@/components/studio/studio-workspace-controls';
 import { EditorialDownloadMenu } from '@/components/shared/editorial-download-menu';
@@ -288,11 +289,27 @@ export function StudioEditorialProgressOverlay({
 }
 
 /** Fallback for multi-image failed slots — subtle, does not overpower successes. */
-export function StudioEditorialFailedState() {
+export function StudioEditorialFailedState({
+  onRetry,
+}: {
+  onRetry?: () => void;
+}) {
+  const copy = workspaceGenerationFailedSlotCopy();
+
   return (
     <div className="sl-studio-editorial-failed flex flex-col items-center gap-1.5 px-3 py-4 text-center">
       <Camera className="h-4 w-4 text-muted-foreground/35" aria-hidden />
-      <p className="text-[10px] font-mono text-muted-foreground/70">Generation failed</p>
+      <p className="text-[10px] font-mono text-muted-foreground/70">{copy.headline}</p>
+      <p className="text-[9px] font-mono text-muted-foreground/55">{copy.creditLine}</p>
+      {onRetry ? (
+        <button
+          type="button"
+          className="mt-1 text-[10px] font-mono text-muted-foreground/80 underline underline-offset-2 transition-opacity hover:text-foreground"
+          onClick={onRetry}
+        >
+          {copy.retryLabel}
+        </button>
+      ) : null}
     </div>
   );
 }

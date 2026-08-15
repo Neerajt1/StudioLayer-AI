@@ -6,6 +6,7 @@ import {
   studioCreditsForRender,
   type LedgerRender,
 } from '@/lib/creative-ledger';
+import { galleryFailedRenderCopy } from '@/lib/generation-failure-copy';
 
 import { GalleryImageDownloadButton } from '@/components/shared/gallery-image-download-button';
 
@@ -231,6 +232,10 @@ function RealCreativeLedgerCard({
     render.outputImageUrl.length > 0;
   const isProcessing = render.status === 'processing' || render.status === 'pending';
   const canInteract = hasOutput && !deletePending;
+  const failedCopy =
+    !hasOutput && render.status === 'failed'
+      ? galleryFailedRenderCopy(render.status)
+      : null;
 
   return (
     <article
@@ -247,8 +252,13 @@ function RealCreativeLedgerCard({
           <div className="sl-ledger-card-placeholder">
             {isProcessing ? (
               <p className="sl-ledger-card-status">Creating…</p>
-            ) : render.status === 'failed' ? (
-              <p className="sl-ledger-card-status">Unavailable</p>
+            ) : failedCopy ? (
+              <div className="sl-ledger-card-failed-copy">
+                <p className="sl-ledger-card-status">{failedCopy.headline}</p>
+                {failedCopy.creditLine ? (
+                  <p className="sl-ledger-card-status-detail">{failedCopy.creditLine}</p>
+                ) : null}
+              </div>
             ) : null}
             <LedgerWatermark />
           </div>

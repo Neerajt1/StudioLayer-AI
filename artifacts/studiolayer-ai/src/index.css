@@ -3454,6 +3454,33 @@
     color: hsl(var(--muted-foreground));
   }
 
+  .sl-ledger-card-failed-copy {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    right: 0.75rem;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    pointer-events: none;
+  }
+
+  .sl-ledger-card-failed-copy .sl-ledger-card-status {
+    position: static;
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+
+  .sl-ledger-card-status-detail {
+    font-family: var(--app-font-mono);
+    font-size: 0.5625rem;
+    line-height: 1.35;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    color: hsl(var(--muted-foreground) / 0.85);
+  }
+
   .sl-ledger-card-actions {
     position: absolute;
     top: 0.625rem;

@@ -27,6 +27,7 @@ import { useActiveRenders } from '@/hooks/use-active-renders';
 import { withErrorContactHelper } from '@/lib/studio-contact';
 import { formatDownloadPreparingLabel } from '@/lib/download-preparing-label';
 import { zeroStudioCreditBlockToast } from '@/lib/studio-credit-block-copy';
+import { workspaceShootGenerationFailedToast } from '@/lib/generation-failure-copy';
 import { useDownloadInFlight } from '@/hooks/use-download-in-flight';
 import { AppShell } from '@/components/layout/app-shell';
 import { FileUpload } from '@/components/ui/file-upload';
@@ -653,9 +654,10 @@ export default function StudioPage() {
           if (process.env.NODE_ENV === 'development') {
             console.error('[Studio] generate failed', error);
           }
+          const copy = workspaceShootGenerationFailedToast();
           toast({
-            title: "We couldn't complete your request.",
-            description: withErrorContactHelper(renderApiErrorDescription(error)),
+            title: copy.title,
+            description: copy.description,
           });
         },
       },
@@ -1014,7 +1016,11 @@ export default function StudioPage() {
               })}
             />
           )}
-          {status === 'failed' && <StudioEditorialFailedState />}
+          {status === 'failed' && (
+            <StudioEditorialFailedState
+              onRetry={canCreate && !isGenerationBusy ? handleRender : undefined}
+            />
+          )}
         </div>
         {status === 'completed' && url && !showGenerationProgress && !showRefinementProgress && (
           <div className="absolute bottom-0 left-0 right-0 flex justify-end bg-gradient-to-t from-black/25 to-transparent p-2">
