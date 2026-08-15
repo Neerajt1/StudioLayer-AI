@@ -62,7 +62,10 @@ export interface MonthlyBalanceFields {
 type PoolKind = "membership" | "pass" | "topUp" | "other";
 
 function poolKindForReason(reasonCode: string): PoolKind {
-  if (reasonCode === StudioCreditReasonCode.MEMBERSHIP_ALLOCATION) {
+  if (
+    reasonCode === StudioCreditReasonCode.MEMBERSHIP_ALLOCATION ||
+    reasonCode === StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION
+  ) {
     return "membership";
   }
   if (reasonCode === StudioCreditReasonCode.STUDIO_PASS_ALLOCATION) {
@@ -113,7 +116,8 @@ function hasExplicitMembershipGrants(
   return ctx.transactions.some(
     (tx) =>
       tx.amount > 0 &&
-      tx.reasonCode === StudioCreditReasonCode.MEMBERSHIP_ALLOCATION,
+      (tx.reasonCode === StudioCreditReasonCode.MEMBERSHIP_ALLOCATION ||
+        tx.reasonCode === StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION),
   );
 }
 

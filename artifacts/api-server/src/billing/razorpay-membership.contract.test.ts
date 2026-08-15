@@ -104,6 +104,8 @@ describe("payments route auth + webhook session contract", () => {
     assert.match(membershipSource, /scheduleChangeAt: "cycle_end"/);
     assert.match(membershipSource, /createRazorpayOrder/);
     assert.match(membershipSource, /fulfillMembershipUpgradeFromCapturedPayment/);
+    assert.match(membershipSource, /MEMBERSHIP_UPGRADE_ALLOCATION/);
+    assert.match(membershipSource, /immediateUpgradeEntitlement/);
     assert.equal(membershipSource.includes('scheduleChangeAt: "now"'), false);
     assert.match(logicSource, /resolveBasicToProUpgrade/);
     assert.match(logicSource, /already_scheduled/);

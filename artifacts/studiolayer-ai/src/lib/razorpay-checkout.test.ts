@@ -4,6 +4,7 @@ import {
   createCheckoutSettlementGuard,
   logRazorpaySubscriptionCheckoutFailure,
   membershipPaymentFailedToastCopy,
+  openRazorpayOrderCheckout,
   openRazorpaySubscriptionCheckout,
   parseRazorpayCheckoutPaymentFailure,
   type RazorpayCheckoutPaymentFailure,
@@ -366,6 +367,123 @@ describe('openRazorpaySubscriptionCheckout failure and lock-release paths', () =
       });
 
       assert.equal(dismissCount, 1);
+    } finally {
+      restore();
+    }
+  });
+});
+
+describe('openRazorpayOrderCheckout payment.failed / dismiss / timeout', () => {
+  afterEach(() => {
+    mock.restoreAll();
+  });
+
+  it('payment.failed invokes onPaymentFailed once; dismiss after is ignored', async () => {
+    const handlers: HandlerMap = {};
+    const restore = installMockRazorpay(handlers);
+    mock.method(console, 'warn', () => {});
+
+    let paymentFailedCount = 0;
+    let dismissCount = 0;
+
+    try {
+      await openRazorpayOrderCheckout({
+        keyId: 'rzp_test_key',
+        orderId: 'order_upg_1',
+        amount: 300_000,
+        currency: 'INR',
+        description: 'Studio Pro upgrade',
+        onSuccess: () => {
+          assert.fail('success should not run');
+        },
+        onDismiss: () => {
+          dismissCount += 1;
+        },
+        onPaymentFailed: () => {
+          paymentFailedCount += 1;
+        },
+        safetyTimeoutMs: 60_000,
+      });
+
+      handlers.paymentFailed?.({
+        error: {
+          code: 'BAD_REQUEST_ERROR',
+          description: 'Bank declined the payment',
+        },
+      });
+      handlers.dismiss?.();
+
+      assert.equal(paymentFailedCount, 1);
+      assert.equal(dismissCount, 0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('dismiss does not call onPaymentFailed', async () => {
+    const handlers: HandlerMap = {};
+    const restore = installMockRazorpay(handlers);
+    let paymentFailedCount = 0;
+    let dismissCount = 0;
+
+    try {
+      await openRazorpayOrderCheckout({
+        keyId: 'rzp_test_key',
+        orderId: 'order_upg_2',
+        amount: 300_000,
+        currency: 'INR',
+        description: 'Studio Pro upgrade',
+        onSuccess: () => {},
+        onDismiss: () => {
+          dismissCount += 1;
+        },
+        onPaymentFailed: () => {
+          paymentFailedCount += 1;
+        },
+        safetyTimeoutMs: 60_000,
+      });
+
+      handlers.dismiss?.();
+      assert.equal(dismissCount, 1);
+      assert.equal(paymentFailedCount, 0);
+    } finally {
+      restore();
+    }
+  });
+
+  it('timeout settles via onDismiss without declined copy path', async () => {
+    const handlers: HandlerMap = {};
+    const restore = installMockRazorpay(handlers);
+    const warn = mock.method(console, 'warn', () => {});
+    let dismissCount = 0;
+    let paymentFailedCount = 0;
+
+    try {
+      await openRazorpayOrderCheckout({
+        keyId: 'rzp_test_key',
+        orderId: 'order_upg_3',
+        amount: 300_000,
+        currency: 'INR',
+        description: 'Studio Pro upgrade',
+        onSuccess: () => {},
+        onDismiss: () => {
+          dismissCount += 1;
+        },
+        onPaymentFailed: () => {
+          paymentFailedCount += 1;
+        },
+        safetyTimeoutMs: 20,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      assert.equal(dismissCount, 1);
+      assert.equal(paymentFailedCount, 0);
+      assert.ok(
+        warn.mock.calls.some((call) => {
+          const payload = call.arguments[1] as Record<string, unknown>;
+          return payload?.event === 'checkout_timeout';
+        }),
+      );
     } finally {
       restore();
     }

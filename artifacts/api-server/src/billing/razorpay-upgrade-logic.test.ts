@@ -3,22 +3,31 @@ import { describe, it } from "node:test";
 import {
   MembershipCreditAllowances,
   MembershipUpgradeChargeAmounts,
+  MembershipUpgradeCreditGrant,
+  StudioCreditReasonCode,
+  isStudioUpgradeImmediateEntitlementEnabled,
   membershipUpgradeCharge,
   membershipUpgradeDisplayPrice,
+  razorpayMembershipUpgradePeriodKey,
 } from "@workspace/studio-credit-engine";
 import {
   assertUpgradePaymentMatchesOrder,
+  buildMembershipUpgradePeriodKey,
+  isCapturedUpgradePaymentMarker,
+  parseUpgradeCheckoutOrderId,
+  readStudioUpgradeImmediateEntitlementFlag,
+  resolveUpgradeCheckoutOrderReuse,
+  resolveUpgradeCreditPeriodBounds,
   resolveUpgradeOrderAmount,
   STUDIO_UPGRADE_PRODUCT,
+  upgradeCheckoutOrderMarker,
   upgradePaymentSourceReference,
 } from "./razorpay-upgrade-logic.js";
 import {
   resolveBasicToProUpgrade,
   resolveOpenMembershipForCreate,
 } from "./razorpay-membership-logic.js";
-import {
-  resolveAddOnPurchaseEligibility,
-} from "./razorpay-add-ons-logic.js";
+import { resolveAddOnPurchaseEligibility } from "./razorpay-add-ons-logic.js";
 
 describe("Basic → Pro fixed upgrade difference", () => {
   it("India upgrade amount is ₹3,000 (300000 paise)", () => {
@@ -118,10 +127,114 @@ describe("Basic → Pro fixed upgrade difference", () => {
     assert.equal(result.action, "conflict");
   });
 
-  it("Pro cycle credits remain 240; upgrade payment grants none", () => {
+  it("upgrade grant is exactly +120; Pro cycle remains 240", () => {
+    assert.equal(MembershipUpgradeCreditGrant, 120);
     assert.equal(MembershipCreditAllowances.basic, 120);
     assert.equal(MembershipCreditAllowances.pro, 240);
-    // Upgrade payment path grants 0 — covered by fulfillMembershipUpgradeFromCapturedPayment contract
+    assert.equal(
+      StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION,
+      "membership_upgrade_allocation",
+    );
+  });
+
+  it("U1 upgrade periodKey format is rzp_upgrade:{sub}:{start}:{end}", () => {
+    assert.equal(
+      razorpayMembershipUpgradePeriodKey({
+        subscriptionId: "sub_1",
+        currentStartUnix: 100,
+        currentEndUnix: 200,
+      }),
+      "rzp_upgrade:sub_1:100:200",
+    );
+    const start = new Date(100_000);
+    const end = new Date(200_000);
+    assert.equal(
+      buildMembershipUpgradePeriodKey({
+        subscriptionId: "sub_1",
+        currentStart: start,
+        currentEnd: end,
+      }),
+      `rzp_upgrade:sub_1:${Math.floor(start.getTime() / 1000)}:${Math.floor(end.getTime() / 1000)}`,
+    );
+  });
+
+  it("U2 missing currentEnd fails closed", () => {
+    assert.equal(
+      resolveUpgradeCreditPeriodBounds({
+        currentStart: new Date(),
+        currentEnd: null,
+      }),
+      null,
+    );
+    assert.equal(
+      resolveUpgradeCreditPeriodBounds({
+        currentStart: null,
+        currentEnd: new Date(),
+      }),
+      null,
+    );
+  });
+
+  it("U3 order / captured payment markers distinguish checkout vs paid", () => {
+    assert.equal(upgradeCheckoutOrderMarker("order_abc"), "order:order_abc");
+    assert.equal(parseUpgradeCheckoutOrderId("order:order_abc"), "order_abc");
+    assert.equal(isCapturedUpgradePaymentMarker("order:order_abc"), false);
+    assert.equal(isCapturedUpgradePaymentMarker("pay_abc"), true);
+  });
+
+  it("active unpaid Order is reused; expired/invalid allows fresh Order", () => {
+    assert.deepEqual(
+      resolveUpgradeCheckoutOrderReuse({
+        orderId: "order_live",
+        order: { status: "created", amount_paid: 0 },
+      }),
+      { action: "reuse", orderId: "order_live" },
+    );
+    assert.deepEqual(
+      resolveUpgradeCheckoutOrderReuse({
+        orderId: "order_live",
+        order: { status: "attempted", amount_paid: 0 },
+      }),
+      { action: "reuse", orderId: "order_live" },
+    );
+    assert.deepEqual(
+      resolveUpgradeCheckoutOrderReuse({
+        orderId: "order_paid",
+        order: { status: "paid", amount_paid: 300_000 },
+      }),
+      { action: "already_paid", orderId: "order_paid" },
+    );
+    assert.deepEqual(
+      resolveUpgradeCheckoutOrderReuse({
+        orderId: "order_old",
+        order: { status: "expired", amount_paid: 0 },
+      }),
+      { action: "create_fresh", reason: "expired" },
+    );
+    assert.deepEqual(
+      resolveUpgradeCheckoutOrderReuse({
+        orderId: "order_missing",
+        order: null,
+        fetchFailed: true,
+      }),
+      { action: "create_fresh", reason: "fetch_failed" },
+    );
+  });
+
+  it("feature flag defaults OFF", () => {
+    assert.equal(isStudioUpgradeImmediateEntitlementEnabled({}), false);
+    assert.equal(
+      isStudioUpgradeImmediateEntitlementEnabled({
+        STUDIO_UPGRADE_IMMEDIATE_ENTITLEMENT: "true",
+      }),
+      true,
+    );
+    assert.equal(
+      readStudioUpgradeImmediateEntitlementFlag({
+        STUDIO_UPGRADE_IMMEDIATE_ENTITLEMENT: "",
+      }),
+      false,
+    );
   });
 
   it("billing anniversary preserved by cycle_end (not now)", async () => {
@@ -133,14 +246,24 @@ describe("Basic → Pro fixed upgrade difference", () => {
       path.join(here, "razorpay-membership.ts"),
       "utf8",
     );
+    const client = readFileSync(path.join(here, "razorpay-client.ts"), "utf8");
     assert.match(membership, /scheduleChangeAt: "cycle_end"/);
     assert.equal(membership.includes('scheduleChangeAt: "now"'), false);
-    assert.match(membership, /grantedCredits: 0/);
+    assert.equal(client.includes('scheduleChangeAt: "now"'), false);
+    assert.match(membership, /MEMBERSHIP_UPGRADE_ALLOCATION/);
+    assert.match(membership, /MembershipUpgradeCreditGrant/);
     assert.match(membership, /createRazorpayOrder/);
     assert.match(
       membership,
       /Upgrade difference paid — Studio Pro scheduled for next billing cycle \(no credits granted\)/,
     );
+    assert.match(
+      membership,
+      /Studio Pro active immediately; \+120 upgrade credits granted/,
+    );
+    assert.match(membership, /upgradeCheckoutOrderMarker/);
+    assert.match(membership, /resolveUpgradeCheckoutOrderReuse/);
+    assert.match(membership, /readStudioUpgradeImmediateEntitlementFlag/);
   });
 });
 
@@ -166,7 +289,6 @@ describe("Pass / Top-Up eligibility with membership", () => {
   });
 
   it("Remaining membership credits do not appear in eligibility input (tier-only gate)", () => {
-    // Eligibility is tier-based only — no remaining-credit argument.
     assert.deepEqual(
       resolveAddOnPurchaseEligibility({
         product: "topUp",

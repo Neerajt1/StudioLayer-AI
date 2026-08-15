@@ -5,6 +5,8 @@ import {
   MembershipDisplayPricing,
   MembershipMarketPricing,
   MembershipAddOnChargeAmounts,
+  MembershipUpgradeCreditGrant,
+  isStudioUpgradeImmediateEntitlementEnabled,
   membershipAddOnCharge,
   membershipAddOnDisplayPrice,
   membershipPlanDisplayPrice,
@@ -74,5 +76,16 @@ describe('frozen membership market pricing', () => {
     });
     assert.equal(membershipUpgradeDisplayPrice('india'), '₹3,000');
     assert.equal(membershipUpgradeDisplayPrice('international'), '$30');
+  });
+
+  it('immediate entitlement flag defaults OFF', () => {
+    assert.equal(isStudioUpgradeImmediateEntitlementEnabled({}), false);
+    assert.equal(
+      isStudioUpgradeImmediateEntitlementEnabled({
+        STUDIO_UPGRADE_IMMEDIATE_ENTITLEMENT: '1',
+      }),
+      true,
+    );
+    assert.equal(MembershipUpgradeCreditGrant, 120);
   });
 });

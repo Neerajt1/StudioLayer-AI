@@ -2,6 +2,7 @@ import {
   creditCostForCustomCampaign,
   creditCostForGenerationType,
   creditCostForImageCount,
+  creditCostForRefine,
 } from './costs';
 import type { GenerationType, ImageCount } from './rules';
 
@@ -28,6 +29,13 @@ export function galleryGenerationCreditLabel(generationType: GenerationType): nu
 
 export function formatStudioCredits(count: number): string {
   return `${count} ${pluralCredits(count)}`;
+}
+
+/** Post-production step cost — e.g. Remove Background → "Studio Credit 1". */
+export function postProductionStudioCreditLabel(
+  cost: number = creditCostForRefine(),
+): string {
+  return `Studio Credit ${cost}`;
 }
 
 /** Membership transparency copy — one creative step. */

@@ -44,7 +44,12 @@ import { browserTimeZone } from '@/lib/pricing-market';
 import {
   fetchMembershipSubscriptionStatus,
   formatMembershipBillingDate,
+  membershipRenewalDisplayPrice,
   startStudioProUpgradeCheckout,
+  upgradeAlreadyActiveToastCopy,
+  upgradeCardCopy,
+  upgradeSuccessToastCopy,
+  isImmediateUpgradeFulfilled,
   type MembershipSubscriptionStatus,
 } from '@/lib/membership-upgrade';
 import { createStudioAddOnCheckoutOrder } from '@/lib/studio-add-on-checkout';
@@ -390,6 +395,8 @@ export default function BillingPage() {
     null,
   );
   const checkoutInFlightRef = useRef(false);
+  /** Set after immediate-upgrade Checkout success until membership confirms Pro. */
+  const upgradeAwaitingFulfillmentRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -411,6 +418,25 @@ export default function BillingPage() {
     };
   }, [user?.subscriptionTier]);
 
+  useEffect(() => {
+    if (!upgradeAwaitingFulfillmentRef.current) return;
+    if (!membershipStatus?.immediateUpgradeEntitlement) return;
+    if (!isImmediateUpgradeFulfilled(membershipStatus)) return;
+
+    upgradeAwaitingFulfillmentRef.current = false;
+    const copy = upgradeSuccessToastCopy({
+      immediate: true,
+      phase: 'fulfilled',
+      nextBillingLabel: formatMembershipBillingDate(
+        membershipStatus.currentEnd,
+      ),
+    });
+    toast({
+      title: copy.title,
+      description: copy.description,
+    });
+  }, [membershipStatus, toast]);
+
   const tier = user?.subscriptionTier ?? 'free';
   const usageData = { used: usage?.used ?? 0, limit: usage?.limit ?? null };
   const purchaseBusy =
@@ -422,8 +448,16 @@ export default function BillingPage() {
   const isPaidMember = tier === 'pro' || tier === 'enterprise';
   const passEligible = !isPaidMember;
   const topUpEligible = isPaidMember;
+  const immediateUpgrade =
+    membershipStatus?.immediateUpgradeEntitlement === true;
   const proUpgradePending =
-    isBasicMember && membershipStatus?.pendingUpgradePlan === 'pro';
+    membershipStatus?.pendingUpgradePlan === 'pro' &&
+    (immediateUpgrade
+      ? isBasicMember || tier === 'enterprise'
+      : isBasicMember);
+  const proUpgradeLocked =
+    proUpgradePending &&
+    (immediateUpgrade ? tier === 'enterprise' || isBasicMember : true);
 
   const releaseCheckoutLock = () => {
     checkoutInFlightRef.current = false;
@@ -432,25 +466,36 @@ export default function BillingPage() {
   };
 
   const handleUpgradeToPro = async () => {
-    if (upgradeBusy || checkoutInFlightRef.current || proUpgradePending) return;
+    if (upgradeBusy || checkoutInFlightRef.current || proUpgradeLocked) return;
     setUpgradeBusy(true);
     checkoutInFlightRef.current = true;
+    const nextBillingLabel = formatMembershipBillingDate(
+      membershipStatus?.currentEnd ?? null,
+    );
+    const renewalPrice = membershipRenewalDisplayPrice(pricingMarket);
     try {
       const result = await startStudioProUpgradeCheckout();
+      const immediate =
+        membershipStatus?.immediateUpgradeEntitlement === true;
 
       if (result.alreadyScheduled) {
         setMembershipStatus((prev) => ({
-          studioPlan: prev?.studioPlan ?? 'basic',
-          studioTier: prev?.studioTier ?? 'pro',
+          studioPlan: immediate ? 'pro' : (prev?.studioPlan ?? 'basic'),
+          studioTier: immediate ? 'enterprise' : (prev?.studioTier ?? 'pro'),
           status: result.status,
           pendingUpgradePlan: 'pro',
           currentEnd: result.currentEnd,
           subscriptionId: result.subscriptionId,
+          immediateUpgradeEntitlement: immediate,
         }));
+        const copy = upgradeAlreadyActiveToastCopy({
+          immediate,
+          renewalPrice,
+          nextBillingLabel: formatMembershipBillingDate(result.currentEnd),
+        });
         toast({
-          title: 'Upgrade already scheduled',
-          description:
-            'Studio Pro starts on your next billing date. Your Studio Basic membership remains active until then.',
+          title: copy.title,
+          description: copy.description,
         });
         return;
       }
@@ -466,24 +511,39 @@ export default function BillingPage() {
         currency: result.currency,
         description: 'Studio Pro upgrade',
         onSuccess: () => {
-          setMembershipStatus((prev) => ({
-            studioPlan: prev?.studioPlan ?? 'basic',
-            studioTier: prev?.studioTier ?? 'pro',
-            status: result.status,
-            pendingUpgradePlan: prev?.pendingUpgradePlan ?? null,
-            currentEnd: result.currentEnd ?? prev?.currentEnd ?? null,
-            subscriptionId: result.subscriptionId,
-          }));
+          const nextLabel = formatMembershipBillingDate(
+            result.currentEnd ?? membershipStatus?.currentEnd ?? null,
+          );
+          if (immediate) {
+            upgradeAwaitingFulfillmentRef.current = true;
+          }
+          // Do not optimistically claim Pro / +120 — wait for membership refresh.
+          const confirming = upgradeSuccessToastCopy({
+            immediate,
+            phase: 'confirming',
+            nextBillingLabel: nextLabel,
+          });
           toast({
-            title: 'Payment received',
-            description:
-              'Studio Pro will start on your next billing date once payment is confirmed. No Studio Credits are added today.',
+            title: confirming.title,
+            description: confirming.description,
+          });
+          void queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+          void queryClient.invalidateQueries({
+            queryKey: getGetRenderUsageQueryKey(),
           });
           void fetchMembershipSubscriptionStatus().then((status) => {
             if (status) setMembershipStatus(status);
           });
         },
         onDismiss: () => {},
+        onPaymentFailed: (failure) => {
+          upgradeAwaitingFulfillmentRef.current = false;
+          const copy = membershipPaymentFailedToastCopy(failure);
+          toast({
+            title: copy.title,
+            description: copy.description,
+          });
+        },
       });
     } catch (error) {
       toast({
@@ -624,9 +684,12 @@ export default function BillingPage() {
                 isBasicMember &&
                 !active;
               const upgradePrice = membershipUpgradeDisplayPrice(pricingMarket);
+              const renewalPrice = membershipRenewalDisplayPrice(pricingMarket);
               const nextBillingLabel = formatMembershipBillingDate(
                 membershipStatus?.currentEnd ?? null,
               );
+              const immediate =
+                membershipStatus?.immediateUpgradeEntitlement === true;
               return (
                 <MembershipCard
                   key={membershipTier.id}
@@ -642,14 +705,21 @@ export default function BillingPage() {
                   upgradeAction={
                     showProUpgrade
                       ? {
-                          label: proUpgradePending
-                            ? 'Upgrade scheduled'
-                            : `Upgrade to Studio Pro · ${upgradePrice}`,
-                          note: proUpgradePending
-                            ? `Your Pro membership starts on your next billing date: ${nextBillingLabel}. Until then, your Studio Basic membership remains active.`
-                            : `Pay ${upgradePrice} today. Your Pro membership starts on your next billing date: ${nextBillingLabel}. Until then, your Studio Basic membership remains active.`,
+                          label:
+                            proUpgradePending && !immediate
+                              ? 'Upgrade scheduled'
+                              : immediate && proUpgradePending
+                                ? 'Studio Pro active'
+                                : `Upgrade to Studio Pro · ${upgradePrice}`,
+                          note: upgradeCardCopy({
+                            immediate,
+                            pending: Boolean(proUpgradePending),
+                            upgradePrice,
+                            renewalPrice,
+                            nextBillingLabel,
+                          }),
                           busyLabel: 'Opening checkout…',
-                          busy: upgradeBusy || proUpgradePending,
+                          busy: upgradeBusy || proUpgradeLocked,
                           onUpgrade: handleUpgradeToPro,
                           testId: 'button-upgrade-to-pro',
                         }

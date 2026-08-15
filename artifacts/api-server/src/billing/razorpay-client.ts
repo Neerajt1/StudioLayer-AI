@@ -56,6 +56,7 @@ export interface RazorpayOrderEntity {
   amount: number;
   currency: string;
   status?: string;
+  amount_paid?: number;
   receipt?: string | null;
   notes?: Record<string, string> | null;
 }

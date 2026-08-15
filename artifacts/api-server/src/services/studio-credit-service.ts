@@ -432,6 +432,13 @@ export async function grantCreditAllocation(input: {
     throw new Error("Membership allocation requires a paid membership tier");
   }
 
+  if (
+    input.reasonCode === StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION &&
+    !isPaidMember
+  ) {
+    throw new Error("Membership upgrade allocation requires a paid membership tier");
+  }
+
   const expected = expectedCreditsForAllocation({
     reasonCode: input.reasonCode,
     tier,
@@ -464,6 +471,17 @@ export async function grantCreditAllocation(input: {
     }
     if (!input.periodKey) {
       throw new Error("Membership allocations require periodKey");
+    }
+  }
+
+  if (input.reasonCode === StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION) {
+    if (!input.expiresAt) {
+      throw new Error(
+        "Membership upgrade allocations require expiresAt (current period end)",
+      );
+    }
+    if (!input.periodKey) {
+      throw new Error("Membership upgrade allocations require periodKey");
     }
   }
 

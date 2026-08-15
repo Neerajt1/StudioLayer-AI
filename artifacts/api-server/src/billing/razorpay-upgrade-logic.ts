@@ -3,7 +3,11 @@
  */
 import {
   MembershipUpgradeChargeAmounts,
+  MembershipUpgradeCreditGrant,
+  STUDIO_UPGRADE_IMMEDIATE_ENTITLEMENT_ENV,
+  isStudioUpgradeImmediateEntitlementEnabled,
   membershipUpgradeCharge,
+  razorpayMembershipUpgradePeriodKey,
   type MembershipPricingMarket,
 } from "@workspace/studio-credit-engine";
 
@@ -42,6 +46,88 @@ export function upgradePaymentSourceReference(paymentId: string): string {
   return `rzp_upgrade_payment:${paymentId}`;
 }
 
+/** Local marker while an upgrade Order exists but payment is not yet fulfilled. */
+export const UPGRADE_CHECKOUT_ORDER_PREFIX = "order:";
+
+export function upgradeCheckoutOrderMarker(orderId: string): string {
+  return `${UPGRADE_CHECKOUT_ORDER_PREFIX}${orderId}`;
+}
+
+export function parseUpgradeCheckoutOrderId(
+  pendingUpgradePaymentId: string | null | undefined,
+): string | null {
+  if (!pendingUpgradePaymentId?.startsWith(UPGRADE_CHECKOUT_ORDER_PREFIX)) {
+    return null;
+  }
+  const orderId = pendingUpgradePaymentId.slice(
+    UPGRADE_CHECKOUT_ORDER_PREFIX.length,
+  );
+  return orderId.trim() ? orderId.trim() : null;
+}
+
+/** True when a captured upgrade payment id is already stored (pending may lag). */
+export function isCapturedUpgradePaymentMarker(
+  pendingUpgradePaymentId: string | null | undefined,
+): boolean {
+  if (!pendingUpgradePaymentId) return false;
+  if (pendingUpgradePaymentId.startsWith(UPGRADE_CHECKOUT_ORDER_PREFIX)) {
+    return false;
+  }
+  return pendingUpgradePaymentId.startsWith("pay_");
+}
+
+/**
+ * Decide whether an unpaid upgrade Order marker can be reused.
+ * Uses Razorpay Order status — no local TTL.
+ *
+ * - created / attempted → reuse (dismissed checkout with valid Order)
+ * - paid / amount_paid > 0 → already paid (never create another Order)
+ * - expired / missing / unknown → allow a fresh Order
+ */
+export type UpgradeCheckoutOrderReuseDecision =
+  | { action: "reuse"; orderId: string }
+  | { action: "already_paid"; orderId: string }
+  | {
+      action: "create_fresh";
+      reason: "expired" | "not_found" | "invalid" | "fetch_failed";
+    };
+
+export function resolveUpgradeCheckoutOrderReuse(input: {
+  orderId: string;
+  order: {
+    status?: string | null;
+    amount_paid?: number | null;
+  } | null;
+  fetchFailed?: boolean;
+}): UpgradeCheckoutOrderReuseDecision {
+  const orderId = input.orderId.trim();
+  if (!orderId) {
+    return { action: "create_fresh", reason: "invalid" };
+  }
+
+  if (input.fetchFailed || !input.order) {
+    return { action: "create_fresh", reason: input.fetchFailed ? "fetch_failed" : "not_found" };
+  }
+
+  const status = (input.order.status ?? "").trim().toLowerCase();
+  const amountPaid =
+    typeof input.order.amount_paid === "number" ? input.order.amount_paid : 0;
+
+  if (status === "paid" || amountPaid > 0) {
+    return { action: "already_paid", orderId };
+  }
+
+  if (status === "created" || status === "attempted") {
+    return { action: "reuse", orderId };
+  }
+
+  if (status === "expired") {
+    return { action: "create_fresh", reason: "expired" };
+  }
+
+  return { action: "create_fresh", reason: "invalid" };
+}
+
 export function parseUpgradeUserIdFromNotes(
   notes: Record<string, string> | null | undefined,
 ): number | null {
@@ -68,4 +154,45 @@ export function parseUpgradeMarketFromNotes(
   return raw === "india" || raw === "international" ? raw : null;
 }
 
-export { MembershipUpgradeChargeAmounts };
+/** Read server env for immediate StudioLayer Pro + +120 path (default OFF). */
+export function readStudioUpgradeImmediateEntitlementFlag(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  return isStudioUpgradeImmediateEntitlementEnabled(env);
+}
+
+/**
+ * U1 period key for upgrade +120 lot. Requires unix seconds for start/end.
+ */
+export function buildMembershipUpgradePeriodKey(input: {
+  subscriptionId: string;
+  currentStart: Date;
+  currentEnd: Date;
+}): string {
+  return razorpayMembershipUpgradePeriodKey({
+    subscriptionId: input.subscriptionId,
+    currentStartUnix: Math.floor(input.currentStart.getTime() / 1000),
+    currentEndUnix: Math.floor(input.currentEnd.getTime() / 1000),
+  });
+}
+
+/**
+ * U2 fail-closed: upgrade +120 requires a valid current period end (and start).
+ */
+export function resolveUpgradeCreditPeriodBounds(input: {
+  currentStart: Date | null | undefined;
+  currentEnd: Date | null | undefined;
+}): { currentStart: Date; currentEnd: Date } | null {
+  if (!input.currentStart || !input.currentEnd) return null;
+  const startMs = input.currentStart.getTime();
+  const endMs = input.currentEnd.getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return null;
+  if (endMs <= startMs) return null;
+  return { currentStart: input.currentStart, currentEnd: input.currentEnd };
+}
+
+export {
+  MembershipUpgradeChargeAmounts,
+  MembershipUpgradeCreditGrant,
+  STUDIO_UPGRADE_IMMEDIATE_ENTITLEMENT_ENV,
+};

@@ -290,7 +290,9 @@ export async function openRazorpaySubscriptionCheckout(input: {
 }
 
 /**
- * One-time Order Checkout for Studio Pass / Top-Up (not subscriptions).
+ * One-time Order Checkout for Studio Pass / Top-Up / Membership upgrade.
+ * Uses the same settlement guard as subscription checkout so payment.failed,
+ * dismiss, success, and timeout each settle at most once.
  */
 export async function openRazorpayOrderCheckout(input: {
   keyId: string;
@@ -300,8 +302,23 @@ export async function openRazorpayOrderCheckout(input: {
   description: string;
   onSuccess: (response: RazorpayCheckoutSuccessResponse) => void;
   onDismiss: () => void;
+  /** Only called for Razorpay Checkout `payment.failed` (actual payment failure). */
+  onPaymentFailed?: (failure: RazorpayCheckoutPaymentFailure) => void;
+  /** Override safety timeout (tests). Default: {@link SUBSCRIPTION_CHECKOUT_SAFETY_TIMEOUT_MS}. */
+  safetyTimeoutMs?: number;
 }): Promise<void> {
   const Razorpay = await loadRazorpayCheckout();
+  const guard = createCheckoutSettlementGuard();
+  const safetyTimeoutMs =
+    input.safetyTimeoutMs ?? SUBSCRIPTION_CHECKOUT_SAFETY_TIMEOUT_MS;
+
+  let safetyTimer: ReturnType<typeof setTimeout> | null = null;
+  const clearSafetyTimer = () => {
+    if (safetyTimer != null) {
+      clearTimeout(safetyTimer);
+      safetyTimer = null;
+    }
+  };
 
   const checkout = new Razorpay({
     key: input.keyId,
@@ -311,17 +328,60 @@ export async function openRazorpayOrderCheckout(input: {
     name: 'StudioLayer AI',
     description: input.description,
     handler: (response: RazorpayCheckoutSuccessResponse) => {
-      input.onSuccess(response);
+      guard.settle(() => {
+        clearSafetyTimer();
+        input.onSuccess(response);
+      });
     },
     modal: {
       ondismiss: () => {
-        input.onDismiss();
+        guard.settle(() => {
+          clearSafetyTimer();
+          input.onDismiss();
+        });
       },
     },
     theme: {
       color: '#5F785C',
     },
   });
+
+  if (typeof checkout.on === 'function') {
+    checkout.on('payment.failed', (response: unknown) => {
+      const failure = parseRazorpayCheckoutPaymentFailure(response);
+      guard.settle(() => {
+        clearSafetyTimer();
+        console.warn('[razorpay-order-checkout]', {
+          event: 'payment_failed',
+          orderId: input.orderId,
+          code: failure.code,
+          description: failure.description,
+          source: failure.source,
+          step: failure.step,
+          reason: failure.reason,
+          paymentId: failure.paymentId,
+          at: new Date().toISOString(),
+        });
+        if (input.onPaymentFailed) {
+          input.onPaymentFailed(failure);
+        } else {
+          input.onDismiss();
+        }
+      });
+    });
+  }
+
+  safetyTimer = setTimeout(() => {
+    guard.settle(() => {
+      clearSafetyTimer();
+      console.warn('[razorpay-order-checkout]', {
+        event: 'checkout_timeout',
+        orderId: input.orderId,
+        at: new Date().toISOString(),
+      });
+      input.onDismiss();
+    });
+  }, safetyTimeoutMs);
 
   checkout.open();
 }

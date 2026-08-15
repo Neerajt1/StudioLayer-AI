@@ -128,7 +128,9 @@ export function membershipAddOnCharge(input: {
 
 /**
  * Fixed Basic → Pro upgrade difference (GST-inclusive). Charged via one-time Order.
- * Plan change is scheduled at Razorpay cycle_end — never immediate proration.
+ * Razorpay subscription plan change stays schedule_change_at=cycle_end (never now).
+ * StudioLayer Pro entitlement + +120 credits may apply immediately when
+ * STUDIO_UPGRADE_IMMEDIATE_ENTITLEMENT is enabled.
  */
 export const MembershipUpgradeChargeAmounts = {
   india: {
@@ -142,6 +144,22 @@ export const MembershipUpgradeChargeAmounts = {
     display: '$30',
   },
 } as const;
+
+/** Studio Credits granted on Basic → Pro upgrade payment (not a full Pro period). */
+export const MembershipUpgradeCreditGrant = MembershipCreditAllowances.basic;
+
+/** Env flag — immediate StudioLayer Pro + +120 after upgrade payment (default OFF). */
+export const STUDIO_UPGRADE_IMMEDIATE_ENTITLEMENT_ENV =
+  'STUDIO_UPGRADE_IMMEDIATE_ENTITLEMENT';
+
+export function isStudioUpgradeImmediateEntitlementEnabled(
+  env: Record<string, string | undefined> = {},
+): boolean {
+  const raw = env[STUDIO_UPGRADE_IMMEDIATE_ENTITLEMENT_ENV];
+  if (raw == null || raw === '') return false;
+  const normalized = raw.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
 
 export function membershipUpgradeCharge(
   market: MembershipPricingMarket,

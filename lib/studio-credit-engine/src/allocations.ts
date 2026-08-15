@@ -14,6 +14,7 @@ export type StudioCreditAllocationStatusValue =
 /** Reason codes that create spendable allocation lots. */
 export const STUDIO_CREDIT_ALLOCATION_REASON_CODES = [
   StudioCreditReasonCode.MEMBERSHIP_ALLOCATION,
+  StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION,
   StudioCreditReasonCode.TOP_UP_ALLOCATION,
   StudioCreditReasonCode.STUDIO_PASS_ALLOCATION,
 ] as const;
@@ -62,6 +63,9 @@ export function expectedCreditsForAllocation(input: {
       throw new Error(
         `membership_allocation requires paid tier (pro|enterprise); got ${input.tier ?? 'undefined'}`,
       );
+    case StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION:
+      // Fixed Basic→Pro difference — always 120, independent of current tier.
+      return MembershipCreditAllowances.basic;
     case StudioCreditReasonCode.TOP_UP_ALLOCATION:
       return MembershipCreditAllowances.topUp;
     case StudioCreditReasonCode.STUDIO_PASS_ALLOCATION:
@@ -123,6 +127,18 @@ export function razorpayMembershipPeriodKey(input: {
   return `rzp:${input.subscriptionId}:${input.currentStartUnix}:${input.currentEndUnix}`;
 }
 
+/**
+ * Period key for Basic → Pro upgrade +120 lot (U1).
+ * Tied to the current subscription billing period — not a permanent top-up.
+ */
+export function razorpayMembershipUpgradePeriodKey(input: {
+  subscriptionId: string;
+  currentStartUnix: number;
+  currentEndUnix: number;
+}): string {
+  return `rzp_upgrade:${input.subscriptionId}:${input.currentStartUnix}:${input.currentEndUnix}`;
+}
+
 export interface CreditAllocationLotLike {
   id: number;
   reasonCode: string;
@@ -153,8 +169,11 @@ function allocationSpendPriority(reasonCode: string): number {
       return 0;
     case StudioCreditReasonCode.TOP_UP_ALLOCATION:
       return 1;
-    case StudioCreditReasonCode.MEMBERSHIP_ALLOCATION:
+    case StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION:
+      // Spend before base membership remainder within the same period.
       return 2;
+    case StudioCreditReasonCode.MEMBERSHIP_ALLOCATION:
+      return 3;
     default:
       return 9;
   }

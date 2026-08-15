@@ -63,6 +63,8 @@ export function transactionTypeLabel(
   switch (reasonCode) {
     case StudioCreditReasonCode.MEMBERSHIP_ALLOCATION:
       return "Membership Credits";
+    case StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION:
+      return "Membership Upgrade Credits";
     case StudioCreditReasonCode.TOP_UP_ALLOCATION:
       return "Purchased Credits";
     case StudioCreditReasonCode.STUDIO_PASS_ALLOCATION:
@@ -157,5 +159,8 @@ export function isPurchasedReasonCode(reasonCode: string): boolean {
 }
 
 export function isMembershipAllocationReasonCode(reasonCode: string): boolean {
-  return reasonCode === StudioCreditReasonCode.MEMBERSHIP_ALLOCATION;
+  return (
+    reasonCode === StudioCreditReasonCode.MEMBERSHIP_ALLOCATION ||
+    reasonCode === StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION
+  );
 }

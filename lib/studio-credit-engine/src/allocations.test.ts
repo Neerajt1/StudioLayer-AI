@@ -20,6 +20,7 @@ import {
   sumSpendableAllocationCredits,
   StudioCreditAllocationStatus,
   STUDIO_PASS_VALIDITY_DAYS,
+  razorpayMembershipUpgradePeriodKey,
   type CreditAllocationLotLike,
 } from './allocations';
 
@@ -74,6 +75,34 @@ describe('expectedCreditsForAllocation', () => {
         reasonCode: StudioCreditReasonCode.STUDIO_PASS_ALLOCATION,
       }),
       40,
+    );
+  });
+
+  it('Basic → Pro upgrade allocation is exactly 120', () => {
+    assert.equal(
+      expectedCreditsForAllocation({
+        reasonCode: StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION,
+        tier: 'enterprise',
+      }),
+      120,
+    );
+    assert.equal(
+      expectedCreditsForAllocation({
+        reasonCode: StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION,
+        tier: 'pro',
+      }),
+      120,
+    );
+  });
+
+  it('upgrade periodKey uses rzp_upgrade prefix', () => {
+    assert.equal(
+      razorpayMembershipUpgradePeriodKey({
+        subscriptionId: 'sub_x',
+        currentStartUnix: 1,
+        currentEndUnix: 2,
+      }),
+      'rzp_upgrade:sub_x:1:2',
     );
   });
 });
@@ -205,6 +234,31 @@ describe('consumption order', () => {
       { allocationId: 1, amount: 40, remainingAfter: 0 },
       { allocationId: 2, amount: 10, remainingAfter: 25 },
     ]);
+  });
+
+  it('spend upgrade lots before base membership lots', () => {
+    const now = new Date('2026-08-05T00:00:00.000Z');
+    const lots = [
+      lot({
+        id: 20,
+        reasonCode: StudioCreditReasonCode.MEMBERSHIP_ALLOCATION,
+        remainingAmount: 80,
+        expiresAt: new Date('2026-09-01T00:00:00.000Z'),
+        createdAt: new Date('2026-08-01T00:00:00.000Z'),
+      }),
+      lot({
+        id: 21,
+        reasonCode: StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION,
+        remainingAmount: 120,
+        expiresAt: new Date('2026-09-01T00:00:00.000Z'),
+        createdAt: new Date('2026-08-10T00:00:00.000Z'),
+      }),
+    ];
+    const ordered = lots.slice().sort(compareLotsForConsumption);
+    assert.deepEqual(
+      ordered.map((l) => l.id),
+      [21, 20],
+    );
   });
 
   it('prefer soonest-expiring Pass lots first', () => {

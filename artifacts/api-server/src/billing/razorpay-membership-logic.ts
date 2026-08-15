@@ -253,6 +253,25 @@ export function resolveBasicToProUpgrade(input: {
   }
 
   const row = open[0]!;
+
+  // Pending Razorpay lag and/or immediate StudioLayer Pro must win over
+  // "must still be Basic" so retries never open a second ₹3,000 checkout.
+  if (row.pendingUpgradePlan === "pro") {
+    return {
+      action: "already_scheduled",
+      pendingUpgradePlan: "pro",
+      pendingRazorpayPlanId: row.pendingRazorpayPlanId,
+    };
+  }
+
+  if (row.studioPlan === "pro") {
+    return {
+      action: "already_scheduled",
+      pendingUpgradePlan: "pro",
+      pendingRazorpayPlanId: row.pendingRazorpayPlanId,
+    };
+  }
+
   if (row.studioPlan !== "basic") {
     return {
       action: "reject",
@@ -266,14 +285,6 @@ export function resolveBasicToProUpgrade(input: {
       action: "reject",
       code: "not_active",
       message: "Upgrade is available once Studio Basic is active.",
-    };
-  }
-
-  if (row.pendingUpgradePlan === "pro") {
-    return {
-      action: "already_scheduled",
-      pendingUpgradePlan: "pro",
-      pendingRazorpayPlanId: row.pendingRazorpayPlanId,
     };
   }
 
@@ -320,6 +331,16 @@ export function resolveSubscriptionPlanSync(input: {
       razorpayPlanId: entityPlanId,
       clearPending: true,
     };
+  }
+
+  // Dual state: StudioLayer may already be Pro while Razorpay still reports
+  // the Basic plan_id. Never demote local entitlement until Razorpay catches up.
+  if (
+    input.pendingUpgradePlan === "pro" &&
+    input.pendingRazorpayPlanId &&
+    entityPlanId !== input.pendingRazorpayPlanId
+  ) {
+    return null;
   }
 
   const mapped = input.mappedStudioPlan;

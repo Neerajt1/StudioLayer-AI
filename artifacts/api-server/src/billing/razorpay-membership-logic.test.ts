@@ -639,7 +639,7 @@ describe("Basic → Pro next-cycle upgrade decisions", () => {
     }
   });
 
-  it("rejects when there is no open Basic membership", () => {
+  it("returns already_scheduled when StudioLayer is already Pro", () => {
     const result = resolveBasicToProUpgrade({
       openSubscriptions: [
         {
@@ -650,8 +650,21 @@ describe("Basic → Pro next-cycle upgrade decisions", () => {
         },
       ],
     });
-    assert.equal(result.action, "reject");
-    if (result.action === "reject") assert.equal(result.code, "no_basic");
+    assert.equal(result.action, "already_scheduled");
+  });
+
+  it("returns already_scheduled for dual-state Pro with pending Razorpay lag", () => {
+    const result = resolveBasicToProUpgrade({
+      openSubscriptions: [
+        {
+          studioPlan: "pro",
+          status: "active",
+          pendingUpgradePlan: "pro",
+          pendingRazorpayPlanId: "plan_pro",
+        },
+      ],
+    });
+    assert.equal(result.action, "already_scheduled");
   });
 
   it("rejects non-active Basic (no mid-cycle apply path)", () => {
@@ -740,6 +753,19 @@ describe("Basic → Pro next-cycle upgrade decisions", () => {
     const sync = resolveSubscriptionPlanSync({
       studioPlan: "basic",
       studioTier: "pro",
+      razorpayPlanId: "plan_basic",
+      pendingUpgradePlan: "pro",
+      pendingRazorpayPlanId: "plan_pro",
+      razorpayEntityPlanId: "plan_basic",
+      mappedStudioPlan: "basic",
+    });
+    assert.equal(sync, null);
+  });
+
+  it("does not demote immediate StudioLayer Pro while Razorpay lag remains", () => {
+    const sync = resolveSubscriptionPlanSync({
+      studioPlan: "pro",
+      studioTier: "enterprise",
       razorpayPlanId: "plan_basic",
       pendingUpgradePlan: "pro",
       pendingRazorpayPlanId: "plan_pro",
