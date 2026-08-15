@@ -37,7 +37,10 @@ export interface GalleryShoot {
   rootId: number;
   generationType: GenerationType;
   createdAt: Date;
-  /** Current completed image(s) — latest tip per original slot. */
+  /**
+   * Gallery slot images — latest completed tip per original root, or the failed
+   * root when that slot never produced output (P0-7).
+   */
   images: CreativeLedgerCardRender[];
   sourceImageUrl: string | null;
   modelPersona?: string;
@@ -71,6 +74,16 @@ function isCompletedWithOutput<T extends CreativeLedgerCardRender>(render: T): b
     render.status === 'completed' &&
     typeof render.outputImageUrl === 'string' &&
     render.outputImageUrl.length > 0
+  );
+}
+
+/** Genuine failed render with no usable output — safe for P0-7 Gallery messaging. */
+export function isFailedGalleryRenderWithoutOutput<
+  T extends { status?: string; outputImageUrl?: string | null },
+>(render: T): boolean {
+  if (render.status !== 'failed') return false;
+  return !(
+    typeof render.outputImageUrl === 'string' && render.outputImageUrl.length > 0
   );
 }
 
@@ -111,6 +124,23 @@ export function tipRenderForRoot<T extends CreativeLedgerCardRender>(
   }
 
   return findLatestCompletedTip(root);
+}
+
+/**
+ * Gallery slot display: prefer the completed tip; otherwise surface a failed root
+ * so partial/all-failed Shoots remain visible in the existing Gallery path.
+ */
+export function displayRenderForRoot<T extends CreativeLedgerCardRender>(
+  rootId: number,
+  allRenders: T[],
+): T | undefined {
+  const tip = tipRenderForRoot(rootId, allRenders);
+  if (tip) return tip;
+
+  const root = allRenders.find((render) => render.id === rootId);
+  if (!root) return undefined;
+  if (!isFailedGalleryRenderWithoutOutput(root)) return undefined;
+  return root;
 }
 
 /** Legacy: group root renders from the same generation batch into Shoot batches. */
@@ -224,9 +254,10 @@ function buildShootFromRoots(
   const batchRootIds = new Set(sortedRoots.map((r) => r.id));
   const shootRootId = sortedRoots[0]!.id;
   const images = sortedRoots
-    .map((root) => tipRenderForRoot(root.id, allRenders))
+    .map((root) => displayRenderForRoot(root.id, allRenders))
     .filter((r): r is CreativeLedgerCardRender => r != null);
 
+  // Keep all-failed Shoots visible; only drop when every slot is still unsettled.
   if (images.length === 0) return null;
 
   return {

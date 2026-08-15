@@ -6,9 +6,11 @@ import {
 } from '@/components/ui/tooltip';
 import {
   formatShootDate,
+  isFailedGalleryRenderWithoutOutput,
   SHOOT_TYPE_LABEL,
   type GalleryShoot,
 } from '@/lib/gallery-shoots';
+import { galleryFailedRenderCopy } from '@/lib/generation-failure-copy';
 
 const SL_TOKEN_ICON = '/icons/sl-token.svg';
 const STUDIO_SPARK_ICON = '/icons/studio-spark.svg';
@@ -41,7 +43,26 @@ function ShootCover({ shoot, priority }: { shoot: GalleryShoot; priority?: boole
     .filter((url): url is string => Boolean(url));
 
   if (urls.length === 0) {
-    return <div className="sl-shoot-card-cover-empty" aria-hidden />;
+    const failedSlot = shoot.images.find((img) => isFailedGalleryRenderWithoutOutput(img));
+    const failedCopy = failedSlot
+      ? galleryFailedRenderCopy(failedSlot.status)
+      : null;
+
+    return (
+      <div
+        className="sl-shoot-card-cover sl-shoot-card-cover--single sl-shoot-card-cover-failed"
+        data-testid={`shoot-card-failed-${shoot.rootId}`}
+      >
+        {failedCopy ? (
+          <div className="sl-shoot-card-failed-copy">
+            <p className="sl-shoot-card-failed-headline">{failedCopy.headline}</p>
+            {failedCopy.creditLine ? (
+              <p className="sl-shoot-card-failed-credit">{failedCopy.creditLine}</p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   if (urls.length === 1) {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import JSZip from 'jszip';
+import { useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -23,9 +24,14 @@ import { GalleryImageDownloadButton } from '@/components/shared/gallery-image-do
 import { FixedBatchViewport } from '@/components/shared/fixed-batch-viewport';
 import {
   formatShootDate,
+  isFailedGalleryRenderWithoutOutput,
   SHOOT_TYPE_LABEL,
   type GalleryShoot,
 } from '@/lib/gallery-shoots';
+import {
+  GALLERY_FAILED_CREATE_AGAIN_PATH,
+  galleryFailedRenderCopy,
+} from '@/lib/generation-failure-copy';
 import { GALLERY_EXIT_ANIMATION_MS } from '@/lib/gallery-shoot-stability';
 import { fetchEditorialImageBlob } from '@/lib/download-image';
 import { formatDownloadPreparingLabel } from '@/lib/download-preparing-label';
@@ -54,6 +60,7 @@ export function ShootDetailDialog({
   onDownloadError,
   getDisplayUrl,
 }: ShootDetailDialogProps) {
+  const [, setLocation] = useLocation();
   const {
     inFlight: downloadingAll,
     elapsedSec: downloadAllElapsedSec,
@@ -68,8 +75,13 @@ export function ShootDetailDialog({
     return shoot.images.filter((render) => !removedIds.has(render.id));
   }, [shoot, removedIds]);
   const deleteInFlight = deletingId != null;
+  const hasDownloadableImages = displayImages.some((render) => {
+    if (isFailedGalleryRenderWithoutOutput(render)) return false;
+    const imageUrl = getDisplayUrl?.(render) ?? render.outputImageUrl;
+    return typeof imageUrl === 'string' && imageUrl.length > 0;
+  });
   const downloadAllDisabled =
-    downloadingAll || displayImages.length === 0 || deleteInFlight;
+    downloadingAll || !hasDownloadableImages || deleteInFlight;
   const { pressed: downloadAllPressed, pressHandlers: downloadAllPressHandlers } =
     useStudioPressFeedback(downloadAllDisabled);
 
@@ -90,7 +102,16 @@ export function ShootDetailDialog({
 
     const isExiting = exitingIds.has(render.id);
     const isDeleting = deletingId === render.id;
-    const imageUrl = getDisplayUrl?.(render) ?? render.outputImageUrl;
+    const isFailedSlot = isFailedGalleryRenderWithoutOutput(render);
+    const failedCopy = isFailedSlot ? galleryFailedRenderCopy(render.status) : null;
+    const imageUrl = isFailedSlot
+      ? null
+      : (getDisplayUrl?.(render) ?? render.outputImageUrl);
+
+    const handleCreateAgain = () => {
+      onOpenChange(false);
+      setLocation(GALLERY_FAILED_CREATE_AGAIN_PATH);
+    };
 
     return (
       <div
@@ -100,46 +121,72 @@ export function ShootDetailDialog({
           isExiting && 'sl-shoot-detail-cell--exit',
         )}
       >
-        <button
-          type="button"
-          className="sl-shoot-detail-image-trigger"
-          onClick={() => onInspect(render)}
-          aria-label={`Inspect image ${index + 1}`}
-          disabled={deleteInFlight}
-        >
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={`Image ${index + 1}`}
-              className="sl-shoot-detail-image"
-              draggable={false}
-            />
-          ) : null}
-        </button>
-        <div className="sl-shoot-detail-actions" aria-label={`Image ${index + 1} actions`}>
+        {isFailedSlot && failedCopy ? (
+          <div
+            className="sl-shoot-detail-failed"
+            data-testid={`shoot-detail-failed-${render.id}`}
+          >
+            <p className="sl-shoot-detail-failed-headline">{failedCopy.headline}</p>
+            {failedCopy.creditLine ? (
+              <p className="sl-shoot-detail-failed-credit">{failedCopy.creditLine}</p>
+            ) : null}
+          </div>
+        ) : (
           <button
             type="button"
-            className="sl-ledger-card-action"
-            disabled={deleteInFlight}
+            className="sl-shoot-detail-image-trigger"
             onClick={() => onInspect(render)}
+            aria-label={`Inspect image ${index + 1}`}
+            disabled={deleteInFlight}
           >
-            View
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={`Image ${index + 1}`}
+                className="sl-shoot-detail-image"
+                draggable={false}
+              />
+            ) : null}
           </button>
-          <button
-            type="button"
-            className="sl-ledger-card-action sl-shoot-detail-refine"
-            disabled={deleteInFlight || !render.outputImageUrl}
-            onClick={() => onEdit(render)}
-          >
-            <Wand2 className="size-3 shrink-0 opacity-70" aria-hidden />
-            Edit
-          </button>
-          <GalleryImageDownloadButton
-            renderId={render.id}
-            outputImageUrl={imageUrl ?? render.outputImageUrl!}
-            disabled={!imageUrl || deleteInFlight}
-            onDownloadError={onDownloadError}
-          />
+        )}
+        <div className="sl-shoot-detail-actions" aria-label={`Image ${index + 1} actions`}>
+          {isFailedSlot && failedCopy ? (
+            <button
+              type="button"
+              className="sl-ledger-card-action"
+              disabled={deleteInFlight}
+              onClick={handleCreateAgain}
+              data-testid={`btn-create-again-render-${render.id}`}
+            >
+              {failedCopy.retryLabel}
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="sl-ledger-card-action"
+                disabled={deleteInFlight}
+                onClick={() => onInspect(render)}
+              >
+                View
+              </button>
+              <button
+                type="button"
+                className="sl-ledger-card-action sl-shoot-detail-refine"
+                disabled={deleteInFlight || !render.outputImageUrl}
+                onClick={() => onEdit(render)}
+              >
+                <Wand2 className="size-3 shrink-0 opacity-70" aria-hidden />
+                Edit
+              </button>
+              <GalleryImageDownloadButton
+                renderId={render.id}
+                outputImageUrl={imageUrl ?? render.outputImageUrl!}
+                disabled={!imageUrl || deleteInFlight}
+                onDownloadError={onDownloadError}
+              />
+            </>
+          )}
           <button
             type="button"
             className="sl-ledger-card-action sl-ledger-card-action--delete sl-shoot-detail-delete"

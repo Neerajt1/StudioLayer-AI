@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  GALLERY_FAILED_CREATE_AGAIN_PATH,
   galleryFailedRenderCopy,
   isUnchargedFailedRenderStatus,
   workspaceGenerationFailedSlotCopy,
@@ -44,10 +45,11 @@ describe('workspaceGenerationFailedSlotCopy', () => {
 });
 
 describe('galleryFailedRenderCopy', () => {
-  it('failed status: created + no credits charged', () => {
+  it('failed status: created + no credits charged + create again', () => {
     assert.deepEqual(galleryFailedRenderCopy('failed'), {
       headline: "This image couldn't be created.",
       creditLine: 'No Studio Credits were charged for this image.',
+      retryLabel: 'Create again',
     });
   });
 
@@ -55,5 +57,9 @@ describe('galleryFailedRenderCopy', () => {
     const copy = galleryFailedRenderCopy('processing');
     assert.equal(copy.creditLine, null);
     assert.equal(copy.headline, 'Unavailable');
+  });
+
+  it('recovery destination is the existing Workspace path', () => {
+    assert.equal(GALLERY_FAILED_CREATE_AGAIN_PATH, '/studio');
   });
 });

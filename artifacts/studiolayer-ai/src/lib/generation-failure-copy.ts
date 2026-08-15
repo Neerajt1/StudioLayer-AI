@@ -38,23 +38,29 @@ export function workspaceGenerationFailedSlotCopy(): {
   };
 }
 
+/** Existing Workspace create flow — do not invent a new generation path. */
+export const GALLERY_FAILED_CREATE_AGAIN_PATH = '/studio';
+
 /**
- * Gallery Creative Ledger card for a failed render with no output.
+ * Gallery failed render with no output (Creative Ledger card + Shoot detail).
  * Credit line only when status is confirmed uncharged (`failed`).
  */
 export function galleryFailedRenderCopy(status: string): {
   headline: string;
   creditLine: string | null;
+  retryLabel: string;
 } {
   if (!isUnchargedFailedRenderStatus(status)) {
     return {
       headline: 'Unavailable',
       creditLine: null,
+      retryLabel: 'Create again',
     };
   }
 
   return {
     headline: "This image couldn't be created.",
     creditLine: 'No Studio Credits were charged for this image.',
+    retryLabel: 'Create again',
   };
 }
