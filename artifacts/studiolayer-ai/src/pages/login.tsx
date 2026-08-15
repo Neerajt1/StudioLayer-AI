@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLogin } from '@workspace/api-client-react';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { AuthPageShell } from '@/components/layout/auth-page-shell';
@@ -15,12 +16,32 @@ import {
   AuthTextLink,
 } from '@/components/auth/auth-editorial';
 import { loginErrorToast } from '@/lib/auth-error-messages';
+import {
+  consumeSessionEndedNoticePending,
+  loginPathHasSessionEndedReason,
+  sessionEndedToastCopy,
+} from '@/lib/auth-session-expiry';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [, setLocation] = useLocation();
   const loginMutation = useLogin();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const shouldNotify = consumeSessionEndedNoticePending();
+    const search = typeof window !== 'undefined' ? window.location.search : '';
+    if (loginPathHasSessionEndedReason(search)) {
+      setLocation('/login', { replace: true });
+    }
+    if (!shouldNotify) return;
+
+    toast({
+      title: sessionEndedToastCopy.title,
+      description: sessionEndedToastCopy.description,
+    });
+  }, [setLocation, toast]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

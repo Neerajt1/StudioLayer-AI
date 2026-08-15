@@ -1,6 +1,10 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useGetMe } from '@workspace/api-client-react';
+import {
+  buildLoginPathAfterSessionEnded,
+  markSessionEndedNoticePending,
+} from '@/lib/auth-session-expiry';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -12,7 +16,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     if (!isLoading && (error || !user)) {
-      setLocation('/login');
+      // One-shot notice for Login; no return-to destination is wired in routing today.
+      markSessionEndedNoticePending();
+      setLocation(buildLoginPathAfterSessionEnded());
     }
   }, [isLoading, error, user, setLocation]);
 
