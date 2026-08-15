@@ -15,6 +15,7 @@ import {
   AuthPageFrame,
   AuthSecondaryNav,
 } from '@/components/auth/auth-editorial';
+import { registerErrorToast } from '@/lib/auth-error-messages';
 
 export default function RegisterPage() {
   const [, setLocation] = useLocation();
@@ -68,10 +69,11 @@ export default function RegisterPage() {
         onSuccess: () => {
           setLocation('/studio');
         },
-        onError: () => {
+        onError: (error) => {
+          const copy = registerErrorToast(error);
           toast({
-            title: "We couldn't complete your request.",
-            description: 'Please try again in a few moments.',
+            title: copy.title,
+            description: copy.description,
           });
         },
       },

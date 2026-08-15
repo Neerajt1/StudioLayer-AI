@@ -14,6 +14,7 @@ import {
   AuthSecondaryNav,
   AuthTextLink,
 } from '@/components/auth/auth-editorial';
+import { loginErrorToast } from '@/lib/auth-error-messages';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -32,10 +33,11 @@ export default function LoginPage() {
           const appBase = import.meta.env.BASE_URL.replace(/\/$/, '');
           window.location.assign(`${appBase}/studio`);
         },
-        onError: () => {
+        onError: (error) => {
+          const copy = loginErrorToast(error);
           toast({
-            title: "We couldn't complete your request.",
-            description: 'Please try again in a few moments.',
+            title: copy.title,
+            description: copy.description,
           });
         },
       },
