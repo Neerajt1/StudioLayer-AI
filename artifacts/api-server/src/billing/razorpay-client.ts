@@ -42,10 +42,29 @@ export interface RazorpaySubscriptionEntity {
 
 export interface RazorpayPaymentEntity {
   id?: string;
+  order_id?: string | null;
   invoice_id?: string | null;
   status?: string;
   amount?: number;
   currency?: string;
+  notes?: Record<string, string> | null;
+}
+
+export interface RazorpayOrderEntity {
+  id: string;
+  entity: string;
+  amount: number;
+  currency: string;
+  status?: string;
+  receipt?: string | null;
+  notes?: Record<string, string> | null;
+}
+
+export interface CreateRazorpayOrderInput {
+  amount: number;
+  currency: string;
+  receipt?: string;
+  notes?: Record<string, string>;
 }
 
 export interface CreateRazorpaySubscriptionInput {
@@ -235,6 +254,54 @@ export async function createRazorpaySubscription(
   }
 
   return payload as unknown as RazorpaySubscriptionEntity;
+}
+
+
+/**
+ * Create a one-time Razorpay order (Pass / Top-Up — never subscriptions).
+ * Official API: POST /v1/orders
+ */
+export async function createRazorpayOrder(
+  input: CreateRazorpayOrderInput,
+): Promise<RazorpayOrderEntity> {
+  const body = {
+    amount: input.amount,
+    currency: input.currency,
+    receipt: input.receipt,
+    notes: input.notes ?? {},
+  };
+
+  const payload = await razorpayFetch("/orders", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+  if (typeof payload.id !== "string" || !payload.id) {
+    throw new RazorpayApiError(
+      "Razorpay create order returned no order id",
+      502,
+      JSON.stringify(payload),
+    );
+  }
+  if (typeof payload.amount !== "number" || typeof payload.currency !== "string") {
+    throw new RazorpayApiError(
+      "Razorpay create order returned incomplete amount/currency",
+      502,
+      JSON.stringify(payload),
+    );
+  }
+
+  return payload as unknown as RazorpayOrderEntity;
+}
+
+export async function fetchRazorpayOrder(
+  orderId: string,
+): Promise<RazorpayOrderEntity> {
+  const payload = await razorpayFetch(
+    `/orders/${encodeURIComponent(orderId)}`,
+    { method: "GET" },
+  );
+  return payload as unknown as RazorpayOrderEntity;
 }
 
 export async function fetchRazorpaySubscription(

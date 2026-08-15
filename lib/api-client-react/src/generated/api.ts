@@ -21,6 +21,7 @@ import type {
 
 import type {
   CreateMembershipSubscriptionInput,
+  CreateStudioAddOnCheckoutInput,
   ErrorResponse,
   HealthStatus,
   Identity,
@@ -30,6 +31,7 @@ import type {
   Render,
   RenderInput,
   RenderUsage,
+  StudioAddOnCheckout,
   SupportTicket,
   SupportTicketInput,
   User
@@ -1164,5 +1166,77 @@ export const useCreateMembershipSubscription = <TError = ErrorType<ErrorResponse
         TContext
       > => {
       return useMutation(getCreateMembershipSubscriptionMutationOptions(options));
+    }
+
+export const getCreateStudioAddOnCheckoutUrl = () => {
+
+
+
+
+  return `/api/payments/add-ons/checkout`
+}
+
+/**
+ * Authenticated endpoint that creates a Razorpay Order (not a subscription) for Studio Pass or Studio Top-Up. Server resolves market → amount/currency. Credits are granted only via verified payment.captured webhooks.
+ * @summary Create a one-time Razorpay order for Studio Pass or Top-Up
+ */
+export const createStudioAddOnCheckout = async (createStudioAddOnCheckoutInput: CreateStudioAddOnCheckoutInput, options?: Parameters<typeof customFetch>[1]): Promise<StudioAddOnCheckout> => {
+
+  return customFetch<StudioAddOnCheckout>(getCreateStudioAddOnCheckoutUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createStudioAddOnCheckoutInput)
+  }
+);}
+
+
+
+
+
+export const getCreateStudioAddOnCheckoutMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStudioAddOnCheckout>>, TError,{data: BodyType<CreateStudioAddOnCheckoutInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createStudioAddOnCheckout>>, TError,{data: BodyType<CreateStudioAddOnCheckoutInput>}, TContext> => {
+
+const mutationKey = ['createStudioAddOnCheckout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createStudioAddOnCheckout>>, {data: BodyType<CreateStudioAddOnCheckoutInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createStudioAddOnCheckout(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateStudioAddOnCheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof createStudioAddOnCheckout>>>
+    export type CreateStudioAddOnCheckoutMutationBody = BodyType<CreateStudioAddOnCheckoutInput>
+    export type CreateStudioAddOnCheckoutMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a one-time Razorpay order for Studio Pass or Top-Up
+ */
+export const useCreateStudioAddOnCheckout = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createStudioAddOnCheckout>>, TError,{data: BodyType<CreateStudioAddOnCheckoutInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createStudioAddOnCheckout>>,
+        TError,
+        {data: BodyType<CreateStudioAddOnCheckoutInput>},
+        TContext
+      > => {
+      return useMutation(getCreateStudioAddOnCheckoutMutationOptions(options));
     }
 

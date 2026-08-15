@@ -33,6 +33,7 @@ import {
 } from "./razorpay-membership-logic.js";
 import { logger } from "../lib/logger.js";
 import type { PricingMarket } from "./pricing-market.js";
+import { grantStudioAddOnFromCapturedPayment } from "./razorpay-add-ons.js";
 
 export type CreateMembershipSubscriptionResult = {
   subscriptionId: string;
@@ -304,7 +305,9 @@ type RazorpayWebhookPayload = {
 
 /**
  * Process a verified Razorpay webhook payload.
- * Credits are granted only on subscription.charged with a captured payment.
+ * Credits are granted on:
+ * - subscription.charged (membership) with a captured payment
+ * - payment.captured (Pass / Top-Up one-time orders)
  *
  * Retry model (UNIQUE event_id preserved):
  * - processed → idempotent duplicate (no re-grant)
@@ -391,6 +394,14 @@ async function handleRazorpayEvent(
   eventType: string,
   payload: RazorpayWebhookPayload,
 ): Promise<{ handled: boolean; grantedCredits: number }> {
+  if (eventType === "payment.captured") {
+    const payment = payload.payload?.payment?.entity;
+    if (!payment) {
+      return { handled: false, grantedCredits: 0 };
+    }
+    return grantStudioAddOnFromCapturedPayment({ payment });
+  }
+
   const subscription = payload.payload?.subscription?.entity;
   if (!subscription?.id) {
     return { handled: false, grantedCredits: 0 };

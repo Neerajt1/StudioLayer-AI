@@ -1762,6 +1762,7 @@
     width: 100%;
   }
 
+  .sl-membership-pass-compact-cta:disabled,
   .sl-membership-topup-compact-cta:disabled {
     opacity: 0.78;
     cursor: not-allowed;

@@ -497,3 +497,55 @@ export interface MembershipSubscriptionCheckout {
   shortUrl: string | null;
 }
 
+/**
+ * StudioLayer add-on product (never a raw Razorpay plan_id)
+ */
+export type CreateStudioAddOnCheckoutInputProduct = typeof CreateStudioAddOnCheckoutInputProduct[keyof typeof CreateStudioAddOnCheckoutInputProduct];
+
+
+export const CreateStudioAddOnCheckoutInputProduct = {
+  studioPass: 'studioPass',
+  topUp: 'topUp',
+} as const;
+
+export interface CreateStudioAddOnCheckoutInput {
+  /** StudioLayer add-on product (never a raw Razorpay plan_id) */
+  product: CreateStudioAddOnCheckoutInputProduct;
+}
+
+export type StudioAddOnCheckoutCurrency = typeof StudioAddOnCheckoutCurrency[keyof typeof StudioAddOnCheckoutCurrency];
+
+
+export const StudioAddOnCheckoutCurrency = {
+  INR: 'INR',
+  USD: 'USD',
+} as const;
+
+export type StudioAddOnCheckoutProduct = typeof StudioAddOnCheckoutProduct[keyof typeof StudioAddOnCheckoutProduct];
+
+
+export const StudioAddOnCheckoutProduct = {
+  studioPass: 'studioPass',
+  topUp: 'topUp',
+} as const;
+
+export type StudioAddOnCheckoutMarket = typeof StudioAddOnCheckoutMarket[keyof typeof StudioAddOnCheckoutMarket];
+
+
+export const StudioAddOnCheckoutMarket = {
+  india: 'india',
+  international: 'international',
+} as const;
+
+export interface StudioAddOnCheckout {
+  /** Razorpay order id for Checkout */
+  orderId: string;
+  /** Public Razorpay Key ID (never the secret) */
+  keyId: string;
+  /** Charge amount in smallest currency unit (paise or cents) */
+  amount: number;
+  currency: StudioAddOnCheckoutCurrency;
+  product: StudioAddOnCheckoutProduct;
+  market: StudioAddOnCheckoutMarket;
+}
+

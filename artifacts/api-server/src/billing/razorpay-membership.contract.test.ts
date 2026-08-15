@@ -89,4 +89,20 @@ describe("payments route auth + webhook session contract", () => {
     const tierIdx = membershipSource.indexOf("subscriptionTier: decision.studioTier");
     assert.ok(grantIdx > 0 && tierIdx > grantIdx);
   });
+
+  it("Pass / Top-Up use one-time Orders + payment.captured grants", () => {
+    const addOnsSource = readFileSync(
+      path.join(here, "razorpay-add-ons.ts"),
+      "utf8",
+    );
+    assert.match(paymentsSource, /\/payments\/add-ons\/checkout/);
+    assert.match(paymentsSource, /createStudioAddOnCheckout/);
+    assert.match(addOnsSource, /createRazorpayOrder/);
+    assert.match(addOnsSource, /STUDIO_PASS_ALLOCATION/);
+    assert.match(addOnsSource, /TOP_UP_ALLOCATION/);
+    assert.match(addOnsSource, /rzp_payment:/);
+    assert.match(membershipSource, /payment\.captured/);
+    assert.match(membershipSource, /grantStudioAddOnFromCapturedPayment/);
+    assert.equal(addOnsSource.includes("createRazorpaySubscription"), false);
+  });
 });

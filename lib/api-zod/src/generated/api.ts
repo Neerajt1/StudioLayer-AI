@@ -334,3 +334,21 @@ export const CreateMembershipSubscriptionResponse = zod.object({
 })
 
 
+/**
+ * Authenticated endpoint that creates a Razorpay Order (not a subscription) for Studio Pass or Studio Top-Up. Server resolves market → amount/currency. Credits are granted only via verified payment.captured webhooks.
+ * @summary Create a one-time Razorpay order for Studio Pass or Top-Up
+ */
+export const CreateStudioAddOnCheckoutBody = zod.object({
+  "product": zod.enum(['studioPass', 'topUp']).describe('StudioLayer add-on product (never a raw Razorpay plan_id)')
+})
+
+export const CreateStudioAddOnCheckoutResponse = zod.object({
+  "orderId": zod.string().describe('Razorpay order id for Checkout'),
+  "keyId": zod.string().describe('Public Razorpay Key ID (never the secret)'),
+  "amount": zod.number().describe('Charge amount in smallest currency unit (paise or cents)'),
+  "currency": zod.enum(['INR', 'USD']),
+  "product": zod.enum(['studioPass', 'topUp']),
+  "market": zod.enum(['india', 'international'])
+})
+
+

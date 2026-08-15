@@ -60,7 +60,11 @@ export {
   MembershipDisplayPricing,
   MembershipMarketPricing,
   membershipPlanDisplayPrice,
+  membershipAddOnDisplayPrice,
+  MembershipAddOnChargeAmounts,
+  membershipAddOnCharge,
   type MembershipPricingMarket,
+  type StudioAddOnProductId,
 } from './membership';
 
 export {

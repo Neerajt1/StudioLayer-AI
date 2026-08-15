@@ -387,6 +387,47 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /payments/add-ons/checkout:
+    post:
+      operationId: createStudioAddOnCheckout
+      tags: [payments]
+      summary: Create a one-time Razorpay order for Studio Pass or Top-Up
+      description: >
+        Authenticated endpoint that creates a Razorpay Order (not a subscription)
+        for Studio Pass or Studio Top-Up. Server resolves market → amount/currency.
+        Credits are granted only via verified payment.captured webhooks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateStudioAddOnCheckoutInput"
+      responses:
+        "201":
+          description: Razorpay order created for Checkout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioAddOnCheckout"
+        "400":
+          description: Invalid product or purchase not allowed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Razorpay upstream failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -846,3 +887,42 @@ components:
         - studioTier
         - status
         - shortUrl
+
+    CreateStudioAddOnCheckoutInput:
+      type: object
+      properties:
+        product:
+          type: string
+          enum: [studioPass, topUp]
+          description: StudioLayer add-on product (never a raw Razorpay plan_id)
+      required:
+        - product
+
+    StudioAddOnCheckout:
+      type: object
+      properties:
+        orderId:
+          type: string
+          description: Razorpay order id for Checkout
+        keyId:
+          type: string
+          description: Public Razorpay Key ID (never the secret)
+        amount:
+          type: number
+          description: Charge amount in smallest currency unit (paise or cents)
+        currency:
+          type: string
+          enum: [INR, USD]
+        product:
+          type: string
+          enum: [studioPass, topUp]
+        market:
+          type: string
+          enum: [india, international]
+      required:
+        - orderId
+        - keyId
+        - amount
+        - currency
+        - product
+        - market

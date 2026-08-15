@@ -19,16 +19,15 @@ import {
 } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { openRazorpaySubscriptionCheckout } from '@/lib/razorpay-checkout';
+import { openRazorpayOrderCheckout, openRazorpaySubscriptionCheckout } from '@/lib/razorpay-checkout';
 import {
   MembershipCreditAllowances,
-  MembershipDisplayPricing,
-  compactFinishedImagesLabel,
-  creativeStepCreditCopy,
   finishedImagesOutcomeLabel,
   formatStudioCredits,
+  membershipAddOnDisplayPrice,
   membershipPlanDisplayPrice,
   type MembershipPricingMarket,
+  type StudioAddOnProductId,
 } from '@workspace/studio-credit-engine';
 import {
   membershipAllowanceLabel,
@@ -37,6 +36,7 @@ import {
 } from '@/lib/membership';
 import { fetchPricingMarket, CLIENT_TIMEZONE_HEADER } from '@/lib/fetch-pricing-market';
 import { browserTimeZone } from '@/lib/pricing-market';
+import { createStudioAddOnCheckoutOrder } from '@/lib/studio-add-on-checkout';
 
 const INTRO_SUPPORTING =
   'Choose the Studio membership that best supports your creative workflow.';
@@ -233,29 +233,71 @@ function CurrentMembershipSummary({
   );
 }
 
-function StudioPassCompact() {
+function StudioPassCompact({
+  market,
+  eligible,
+  checkoutBusy,
+  choosing,
+  onChoose,
+}: {
+  market: MembershipPricingMarket;
+  eligible: boolean;
+  checkoutBusy: boolean;
+  choosing: boolean;
+  onChoose: () => void;
+}) {
   return (
     <div className="sl-membership-pass-compact">
       <div className="sl-membership-pass-compact-copy">
         <h3 className="sl-membership-pass-compact-title">Studio Pass</h3>
-        <p className="sl-membership-pass-compact-subtitle">One-time creative access</p>
         <p className="sl-membership-pass-compact-line">
-          {MembershipDisplayPricing.studioPass}
-          {' • '}
-          {formatStudioCredits(MembershipCreditAllowances.studioPass)}
+          {formatStudioCredits(MembershipCreditAllowances.studioPass)},{' '}
+          <span className="sl-membership-pass-compact-subtitle">
+            One-time creative access
+          </span>
+        </p>
+        <p className="sl-membership-topup-compact-price">
+          {membershipAddOnDisplayPrice('studioPass', market)}
         </p>
         <p className="sl-membership-pass-compact-line">
-          {compactFinishedImagesLabel(MembershipCreditAllowances.studioPass)}
+          Create up to {MembershipCreditAllowances.studioPass} images at 2K
+          <sup>*</sup>
         </p>
         <p className="sl-membership-pass-compact-meta">
           Valid 7 Days • No Subscription
         </p>
       </div>
+      <Button
+        className="sl-membership-pass-compact-cta"
+        variant="outline"
+        disabled={!eligible || checkoutBusy}
+        onClick={onChoose}
+        data-testid="button-choose-studio-pass"
+      >
+        {choosing ? 'Opening checkout…' : 'Choose Studio Pass'}
+      </Button>
+      {!eligible ? (
+        <p className="mt-2 text-center text-[0.6875rem] font-medium tracking-[0.04em] text-muted-foreground">
+          Available to Complimentary Studio accounts
+        </p>
+      ) : null}
     </div>
   );
 }
 
-function StudioTopUpCompact() {
+function StudioTopUpCompact({
+  market,
+  eligible,
+  checkoutBusy,
+  choosing,
+  onChoose,
+}: {
+  market: MembershipPricingMarket;
+  eligible: boolean;
+  checkoutBusy: boolean;
+  choosing: boolean;
+  onChoose: () => void;
+}) {
   return (
     <div className="sl-membership-topup-compact">
       <div className="sl-membership-topup-compact-copy">
@@ -264,10 +306,28 @@ function StudioTopUpCompact() {
           {formatStudioCredits(MembershipCreditAllowances.topUp)}
         </p>
         <p className="sl-membership-topup-compact-price">
-          {MembershipDisplayPricing.topUp}
+          {membershipAddOnDisplayPrice('topUp', market)}
+        </p>
+        <p className="sl-membership-topup-compact-line">
+          Create up to {MembershipCreditAllowances.topUp} images at 2K
+          <sup>*</sup>
         </p>
         <p className="sl-membership-topup-compact-meta">For active Studio Members</p>
       </div>
+      <Button
+        className="sl-membership-topup-compact-cta"
+        variant="outline"
+        disabled={!eligible || checkoutBusy}
+        onClick={onChoose}
+        data-testid="button-top-up-credits"
+      >
+        {choosing ? 'Opening checkout…' : 'Top Up Credits'}
+      </Button>
+      {!eligible ? (
+        <p className="mt-2 text-center text-[0.6875rem] font-medium tracking-[0.04em] text-muted-foreground">
+          Available with an active Studio Basic or Studio Pro membership
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -290,6 +350,9 @@ export default function BillingPage() {
 
   const [pendingPlan, setPendingPlan] =
     useState<CreateMembershipSubscriptionInputPlan | null>(null);
+  const [pendingAddOn, setPendingAddOn] = useState<StudioAddOnProductId | null>(
+    null,
+  );
   const checkoutInFlightRef = useRef(false);
 
   useEffect(() => {
@@ -304,11 +367,18 @@ export default function BillingPage() {
 
   const tier = user?.subscriptionTier ?? 'free';
   const usageData = { used: usage?.used ?? 0, limit: usage?.limit ?? null };
-  const purchaseBusy = pendingPlan != null || createSubscription.isPending;
+  const purchaseBusy =
+    pendingPlan != null ||
+    pendingAddOn != null ||
+    createSubscription.isPending;
+  const isPaidMember = tier === 'pro' || tier === 'enterprise';
+  const passEligible = !isPaidMember;
+  const topUpEligible = isPaidMember;
 
   const releaseCheckoutLock = () => {
     checkoutInFlightRef.current = false;
     setPendingPlan(null);
+    setPendingAddOn(null);
   };
 
   const handleChoosePlan = async (
@@ -357,6 +427,55 @@ export default function BillingPage() {
     }
   };
 
+  const handleChooseAddOn = async (product: StudioAddOnProductId) => {
+    if (checkoutInFlightRef.current) return;
+    if (product === 'studioPass' && !passEligible) return;
+    if (product === 'topUp' && !topUpEligible) return;
+
+    checkoutInFlightRef.current = true;
+    setPendingAddOn(product);
+
+    try {
+      const checkout = await createStudioAddOnCheckoutOrder(product);
+      if (!checkout.keyId || !checkout.orderId) {
+        throw new Error('Checkout details were incomplete. Please try again.');
+      }
+
+      await openRazorpayOrderCheckout({
+        keyId: checkout.keyId,
+        orderId: checkout.orderId,
+        amount: checkout.amount,
+        currency: checkout.currency,
+        description:
+          product === 'studioPass' ? 'Studio Pass' : 'Studio Top-Up',
+        onSuccess: () => {
+          releaseCheckoutLock();
+          toast({
+            title: 'Payment received',
+            description:
+              'Your Studio Credits will appear once payment is confirmed.',
+          });
+          void queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+          void queryClient.invalidateQueries({
+            queryKey: getGetRenderUsageQueryKey(),
+          });
+        },
+        onDismiss: () => {
+          releaseCheckoutLock();
+        },
+      });
+    } catch (error) {
+      releaseCheckoutLock();
+      toast({
+        title: "We couldn't start checkout.",
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Unable to start checkout.',
+      });
+    }
+  };
+
   return (
     <AppShell footer>
       <EditorialPageHeader
@@ -395,14 +514,29 @@ export default function BillingPage() {
         <section className="sl-membership-credits-note">
           <h3 className="sl-membership-credits-note-heading">Understanding Studio Credits</h3>
           <p className="sl-membership-credits-note-body">
-            {creativeStepCreditCopy()} Most creators refine each image up to three times.
-            Fewer refinements allow you to create even more finished images.
+            <sup>*</sup>2K generation uses 1 Studio Credit. 4K uses 2 credits. Remove Background uses 1 Studio Credit.
           </p>
         </section>
 
         <section className="sl-membership-secondary-offers">
-          <StudioPassCompact />
-          <StudioTopUpCompact />
+          <StudioPassCompact
+            market={pricingMarket}
+            eligible={passEligible}
+            checkoutBusy={purchaseBusy}
+            choosing={pendingAddOn === 'studioPass'}
+            onChoose={() => {
+              void handleChooseAddOn('studioPass');
+            }}
+          />
+          <StudioTopUpCompact
+            market={pricingMarket}
+            eligible={topUpEligible}
+            checkoutBusy={purchaseBusy}
+            choosing={pendingAddOn === 'topUp'}
+            onChoose={() => {
+              void handleChooseAddOn('topUp');
+            }}
+          />
         </section>
 
         <section className="sl-membership-faq-section max-w-3xl mx-auto">

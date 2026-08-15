@@ -69,11 +69,15 @@ export const MembershipMarketPricing = {
     currency: 'INR',
     basicMonthly: '₹3,999',
     proMonthly: '₹6,999',
+    studioPass: '₹2,499',
+    topUp: '₹1,899',
   },
   international: {
     currency: 'USD',
     basicMonthly: '$49',
     proMonthly: '$79',
+    studioPass: '$35',
+    topUp: '$20',
   },
 } as const;
 
@@ -85,10 +89,47 @@ export function membershipPlanDisplayPrice(
   return plan === 'basic' ? prices.basicMonthly : prices.proMonthly;
 }
 
-/** International display defaults. Studio Pass / Top-Up are not market-priced yet. */
+export function membershipAddOnDisplayPrice(
+  product: 'studioPass' | 'topUp',
+  market: MembershipPricingMarket,
+): string {
+  return MembershipMarketPricing[market][product];
+}
+
+/**
+ * Frozen Pass / Top-Up charge amounts in the smallest currency unit
+ * (INR paise / USD cents). Display prices are GST-inclusive — do not add tax.
+ */
+export const MembershipAddOnChargeAmounts = {
+  india: {
+    currency: 'INR' as const,
+    studioPass: 249_900,
+    topUp: 189_900,
+  },
+  international: {
+    currency: 'USD' as const,
+    studioPass: 3_500,
+    topUp: 2_000,
+  },
+} as const;
+
+export type StudioAddOnProductId = 'studioPass' | 'topUp';
+
+export function membershipAddOnCharge(input: {
+  product: StudioAddOnProductId;
+  market: MembershipPricingMarket;
+}): { amount: number; currency: 'INR' | 'USD' } {
+  const table = MembershipAddOnChargeAmounts[input.market];
+  return {
+    amount: table[input.product],
+    currency: table.currency,
+  };
+}
+
+/** International display defaults for surfaces that are not market-aware yet. */
 export const MembershipDisplayPricing = {
   basicMonthly: MembershipMarketPricing.international.basicMonthly,
   proMonthly: MembershipMarketPricing.international.proMonthly,
-  studioPass: '$35',
-  topUp: '$20',
+  studioPass: MembershipMarketPricing.international.studioPass,
+  topUp: MembershipMarketPricing.international.topUp,
 } as const;

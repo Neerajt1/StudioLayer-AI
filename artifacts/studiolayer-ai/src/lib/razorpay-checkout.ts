@@ -104,3 +104,40 @@ export async function openRazorpaySubscriptionCheckout(input: {
 
   checkout.open();
 }
+
+/**
+ * One-time Order Checkout for Studio Pass / Top-Up (not subscriptions).
+ */
+export async function openRazorpayOrderCheckout(input: {
+  keyId: string;
+  orderId: string;
+  amount: number;
+  currency: 'INR' | 'USD';
+  description: string;
+  onSuccess: (response: RazorpayCheckoutSuccessResponse) => void;
+  onDismiss: () => void;
+}): Promise<void> {
+  const Razorpay = await loadRazorpayCheckout();
+
+  const checkout = new Razorpay({
+    key: input.keyId,
+    order_id: input.orderId,
+    amount: input.amount,
+    currency: input.currency,
+    name: 'StudioLayer AI',
+    description: input.description,
+    handler: (response: RazorpayCheckoutSuccessResponse) => {
+      input.onSuccess(response);
+    },
+    modal: {
+      ondismiss: () => {
+        input.onDismiss();
+      },
+    },
+    theme: {
+      color: '#5F785C',
+    },
+  });
+
+  checkout.open();
+}

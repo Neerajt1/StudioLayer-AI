@@ -1,5 +1,8 @@
 import { Router, type IRouter, type Request } from "express";
-import { CreateMembershipSubscriptionBody } from "@workspace/api-zod";
+import {
+  CreateMembershipSubscriptionBody,
+  CreateStudioAddOnCheckoutBody,
+} from "@workspace/api-zod";
 import {
   createMembershipSubscription,
   processRazorpayWebhookPayload,
@@ -7,6 +10,11 @@ import {
   SubscriptionPersistenceError,
   SubscriptionValidationError,
 } from "../billing/razorpay-membership.js";
+import {
+  AddOnPersistenceError,
+  AddOnValidationError,
+  createStudioAddOnCheckout,
+} from "../billing/razorpay-add-ons.js";
 import { verifyRazorpayWebhookSignature } from "../billing/razorpay-client.js";
 import { pricingMarketFromRequest } from "../billing/pricing-market.js";
 import { logger } from "../lib/logger.js";
@@ -76,6 +84,47 @@ router.post("/payments/subscriptions", async (req, res): Promise<void> => {
     }
     logger.error({ err: error }, "Failed to create Razorpay subscription");
     res.status(502).json({ error: "Unable to create subscription" });
+  }
+});
+
+/**
+ * POST /api/payments/add-ons/checkout
+ * Authenticated — create a one-time Razorpay order for Studio Pass or Top-Up.
+ */
+router.post("/payments/add-ons/checkout", async (req, res): Promise<void> => {
+  const userId = req.session?.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  const parsed = CreateStudioAddOnCheckoutBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'product must be "studioPass" or "topUp"' });
+    return;
+  }
+
+  try {
+    const result = await createStudioAddOnCheckout({
+      userId,
+      product: parsed.data.product,
+      pricingMarket: pricingMarketFromRequest(
+        req.headers,
+        clientTimeZoneFromRequest(req),
+      ),
+    });
+    res.status(201).json(result);
+  } catch (error) {
+    if (error instanceof AddOnValidationError) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    if (error instanceof AddOnPersistenceError) {
+      res.status(502).json({ error: error.message });
+      return;
+    }
+    logger.error({ err: error }, "Failed to create add-on Razorpay order");
+    res.status(502).json({ error: "Unable to create checkout order" });
   }
 });
 
