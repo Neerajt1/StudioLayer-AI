@@ -61,9 +61,34 @@ export function compactFinishedImagesLabel(allowanceCredits: number): string {
   return `≈${count} Finished Images`;
 }
 
+export type MembershipPricingMarket = 'india' | 'international';
+
+/** Frozen membership prices — display only. Not FX conversion. */
+export const MembershipMarketPricing = {
+  india: {
+    currency: 'INR',
+    basicMonthly: '₹3,999',
+    proMonthly: '₹6,999',
+  },
+  international: {
+    currency: 'USD',
+    basicMonthly: '$49',
+    proMonthly: '$79',
+  },
+} as const;
+
+export function membershipPlanDisplayPrice(
+  plan: 'basic' | 'pro',
+  market: MembershipPricingMarket,
+): string {
+  const prices = MembershipMarketPricing[market];
+  return plan === 'basic' ? prices.basicMonthly : prices.proMonthly;
+}
+
+/** International display defaults. Studio Pass / Top-Up are not market-priced yet. */
 export const MembershipDisplayPricing = {
-  basicMonthly: '$49',
-  proMonthly: '$79',
+  basicMonthly: MembershipMarketPricing.international.basicMonthly,
+  proMonthly: MembershipMarketPricing.international.proMonthly,
   studioPass: '$35',
   topUp: '$20',
 } as const;

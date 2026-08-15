@@ -32,6 +32,7 @@ import {
   unixToDate,
 } from "./razorpay-membership-logic.js";
 import { logger } from "../lib/logger.js";
+import type { PricingMarket } from "./pricing-market.js";
 
 export type CreateMembershipSubscriptionResult = {
   subscriptionId: string;
@@ -116,6 +117,7 @@ export async function withRazorpayPaymentGrantLock<T>(
 export async function createMembershipSubscription(input: {
   userId: number;
   plan: unknown;
+  pricingMarket?: PricingMarket;
 }): Promise<CreateMembershipSubscriptionResult> {
   if (!isStudioMembershipPlanId(input.plan)) {
     throw new SubscriptionValidationError(
@@ -124,7 +126,7 @@ export async function createMembershipSubscription(input: {
   }
 
   const plan = input.plan;
-  const razorpayPlanId = resolveRazorpayPlanId(plan);
+  const razorpayPlanId = resolveRazorpayPlanId(plan, input.pricingMarket);
   const studioTier = studioTierForPlan(plan);
 
   return withMembershipSubscriptionUserLock(input.userId, async () => {

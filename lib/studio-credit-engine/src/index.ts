@@ -58,6 +58,9 @@ export {
   finishedImagesOutcomeLabel,
   compactFinishedImagesLabel,
   MembershipDisplayPricing,
+  MembershipMarketPricing,
+  membershipPlanDisplayPrice,
+  type MembershipPricingMarket,
 } from './membership';
 
 export {

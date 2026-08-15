@@ -65,6 +65,24 @@ describe("Razorpay plan mapping", () => {
     assert.equal(MembershipCreditAllowances.pro, 240);
   });
 
+  it("uses optional INR plan IDs for India when configured", () => {
+    process.env.RAZORPAY_BASIC_PLAN_ID_INR = "plan_in_basic";
+    process.env.RAZORPAY_PRO_PLAN_ID_INR = "plan_in_pro";
+    assert.equal(resolveRazorpayPlanId("basic", "india"), "plan_in_basic");
+    assert.equal(resolveRazorpayPlanId("pro", "india"), "plan_in_pro");
+  });
+
+  it("keeps existing plan IDs when market-specific IDs are unset", () => {
+    delete process.env.RAZORPAY_BASIC_PLAN_ID_INR;
+    delete process.env.RAZORPAY_BASIC_PLAN_ID_USD;
+    assert.equal(resolveRazorpayPlanId("basic", "india"), "plan_TPKaBkXum2gQHn");
+    assert.equal(
+      resolveRazorpayPlanId("basic", "international"),
+      "plan_TPKaBkXum2gQHn",
+    );
+    assert.equal(resolveRazorpayPlanId("basic"), "plan_TPKaBkXum2gQHn");
+  });
+
   it("arbitrary Razorpay plan id from client is rejected", () => {
     assert.equal(isStudioMembershipPlanId("plan_TPKaBkXum2gQHn"), false);
     assert.equal(isStudioMembershipPlanId("enterprise"), false);

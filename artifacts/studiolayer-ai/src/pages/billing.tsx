@@ -1,5 +1,14 @@
+import { useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/app-shell';
-import { useGetMe, useGetRenderUsage } from '@workspace/api-client-react';
+import {
+  getGetMeQueryKey,
+  getGetRenderUsageQueryKey,
+  useCreateMembershipSubscription,
+  useGetMe,
+  useGetRenderUsage,
+  type CreateMembershipSubscriptionInputPlan,
+} from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { EditorialPageHeader } from '@/components/design-system/editorial-page-header';
 import {
@@ -9,6 +18,8 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { openRazorpaySubscriptionCheckout } from '@/lib/razorpay-checkout';
 import {
   MembershipCreditAllowances,
   MembershipDisplayPricing,
@@ -16,12 +27,16 @@ import {
   creativeStepCreditCopy,
   finishedImagesOutcomeLabel,
   formatStudioCredits,
+  membershipPlanDisplayPrice,
+  type MembershipPricingMarket,
 } from '@workspace/studio-credit-engine';
 import {
   membershipAllowanceLabel,
   membershipCreditsRemaining,
   membershipLabel,
 } from '@/lib/membership';
+import { fetchPricingMarket, CLIENT_TIMEZONE_HEADER } from '@/lib/fetch-pricing-market';
+import { browserTimeZone } from '@/lib/pricing-market';
 
 const INTRO_SUPPORTING =
   'Choose the Studio membership that best supports your creative workflow.';
@@ -32,10 +47,9 @@ const INTRO_TAGLINE =
 const MEMBERSHIP_TIERS = [
   {
     id: 'pro',
+    plan: 'basic' as const satisfies CreateMembershipSubscriptionInputPlan,
     name: 'Studio Basic',
     subtitle: 'For growing fashion brands',
-    originalPrice: '$99',
-    price: MembershipDisplayPricing.basicMonthly,
     credits: formatStudioCredits(MembershipCreditAllowances.basic),
     outcome: finishedImagesOutcomeLabel(MembershipCreditAllowances.basic),
     features: [
@@ -46,16 +60,15 @@ const MEMBERSHIP_TIERS = [
       'Studio Talent',
       'Priority Rendering',
     ],
-    chooseLabel: 'Choose Basic',
+    chooseLabel: 'Choose Studio Basic',
     testId: 'button-choose-basic',
     recommended: false,
   },
   {
     id: 'enterprise',
+    plan: 'pro' as const satisfies CreateMembershipSubscriptionInputPlan,
     name: 'Studio Pro',
     subtitle: 'For creative teams & agencies',
-    originalPrice: '$120',
-    price: MembershipDisplayPricing.proMonthly,
     credits: formatStudioCredits(MembershipCreditAllowances.pro),
     outcome: finishedImagesOutcomeLabel(MembershipCreditAllowances.pro),
     features: [
@@ -66,7 +79,7 @@ const MEMBERSHIP_TIERS = [
       'Studio Talent',
       'Faster Priority Rendering',
     ],
-    chooseLabel: 'Choose Pro',
+    chooseLabel: 'Choose Studio Pro',
     testId: 'button-choose-pro',
     recommended: true,
   },
@@ -91,13 +104,43 @@ function isActiveTier(tier: string, cardId: string): boolean {
   return tier === cardId;
 }
 
-interface MembershipCardProps {
-  tier: (typeof MEMBERSHIP_TIERS)[number];
-  active: boolean;
-  disabled: boolean;
+function membershipCheckoutErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'data' in error) {
+    const data = (error as { data: unknown }).data;
+    if (data && typeof data === 'object' && 'error' in data) {
+      const bodyError = (data as { error: unknown }).error;
+      if (typeof bodyError === 'string' && bodyError.trim()) {
+        return bodyError.trim();
+      }
+    }
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    const match = error.message.match(/^HTTP \d+ [^:]+:\s*(.+)$/);
+    if (match?.[1]) return match[1].trim();
+    return error.message.trim();
+  }
+
+  return 'Unable to start membership checkout. Please try again.';
 }
 
-function MembershipCard({ tier, active, disabled }: MembershipCardProps) {
+interface MembershipCardProps {
+  tier: (typeof MEMBERSHIP_TIERS)[number];
+  price: string;
+  active: boolean;
+  checkoutBusy: boolean;
+  choosingThisPlan: boolean;
+  onChoose: (tier: (typeof MEMBERSHIP_TIERS)[number]) => void;
+}
+
+function MembershipCard({
+  tier,
+  price,
+  active,
+  checkoutBusy,
+  choosingThisPlan,
+  onChoose,
+}: MembershipCardProps) {
   return (
     <div
       className={cn(
@@ -112,13 +155,8 @@ function MembershipCard({ tier, active, disabled }: MembershipCardProps) {
         <h3 className="sl-membership-tier-title">{tier.name}</h3>
         <p className="sl-membership-tier-subtitle">{tier.subtitle}</p>
         <div className="sl-membership-tier-pricing">
-          {'originalPrice' in tier && tier.originalPrice && (
-            <p className="sl-membership-tier-original-price">
-              {tier.originalPrice} / month
-            </p>
-          )}
           <p className="sl-membership-tier-price">
-            {tier.price}
+            {price}
             <span>/ month</span>
           </p>
           <p className="sl-membership-tier-credits">{tier.credits}</p>
@@ -130,18 +168,33 @@ function MembershipCard({ tier, active, disabled }: MembershipCardProps) {
           ))}
         </ul>
       </div>
-      {active ? (
-        <div className="sl-membership-tier-cta-wrap">
+      <div className="sl-membership-tier-cta-wrap">
+        {active ? (
           <Button
             className="w-full"
             variant="outline"
-            disabled={disabled}
+            disabled
             data-testid={tier.testId}
           >
             Current Membership
           </Button>
-        </div>
-      ) : null}
+        ) : (
+          <>
+            <Button
+              className="w-full"
+              variant={tier.recommended ? 'default' : 'outline'}
+              disabled={checkoutBusy}
+              onClick={() => onChoose(tier)}
+              data-testid={tier.testId}
+            >
+              {choosingThisPlan ? 'Opening checkout…' : tier.chooseLabel}
+            </Button>
+            <p className="mt-2 text-center text-[0.6875rem] font-medium tracking-[0.04em] text-muted-foreground">
+              Auto-renews until cancelled
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -220,11 +273,89 @@ function StudioTopUpCompact() {
 }
 
 export default function BillingPage() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: user } = useGetMe();
   const { data: usage } = useGetRenderUsage();
+  const clientTimeZone = browserTimeZone();
+  const createSubscription = useCreateMembershipSubscription({
+    request: {
+      headers: clientTimeZone
+        ? { [CLIENT_TIMEZONE_HEADER]: clientTimeZone }
+        : undefined,
+    },
+  });
+  const [pricingMarket, setPricingMarket] =
+    useState<MembershipPricingMarket>('international');
+
+  const [pendingPlan, setPendingPlan] =
+    useState<CreateMembershipSubscriptionInputPlan | null>(null);
+  const checkoutInFlightRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchPricingMarket().then((market) => {
+      if (!cancelled) setPricingMarket(market);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const tier = user?.subscriptionTier ?? 'free';
   const usageData = { used: usage?.used ?? 0, limit: usage?.limit ?? null };
+  const purchaseBusy = pendingPlan != null || createSubscription.isPending;
+
+  const releaseCheckoutLock = () => {
+    checkoutInFlightRef.current = false;
+    setPendingPlan(null);
+  };
+
+  const handleChoosePlan = async (
+    membershipTier: (typeof MEMBERSHIP_TIERS)[number],
+  ) => {
+    if (checkoutInFlightRef.current) return;
+
+    checkoutInFlightRef.current = true;
+    setPendingPlan(membershipTier.plan);
+
+    try {
+      const checkout = await createSubscription.mutateAsync({
+        data: { plan: membershipTier.plan },
+      });
+
+      if (!checkout.keyId || !checkout.subscriptionId) {
+        throw new Error('Checkout details were incomplete. Please try again.');
+      }
+
+      await openRazorpaySubscriptionCheckout({
+        keyId: checkout.keyId,
+        subscriptionId: checkout.subscriptionId,
+        description: membershipTier.name,
+        onSuccess: () => {
+          releaseCheckoutLock();
+          toast({
+            title: 'Payment received',
+            description:
+              'Your Studio Credits will appear once payment is confirmed.',
+          });
+          void queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+          void queryClient.invalidateQueries({
+            queryKey: getGetRenderUsageQueryKey(),
+          });
+        },
+        onDismiss: () => {
+          releaseCheckoutLock();
+        },
+      });
+    } catch (error) {
+      releaseCheckoutLock();
+      toast({
+        title: "We couldn't start checkout.",
+        description: membershipCheckoutErrorMessage(error),
+      });
+    }
+  };
 
   return (
     <AppShell footer>
@@ -247,8 +378,14 @@ export default function BillingPage() {
                 <MembershipCard
                   key={membershipTier.id}
                   tier={membershipTier}
+                  price={membershipPlanDisplayPrice(
+                    membershipTier.plan,
+                    pricingMarket,
+                  )}
                   active={active}
-                  disabled={active}
+                  checkoutBusy={purchaseBusy}
+                  choosingThisPlan={pendingPlan === membershipTier.plan}
+                  onChoose={handleChoosePlan}
                 />
               );
             })}

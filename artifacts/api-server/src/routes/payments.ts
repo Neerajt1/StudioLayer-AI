@@ -8,9 +8,19 @@ import {
   SubscriptionValidationError,
 } from "../billing/razorpay-membership.js";
 import { verifyRazorpayWebhookSignature } from "../billing/razorpay-client.js";
+import { pricingMarketFromRequest } from "../billing/pricing-market.js";
 import { logger } from "../lib/logger.js";
 
 type RequestWithRawBody = Request & { rawBody?: Buffer };
+
+function clientTimeZoneFromRequest(req: Request): string | null {
+  const header = req.header("X-Client-Timezone")?.trim();
+  if (header) return header;
+
+  const queryTz = req.query.tz;
+  if (typeof queryTz === "string" && queryTz.trim()) return queryTz.trim();
+  return null;
+}
 
 const router: IRouter = Router();
 
@@ -35,6 +45,10 @@ router.post("/payments/subscriptions", async (req, res): Promise<void> => {
     const result = await createMembershipSubscription({
       userId,
       plan: parsed.data.plan,
+      pricingMarket: pricingMarketFromRequest(
+        req.headers,
+        clientTimeZoneFromRequest(req),
+      ),
     });
 
     // Public fields only — never include RAZORPAY_KEY_SECRET.
@@ -63,6 +77,19 @@ router.post("/payments/subscriptions", async (req, res): Promise<void> => {
     logger.error({ err: error }, "Failed to create Razorpay subscription");
     res.status(502).json({ error: "Unable to create subscription" });
   }
+});
+
+/**
+ * GET /api/pricing/market
+ * Display hint only — never persisted to the user account.
+ * Country headers take precedence; tz query / X-Client-Timezone is fallback only.
+ */
+router.get("/pricing/market", (req, res): void => {
+  const market = pricingMarketFromRequest(
+    req.headers,
+    clientTimeZoneFromRequest(req),
+  );
+  res.json({ market });
 });
 
 /**

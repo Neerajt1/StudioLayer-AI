@@ -4,6 +4,8 @@
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import type { PricingMarket } from "./pricing-market.js";
+
 const RAZORPAY_API_BASE = "https://api.razorpay.com/v1";
 
 /** Finite cycle count ≈ auto-renew until cancelled (Razorpay requires total_count). */
@@ -85,15 +87,38 @@ export function getRazorpayWebhookSecret(): string {
   return requireEnv("RAZORPAY_WEBHOOK_SECRET");
 }
 
+function optionalEnv(name: string): string | null {
+  const value = process.env[name]?.trim();
+  return value ? value : null;
+}
+
 /**
  * Maps StudioLayer plan identifiers to Razorpay Plan IDs.
  * Plan IDs come from env — never accept arbitrary plan IDs from the browser.
+ *
+ * Optional INR/USD plan IDs are used only when configured. Otherwise the
+ * existing RAZORPAY_*_PLAN_ID values are unchanged.
  */
-export function resolveRazorpayPlanId(plan: StudioMembershipPlanId): string {
+export function resolveRazorpayPlanId(
+  plan: StudioMembershipPlanId,
+  market?: PricingMarket,
+): string {
   if (plan === "basic") {
+    if (market === "india") {
+      return optionalEnv("RAZORPAY_BASIC_PLAN_ID_INR") ?? requireEnv("RAZORPAY_BASIC_PLAN_ID");
+    }
+    if (market === "international") {
+      return optionalEnv("RAZORPAY_BASIC_PLAN_ID_USD") ?? requireEnv("RAZORPAY_BASIC_PLAN_ID");
+    }
     return requireEnv("RAZORPAY_BASIC_PLAN_ID");
   }
   if (plan === "pro") {
+    if (market === "india") {
+      return optionalEnv("RAZORPAY_PRO_PLAN_ID_INR") ?? requireEnv("RAZORPAY_PRO_PLAN_ID");
+    }
+    if (market === "international") {
+      return optionalEnv("RAZORPAY_PRO_PLAN_ID_USD") ?? requireEnv("RAZORPAY_PRO_PLAN_ID");
+    }
     return requireEnv("RAZORPAY_PRO_PLAN_ID");
   }
   throw new Error(`Unsupported StudioLayer membership plan: ${plan}`);
