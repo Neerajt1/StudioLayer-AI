@@ -19,7 +19,11 @@ import {
 } from '@/components/ui/accordion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { openRazorpayOrderCheckout, openRazorpaySubscriptionCheckout } from '@/lib/razorpay-checkout';
+import {
+  membershipPaymentFailedToastCopy,
+  openRazorpayOrderCheckout,
+  openRazorpaySubscriptionCheckout,
+} from '@/lib/razorpay-checkout';
 import {
   MembershipCreditAllowances,
   finishedImagesOutcomeLabel,
@@ -530,6 +534,14 @@ export default function BillingPage() {
         },
         onDismiss: () => {
           releaseCheckoutLock();
+        },
+        onPaymentFailed: (failure) => {
+          releaseCheckoutLock();
+          const copy = membershipPaymentFailedToastCopy(failure);
+          toast({
+            title: copy.title,
+            description: copy.description,
+          });
         },
       });
     } catch (error) {
