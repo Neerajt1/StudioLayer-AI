@@ -36,6 +36,10 @@ import {
 } from '@workspace/studio-credit-engine';
 import { zeroStudioCreditBlockToast } from '@/lib/studio-credit-block-copy';
 import {
+  galleryDeleteFailedToast,
+  galleryDeleteSucceededToast,
+} from '@/lib/gallery-delete-copy';
+import {
   delay,
   GALLERY_EXIT_ANIMATION_MS,
   stabilizeGalleryShoots,
@@ -216,14 +220,14 @@ export default function GalleryPage() {
             }
             queryClient.invalidateQueries({ queryKey: getListRendersQueryKey() });
             queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
-            toast({ title: 'Asset deleted', description: 'The image has been removed.' });
+            const copy = galleryDeleteSucceededToast();
+            toast({ title: copy.title, description: copy.description });
             resolve();
           },
           onError: () => {
-            toast({
-              title: "We couldn't complete your request.",
-              description: 'Please try again in a few moments.',
-            });
+            const copy = galleryDeleteFailedToast();
+            toast({ title: copy.title, description: copy.description });
+            // Reject so Shoot Detail keeps the image visible (no exit/remove).
             reject(new Error('Delete failed'));
           },
         },
