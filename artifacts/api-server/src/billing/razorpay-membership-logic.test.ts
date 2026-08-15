@@ -12,7 +12,6 @@ import {
   claimWebhookEventForProcessing,
   evaluateSubscriptionChargedGrant,
   expectedMembershipCreditsForPlan,
-  resolveBasicToProUpgrade,
   resolveOpenMembershipForCreate,
   resolveRazorpayWebhookEventId,
   resolveSubscriptionPlanSync,
@@ -607,81 +606,7 @@ describe("lifecycle events never grant", () => {
   });
 });
 
-describe("Basic → Pro next-cycle upgrade decisions", () => {
-  const basicActive = {
-    studioPlan: "basic",
-    status: "active",
-    pendingUpgradePlan: null,
-    pendingRazorpayPlanId: null,
-  };
-
-  it("schedules upgrade for active Basic with no pending change", () => {
-    const result = resolveBasicToProUpgrade({
-      openSubscriptions: [basicActive],
-    });
-    assert.equal(result.action, "schedule");
-  });
-
-  it("returns already_scheduled for duplicate Basic → Pro request", () => {
-    const result = resolveBasicToProUpgrade({
-      openSubscriptions: [
-        {
-          ...basicActive,
-          pendingUpgradePlan: "pro",
-          pendingRazorpayPlanId: "plan_pro",
-        },
-      ],
-    });
-    assert.equal(result.action, "already_scheduled");
-    if (result.action === "already_scheduled") {
-      assert.equal(result.pendingUpgradePlan, "pro");
-      assert.equal(result.pendingRazorpayPlanId, "plan_pro");
-    }
-  });
-
-  it("returns already_scheduled when StudioLayer is already Pro", () => {
-    const result = resolveBasicToProUpgrade({
-      openSubscriptions: [
-        {
-          studioPlan: "pro",
-          status: "active",
-          pendingUpgradePlan: null,
-          pendingRazorpayPlanId: null,
-        },
-      ],
-    });
-    assert.equal(result.action, "already_scheduled");
-  });
-
-  it("returns already_scheduled for dual-state Pro with pending Razorpay lag", () => {
-    const result = resolveBasicToProUpgrade({
-      openSubscriptions: [
-        {
-          studioPlan: "pro",
-          status: "active",
-          pendingUpgradePlan: "pro",
-          pendingRazorpayPlanId: "plan_pro",
-        },
-      ],
-    });
-    assert.equal(result.action, "already_scheduled");
-  });
-
-  it("rejects non-active Basic (no mid-cycle apply path)", () => {
-    const result = resolveBasicToProUpgrade({
-      openSubscriptions: [
-        {
-          studioPlan: "basic",
-          status: "authenticated",
-          pendingUpgradePlan: null,
-          pendingRazorpayPlanId: null,
-        },
-      ],
-    });
-    assert.equal(result.action, "reject");
-    if (result.action === "reject") assert.equal(result.code, "not_active");
-  });
-
+describe("membership plan sync and create conflicts", () => {
   it("create Pro while Basic open remains conflict (no second subscription)", () => {
     const result = resolveOpenMembershipForCreate({
       requestedPlan: "pro",
@@ -732,7 +657,7 @@ describe("Basic → Pro next-cycle upgrade decisions", () => {
     if (proGrant.grant) assert.equal(proGrant.credits, 240);
   });
 
-  it("webhook sync applies pending Pro plan_id and clears pending", () => {
+  it("webhook sync maps Razorpay plan_id changes and clears leftover pending columns", () => {
     const sync = resolveSubscriptionPlanSync({
       studioPlan: "basic",
       studioTier: "pro",
@@ -749,26 +674,13 @@ describe("Basic → Pro next-cycle upgrade decisions", () => {
     assert.equal(sync!.clearPending, true);
   });
 
-  it("webhook sync is a no-op while Razorpay still shows Basic plan_id", () => {
+  it("webhook sync is a no-op when local plan already matches Razorpay", () => {
     const sync = resolveSubscriptionPlanSync({
       studioPlan: "basic",
       studioTier: "pro",
       razorpayPlanId: "plan_basic",
-      pendingUpgradePlan: "pro",
-      pendingRazorpayPlanId: "plan_pro",
-      razorpayEntityPlanId: "plan_basic",
-      mappedStudioPlan: "basic",
-    });
-    assert.equal(sync, null);
-  });
-
-  it("does not demote immediate StudioLayer Pro while Razorpay lag remains", () => {
-    const sync = resolveSubscriptionPlanSync({
-      studioPlan: "pro",
-      studioTier: "enterprise",
-      razorpayPlanId: "plan_basic",
-      pendingUpgradePlan: "pro",
-      pendingRazorpayPlanId: "plan_pro",
+      pendingUpgradePlan: null,
+      pendingRazorpayPlanId: null,
       razorpayEntityPlanId: "plan_basic",
       mappedStudioPlan: "basic",
     });

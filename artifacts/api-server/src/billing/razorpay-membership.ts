@@ -1,13 +1,11 @@
 import { and, eq, inArray } from "drizzle-orm";
 import {
   MembershipCreditAllowances,
-  MembershipUpgradeCreditGrant,
   StudioCreditReasonCode,
 } from "@workspace/studio-credit-engine";
 import {
   db,
   pool,
-  studioCreditAllocationsTable,
   studioRazorpaySubscriptionsTable,
   studioRazorpayWebhookEventsTable,
   usersTable,
@@ -15,9 +13,7 @@ import {
 import { grantCreditAllocation } from "../services/studio-credit-service.js";
 import {
   cancelRazorpaySubscription,
-  createRazorpayOrder,
   createRazorpaySubscription,
-  fetchRazorpayOrder,
   getRazorpayKeyId,
   isCapturedRazorpayPayment,
   isOpenMembershipSubscriptionStatus,
@@ -29,40 +25,16 @@ import {
   type StudioMembershipPlanId,
   studioTierForPlan,
   resolveRazorpayPlanId,
-  resolveProPlanIdForUpgrade,
   studioPlanForRazorpayPlanId,
-  updateRazorpaySubscriptionPlan,
 } from "./razorpay-client.js";
 import {
   claimWebhookEventForProcessing,
   evaluateSubscriptionChargedGrant,
-  resolveBasicToProUpgrade,
   resolveOpenMembershipForCreate,
   resolveRazorpayWebhookEventId,
   resolveSubscriptionPlanSync,
   unixToDate,
 } from "./razorpay-membership-logic.js";
-import {
-  STUDIO_UPGRADE_NOTE_MARKET,
-  STUDIO_UPGRADE_NOTE_PRODUCT,
-  STUDIO_UPGRADE_NOTE_SUBSCRIPTION_ID,
-  STUDIO_UPGRADE_NOTE_USER_ID,
-  STUDIO_UPGRADE_PRODUCT,
-  assertUpgradePaymentMatchesOrder,
-  buildMembershipUpgradePeriodKey,
-  isCapturedUpgradePaymentMarker,
-  isStudioUpgradeProduct,
-  parseUpgradeCheckoutOrderId,
-  parseUpgradeMarketFromNotes,
-  parseUpgradeSubscriptionIdFromNotes,
-  parseUpgradeUserIdFromNotes,
-  readStudioUpgradeImmediateEntitlementFlag,
-  resolveUpgradeCreditPeriodBounds,
-  resolveUpgradeCheckoutOrderReuse,
-  resolveUpgradeOrderAmount,
-  upgradeCheckoutOrderMarker,
-  upgradePaymentSourceReference,
-} from "./razorpay-upgrade-logic.js";
 import { logger } from "../lib/logger.js";
 import type { PricingMarket } from "./pricing-market.js";
 import { grantStudioAddOnFromCapturedPayment } from "./razorpay-add-ons.js";
@@ -77,21 +49,6 @@ export type CreateMembershipSubscriptionResult = {
   shortUrl: string | null;
 };
 
-export type UpgradeMembershipToProResult = {
-  subscriptionId: string;
-  currentPlan: "basic";
-  scheduledPlan: "pro";
-  status: string;
-  alreadyScheduled: boolean;
-  currentEnd: string | null;
-  /** Present when checkout is required (not already scheduled). */
-  orderId: string | null;
-  keyId: string | null;
-  amount: number | null;
-  currency: "INR" | "USD" | null;
-  market: PricingMarket | null;
-  pendingRazorpayPlanId: string | null;
-};
 
 /**
  * Serialize check → Razorpay create → local persist for one user.
@@ -357,654 +314,15 @@ export async function createMembershipSubscription(input: {
   });
 }
 
-/**
- * Create a one-time Razorpay Order for the fixed Basic → Pro upgrade difference.
- * Does NOT change the subscription plan yet — that happens on payment.captured
- * via schedule_change_at=cycle_end (no immediate Razorpay proration).
- * Credits / StudioLayer Pro entitlement apply only after captured fulfillment
- * when STUDIO_UPGRADE_IMMEDIATE_ENTITLEMENT is enabled.
- */
-export async function upgradeMembershipToPro(input: {
-  userId: number;
-  pricingMarket?: PricingMarket;
-}): Promise<UpgradeMembershipToProResult> {
-  const market = input.pricingMarket ?? "international";
-
-  return withMembershipSubscriptionUserLock(input.userId, async () => {
-    const openRows = await db
-      .select()
-      .from(studioRazorpaySubscriptionsTable)
-      .where(
-        and(
-          eq(studioRazorpaySubscriptionsTable.userId, input.userId),
-          inArray(studioRazorpaySubscriptionsTable.status, [
-            ...OPEN_MEMBERSHIP_SUBSCRIPTION_STATUSES,
-          ]),
-        ),
-      );
-
-    const row = openRows[0];
-    const { amount, currency } = resolveUpgradeOrderAmount({ market });
-
-    // U3: captured/processing upgrade already known — never open a second Order.
-    if (row && isCapturedUpgradePaymentMarker(row.pendingUpgradePaymentId)) {
-      return {
-        subscriptionId: row.razorpaySubscriptionId,
-        currentPlan: "basic",
-        scheduledPlan: "pro",
-        status: row.status,
-        alreadyScheduled: true,
-        currentEnd: row.currentEnd?.toISOString() ?? null,
-        orderId: null,
-        keyId: null,
-        amount,
-        currency,
-        market,
-        pendingRazorpayPlanId: row.pendingRazorpayPlanId ?? null,
-      };
-    }
-
-    const [existingUpgradeLot] = await db
-      .select({ id: studioCreditAllocationsTable.id })
-      .from(studioCreditAllocationsTable)
-      .where(
-        and(
-          eq(studioCreditAllocationsTable.userId, input.userId),
-          eq(
-            studioCreditAllocationsTable.reasonCode,
-            StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION,
-          ),
-        ),
-      )
-      .limit(1);
-
-    if (existingUpgradeLot) {
-      return {
-        subscriptionId: row?.razorpaySubscriptionId ?? "",
-        currentPlan: "basic",
-        scheduledPlan: "pro",
-        status: row?.status ?? "active",
-        alreadyScheduled: true,
-        currentEnd: row?.currentEnd?.toISOString() ?? null,
-        orderId: null,
-        keyId: null,
-        amount,
-        currency,
-        market,
-        pendingRazorpayPlanId: row?.pendingRazorpayPlanId ?? null,
-      };
-    }
-
-    const decision = resolveBasicToProUpgrade({
-      openSubscriptions: openRows.map((openRow) => ({
-        studioPlan: openRow.studioPlan,
-        status: openRow.status,
-        pendingUpgradePlan: openRow.pendingUpgradePlan,
-        pendingRazorpayPlanId: openRow.pendingRazorpayPlanId,
-      })),
-    });
-
-    if (decision.action === "reject") {
-      throw new SubscriptionValidationError(decision.message);
-    }
-
-    if (!row) {
-      throw new SubscriptionValidationError(
-        "An active Studio Basic membership is required to upgrade.",
-      );
-    }
-
-    if (decision.action === "already_scheduled") {
-      return {
-        subscriptionId: row.razorpaySubscriptionId,
-        currentPlan: "basic",
-        scheduledPlan: "pro",
-        status: row.status,
-        alreadyScheduled: true,
-        currentEnd: row.currentEnd?.toISOString() ?? null,
-        orderId: null,
-        keyId: null,
-        amount,
-        currency,
-        market,
-        pendingRazorpayPlanId:
-          decision.pendingRazorpayPlanId ?? row.pendingRazorpayPlanId ?? null,
-      };
-    }
-
-    // Resume an existing unpaid upgrade Order instead of creating a duplicate.
-    // Expired / invalid Orders are cleared so a fresh ₹3,000 Order can be created.
-    const existingOrderId = parseUpgradeCheckoutOrderId(
-      row.pendingUpgradePaymentId,
-    );
-    if (existingOrderId) {
-      let reuse = resolveUpgradeCheckoutOrderReuse({
-        orderId: existingOrderId,
-        order: null,
-        fetchFailed: true,
-      });
-      try {
-        const existingOrder = await fetchRazorpayOrder(existingOrderId);
-        reuse = resolveUpgradeCheckoutOrderReuse({
-          orderId: existingOrderId,
-          order: {
-            status: existingOrder.status,
-            amount_paid: existingOrder.amount_paid,
-          },
-        });
-      } catch (error) {
-        logger.warn(
-          {
-            err: error,
-            userId: input.userId,
-            orderId: existingOrderId,
-            subscriptionId: row.razorpaySubscriptionId,
-          },
-          "Unable to fetch existing upgrade Order — allowing a fresh Order if unpaid",
-        );
-        reuse = resolveUpgradeCheckoutOrderReuse({
-          orderId: existingOrderId,
-          order: null,
-          fetchFailed: true,
-        });
-      }
-
-      if (reuse.action === "reuse") {
-        return {
-          subscriptionId: row.razorpaySubscriptionId,
-          currentPlan: "basic",
-          scheduledPlan: "pro",
-          status: row.status,
-          alreadyScheduled: false,
-          currentEnd: row.currentEnd?.toISOString() ?? null,
-          orderId: existingOrderId,
-          keyId: getRazorpayKeyId(),
-          amount,
-          currency,
-          market,
-          pendingRazorpayPlanId: null,
-        };
-      }
-
-      if (reuse.action === "already_paid") {
-        return {
-          subscriptionId: row.razorpaySubscriptionId,
-          currentPlan: "basic",
-          scheduledPlan: "pro",
-          status: row.status,
-          alreadyScheduled: true,
-          currentEnd: row.currentEnd?.toISOString() ?? null,
-          orderId: null,
-          keyId: null,
-          amount,
-          currency,
-          market,
-          pendingRazorpayPlanId: row.pendingRazorpayPlanId ?? null,
-        };
-      }
-
-      // create_fresh — clear stale order: marker, then fall through to create.
-      await db
-        .update(studioRazorpaySubscriptionsTable)
-        .set({
-          pendingUpgradePaymentId: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(studioRazorpaySubscriptionsTable.id, row.id));
-
-      logger.info(
-        {
-          userId: input.userId,
-          subscriptionId: row.razorpaySubscriptionId,
-          expiredOrderId: existingOrderId,
-          reason: reuse.reason,
-        },
-        "Cleared expired/invalid unpaid upgrade Order marker — creating a fresh Order",
-      );
-    }
-
-    const order = await createRazorpayOrder({
-      amount,
-      currency,
-      receipt: `upg_${input.userId}_${Date.now()}`.slice(0, 40),
-      notes: {
-        [STUDIO_UPGRADE_NOTE_USER_ID]: String(input.userId),
-        [STUDIO_UPGRADE_NOTE_PRODUCT]: STUDIO_UPGRADE_PRODUCT,
-        [STUDIO_UPGRADE_NOTE_MARKET]: market,
-        [STUDIO_UPGRADE_NOTE_SUBSCRIPTION_ID]: row.razorpaySubscriptionId,
-      },
-    });
-
-    if (order.amount !== amount || order.currency.toUpperCase() !== currency) {
-      throw new SubscriptionUpgradeError(
-        "Razorpay upgrade order amount/currency did not match StudioLayer charge table",
-      );
-    }
-
-    // U3 marker: checkout Order exists before payment.captured writes pending plan.
-    await db
-      .update(studioRazorpaySubscriptionsTable)
-      .set({
-        pendingUpgradePaymentId: upgradeCheckoutOrderMarker(order.id),
-        updatedAt: new Date(),
-      })
-      .where(eq(studioRazorpaySubscriptionsTable.id, row.id));
-
-    return {
-      subscriptionId: row.razorpaySubscriptionId,
-      currentPlan: "basic",
-      scheduledPlan: "pro",
-      status: row.status,
-      alreadyScheduled: false,
-      currentEnd: row.currentEnd?.toISOString() ?? null,
-      orderId: order.id,
-      keyId: getRazorpayKeyId(),
-      amount,
-      currency,
-      market,
-      pendingRazorpayPlanId: null,
-    };
-  });
-}
-
-async function applyImmediateUpgradeEntitlementAndCredits(input: {
-  userId: number;
-  subscriptionRowId: number;
-  subscriptionId: string;
-  paymentId: string;
-  currentStart: Date;
-  currentEnd: Date;
-  razorpayPlanIdBeforeSync: string;
-}): Promise<{ grantedCredits: number }> {
-  const now = new Date();
-  const periodKey = buildMembershipUpgradePeriodKey({
-    subscriptionId: input.subscriptionId,
-    currentStart: input.currentStart,
-    currentEnd: input.currentEnd,
-  });
-
-  await db
-    .update(studioRazorpaySubscriptionsTable)
-    .set({
-      studioPlan: "pro",
-      studioTier: "enterprise",
-      // Keep Razorpay plan_id as Basic until Razorpay reports Pro.
-      razorpayPlanId: input.razorpayPlanIdBeforeSync,
-      updatedAt: now,
-    })
-    .where(eq(studioRazorpaySubscriptionsTable.id, input.subscriptionRowId));
-
-  await db
-    .update(usersTable)
-    .set({
-      subscriptionTier: "enterprise",
-      updatedAt: now,
-    })
-    .where(eq(usersTable.id, input.userId));
-
-  const grant = await grantCreditAllocation({
-    userId: input.userId,
-    reasonCode: StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION,
-    credits: MembershipUpgradeCreditGrant,
-    sourceReference: upgradePaymentSourceReference(input.paymentId),
-    startsAt: input.currentStart,
-    expiresAt: input.currentEnd,
-    periodKey,
-    tier: "enterprise",
-  });
-
-  return {
-    grantedCredits: grant.created ? MembershipUpgradeCreditGrant : 0,
-  };
-}
-
-/**
- * After upgrade-difference payment.captured:
- * 1) schedule Basic → Pro at cycle_end (never now)
- * 2) write pending Razorpay-lag fields
- * 3) when flag ON: immediate StudioLayer Pro + exactly +120 upgrade credits
- *
- * Idempotent on payment id + allocation source_reference.
- */
-export async function fulfillMembershipUpgradeFromCapturedPayment(input: {
-  payment: RazorpayPaymentEntity;
-}): Promise<{ handled: boolean; grantedCredits: number }> {
-  const payment = input.payment;
-  if (!isCapturedRazorpayPayment(payment) || !payment.id) {
-    return { handled: false, grantedCredits: 0 };
-  }
-
-  let notes = payment.notes ?? null;
-  if (
-    (!isStudioUpgradeProduct(notes?.[STUDIO_UPGRADE_NOTE_PRODUCT]) ||
-      !parseUpgradeUserIdFromNotes(notes)) &&
-    payment.order_id
-  ) {
-    try {
-      const order = await fetchRazorpayOrder(payment.order_id);
-      notes = order.notes ?? notes;
-    } catch (error) {
-      logger.warn(
-        { err: error, orderId: payment.order_id, paymentId: payment.id },
-        "Unable to fetch Razorpay order for upgrade payment notes",
-      );
-    }
-  }
-
-  if (!isStudioUpgradeProduct(notes?.[STUDIO_UPGRADE_NOTE_PRODUCT])) {
-    return { handled: false, grantedCredits: 0 };
-  }
-
-  const userId = parseUpgradeUserIdFromNotes(notes);
-  const subscriptionId = parseUpgradeSubscriptionIdFromNotes(notes);
-  const market = parseUpgradeMarketFromNotes(notes) ?? "international";
-  const immediate = readStudioUpgradeImmediateEntitlementFlag();
-
-  if (!userId || !subscriptionId) {
-    logger.warn(
-      { paymentId: payment.id },
-      "Upgrade payment missing user/subscription notes — ignored",
-    );
-    return { handled: true, grantedCredits: 0 };
-  }
-
-  if (
-    !assertUpgradePaymentMatchesOrder({
-      market,
-      paymentAmount: payment.amount,
-      paymentCurrency: payment.currency,
-    })
-  ) {
-    logger.warn(
-      {
-        paymentId: payment.id,
-        market,
-        amount: payment.amount,
-        currency: payment.currency,
-      },
-      "Upgrade payment amount/currency mismatch — plan change not scheduled",
-    );
-    return { handled: true, grantedCredits: 0 };
-  }
-
-  return withRazorpayPaymentGrantLock(payment.id, async () => {
-    return withMembershipSubscriptionUserLock(userId, async () => {
-      const [row] = await db
-        .select()
-        .from(studioRazorpaySubscriptionsTable)
-        .where(
-          eq(
-            studioRazorpaySubscriptionsTable.razorpaySubscriptionId,
-            subscriptionId,
-          ),
-        )
-        .limit(1);
-
-      if (!row || row.userId !== userId) {
-        logger.warn(
-          { paymentId: payment.id, subscriptionId, userId },
-          "Upgrade payment subscription not found for user",
-        );
-        return { handled: true, grantedCredits: 0 };
-      }
-
-      // Idempotent retry for the same captured payment.
-      if (row.pendingUpgradePaymentId === payment.id) {
-        if (!immediate) {
-          return { handled: true, grantedCredits: 0 };
-        }
-        const bounds = resolveUpgradeCreditPeriodBounds({
-          currentStart: row.currentStart,
-          currentEnd: row.currentEnd,
-        });
-        if (!bounds) {
-          throw new Error(
-            `Upgrade fulfillment missing currentStart/currentEnd for ${subscriptionId} (payment ${payment.id})`,
-          );
-        }
-        const result = await applyImmediateUpgradeEntitlementAndCredits({
-          userId,
-          subscriptionRowId: row.id,
-          subscriptionId: row.razorpaySubscriptionId,
-          paymentId: payment.id,
-          currentStart: bounds.currentStart,
-          currentEnd: bounds.currentEnd,
-          razorpayPlanIdBeforeSync: row.razorpayPlanId,
-        });
-        logger.info(
-          {
-            userId,
-            subscriptionId: row.razorpaySubscriptionId,
-            paymentId: payment.id,
-            grantedCredits: result.grantedCredits,
-            immediateEntitlement: true,
-            idempotentRetry: true,
-          },
-          "Upgrade payment already pending — ensured immediate Pro + upgrade credits",
-        );
-        return { handled: true, grantedCredits: result.grantedCredits };
-      }
-
-      // Different payment already fulfilled this upgrade path.
-      if (
-        row.pendingUpgradePlan === "pro" &&
-        isCapturedUpgradePaymentMarker(row.pendingUpgradePaymentId) &&
-        row.pendingUpgradePaymentId !== payment.id
-      ) {
-        logger.info(
-          {
-            paymentId: payment.id,
-            subscriptionId,
-            existingPaymentId: row.pendingUpgradePaymentId,
-          },
-          "Upgrade already scheduled — skipping duplicate plan change",
-        );
-        return { handled: true, grantedCredits: 0 };
-      }
-
-      // U3: another captured upgrade payment marker exists for this subscription.
-      if (
-        isCapturedUpgradePaymentMarker(row.pendingUpgradePaymentId) &&
-        row.pendingUpgradePaymentId !== payment.id
-      ) {
-        logger.info(
-          {
-            paymentId: payment.id,
-            subscriptionId,
-            existingPaymentId: row.pendingUpgradePaymentId,
-          },
-          "Captured upgrade payment already recorded — refusing duplicate fulfillment",
-        );
-        return { handled: true, grantedCredits: 0 };
-      }
-
-      if (row.pendingUpgradePlan === "pro") {
-        logger.info(
-          {
-            paymentId: payment.id,
-            subscriptionId,
-            existingPaymentId: row.pendingUpgradePaymentId,
-          },
-          "Upgrade already scheduled — skipping duplicate plan change",
-        );
-        return { handled: true, grantedCredits: 0 };
-      }
-
-      if (row.status !== "active") {
-        logger.warn(
-          { paymentId: payment.id, status: row.status },
-          "Upgrade payment captured but membership not active",
-        );
-        return { handled: true, grantedCredits: 0 };
-      }
-
-      // Allow Basic (including unpaid order: marker). Allow Pro only when
-      // completing a retry after a partial immediate apply without pending plan.
-      if (row.studioPlan !== "basic" && row.studioPlan !== "pro") {
-        logger.warn(
-          { paymentId: payment.id, studioPlan: row.studioPlan },
-          "Upgrade payment captured but membership not eligible",
-        );
-        return { handled: true, grantedCredits: 0 };
-      }
-
-      if (row.studioPlan === "pro" && !immediate) {
-        logger.warn(
-          { paymentId: payment.id },
-          "Upgrade payment captured for non-Basic membership while immediate entitlement is off",
-        );
-        return { handled: true, grantedCredits: 0 };
-      }
-
-      const proPlanId = resolveProPlanIdForUpgrade({
-        currentRazorpayPlanId: row.razorpayPlanId,
-        pricingMarket: market,
-      });
-
-      let updated: RazorpaySubscriptionEntity;
-      try {
-        updated = await updateRazorpaySubscriptionPlan({
-          subscriptionId: row.razorpaySubscriptionId,
-          planId: proPlanId,
-          scheduleChangeAt: "cycle_end",
-        });
-      } catch (error) {
-        logger.error(
-          {
-            err: error,
-            userId,
-            subscriptionId: row.razorpaySubscriptionId,
-            proPlanId,
-            paymentId: payment.id,
-          },
-          "Razorpay Basic → Pro cycle_end plan change failed after upgrade payment",
-        );
-        // C: schedule failure → no Pro, no +120; webhook fails/retries.
-        throw error;
-      }
-
-      const currentStart =
-        unixToDate(updated.current_start) ?? row.currentStart;
-      const currentEnd = unixToDate(updated.current_end) ?? row.currentEnd;
-
-      if (immediate) {
-        const bounds = resolveUpgradeCreditPeriodBounds({
-          currentStart,
-          currentEnd,
-        });
-        if (!bounds) {
-          // U2: fail closed — do not write Pro / +120 without a valid expiry.
-          throw new Error(
-            `Upgrade fulfillment missing currentStart/currentEnd for ${subscriptionId} (payment ${payment.id})`,
-          );
-        }
-      }
-
-      const scheduledAt = new Date();
-      await db
-        .update(studioRazorpaySubscriptionsTable)
-        .set({
-          pendingUpgradePlan: "pro",
-          pendingRazorpayPlanId: proPlanId,
-          pendingUpgradeScheduledAt: scheduledAt,
-          pendingUpgradePaymentId: payment.id,
-          status: updated.status || row.status,
-          currentStart: currentStart ?? row.currentStart,
-          currentEnd: currentEnd ?? row.currentEnd,
-          updatedAt: scheduledAt,
-        })
-        .where(eq(studioRazorpaySubscriptionsTable.id, row.id));
-
-      if (!immediate) {
-        logger.info(
-          {
-            userId,
-            subscriptionId: row.razorpaySubscriptionId,
-            paymentId: payment.id,
-            fromPlan: "basic",
-            toPlan: "pro",
-            pendingRazorpayPlanId: proPlanId,
-            scheduleChangeAt: "cycle_end",
-            grantedCredits: 0,
-            immediateEntitlement: false,
-          },
-          "Upgrade difference paid — Studio Pro scheduled for next billing cycle (no credits granted)",
-        );
-        return { handled: true, grantedCredits: 0 };
-      }
-
-      const bounds = resolveUpgradeCreditPeriodBounds({
-        currentStart,
-        currentEnd,
-      });
-      if (!bounds) {
-        throw new Error(
-          `Upgrade fulfillment missing currentStart/currentEnd for ${subscriptionId} (payment ${payment.id})`,
-        );
-      }
-
-      let grantedCredits = 0;
-      try {
-        const result = await applyImmediateUpgradeEntitlementAndCredits({
-          userId,
-          subscriptionRowId: row.id,
-          subscriptionId: row.razorpaySubscriptionId,
-          paymentId: payment.id,
-          currentStart: bounds.currentStart,
-          currentEnd: bounds.currentEnd,
-          razorpayPlanIdBeforeSync: row.razorpayPlanId,
-        });
-        grantedCredits = result.grantedCredits;
-      } catch (error) {
-        // D: schedule + pending succeeded; credit/entitlement failure must retry.
-        logger.error(
-          {
-            err: error,
-            userId,
-            subscriptionId: row.razorpaySubscriptionId,
-            paymentId: payment.id,
-          },
-          "Immediate upgrade entitlement or +120 grant failed after cycle_end schedule",
-        );
-        throw error;
-      }
-
-      logger.info(
-        {
-          userId,
-          subscriptionId: row.razorpaySubscriptionId,
-          paymentId: payment.id,
-          fromPlan: "basic",
-          toPlan: "pro",
-          pendingRazorpayPlanId: proPlanId,
-          scheduleChangeAt: "cycle_end",
-          razorpayPlanIdUnchanged: row.razorpayPlanId,
-          studioPlan: "pro",
-          studioTier: "enterprise",
-          grantedCredits,
-          upgradeCredits: MembershipUpgradeCreditGrant,
-          immediateEntitlement: true,
-        },
-        "Upgrade difference paid — Studio Pro active immediately; +120 upgrade credits granted; Razorpay Pro pending cycle_end",
-      );
-
-      return { handled: true, grantedCredits };
-    });
-  });
-}
-
 export async function getMembershipSubscriptionStatus(input: {
   userId: number;
 }): Promise<{
   studioPlan: StudioMembershipPlanId | null;
   studioTier: "pro" | "enterprise" | null;
   status: string | null;
-  pendingUpgradePlan: "pro" | null;
   currentEnd: string | null;
   subscriptionId: string | null;
-  immediateUpgradeEntitlement: boolean;
 }> {
-  const immediateUpgradeEntitlement = readStudioUpgradeImmediateEntitlementFlag();
   const openRows = await db
     .select()
     .from(studioRazorpaySubscriptionsTable)
@@ -1024,10 +342,8 @@ export async function getMembershipSubscriptionStatus(input: {
       studioPlan: null,
       studioTier: null,
       status: null,
-      pendingUpgradePlan: null,
       currentEnd: null,
       subscriptionId: null,
-      immediateUpgradeEntitlement,
     };
   }
 
@@ -1041,10 +357,8 @@ export async function getMembershipSubscriptionStatus(input: {
         ? row.studioTier
         : null,
     status: row.status,
-    pendingUpgradePlan: row.pendingUpgradePlan === "pro" ? "pro" : null,
     currentEnd: row.currentEnd?.toISOString() ?? null,
     subscriptionId: row.razorpaySubscriptionId,
-    immediateUpgradeEntitlement,
   };
 }
 
@@ -1066,13 +380,6 @@ export class SubscriptionPersistenceError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "SubscriptionPersistenceError";
-  }
-}
-
-export class SubscriptionUpgradeError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "SubscriptionUpgradeError";
   }
 }
 
@@ -1182,12 +489,6 @@ async function handleRazorpayEvent(
     const payment = payload.payload?.payment?.entity;
     if (!payment) {
       return { handled: false, grantedCredits: 0 };
-    }
-    const upgrade = await fulfillMembershipUpgradeFromCapturedPayment({
-      payment,
-    });
-    if (upgrade.handled) {
-      return upgrade;
     }
     return grantStudioAddOnFromCapturedPayment({ payment });
   }

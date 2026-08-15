@@ -6,9 +6,7 @@ import {
   processRazorpayWebhookPayload,
   SubscriptionConflictError,
   SubscriptionPersistenceError,
-  SubscriptionUpgradeError,
   SubscriptionValidationError,
-  upgradeMembershipToPro,
 } from "../billing/razorpay-membership.js";
 import {
   AddOnPersistenceError,
@@ -89,7 +87,7 @@ router.post("/payments/subscriptions", async (req, res): Promise<void> => {
 
 /**
  * GET /api/payments/subscriptions/membership
- * Authenticated — open membership + pending next-cycle upgrade state.
+ * Authenticated — open membership subscription status.
  */
 router.get(
   "/payments/subscriptions/membership",
@@ -106,43 +104,6 @@ router.get(
     } catch (error) {
       logger.error({ err: error }, "Failed to load membership subscription status");
       res.status(500).json({ error: "Unable to load membership status" });
-    }
-  },
-);
-
-/**
- * POST /api/payments/subscriptions/upgrade-to-pro
- * Authenticated — create fixed-difference Order; plan changes at cycle_end after payment.
- */
-router.post(
-  "/payments/subscriptions/upgrade-to-pro",
-  async (req, res): Promise<void> => {
-    const userId = req.session?.userId;
-    if (!userId) {
-      res.status(401).json({ error: "Not authenticated" });
-      return;
-    }
-
-    try {
-      const result = await upgradeMembershipToPro({
-        userId,
-        pricingMarket: pricingMarketFromRequest(
-          req.headers,
-          clientTimeZoneFromRequest(req),
-        ),
-      });
-      res.status(result.alreadyScheduled ? 200 : 201).json(result);
-    } catch (error) {
-      if (error instanceof SubscriptionValidationError) {
-        res.status(400).json({ error: error.message });
-        return;
-      }
-      if (error instanceof SubscriptionUpgradeError) {
-        res.status(502).json({ error: error.message });
-        return;
-      }
-      logger.error({ err: error }, "Failed to start Basic → Pro upgrade checkout");
-      res.status(502).json({ error: "Unable to start Studio Pro upgrade" });
     }
   },
 );

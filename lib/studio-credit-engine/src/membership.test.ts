@@ -5,13 +5,9 @@ import {
   MembershipDisplayPricing,
   MembershipMarketPricing,
   MembershipAddOnChargeAmounts,
-  MembershipUpgradeCreditGrant,
-  isStudioUpgradeImmediateEntitlementEnabled,
   membershipAddOnCharge,
   membershipAddOnDisplayPrice,
   membershipPlanDisplayPrice,
-  membershipUpgradeCharge,
-  membershipUpgradeDisplayPrice,
 } from './membership.js';
 
 describe('frozen membership market pricing', () => {
@@ -65,27 +61,4 @@ describe('frozen membership market pricing', () => {
     });
   });
 
-  it('Basic → Pro upgrade difference is frozen at ₹3,000 / $30', () => {
-    assert.deepEqual(membershipUpgradeCharge('india'), {
-      amount: 300_000,
-      currency: 'INR',
-    });
-    assert.deepEqual(membershipUpgradeCharge('international'), {
-      amount: 3_000,
-      currency: 'USD',
-    });
-    assert.equal(membershipUpgradeDisplayPrice('india'), '₹3,000');
-    assert.equal(membershipUpgradeDisplayPrice('international'), '$30');
-  });
-
-  it('immediate entitlement flag defaults OFF', () => {
-    assert.equal(isStudioUpgradeImmediateEntitlementEnabled({}), false);
-    assert.equal(
-      isStudioUpgradeImmediateEntitlementEnabled({
-        STUDIO_UPGRADE_IMMEDIATE_ENTITLEMENT: '1',
-      }),
-      true,
-    );
-    assert.equal(MembershipUpgradeCreditGrant, 120);
-  });
 });

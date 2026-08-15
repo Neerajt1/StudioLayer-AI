@@ -391,7 +391,7 @@ paths:
     get:
       operationId: getMembershipSubscriptionStatus
       tags: [payments]
-      summary: Get open membership and pending upgrade state
+      summary: Get open membership subscription status
       responses:
         "200":
           description: Membership subscription status
@@ -401,49 +401,6 @@ paths:
                 $ref: "#/components/schemas/MembershipSubscriptionStatus"
         "401":
           description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
-  /payments/subscriptions/upgrade-to-pro:
-    post:
-      operationId: upgradeMembershipToPro
-      tags: [payments]
-      summary: Start Basic to Pro upgrade checkout (fixed difference)
-      description: >
-        Creates a one-time Razorpay Order for the fixed Basic→Pro difference
-        (₹3,000 / $30). After payment.captured, schedules plan change with
-        schedule_change_at=cycle_end. Does not grant credits on the upgrade
-        payment. Does not create a second subscription. Billing anniversary
-        is preserved. Returns alreadyScheduled when pending upgrade exists.
-      responses:
-        "200":
-          description: Upgrade already scheduled (no new charge)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MembershipUpgradeToProResult"
-        "201":
-          description: Upgrade checkout order created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/MembershipUpgradeToProResult"
-        "400":
-          description: Upgrade not allowed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          description: Not authenticated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "502":
-          description: Razorpay upstream failure
           content:
             application/json:
               schema:
@@ -961,9 +918,6 @@ components:
           enum: [pro, enterprise, null]
         status:
           type: ["string", "null"]
-        pendingUpgradePlan:
-          type: ["string", "null"]
-          enum: [pro, null]
         currentEnd:
           type: ["string", "null"]
           format: date-time
@@ -973,58 +927,8 @@ components:
         - studioPlan
         - studioTier
         - status
-        - pendingUpgradePlan
         - currentEnd
         - subscriptionId
-
-    MembershipUpgradeToProResult:
-      type: object
-      properties:
-        subscriptionId:
-          type: string
-        currentPlan:
-          type: string
-          enum: [basic]
-        scheduledPlan:
-          type: string
-          enum: [pro]
-        pendingRazorpayPlanId:
-          type: ["string", "null"]
-        status:
-          type: string
-        alreadyScheduled:
-          type: boolean
-        currentEnd:
-          type: ["string", "null"]
-          format: date-time
-        orderId:
-          type: ["string", "null"]
-          description: Razorpay order id when checkout is required
-        keyId:
-          type: ["string", "null"]
-          description: Public Razorpay Key ID when checkout is required
-        amount:
-          type: ["number", "null"]
-          description: Fixed upgrade difference in smallest currency unit
-        currency:
-          type: ["string", "null"]
-          enum: [INR, USD, null]
-        market:
-          type: ["string", "null"]
-          enum: [india, international, null]
-      required:
-        - subscriptionId
-        - currentPlan
-        - scheduledPlan
-        - pendingRazorpayPlanId
-        - status
-        - alreadyScheduled
-        - currentEnd
-        - orderId
-        - keyId
-        - amount
-        - currency
-        - market
 
     CreateStudioAddOnCheckoutInput:
       type: object

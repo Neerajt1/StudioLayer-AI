@@ -7,7 +7,7 @@ export const StudioCreditReasonCode = {
   REGENERATE: 'regenerate',
   TRANSPARENT_DOWNLOAD: 'transparent_download',
   MEMBERSHIP_ALLOCATION: 'membership_allocation',
-  /** Basic → Pro upgrade difference (+120); not a full membership period grant. */
+  /** Historical Basic → Pro upgrade lot (+120). Not granted in V1. */
   MEMBERSHIP_UPGRADE_ALLOCATION: 'membership_upgrade_allocation',
   TOP_UP_ALLOCATION: 'top_up_allocation',
   STUDIO_PASS_ALLOCATION: 'studio_pass_allocation',

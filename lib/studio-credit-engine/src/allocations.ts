@@ -127,18 +127,6 @@ export function razorpayMembershipPeriodKey(input: {
   return `rzp:${input.subscriptionId}:${input.currentStartUnix}:${input.currentEndUnix}`;
 }
 
-/**
- * Period key for Basic → Pro upgrade +120 lot (U1).
- * Tied to the current subscription billing period — not a permanent top-up.
- */
-export function razorpayMembershipUpgradePeriodKey(input: {
-  subscriptionId: string;
-  currentStartUnix: number;
-  currentEndUnix: number;
-}): string {
-  return `rzp_upgrade:${input.subscriptionId}:${input.currentStartUnix}:${input.currentEndUnix}`;
-}
-
 export interface CreditAllocationLotLike {
   id: number;
   reasonCode: string;

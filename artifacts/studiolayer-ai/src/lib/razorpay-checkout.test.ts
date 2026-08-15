@@ -392,7 +392,7 @@ describe('openRazorpayOrderCheckout payment.failed / dismiss / timeout', () => {
         orderId: 'order_upg_1',
         amount: 300_000,
         currency: 'INR',
-        description: 'Studio Pro upgrade',
+        description: 'Studio Top-Up',
         onSuccess: () => {
           assert.fail('success should not run');
         },
@@ -432,7 +432,7 @@ describe('openRazorpayOrderCheckout payment.failed / dismiss / timeout', () => {
         orderId: 'order_upg_2',
         amount: 300_000,
         currency: 'INR',
-        description: 'Studio Pro upgrade',
+        description: 'Studio Top-Up',
         onSuccess: () => {},
         onDismiss: () => {
           dismissCount += 1;
@@ -464,7 +464,7 @@ describe('openRazorpayOrderCheckout payment.failed / dismiss / timeout', () => {
         orderId: 'order_upg_3',
         amount: 300_000,
         currency: 'INR',
-        description: 'Studio Pro upgrade',
+        description: 'Studio Top-Up',
         onSuccess: () => {},
         onDismiss: () => {
           dismissCount += 1;

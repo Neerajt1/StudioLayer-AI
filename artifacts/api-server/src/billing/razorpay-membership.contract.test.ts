@@ -98,17 +98,13 @@ describe("payments route auth + webhook session contract", () => {
     assert.ok(grantIdx > 0 && tierIdx > grantIdx);
   });
 
-  it("Basic → Pro upgrade is authenticated and cycle_end only", () => {
-    assert.match(paymentsSource, /\/payments\/subscriptions\/upgrade-to-pro/);
-    assert.match(paymentsSource, /upgradeMembershipToPro/);
-    assert.match(membershipSource, /scheduleChangeAt: "cycle_end"/);
-    assert.match(membershipSource, /createRazorpayOrder/);
-    assert.match(membershipSource, /fulfillMembershipUpgradeFromCapturedPayment/);
-    assert.match(membershipSource, /MEMBERSHIP_UPGRADE_ALLOCATION/);
-    assert.match(membershipSource, /immediateUpgradeEntitlement/);
-    assert.equal(membershipSource.includes('scheduleChangeAt: "now"'), false);
-    assert.match(logicSource, /resolveBasicToProUpgrade/);
-    assert.match(logicSource, /already_scheduled/);
+  it("Basic → Pro mid-cycle upgrade is not present in V1", () => {
+    assert.equal(paymentsSource.includes("/payments/subscriptions/upgrade-to-pro"), false);
+    assert.equal(paymentsSource.includes("upgradeMembershipToPro"), false);
+    assert.equal(membershipSource.includes("fulfillMembershipUpgradeFromCapturedPayment"), false);
+    assert.equal(membershipSource.includes("upgradeMembershipToPro"), false);
+    assert.equal(membershipSource.includes("immediateUpgradeEntitlement"), false);
+    assert.equal(logicSource.includes("resolveBasicToProUpgrade"), false);
   });
 
   it("Pass / Top-Up use one-time Orders + payment.captured grants", () => {

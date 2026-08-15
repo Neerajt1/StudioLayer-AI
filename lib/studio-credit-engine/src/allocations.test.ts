@@ -20,7 +20,6 @@ import {
   sumSpendableAllocationCredits,
   StudioCreditAllocationStatus,
   STUDIO_PASS_VALIDITY_DAYS,
-  razorpayMembershipUpgradePeriodKey,
   type CreditAllocationLotLike,
 } from './allocations';
 
@@ -95,16 +94,6 @@ describe('expectedCreditsForAllocation', () => {
     );
   });
 
-  it('upgrade periodKey uses rzp_upgrade prefix', () => {
-    assert.equal(
-      razorpayMembershipUpgradePeriodKey({
-        subscriptionId: 'sub_x',
-        currentStartUnix: 1,
-        currentEndUnix: 2,
-      }),
-      'rzp_upgrade:sub_x:1:2',
-    );
-  });
 });
 
 describe('expiry helpers', () => {

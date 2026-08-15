@@ -5,7 +5,6 @@
  * StudioLayer AI API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { MembershipSubscriptionStatusPendingUpgradePlan } from './membershipSubscriptionStatusPendingUpgradePlan';
 import type { MembershipSubscriptionStatusStudioPlan } from './membershipSubscriptionStatusStudioPlan';
 import type { MembershipSubscriptionStatusStudioTier } from './membershipSubscriptionStatusStudioTier';
 
@@ -16,8 +15,6 @@ export interface MembershipSubscriptionStatus {
   studioTier: MembershipSubscriptionStatusStudioTier;
   /** @nullable */
   status: string | null;
-  /** @nullable */
-  pendingUpgradePlan: MembershipSubscriptionStatusPendingUpgradePlan;
   /** @nullable */
   currentEnd: Date | null;
   /** @nullable */
