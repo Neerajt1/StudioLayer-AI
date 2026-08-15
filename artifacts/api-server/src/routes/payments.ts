@@ -243,6 +243,7 @@ router.post("/payments/razorpay/webhook", async (req, res): Promise<void> => {
   try {
     const result = await processRazorpayWebhookPayload(
       payload as Parameters<typeof processRazorpayWebhookPayload>[0],
+      { eventIdHeader: req.header("X-Razorpay-Event-Id") },
     );
     res.status(200).json({
       ok: true,

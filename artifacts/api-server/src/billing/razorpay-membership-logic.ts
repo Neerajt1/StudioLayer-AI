@@ -341,6 +341,25 @@ export function resolveSubscriptionPlanSync(input: {
 }
 
 /**
+ * Razorpay webhook idempotency key.
+ * Live deliveries send the unique id in `X-Razorpay-Event-Id` (not body.id).
+ * Body `id` remains a fallback for tests / internal callers.
+ */
+export function resolveRazorpayWebhookEventId(input: {
+  headerEventId?: string | null;
+  bodyId?: unknown;
+}): string | null {
+  const fromHeader =
+    typeof input.headerEventId === "string" ? input.headerEventId.trim() : "";
+  if (fromHeader.length > 0) return fromHeader;
+
+  if (typeof input.bodyId === "string" && input.bodyId.trim().length > 0) {
+    return input.bodyId.trim();
+  }
+  return null;
+}
+
+/**
  * In-memory claim semantics for webhook event_id uniqueness + retryability.
  * Mirrors DB advisory-locked claim without requiring a database in unit tests.
  */

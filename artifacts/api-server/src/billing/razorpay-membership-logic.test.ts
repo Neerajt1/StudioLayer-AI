@@ -14,6 +14,7 @@ import {
   expectedMembershipCreditsForPlan,
   resolveBasicToProUpgrade,
   resolveOpenMembershipForCreate,
+  resolveRazorpayWebhookEventId,
   resolveSubscriptionPlanSync,
 } from "./razorpay-membership-logic.js";
 
@@ -22,6 +23,73 @@ const period = {
   current_start: 1_723_939_200, // 2024-08-18 00:00:00 UTC
   current_end: 1_726_531_200, // 2024-09-17 00:00:00 UTC
 };
+
+describe("resolveRazorpayWebhookEventId", () => {
+  it("accepts X-Razorpay-Event-Id header as the event id", () => {
+    assert.equal(
+      resolveRazorpayWebhookEventId({
+        headerEventId: "evt_header_1",
+        bodyId: undefined,
+      }),
+      "evt_header_1",
+    );
+  });
+
+  it("header value is what would be persisted as event_id (preferred over body.id)", () => {
+    assert.equal(
+      resolveRazorpayWebhookEventId({
+        headerEventId: "evt_from_header",
+        bodyId: "evt_from_body",
+      }),
+      "evt_from_header",
+    );
+  });
+
+  it("falls back to body.id when header is missing (test/compat)", () => {
+    assert.equal(
+      resolveRazorpayWebhookEventId({
+        headerEventId: null,
+        bodyId: "evt_body_only",
+      }),
+      "evt_body_only",
+    );
+    assert.equal(
+      resolveRazorpayWebhookEventId({
+        headerEventId: "   ",
+        bodyId: "evt_body_only",
+      }),
+      "evt_body_only",
+    );
+  });
+
+  it("missing header and body.id yields null (existing validation error path)", () => {
+    assert.equal(
+      resolveRazorpayWebhookEventId({
+        headerEventId: undefined,
+        bodyId: undefined,
+      }),
+      null,
+    );
+    assert.equal(
+      resolveRazorpayWebhookEventId({
+        headerEventId: "",
+        bodyId: "",
+      }),
+      null,
+    );
+  });
+
+  it("does not treat payment entity id as the webhook event id", () => {
+    // Business handlers still read payload.payment.entity.id separately.
+    assert.equal(
+      resolveRazorpayWebhookEventId({
+        headerEventId: "evt_wh_1",
+        bodyId: undefined,
+      }),
+      "evt_wh_1",
+    );
+  });
+});
 
 describe("evaluateSubscriptionChargedGrant — captured payment gate", () => {
   it("1. captured Basic payment grants exactly 120", () => {

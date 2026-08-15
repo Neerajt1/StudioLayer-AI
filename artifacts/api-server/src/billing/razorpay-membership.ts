@@ -36,6 +36,7 @@ import {
   evaluateSubscriptionChargedGrant,
   resolveBasicToProUpgrade,
   resolveOpenMembershipForCreate,
+  resolveRazorpayWebhookEventId,
   resolveSubscriptionPlanSync,
   unixToDate,
 } from "./razorpay-membership-logic.js";
@@ -726,12 +727,13 @@ type RazorpayWebhookPayload = {
  */
 export async function processRazorpayWebhookPayload(
   payload: RazorpayWebhookPayload,
+  options?: { eventIdHeader?: string | null },
 ): Promise<{ handled: boolean; grantedCredits: number; duplicate: boolean }> {
   const eventType = payload.event ?? "";
-  const eventId =
-    typeof payload.id === "string" && payload.id.length > 0
-      ? payload.id
-      : null;
+  const eventId = resolveRazorpayWebhookEventId({
+    headerEventId: options?.eventIdHeader,
+    bodyId: payload.id,
+  });
 
   if (!eventId) {
     throw new Error("Razorpay webhook payload missing event id");

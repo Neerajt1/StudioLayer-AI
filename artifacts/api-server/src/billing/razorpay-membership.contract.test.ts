@@ -32,7 +32,15 @@ describe("payments route auth + webhook session contract", () => {
     );
     assert.equal(webhookBlock.includes("req.session"), false);
     assert.match(webhookBlock, /X-Razorpay-Signature/);
+    assert.match(webhookBlock, /X-Razorpay-Event-Id/);
     assert.match(webhookBlock, /rawBody/);
+  });
+
+  it("webhook event id prefers X-Razorpay-Event-Id header over body.id", () => {
+    assert.match(paymentsSource, /eventIdHeader:\s*req\.header\("X-Razorpay-Event-Id"\)/);
+    assert.match(membershipSource, /resolveRazorpayWebhookEventId/);
+    assert.match(logicSource, /headerEventId/);
+    assert.match(logicSource, /bodyId/);
   });
 
   it("app.ts preserves raw body for Razorpay webhook path", () => {
