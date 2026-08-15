@@ -72,6 +72,19 @@ describe("Razorpay plan mapping", () => {
     assert.equal(resolveRazorpayPlanId("pro", "india"), "plan_in_pro");
   });
 
+  it("uses optional USD plan IDs for international when configured", () => {
+    process.env.RAZORPAY_BASIC_PLAN_ID_USD = "plan_usd_basic";
+    process.env.RAZORPAY_PRO_PLAN_ID_USD = "plan_usd_pro";
+    assert.equal(
+      resolveRazorpayPlanId("basic", "international"),
+      "plan_usd_basic",
+    );
+    assert.equal(
+      resolveRazorpayPlanId("pro", "international"),
+      "plan_usd_pro",
+    );
+  });
+
   it("keeps existing plan IDs when market-specific IDs are unset", () => {
     delete process.env.RAZORPAY_BASIC_PLAN_ID_INR;
     delete process.env.RAZORPAY_BASIC_PLAN_ID_USD;

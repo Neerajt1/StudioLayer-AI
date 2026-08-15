@@ -139,34 +139,76 @@ export type OpenMembershipRow = {
 
 /**
  * At most one open membership across Basic + Pro.
- * Same plan open → reuse. Other plan open → conflict.
+ * Same StudioLayer plan + matching Razorpay plan_id → reuse.
+ * Stale incomplete (`created`) with a different Razorpay plan_id (e.g. old USD
+ * checkout while the current market expects INR) → do not reuse; allow create
+ * and return those rows for the caller to supersede.
+ * Non-created open memberships (active / authenticated / …) keep blocking even
+ * when the Razorpay plan_id differs — never replace a paid membership for market.
+ * Other StudioLayer plan open → conflict.
  */
 export function resolveOpenMembershipForCreate(input: {
   requestedPlan: StudioMembershipPlanId;
   openSubscriptions: readonly OpenMembershipRow[];
+  /** Market-resolved Razorpay plan id for this checkout (required for safe reuse). */
+  expectedRazorpayPlanId?: string;
 }):
-  | { action: "create" }
+  | { action: "create"; supersedeCreated: OpenMembershipRow[] }
   | { action: "reuse"; subscription: OpenMembershipRow }
   | { action: "conflict"; existing: OpenMembershipRow; message: string } {
   const open = input.openSubscriptions.filter((row) =>
     isOpenMembershipSubscriptionStatus(row.status),
   );
   if (open.length === 0) {
-    return { action: "create" };
+    return { action: "create", supersedeCreated: [] };
   }
 
-  const samePlan = open.find((row) => row.studioPlan === input.requestedPlan);
-  if (samePlan) {
-    return { action: "reuse", subscription: samePlan };
+  const samePlanRows = open.filter(
+    (row) => row.studioPlan === input.requestedPlan,
+  );
+  const otherPlan = open.find((row) => row.studioPlan !== input.requestedPlan);
+
+  if (samePlanRows.length > 0) {
+    const expected = input.expectedRazorpayPlanId?.trim() || null;
+
+    if (!expected) {
+      // Legacy callers without market plan id — preserve prior reuse behaviour.
+      return { action: "reuse", subscription: samePlanRows[0]! };
+    }
+
+    const matching = samePlanRows.find(
+      (row) => row.razorpayPlanId === expected,
+    );
+    if (matching) {
+      return { action: "reuse", subscription: matching };
+    }
+
+    const staleCreated = samePlanRows.filter((row) => row.status === "created");
+    const blockingMismatch = samePlanRows.find(
+      (row) => row.status !== "created",
+    );
+    if (blockingMismatch) {
+      return {
+        action: "conflict",
+        existing: blockingMismatch,
+        message: `An open ${blockingMismatch.studioPlan} membership already exists (${blockingMismatch.status}). Cancel or complete it before starting ${input.requestedPlan}.`,
+      };
+    }
+
+    // Only incomplete `created` checkouts with the wrong market plan_id.
+    return { action: "create", supersedeCreated: staleCreated };
   }
 
-  const existing = open[0]!;
-  const requestedTier = studioTierForPlan(input.requestedPlan);
-  return {
-    action: "conflict",
-    existing,
-    message: `An open ${existing.studioPlan} membership already exists (${existing.status}). Cancel or complete it before starting ${input.requestedPlan} (${requestedTier}).`,
-  };
+  if (otherPlan) {
+    const requestedTier = studioTierForPlan(input.requestedPlan);
+    return {
+      action: "conflict",
+      existing: otherPlan,
+      message: `An open ${otherPlan.studioPlan} membership already exists (${otherPlan.status}). Cancel or complete it before starting ${input.requestedPlan} (${requestedTier}).`,
+    };
+  }
+
+  return { action: "create", supersedeCreated: [] };
 }
 
 export type PendingUpgradeRow = {

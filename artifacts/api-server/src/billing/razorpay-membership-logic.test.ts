@@ -365,6 +365,82 @@ describe("one open membership across Basic + Pro", () => {
     assert.equal(result.action, "reuse");
   });
 
+  it("same plan + matching expected Razorpay plan_id → reuse", () => {
+    const result = resolveOpenMembershipForCreate({
+      requestedPlan: "basic",
+      expectedRazorpayPlanId: "plan_in_basic",
+      openSubscriptions: [
+        {
+          razorpaySubscriptionId: "sub_in",
+          studioPlan: "basic",
+          studioTier: "pro",
+          status: "created",
+          razorpayPlanId: "plan_in_basic",
+        },
+      ],
+    });
+    assert.equal(result.action, "reuse");
+    if (result.action === "reuse") {
+      assert.equal(result.subscription.razorpaySubscriptionId, "sub_in");
+    }
+  });
+
+  it("stale created USD Basic + India expected INR plan → create (do not reuse)", () => {
+    const result = resolveOpenMembershipForCreate({
+      requestedPlan: "basic",
+      expectedRazorpayPlanId: "plan_TQ3KlDHULo9Bjn",
+      openSubscriptions: [
+        {
+          razorpaySubscriptionId: "sub_TQ31WESEQGhGGW",
+          studioPlan: "basic",
+          studioTier: "pro",
+          status: "created",
+          razorpayPlanId: "plan_TPKaBkXum2gQHn",
+        },
+      ],
+    });
+    assert.equal(result.action, "create");
+    if (result.action === "create") {
+      assert.equal(result.supersedeCreated.length, 1);
+      assert.equal(
+        result.supersedeCreated[0]!.razorpaySubscriptionId,
+        "sub_TQ31WESEQGhGGW",
+      );
+    }
+  });
+
+  it("active Basic USD + India expected INR plan → conflict (do not replace)", () => {
+    const result = resolveOpenMembershipForCreate({
+      requestedPlan: "basic",
+      expectedRazorpayPlanId: "plan_TQ3KlDHULo9Bjn",
+      openSubscriptions: [
+        {
+          razorpaySubscriptionId: "sub_active_usd",
+          studioPlan: "basic",
+          studioTier: "pro",
+          status: "active",
+          razorpayPlanId: "plan_TPKaBkXum2gQHn",
+        },
+      ],
+    });
+    assert.equal(result.action, "conflict");
+    if (result.action === "conflict") {
+      assert.equal(result.existing.status, "active");
+    }
+  });
+
+  it("empty open list → create (new India / international checkout)", () => {
+    const result = resolveOpenMembershipForCreate({
+      requestedPlan: "basic",
+      expectedRazorpayPlanId: "plan_TQ3KlDHULo9Bjn",
+      openSubscriptions: [],
+    });
+    assert.equal(result.action, "create");
+    if (result.action === "create") {
+      assert.deepEqual(result.supersedeCreated, []);
+    }
+  });
+
   it("14. completed/terminal old subscription does not block", () => {
     for (const status of ["completed", "cancelled"]) {
       assert.equal(isOpenMembershipSubscriptionStatus(status), false);

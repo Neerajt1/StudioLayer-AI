@@ -182,6 +182,7 @@ export async function createMembershipSubscription(input: {
 
     const decision = resolveOpenMembershipForCreate({
       requestedPlan: plan,
+      expectedRazorpayPlanId: razorpayPlanId,
       openSubscriptions: openRows.map((row) => ({
         razorpaySubscriptionId: row.razorpaySubscriptionId,
         studioPlan: row.studioPlan,
@@ -206,6 +207,42 @@ export async function createMembershipSubscription(input: {
 
     if (decision.action === "conflict") {
       throw new SubscriptionConflictError(decision.message);
+    }
+
+    // Stale incomplete checkouts on a different market plan must not remain open
+    // beside the new market-correct subscription.
+    for (const stale of decision.supersedeCreated) {
+      await db
+        .update(studioRazorpaySubscriptionsTable)
+        .set({
+          status: "cancelled",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(
+              studioRazorpaySubscriptionsTable.razorpaySubscriptionId,
+              stale.razorpaySubscriptionId,
+            ),
+            eq(studioRazorpaySubscriptionsTable.status, "created"),
+          ),
+        );
+
+      try {
+        await cancelRazorpaySubscription({
+          subscriptionId: stale.razorpaySubscriptionId,
+          cancelAtCycleEnd: false,
+        });
+      } catch (cancelError) {
+        logger.warn(
+          {
+            err: cancelError,
+            subscriptionId: stale.razorpaySubscriptionId,
+            userId: input.userId,
+          },
+          "Failed to cancel stale market-mismatched Razorpay subscription — local row already closed",
+        );
+      }
     }
 
     const created = await createRazorpaySubscription({
