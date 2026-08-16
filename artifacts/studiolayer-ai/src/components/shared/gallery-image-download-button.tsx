@@ -9,6 +9,8 @@ export interface GalleryImageDownloadButtonProps {
   outputImageUrl: string;
   disabled?: boolean;
   label?: string;
+  /** Skip canvas fallback — preserve PNG alpha (Remove Background child renders). */
+  preservePngAlpha?: boolean;
   onDownloadError?: (message: string) => void;
 }
 
@@ -18,6 +20,7 @@ export function GalleryImageDownloadButton({
   outputImageUrl,
   disabled = false,
   label = 'Download',
+  preservePngAlpha = false,
   onDownloadError,
 }: GalleryImageDownloadButtonProps) {
   const { inFlight, elapsedSec, run } = useDownloadInFlight();
@@ -32,7 +35,7 @@ export function GalleryImageDownloadButton({
           downloadBlobDirect(blob, buildHeroDownloadFilename(outputImageUrl, blob));
           return;
         }
-        await triggerImageDownload(outputImageUrl, { renderId });
+        await triggerImageDownload(outputImageUrl, { renderId, preservePngAlpha });
       } catch {
         onDownloadError?.("We couldn't download this image.");
       }

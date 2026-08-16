@@ -1,14 +1,18 @@
 // ---------------------------------------------------------------------------
-// BirefNet Background Removal — editorial output cutout (Batch 21)
+// BirefNet Background Removal — segmentation mask only (Phase 1)
 //
-// Removes the studio background from a generated fashion image.
-// V1: used ONLY by Remove Background refinement — not normal generation.
+// FAL produces a segmentation mask at operating_resolution. The final
+// transparent PNG is composited server-side onto the original full-res image.
 // ---------------------------------------------------------------------------
 
 import { fal } from "@fal-ai/client";
 import { logger } from "../../lib/logger.js";
 import type { BackgroundRemovalProvider } from "./background-removal-provider.js";
 import type { BackgroundRemovalInput, BackgroundRemovalResult } from "./types.js";
+import {
+  resolveBirefNetOperatingResolution,
+  type BirefNetOperatingResolution,
+} from "./resolve-birefnet-operating-resolution.js";
 
 fal.config({ credentials: process.env["FAL_KEY"] });
 
@@ -16,6 +20,15 @@ fal.config({ credentials: process.env["FAL_KEY"] });
 export const FAL_BIREFNET_TIMEOUT_MS = Number(
   process.env["FAL_BIREFNET_TIMEOUT_MS"] ?? 120_000,
 );
+
+/** FAL request parameters for mask-only segmentation (fal-ai/birefnet v1). */
+export const BIREFNET_MASK_REQUEST = {
+  model: "General Use (Light)" as const,
+  output_format: "png" as const,
+  mask_only: true,
+  output_mask: true,
+  refine_foreground: false,
+};
 
 function withAsyncTimeout<T>(
   promise: Promise<T>,
@@ -37,19 +50,18 @@ function withAsyncTimeout<T>(
   });
 }
 
-function extractResultUrl(data: Record<string, unknown> | undefined): string | null {
-  const candidates: unknown[] = [
-    (data?.["image"] as { url?: string } | undefined)?.url,
-    data?.["image_url"],
-    data?.["url"],
-    (data?.["images"] as Array<{ url: string }> | undefined)?.[0]?.url,
-  ];
-
-  for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate.startsWith("http")) {
-      return candidate;
-    }
+function extractMaskUrl(data: Record<string, unknown> | undefined): string | null {
+  const maskImage = (data?.["mask_image"] as { url?: string } | undefined)?.url;
+  if (typeof maskImage === "string" && maskImage.startsWith("http")) {
+    return maskImage;
   }
+
+  // mask_only: true — segmentation mask is returned in the image field.
+  const image = (data?.["image"] as { url?: string } | undefined)?.url;
+  if (typeof image === "string" && image.startsWith("http")) {
+    return image;
+  }
+
   return null;
 }
 
@@ -59,21 +71,33 @@ export class BirefNetBackgroundRemovalProvider implements BackgroundRemovalProvi
   async processBackgroundRemoval(
     input: BackgroundRemovalInput,
   ): Promise<BackgroundRemovalResult> {
-    const { sourceImageUrl, renderId, purpose } = input;
+    const { sourceImageUrl, renderId, purpose, sourceWidth, sourceHeight } = input;
+
+    const operatingResolution: BirefNetOperatingResolution =
+      sourceWidth != null && sourceHeight != null
+        ? resolveBirefNetOperatingResolution(sourceWidth, sourceHeight)
+        : "2048x2048";
 
     logger.info(
-      { renderId, purpose, provider: this.name, timeoutMs: FAL_BIREFNET_TIMEOUT_MS },
-      "background-removal: BirefNet started",
+      {
+        renderId,
+        purpose,
+        provider: this.name,
+        timeoutMs: FAL_BIREFNET_TIMEOUT_MS,
+        operatingResolution,
+        sourceWidth,
+        sourceHeight,
+        ...BIREFNET_MASK_REQUEST,
+      },
+      "background-removal: BirefNet mask request started",
     );
 
     const result = await withAsyncTimeout(
       fal.subscribe("fal-ai/birefnet", {
         input: {
           image_url: sourceImageUrl,
-          model: "General Use (Light)",
-          output_format: "png",
-          operating_resolution: "2048x2048",
-          refine_foreground: true,
+          operating_resolution: operatingResolution,
+          ...BIREFNET_MASK_REQUEST,
         },
         logs: false,
       }),
@@ -81,16 +105,16 @@ export class BirefNetBackgroundRemovalProvider implements BackgroundRemovalProvi
       `background-removal: BirefNet timed out after ${FAL_BIREFNET_TIMEOUT_MS}ms`,
     );
 
-    const url = extractResultUrl(result.data as Record<string, unknown> | undefined);
-    if (!url) {
-      throw new Error("background-removal: BirefNet returned no image URL");
+    const maskUrl = extractMaskUrl(result.data as Record<string, unknown> | undefined);
+    if (!maskUrl) {
+      throw new Error("background-removal: BirefNet returned no mask URL");
     }
 
     logger.info(
-      { renderId, purpose, provider: this.name, outputUrl: url },
-      "background-removal: BirefNet complete",
+      { renderId, purpose, provider: this.name, maskUrl, operatingResolution },
+      "background-removal: BirefNet mask complete",
     );
 
-    return { kind: "url", url };
+    return { kind: "mask_url", maskUrl };
   }
 }

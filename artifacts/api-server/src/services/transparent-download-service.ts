@@ -1,24 +1,24 @@
 // ---------------------------------------------------------------------------
-// StudioLayer AI — Transparent PNG download service (Batch 6.1)
+// StudioLayer AI — Transparent PNG download service (Batch 6.1 / Phase 1)
 //
 // Flow:
-//   TransparentDownloadService → ImageProcessingProvider → BackgroundRemovalProvider
+//   ensureTransparentOutputUrl → produceResolutionPreservingTransparentPng
 //   → R2 persist → renders.transparent_output_image_url
-//
-// No Fal, OpenRouter, or third-party engine assumptions in this module.
 // ---------------------------------------------------------------------------
 
 import { eq } from "drizzle-orm";
 import { db, rendersTable } from "@workspace/db";
 import { logger } from "../lib/logger.js";
 import { traceRenderFailure, traceRenderStage } from "../lib/render-pipeline-trace.js";
-import { uploadRemoteImageToR2 } from "../rendering/image-storage.js";
-import type { BackgroundRemovalResult } from "./image-processing/types.js";
+import { uploadTransparentPngBufferToR2 } from "../rendering/image-storage.js";
 import {
   FeatureTemporarilyUnavailableError,
-  getImageProcessingProvider,
   isImageProcessingNotImplementedError,
 } from "./image-processing/index.js";
+import {
+  isRemoveBackgroundFailedError,
+  produceResolutionPreservingTransparentPng,
+} from "./remove-background-service.js";
 
 export async function ensureTransparentOutputUrl(input: {
   renderId: number;
@@ -38,17 +38,15 @@ export async function ensureTransparentOutputUrl(input: {
     outputImageUrl: input.outputImageUrl,
   });
 
-  const imageProcessing = getImageProcessingProvider();
-
   try {
-    const removalResult = await imageProcessing.processBackgroundRemoval({
+    const { buffer } = await produceResolutionPreservingTransparentPng({
       sourceImageUrl: input.outputImageUrl,
       renderId: input.renderId,
       purpose: "transparent-download",
     });
 
-    const persistedUrl = await persistBackgroundRemovalResult(
-      removalResult,
+    const persistedUrl = await uploadTransparentPngBufferToR2(
+      buffer,
       input.renderId,
     );
 
@@ -72,23 +70,16 @@ export async function ensureTransparentOutputUrl(input: {
     if (isImageProcessingNotImplementedError(error)) {
       throw new FeatureTemporarilyUnavailableError();
     }
+    if (isRemoveBackgroundFailedError(error)) {
+      traceRenderFailure("Transparent download generation", error, {
+        renderId: input.renderId,
+      });
+      throw error;
+    }
 
     traceRenderFailure("Transparent download generation", error, {
       renderId: input.renderId,
     });
     throw error;
   }
-}
-
-async function persistBackgroundRemovalResult(
-  result: BackgroundRemovalResult,
-  renderId: number,
-): Promise<string> {
-  if (result.kind === "url") {
-    return uploadRemoteImageToR2(result.url, renderId, "transparent");
-  }
-
-  throw new Error(
-    "transparent-download: buffer persistence is not wired yet — provider must return kind:url",
-  );
 }

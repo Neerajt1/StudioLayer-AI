@@ -22,9 +22,10 @@ import {
   isGenerationReasonCode,
   isRefinementReasonCode,
   isUsageReasonCode,
+  refinementActionLabel,
 } from "./labels.js";
 
-export type ActivityType = "Generation" | "Refinement";
+export type ActivityType = "Generation" | "Refinement" | "Remove Background";
 export type ActivityResult = "Completed" | "Failed" | "Unknown";
 
 export interface CreativeActivityRow {
@@ -506,6 +507,10 @@ function refinementActivityDate(
   return render?.createdAt ?? refinementTx?.createdAt ?? event?.deletedAt ?? new Date(0);
 }
 
+function isRefinementActivityType(activityType: ActivityType): boolean {
+  return activityType === "Refinement" || activityType === "Remove Background";
+}
+
 function buildRefinementRow(
   slot: SessionRefinementSlot,
   sessionId: string,
@@ -534,15 +539,20 @@ function buildRefinementRow(
   const generationType =
     render?.generationType ?? event?.generationType ?? "editorial";
   const creditsUsed = result === "Completed" ? 1 : 0;
+  const actionLabel = refinementActionLabel(render?.refinementType);
+  const activityType: ActivityType =
+    render?.refinementType === "remove_background"
+      ? "Remove Background"
+      : "Refinement";
 
   return {
     activityId: `render-${slot.renderId}`,
     dateTime,
     generationSessionId: sessionId,
     transactionId: refinementTx?.transactionId ?? null,
-    activityType: "Refinement",
+    activityType,
     generationType,
-    batchAction: "Refinement",
+    batchAction: actionLabel,
     outputSequence: 1,
     outputsRequested: 1,
     outputLabel: "1/1",
@@ -712,7 +722,7 @@ export function countMasterRefinements(
 ): number {
   return rows.filter(
     (row) =>
-      row.activityType === "Refinement" && row.result === "Completed",
+      isRefinementActivityType(row.activityType) && row.result === "Completed",
   ).length;
 }
 
@@ -840,7 +850,7 @@ export function aggregateMasterByMonth(
     if (row.activityType === "Generation" && row.result === "Completed") {
       entry.imagesGenerated += 1;
     }
-    if (row.activityType === "Refinement" && row.result === "Completed") {
+    if (isRefinementActivityType(row.activityType) && row.result === "Completed") {
       entry.refinements += 1;
     }
     entry.creditsUsed += row.creditsUsed;

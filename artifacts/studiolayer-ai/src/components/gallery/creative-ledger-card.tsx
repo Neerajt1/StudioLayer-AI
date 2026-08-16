@@ -16,11 +16,15 @@ const STUDIO_SPARK_ICON = '/icons/studio-spark.svg';
 export interface CreativeLedgerCardRender extends LedgerRender {
   sourceImageUrl: string | null;
   outputImageUrl: string | null;
+  /** Lightweight Gallery card preview — null until async generation completes. */
+  previewImageUrl?: string | null;
   status: string;
   modelPersona?: string;
   locationEnvironment?: string;
   generationType?: 'hero' | 'campaign' | 'editorial';
   generationSessionId?: string | null;
+  refinementType?: string | null;
+  assetType?: string | null;
 }
 
 type CreativeLedgerCardProps =
@@ -157,8 +161,8 @@ function GhostCreativeLedgerCard({ ghostIndex }: { ghostIndex: number }) {
         </div>
       </div>
       <div className="sl-ledger-accounting-strip">
-        <AccountingMetric iconSrc={SL_TOKEN_ICON} label="Studio Credits" value={0} studioCreditIcon />
-        <AccountingMetric iconSrc={STUDIO_SPARK_ICON} label="Refinements" value={0} />
+        <AccountingMetric iconSrc={SL_TOKEN_ICON} label="Credits Used" value={0} studioCreditIcon />
+        <AccountingMetric iconSrc={STUDIO_SPARK_ICON} label="Edits Made" value={0} />
       </div>
     </article>
   );
@@ -295,13 +299,13 @@ function RealCreativeLedgerCard({
       <div className="sl-ledger-accounting-strip">
         <AccountingMetric
           iconSrc={SL_TOKEN_ICON}
-          label="Studio Credits"
+          label="Credits Used"
           value={studioCredits}
           studioCreditIcon
         />
         <AccountingMetric
           iconSrc={STUDIO_SPARK_ICON}
-          label="Refinements"
+          label="Edits Made"
           value={refinements}
         />
       </div>

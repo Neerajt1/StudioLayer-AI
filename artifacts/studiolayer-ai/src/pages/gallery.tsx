@@ -11,6 +11,7 @@ import {
   getListRendersQueryKey,
   getGetRenderUsageQueryKey,
 } from '@workspace/api-client-react';
+import type { Render } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { withErrorContactHelper } from '@/lib/studio-contact';
 import { useToast } from '@/hooks/use-toast';
@@ -26,9 +27,9 @@ import {
 } from '@/components/gallery/gallery-image-edit-dialog';
 import type { CreativeLedgerCardRender } from '@/components/gallery/creative-ledger-card';
 import { buildGalleryShoots, type GalleryShoot } from '@/lib/gallery-shoots';
-import { buildGalleryRefinementRequest } from '@/lib/gallery-refinement';
-import { galleryQueryOptions } from '@/lib/gallery-queries';
-import type { RefinementType } from '@/lib/refinement-types';
+import { buildGalleryRemoveBackgroundRequest } from '@/lib/gallery-refinement';
+import { readPreviewImageUrlFromApiRender } from '@/lib/gallery-card-image';
+import { galleryQueryOptions, galleryUsageQueryOptions } from '@/lib/gallery-queries';
 import { revokeCropObjectUrl } from '@/lib/studio-crop';
 import {
   isStudioCreditLimitBlocked,
@@ -84,17 +85,31 @@ function renderApiErrorDescription(error: unknown): string {
 const GALLERY_FAQ = [
   {
     q: 'Can I see where I spend my Studio Credits?',
-    a: 'Yes.\n\nEvery Shoot in your Studio Gallery records exactly how many Studio Credits were used and how many refinements were made to produce the final result.\n\nStudio Gallery acts as your Creative Ledger, giving you complete transparency for every generation session.',
+    a: 'Yes.\n\nEvery Shoot in your Studio Gallery records exactly how many Studio Credits were used and how many paid post-production edits were made to produce the final result.\n\nStudio Gallery acts as your Creative Ledger, giving you complete transparency for every generation session.',
   },
   {
     q: 'What is my Creative Ledger?',
-    a: 'Your Creative Ledger is the permanent record of every generation session you create in StudioLayer.\n\nEach Shoot shows Studio Credit usage and refinement history — so you always know where your creative investment went.',
+    a: 'Your Creative Ledger is the permanent record of every generation session you create in StudioLayer.\n\nEach Shoot shows Studio Credit usage and post-production activity — so you always know where your creative investment went.',
   },
   {
     q: 'What are Studio Credits?',
     a: 'Studio Credits are your allowance for creating Editorial Images. Every credit consumed appears in your Creative Ledger alongside the Shoot it helped produce.',
   },
 ];
+
+function toCreativeLedgerCardRender(render: Render): CreativeLedgerCardRender {
+  return {
+    ...render,
+    sourceImageUrl: render.sourceImageUrl ?? null,
+    outputImageUrl: render.outputImageUrl ?? null,
+    previewImageUrl: readPreviewImageUrlFromApiRender(render),
+    status: render.status,
+    generationType: render.generationType,
+    generationSessionId: render.generationSessionId,
+    refinementType: render.refinementType,
+    assetType: render.assetType,
+  };
+}
 
 export default function GalleryPage() {
   const {
@@ -108,7 +123,10 @@ export default function GalleryPage() {
     query: galleryQueryOptions as never,
   });
   const { data: usage } = useGetRenderUsage({
-    query: galleryQueryOptions as never,
+    query: {
+      ...galleryUsageQueryOptions,
+      enabled: !rendersPending,
+    } as never,
   });
   const { data: user } = useGetMe();
   const createRender = useCreateRender();
@@ -122,20 +140,18 @@ export default function GalleryPage() {
   const [cropStateByRenderId, setCropStateByRenderId] = useState<
     Record<number, GalleryCropState>
   >({});
-  const [refineInFlight, setRefineInFlight] = useState(false);
-  const [activeRefinement, setActiveRefinement] = useState<RefinementType | null>(null);
-  const [refinementPending, setRefinementPending] = useState<{
+  const [removeBackgroundInFlight, setRemoveBackgroundInFlight] = useState(false);
+  const [removeBackgroundPending, setRemoveBackgroundPending] = useState<{
     parentRenderId: number;
     childRenderId: number;
-    refinementType: RefinementType;
   } | null>(null);
-  const refinementHandledRef = useRef<number | null>(null);
+  const removeBackgroundHandledRef = useRef<number | null>(null);
   const [exitingShoots, setExitingShoots] = useState<GalleryShoot[]>([]);
   const stableShootsRef = useRef<GalleryShoot[]>([]);
   const exitingShootIdsRef = useRef<Set<string>>(new Set());
 
-  const pendingChildId = refinementPending?.childRenderId ?? 0;
-  const { data: pendingRefinementRender } = useGetRender(pendingChildId, {
+  const pendingChildId = removeBackgroundPending?.childRenderId ?? 0;
+  const { data: pendingRemoveBackgroundRender } = useGetRender(pendingChildId, {
     query: {
       enabled: pendingChildId > 0,
       refetchInterval: makeRefetchInterval(pendingChildId > 0),
@@ -172,6 +188,28 @@ export default function GalleryPage() {
     () => new Set(exitingShoots.map((shoot) => shoot.id)),
     [exitingShoots],
   );
+
+  useEffect(() => {
+    if (!editRender?.id || !renders) return;
+
+    const fresh = (renders as CreativeLedgerCardRender[]).find(
+      (render) => render.id === editRender.id,
+    );
+    if (!fresh) return;
+
+    setEditRender((current) => {
+      if (!current || current.id !== fresh.id) return current;
+      if (
+        current.outputImageUrl === fresh.outputImageUrl
+        && current.status === fresh.status
+        && current.refinementType === fresh.refinementType
+        && current.assetType === fresh.assetType
+      ) {
+        return current;
+      }
+      return fresh;
+    });
+  }, [renders, editRender?.id]);
 
   useEffect(() => {
     if (!openShoot) return;
@@ -270,8 +308,8 @@ export default function GalleryPage() {
     });
   };
 
-  const handleGalleryRefine = (render: CreativeLedgerCardRender, type: RefinementType) => {
-    if (refineInFlight || createRender.isPending) return;
+  const handleGalleryRemoveBackground = (render: CreativeLedgerCardRender) => {
+    if (removeBackgroundInFlight || createRender.isPending) return;
 
     if (isStudioCreditLimitBlocked(usage) && !resolveStudioAdminFlag(user, usage)) {
       const copy = zeroStudioCreditBlockToast();
@@ -282,37 +320,33 @@ export default function GalleryPage() {
       return;
     }
 
-    setRefineInFlight(true);
-    setActiveRefinement(type);
+    setRemoveBackgroundInFlight(true);
 
     createRender.mutate(
-      { data: buildGalleryRefinementRequest(render, type) },
+      { data: buildGalleryRemoveBackgroundRequest(render) },
       {
         onSuccess: (renders) => {
           const childId = (renders as unknown as { id: number }[])?.[0]?.id;
           if (!childId) {
-            setRefineInFlight(false);
-            setActiveRefinement(null);
+            setRemoveBackgroundInFlight(false);
             toast({
-              title: "We couldn't complete this refinement.",
+              title: "We couldn't remove the background.",
               description: withErrorContactHelper('Please try again in a few moments.'),
             });
             return;
           }
 
-          refinementHandledRef.current = null;
-          setRefinementPending({
+          removeBackgroundHandledRef.current = null;
+          setRemoveBackgroundPending({
             parentRenderId: render.id,
             childRenderId: childId,
-            refinementType: type,
           });
         },
         onError: (error: unknown) => {
-          setRefineInFlight(false);
-          setActiveRefinement(null);
-          setRefinementPending(null);
+          setRemoveBackgroundInFlight(false);
+          setRemoveBackgroundPending(null);
           toast({
-            title: "We couldn't complete this refinement.",
+            title: "We couldn't remove the background.",
             description: withErrorContactHelper(renderApiErrorDescription(error)),
           });
         },
@@ -321,21 +355,24 @@ export default function GalleryPage() {
   };
 
   useEffect(() => {
-    if (!refinementPending || !pendingRefinementRender) return;
+    if (!removeBackgroundPending || !pendingRemoveBackgroundRender) return;
 
-    const { status } = pendingRefinementRender;
+    const { status } = pendingRemoveBackgroundRender;
     if (status !== 'completed' && status !== 'failed') return;
 
-    const { childRenderId, parentRenderId } = refinementPending;
-    if (refinementHandledRef.current === childRenderId) return;
-    refinementHandledRef.current = childRenderId;
+    const { childRenderId, parentRenderId } = removeBackgroundPending;
+    if (removeBackgroundHandledRef.current === childRenderId) return;
+    removeBackgroundHandledRef.current = childRenderId;
 
     if (status === 'completed') {
       toast({
-        title: 'Refinement complete',
-        description: 'Your updated image is now in the Gallery.',
+        title: 'Background removed',
+        description: 'Your transparent image is now in the Gallery.',
       });
-      setEditRender(null);
+      setEditRender(toCreativeLedgerCardRender(pendingRemoveBackgroundRender));
+      if (viewRender?.id === parentRenderId) {
+        setViewRender(toCreativeLedgerCardRender(pendingRemoveBackgroundRender));
+      }
       setCropStateByRenderId((prev) => {
         const next = { ...prev };
         revokeCropObjectUrl(prev[parentRenderId]?.displayUrl);
@@ -345,18 +382,17 @@ export default function GalleryPage() {
       void queryClient.invalidateQueries({ queryKey: getListRendersQueryKey() });
     } else {
       toast({
-        title: "We couldn't complete this refinement.",
+        title: "We couldn't remove the background.",
         description: withErrorContactHelper('Your original image is unchanged. Please try again.'),
       });
     }
 
-    setRefinementPending(null);
-    setRefineInFlight(false);
-    setActiveRefinement(null);
+    setRemoveBackgroundPending(null);
+    setRemoveBackgroundInFlight(false);
     void queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
   }, [
-    refinementPending,
-    pendingRefinementRender,
+    removeBackgroundPending,
+    pendingRemoveBackgroundRender,
     queryClient,
     toast,
   ]);
@@ -398,7 +434,7 @@ export default function GalleryPage() {
           <h2 className="sl-section-label mb-3">Your Creative Ledger is empty</h2>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6">
             Every generation you create in Studio appears here — with Studio Credit usage and
-            refinement history preserved for each Shoot.
+            post-production activity preserved for each Shoot.
           </p>
           <StudioWorkspaceButton
             variant="primary"
@@ -437,6 +473,7 @@ export default function GalleryPage() {
 
       <ShootDetailDialog
         shoot={openShoot}
+        allRenders={(renders ?? EMPTY_LEDGER_RENDERS) as CreativeLedgerCardRender[]}
         open={openShoot != null}
         onOpenChange={(open) => !open && setOpenShoot(null)}
         onInspect={setViewRender}
@@ -451,13 +488,14 @@ export default function GalleryPage() {
 
       <GalleryImageEditDialog
         render={editRender}
+        allRenders={(renders ?? EMPTY_LEDGER_RENDERS) as CreativeLedgerCardRender[]}
         open={editRender != null}
         onOpenChange={(open) => !open && setEditRender(null)}
         cropState={editRender ? cropStateByRenderId[editRender.id] : undefined}
         onCropStateChange={handleCropStateChange}
-        refineInFlight={refineInFlight}
-        activeRefinement={activeRefinement}
-        onRefine={handleGalleryRefine}
+        removeBackgroundInFlight={removeBackgroundInFlight}
+        onRemoveBackground={handleGalleryRemoveBackground}
+        onRenderChange={setEditRender}
         onDownloadError={handleDownloadError}
       />
 

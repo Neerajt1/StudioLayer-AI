@@ -14,10 +14,16 @@ export const RAZORPAY_ONGOING_SUBSCRIPTION_TOTAL_COUNT = 1200;
 /** Conservative timeout for Razorpay REST calls (ms). */
 export const RAZORPAY_FETCH_TIMEOUT_MS = 30_000;
 
-/** Expected plan amounts in the smallest currency unit (USD cents). */
+/** Expected plan amounts in the smallest currency unit. */
 export const RAZORPAY_EXPECTED_PLAN_AMOUNT_CENTS = {
   basic: 4900,
   pro: 7900,
+} as const;
+
+/** Expected India plan amounts in paise (GST-inclusive). */
+export const RAZORPAY_EXPECTED_PLAN_AMOUNT_PAISE = {
+  basic: 399_900,
+  pro: 699_900,
 } as const;
 
 export type StudioMembershipPlanId = "basic" | "pro";
@@ -32,12 +38,16 @@ export interface RazorpaySubscriptionEntity {
   status: string;
   current_start?: number | null;
   current_end?: number | null;
+  start_at?: number | null;
+  charge_at?: number | null;
   quantity?: number;
   total_count?: number;
   paid_count?: number;
   short_url?: string | null;
   notes?: Record<string, string>;
   created_at?: number;
+  /** Present after cancel_at_cycle_end requests (may be absent on some GETs). */
+  cancel_at_cycle_end?: boolean | null;
 }
 
 export interface RazorpayPaymentEntity {
@@ -61,6 +71,19 @@ export interface RazorpayOrderEntity {
   notes?: Record<string, string> | null;
 }
 
+/** Invoice linked to a subscription charge (used for missed-webhook reconciliation). */
+export interface RazorpayInvoiceEntity {
+  id: string;
+  entity?: string;
+  status?: string;
+  payment_id?: string | null;
+  subscription_id?: string | null;
+  paid_at?: number | null;
+  created_at?: number | null;
+  amount?: number;
+  currency?: string;
+}
+
 export interface CreateRazorpayOrderInput {
   amount: number;
   currency: string;
@@ -73,6 +96,8 @@ export interface CreateRazorpaySubscriptionInput {
   totalCount?: number;
   notes?: Record<string, string>;
   customerNotify?: boolean;
+  /** Unix timestamp — future-start subscriptions charge only after this instant. */
+  startAt?: number;
 }
 
 export class RazorpayApiError extends Error {
@@ -233,13 +258,16 @@ async function razorpayFetch(
 export async function createRazorpaySubscription(
   input: CreateRazorpaySubscriptionInput,
 ): Promise<RazorpaySubscriptionEntity> {
-  const body = {
+  const body: Record<string, unknown> = {
     plan_id: input.planId,
     total_count:
       input.totalCount ?? RAZORPAY_ONGOING_SUBSCRIPTION_TOTAL_COUNT,
     customer_notify: input.customerNotify ?? 1,
     notes: input.notes ?? {},
   };
+  if (input.startAt != null) {
+    body.start_at = input.startAt;
+  }
 
   const payload = await razorpayFetch("/subscriptions", {
     method: "POST",
@@ -312,6 +340,32 @@ export async function fetchRazorpaySubscription(
     { method: "GET" },
   );
   return payload as unknown as RazorpaySubscriptionEntity;
+}
+
+/**
+ * List invoices for a subscription (newest-first is not guaranteed by API).
+ * @see https://razorpay.com/docs/api/payments/subscriptions/fetch-invoices/
+ */
+export async function fetchRazorpayInvoicesForSubscription(
+  subscriptionId: string,
+): Promise<RazorpayInvoiceEntity[]> {
+  const payload = await razorpayFetch(
+    `/invoices?subscription_id=${encodeURIComponent(subscriptionId)}`,
+    { method: "GET" },
+  );
+  const items = payload.items;
+  if (!Array.isArray(items)) return [];
+  return items as unknown as RazorpayInvoiceEntity[];
+}
+
+export async function fetchRazorpayPayment(
+  paymentId: string,
+): Promise<RazorpayPaymentEntity> {
+  const payload = await razorpayFetch(
+    `/payments/${encodeURIComponent(paymentId)}`,
+    { method: "GET" },
+  );
+  return payload as unknown as RazorpayPaymentEntity;
 }
 
 /**
@@ -429,9 +483,30 @@ export function isCapturedRazorpayPayment(
 }
 
 /**
- * Optional amount check when USD cents are present.
- * Returns null when amount/currency are absent (do not reject).
- * Returns false only on a clear USD amount mismatch.
+ * Membership payment amount + currency gate.
+ * USD: expected cents. INR: expected paise.
+ * Returns null when amount/currency are absent (do not reject incomplete payloads).
+ * Returns false on a clear mismatch or unsupported membership currency.
+ */
+export function matchesExpectedMembershipPaymentAmount(input: {
+  plan: StudioMembershipPlanId;
+  payment: RazorpayPaymentEntity;
+}): boolean | null {
+  const amount = input.payment.amount;
+  const currency = input.payment.currency?.toUpperCase();
+  if (amount == null || !currency) return null;
+
+  if (currency === "USD") {
+    return amount === RAZORPAY_EXPECTED_PLAN_AMOUNT_CENTS[input.plan];
+  }
+  if (currency === "INR") {
+    return amount === RAZORPAY_EXPECTED_PLAN_AMOUNT_PAISE[input.plan];
+  }
+  return false;
+}
+
+/**
+ * @deprecated Prefer matchesExpectedMembershipPaymentAmount — kept for call-site clarity in USD tests.
  */
 export function matchesExpectedPlanAmountUsdCents(input: {
   plan: StudioMembershipPlanId;
@@ -442,6 +517,13 @@ export function matchesExpectedPlanAmountUsdCents(input: {
   if (amount == null || !currency) return null;
   if (currency !== "USD") return null;
   return amount === RAZORPAY_EXPECTED_PLAN_AMOUNT_CENTS[input.plan];
+}
+
+/** True when Razorpay confirms cancel_at_cycle_end on the subscription entity. */
+export function isRazorpayCancelAtCycleEndConfirmed(
+  subscription: Pick<RazorpaySubscriptionEntity, "cancel_at_cycle_end">,
+): boolean {
+  return subscription.cancel_at_cycle_end === true;
 }
 
 /** Webhook event processing states — supports retry after failure. */

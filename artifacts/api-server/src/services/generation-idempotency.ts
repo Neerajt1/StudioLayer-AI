@@ -20,6 +20,7 @@ import {
   isRefinementOrphanReasonCode,
   resolvePendingGenerationFinalization,
 } from "./generation-credit-reconciliation.js";
+import { invalidateBillingCycleActivityStatsCache } from "./account-statement/billing-cycle-activity.js";
 import { logger } from "../lib/logger.js";
 
 const ACTIVE_RENDER_STATUSES = ["pending", "processing"] as const;
@@ -35,6 +36,44 @@ export interface StaleReconcileResult {
   failedTransactionIds: string[];
   reversedOrphanTransactionIds: string[];
   finalizedGenerationTransactionIds: string[];
+}
+
+const deferredReconcileInFlight = new Set<number>();
+const deferredReconcileQueued = new Set<number>();
+
+/**
+ * Runs commercial reconciliation without blocking the caller.
+ * Coalesces concurrent schedules for the same user (e.g. Gallery list + usage).
+ */
+export function scheduleDeferredCommercialReconciliation(userId: number): void {
+  if (deferredReconcileInFlight.has(userId)) {
+    deferredReconcileQueued.add(userId);
+    return;
+  }
+
+  deferredReconcileInFlight.add(userId);
+  void reconcileStaleCommercialState(userId)
+    .then(() => {
+      invalidateBillingCycleActivityStatsCache(userId);
+    })
+    .catch((error) => {
+      logger.error(
+        { userId, err: error },
+        "commercial-reconcile: deferred reconciliation failed",
+      );
+    })
+    .finally(() => {
+      deferredReconcileInFlight.delete(userId);
+      if (deferredReconcileQueued.delete(userId)) {
+        scheduleDeferredCommercialReconciliation(userId);
+      }
+    });
+}
+
+/** @internal Test-only reset for deferred reconciliation coalescing state. */
+export function resetDeferredCommercialReconciliationState(): void {
+  deferredReconcileInFlight.clear();
+  deferredReconcileQueued.clear();
 }
 
 /**

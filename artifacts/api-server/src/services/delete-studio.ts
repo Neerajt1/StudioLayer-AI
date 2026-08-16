@@ -2,6 +2,7 @@ import type { Logger } from "pino";
 import { eq, sql } from "drizzle-orm";
 import { db, usersTable } from "@workspace/db";
 import { cancelStripeSubscriptionIfPresent } from "../billing/stripe-subscription.js";
+import { cancelAllOpenRazorpayMembershipsForUser } from "../billing/razorpay-membership.js";
 
 export class StudioDeletionError extends Error {
   readonly name = "StudioDeletionError";
@@ -37,9 +38,32 @@ async function readStripeSubscriptionId(
 
 /**
  * Permanently delete a Studio account and all cascaded user data.
- * Stripe cancellation is best-effort and never blocks deletion.
+ * Razorpay membership cancellation is required before deletion (fail closed).
+ * Stripe cancellation remains best-effort and never blocks deletion.
  */
 export async function deleteStudioAccount(userId: number, log: Logger): Promise<void> {
+  log.info(
+    { userId, step: "razorpay_cancellation" },
+    "Razorpay membership cancellation phase starting",
+  );
+
+  try {
+    await cancelAllOpenRazorpayMembershipsForUser({ userId });
+  } catch (error) {
+    log.error(
+      {
+        err: error,
+        userId,
+        step: "razorpay_cancellation",
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+      "Razorpay membership cancellation failed — account deletion blocked",
+    );
+    throw new StudioDeletionError("DELETE_FAILED", "razorpay_cancellation", {
+      cause: error,
+    });
+  }
+
   log.info({ userId, step: "stripe_cancellation" }, "Stripe cancellation phase starting");
 
   const stripeSubscriptionId = await readStripeSubscriptionId(userId, log);

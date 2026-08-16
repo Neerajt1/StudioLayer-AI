@@ -57,8 +57,19 @@ export function statementFilename(now: Date): string {
   return `Studio Account Statement - ${year}-${month}.xlsx`;
 }
 
+/** User-facing post-production label from render refinementType (new actions only). */
+export function refinementActionLabel(
+  refinementType: string | null | undefined,
+): string {
+  if (refinementType === "remove_background") {
+    return "Remove Background";
+  }
+  return "Refinement";
+}
+
 export function transactionTypeLabel(
   reasonCode: string,
+  refinementType?: string | null,
 ): string {
   switch (reasonCode) {
     case StudioCreditReasonCode.MEMBERSHIP_ALLOCATION:
@@ -78,8 +89,12 @@ export function transactionTypeLabel(
     case StudioCreditReasonCode.EDITORIAL_GENERATION:
       return "Image Generation";
     case StudioCreditReasonCode.REFINE:
+      if (refinementType === "remove_background") {
+        return "Remove Background";
+      }
+      return "Refinement";
     case StudioCreditReasonCode.REGENERATE:
-      return "Image Refinement";
+      return "Regeneration";
     case StudioCreditReasonCode.TRANSPARENT_DOWNLOAD:
       return "Transparent Download";
     default:
@@ -90,8 +105,9 @@ export function transactionTypeLabel(
 export function transactionDescription(
   reasonCode: string,
   renderId: number | null,
+  refinementType?: string | null,
 ): string {
-  const type = transactionTypeLabel(reasonCode);
+  const type = transactionTypeLabel(reasonCode, refinementType);
   if (renderId != null) {
     return `${type} — Render #${renderId}`;
   }

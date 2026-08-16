@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // Editorial download formats — Batch 21: download is always free
-// Transparent PNG is produced by Remove Background refinement, not paid download.
+// Transparent PNG is produced by Remove Background, not paid download.
 // ---------------------------------------------------------------------------
 
 export type EditorialDownloadFormatId = 'original';

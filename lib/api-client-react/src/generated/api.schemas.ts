@@ -519,6 +519,13 @@ export const MembershipSubscriptionStatusStudioTier = {
   enterprise: 'enterprise',
 } as const;
 
+export interface ScheduledProMembershipStatus {
+  subscriptionId: string;
+  status: string;
+  /** @nullable */
+  startAt: string | null;
+}
+
 export interface MembershipSubscriptionStatus {
   /** @nullable */
   studioPlan: MembershipSubscriptionStatusStudioPlan;
@@ -530,6 +537,69 @@ export interface MembershipSubscriptionStatus {
   currentEnd: string | null;
   /** @nullable */
   subscriptionId: string | null;
+  /** True when renewal cancellation at cycle end was requested */
+  cancelAtCycleEnd: boolean;
+  /**
+     * Membership remains active until this instant when cancelAtCycleEnd is true
+     * @nullable
+     */
+  cancelEffectiveAt: string | null;
+  scheduledPro: null | ScheduledProMembershipStatus;
+}
+
+export type MembershipCancellationResultStudioPlan = typeof MembershipCancellationResultStudioPlan[keyof typeof MembershipCancellationResultStudioPlan];
+
+
+export const MembershipCancellationResultStudioPlan = {
+  basic: 'basic',
+  pro: 'pro',
+} as const;
+
+export interface MembershipCancellationResult {
+  subscriptionId: string;
+  studioPlan: MembershipCancellationResultStudioPlan;
+  status: string;
+  cancelAtCycleEnd: true;
+  cancelEffectiveAt: string;
+}
+
+export type ScheduledMembershipUpgradeCheckoutPlan = typeof ScheduledMembershipUpgradeCheckoutPlan[keyof typeof ScheduledMembershipUpgradeCheckoutPlan];
+
+
+export const ScheduledMembershipUpgradeCheckoutPlan = {
+  pro: 'pro',
+} as const;
+
+export type ScheduledMembershipUpgradeCheckoutStudioTier = typeof ScheduledMembershipUpgradeCheckoutStudioTier[keyof typeof ScheduledMembershipUpgradeCheckoutStudioTier];
+
+
+export const ScheduledMembershipUpgradeCheckoutStudioTier = {
+  enterprise: 'enterprise',
+} as const;
+
+export type ScheduledMembershipUpgradeCheckoutMarket = typeof ScheduledMembershipUpgradeCheckoutMarket[keyof typeof ScheduledMembershipUpgradeCheckoutMarket];
+
+
+export const ScheduledMembershipUpgradeCheckoutMarket = {
+  india: 'india',
+  international: 'international',
+} as const;
+
+export interface ScheduledMembershipUpgradeCheckout {
+  /** Future-start Razorpay Pro subscription id for Checkout */
+  subscriptionId: string;
+  /** Public Razorpay Key ID (never the secret) */
+  keyId: string;
+  plan: ScheduledMembershipUpgradeCheckoutPlan;
+  studioTier: ScheduledMembershipUpgradeCheckoutStudioTier;
+  status: string;
+  /** @nullable */
+  shortUrl: string | null;
+  /** Pro start instant (Basic current_end) */
+  startAt: string;
+  basicSubscriptionId: string;
+  alreadyScheduled: boolean;
+  market: ScheduledMembershipUpgradeCheckoutMarket;
 }
 
 /**

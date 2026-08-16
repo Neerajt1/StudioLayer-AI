@@ -2,8 +2,10 @@ import { Router, type IRouter, type Request } from "express";
 import { CreateMembershipSubscriptionBody, CreateStudioAddOnCheckoutBody } from "@workspace/api-zod";
 import {
   createMembershipSubscription,
+  cancelMembershipAtCycleEnd,
   getMembershipSubscriptionStatus,
   processRazorpayWebhookPayload,
+  scheduleMembershipUpgradeToPro,
   SubscriptionConflictError,
   SubscriptionPersistenceError,
   SubscriptionValidationError,
@@ -109,8 +111,101 @@ router.get(
 );
 
 /**
+ * POST /api/payments/subscriptions/schedule-pro
+ * Authenticated Basic member — schedule Studio Pro at Basic current_end
+ * via a separate future-start Pro subscription (no mid-cycle charge).
+ */
+router.post("/payments/subscriptions/schedule-pro", async (req, res): Promise<void> => {
+  const userId = req.session?.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  try {
+    const result = await scheduleMembershipUpgradeToPro({
+      userId,
+      pricingMarket: pricingMarketFromRequest(
+        req.headers,
+        clientTimeZoneFromRequest(req),
+      ),
+    });
+
+    res.status(201).json({
+      subscriptionId: result.subscriptionId,
+      keyId: result.keyId,
+      plan: result.plan,
+      studioTier: result.studioTier,
+      status: result.status,
+      shortUrl: result.shortUrl,
+      startAt: result.startAt,
+      basicSubscriptionId: result.basicSubscriptionId,
+      alreadyScheduled: result.alreadyScheduled,
+      market: result.market,
+    });
+  } catch (error) {
+    if (error instanceof SubscriptionValidationError) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    if (error instanceof SubscriptionConflictError) {
+      res.status(409).json({ error: error.message });
+      return;
+    }
+    if (error instanceof SubscriptionPersistenceError) {
+      logger.error({ err: error }, "Scheduled Pro subscription orphan after create");
+      res.status(502).json({
+        error:
+          "Studio Pro could not be scheduled safely. Nothing was charged. Please try again shortly.",
+      });
+      return;
+    }
+    logger.error({ err: error }, "Failed to schedule Studio Pro subscription");
+    res.status(502).json({
+      error:
+        "Unable to schedule Studio Pro right now. Your Studio Basic membership is unchanged.",
+    });
+  }
+});
+
+/**
+ * POST /api/payments/subscriptions/cancel
+ * Authenticated — cancel renewal at cycle end (membership stays active until current_end).
+ */
+router.post("/payments/subscriptions/cancel", async (req, res): Promise<void> => {
+  const userId = req.session?.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  try {
+    const result = await cancelMembershipAtCycleEnd({ userId });
+    res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof SubscriptionValidationError) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    if (error instanceof SubscriptionConflictError) {
+      res.status(409).json({ error: error.message });
+      return;
+    }
+    if (error instanceof SubscriptionPersistenceError) {
+      res.status(502).json({ error: error.message });
+      return;
+    }
+    logger.error({ err: error }, "Failed to cancel membership at cycle end");
+    res.status(502).json({
+      error:
+        "Unable to cancel membership renewal right now. Your membership is unchanged.",
+    });
+  }
+});
+
+/**
  * POST /api/payments/add-ons/checkout
- * Authenticated — create a one-time Razorpay order for Studio Pass or Top-Up.
+ * Authenticated — create a one-time Razorpay order for Studio Pass or Studio Top-Up.
  */
 router.post("/payments/add-ons/checkout", async (req, res): Promise<void> => {
   const userId = req.session?.userId;

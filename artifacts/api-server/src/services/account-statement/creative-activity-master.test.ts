@@ -85,7 +85,10 @@ function generationRows(rows: readonly CreativeActivityRow[]) {
 }
 
 function refinementRows(rows: readonly CreativeActivityRow[]) {
-  return rows.filter((row) => row.activityType === "Refinement");
+  return rows.filter(
+    (row) =>
+      row.activityType === "Refinement" || row.activityType === "Remove Background",
+  );
 }
 
 function sessionRows(rows: readonly CreativeActivityRow[], sessionId: string) {
@@ -352,6 +355,44 @@ describe("master creative activity architecture", () => {
     assert.equal(rows.length, 1);
     assert.equal(rows[0]!.creditsUsed, 1);
     assert.equal(rows[0]!.activityType, "Refinement");
+  });
+
+  it("7b. Remove Background refinement → labelled explicitly", () => {
+    const ctx = baseContext({
+      renders: [
+        render({ id: 1, generationSessionId: "session-1" }),
+        render({
+          id: 2,
+          parentRenderId: 1,
+          generationSessionId: "session-1",
+          status: "completed",
+          refinementType: "remove_background",
+          assetType: "background_removed",
+        }),
+      ],
+      transactions: [
+        usageTx({
+          id: 1,
+          reasonCode: StudioCreditReasonCode.EDITORIAL_GENERATION,
+          amount: -1,
+          renderId: 1,
+        }),
+        usageTx({
+          id: 2,
+          reasonCode: StudioCreditReasonCode.REFINE,
+          amount: -1,
+          renderId: 2,
+        }),
+      ],
+    });
+
+    const master = buildMasterCreativeActivity(ctx);
+    const rows = refinementRows(master.rows);
+
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0]!.activityType, "Remove Background");
+    assert.equal(rows[0]!.batchAction, "Remove Background");
+    assert.equal(rows[0]!.creditsUsed, 1);
   });
 
   it("8. Failed refinement → 1 row, 0 credits", () => {

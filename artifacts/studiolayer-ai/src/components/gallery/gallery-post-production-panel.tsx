@@ -1,12 +1,12 @@
 // ---------------------------------------------------------------------------
-// Gallery Post-Production Panel — compact crop + AI refine controls (Fix #10)
+// Gallery Post-Production Panel — Crop (free) + Remove Background
 // ---------------------------------------------------------------------------
 
-import { Scissors, Wand2 } from 'lucide-react';
+import { Eraser, Scissors } from 'lucide-react';
+import { postProductionStudioCreditLabel } from '@workspace/studio-credit-engine';
 import { cn } from '@/lib/utils';
 import { StudioWorkspaceButton } from '@/components/studio/studio-workspace-controls';
 import { GalleryImageDownloadButton } from '@/components/shared/gallery-image-download-button';
-import { AI_REFINEMENT_OPTIONS, type RefinementType } from '@/lib/refinement-types';
 
 interface GalleryPostProductionPanelProps {
   hasCropApplied?: boolean;
@@ -15,10 +15,10 @@ interface GalleryPostProductionPanelProps {
   masterUrl: string | null;
   renderId: number;
   disabled?: boolean;
-  refineInFlight?: boolean;
-  activeRefinement?: RefinementType | null;
+  removeBackgroundInFlight?: boolean;
+  preservePngAlpha?: boolean;
   onOpenCrop: () => void;
-  onRefine: (type: RefinementType) => void;
+  onRemoveBackground: () => void;
   onDownloadError?: (message: string) => void;
 }
 
@@ -29,13 +29,13 @@ export function GalleryPostProductionPanel({
   masterUrl,
   renderId,
   disabled = false,
-  refineInFlight = false,
-  activeRefinement = null,
+  removeBackgroundInFlight = false,
+  preservePngAlpha = false,
   onOpenCrop,
-  onRefine,
+  onRemoveBackground,
   onDownloadError,
 }: GalleryPostProductionPanelProps) {
-  const busy = disabled || refineInFlight;
+  const busy = disabled || removeBackgroundInFlight;
   const isCropActive = hasCropApplied || isCropDialogOpen;
   const downloadUrl = displayUrl ?? masterUrl ?? '';
 
@@ -63,34 +63,30 @@ export function GalleryPostProductionPanel({
 
       <section className="sl-gallery-post-section">
         <div className="sl-gallery-post-section-head">
-          <Wand2 className="size-3.5 opacity-70" aria-hidden />
+          <Eraser className="size-3.5 opacity-70" aria-hidden />
           <div>
-            <p className="sl-gallery-post-section-title">AI Refinements</p>
-            <p className="sl-gallery-post-section-note">1 Studio Credit each when successful</p>
+            <p className="sl-gallery-post-section-title">Remove Background</p>
           </div>
         </div>
-        <div className="sl-gallery-post-refine-list">
-          {AI_REFINEMENT_OPTIONS.map((option) => {
-            const isRunning = refineInFlight && activeRefinement === option.type;
-            return (
-              <button
-                key={option.type}
-                type="button"
-                className={cn(
-                  'sl-gallery-post-refine-item',
-                  isRunning && 'is-running',
-                )}
-                disabled={busy || !masterUrl}
-                onClick={() => onRefine(option.type)}
-              >
-                <span className="sl-gallery-post-refine-label">
-                  {isRunning ? 'Refining…' : option.label}
-                </span>
-                <span className="sl-gallery-post-refine-credit">1 credit</span>
-              </button>
-            );
-          })}
+        <div className="sl-gallery-post-chip-row">
+          <StudioWorkspaceButton
+            className="sl-gallery-post-chip"
+            disabled={busy || !masterUrl || preservePngAlpha}
+            loading={removeBackgroundInFlight}
+            onClick={onRemoveBackground}
+          >
+            {removeBackgroundInFlight ? 'Removing background…' : 'Remove Background'}
+          </StudioWorkspaceButton>
         </div>
+        <p className="sl-gallery-post-section-note sl-post-production-credit-note sl-gallery-post-credit-below-action">
+          {postProductionStudioCreditLabel()}
+        </p>
+        <p className="sl-gallery-post-section-note">
+          Transparent PNG at original resolution
+        </p>
+        <p className="text-[10px] font-normal leading-relaxed text-muted-foreground/75">
+          AI background removal may produce minor variations around fine details such as hair or very fine edges.
+        </p>
       </section>
 
       <section className="sl-gallery-post-section sl-gallery-post-section--download">
@@ -98,6 +94,7 @@ export function GalleryPostProductionPanel({
           renderId={renderId}
           outputImageUrl={downloadUrl}
           disabled={!downloadUrl || busy}
+          preservePngAlpha={preservePngAlpha}
           label="Download"
           onDownloadError={onDownloadError}
         />

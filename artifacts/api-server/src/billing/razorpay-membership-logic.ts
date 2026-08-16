@@ -12,9 +12,10 @@ import {
   isCapturedRazorpayPayment,
   isOpenMembershipSubscriptionStatus,
   isWebhookEventFullyProcessed,
-  matchesExpectedPlanAmountUsdCents,
+  matchesExpectedMembershipPaymentAmount,
   membershipPaymentSourceReference,
   shouldReprocessWebhookEvent,
+  type RazorpayInvoiceEntity,
   type RazorpayPaymentEntity,
   type RazorpaySubscriptionEntity,
   type RazorpayWebhookProcessingStatusValue,
@@ -78,7 +79,7 @@ export function evaluateSubscriptionChargedGrant(input: {
     return { grant: false, reason: "payment_not_captured", credits: 0 };
   }
 
-  const amountOk = matchesExpectedPlanAmountUsdCents({
+  const amountOk = matchesExpectedMembershipPaymentAmount({
     plan: input.studioPlan,
     payment,
   });
@@ -136,6 +137,59 @@ export type OpenMembershipRow = {
   status: string;
   razorpayPlanId: string;
 };
+
+/**
+ * Before reusing a local open subscription for Checkout, decide from live Razorpay
+ * state whether Checkout is still valid or the subscription is already paid.
+ */
+export function resolveLiveMembershipForCheckoutReuse(input: {
+  liveStatus: string;
+  paidCount?: number | null;
+}):
+  | { action: "reuse_checkout" }
+  | { action: "reconcile_paid" }
+  | { action: "unavailable"; message: string } {
+  const paidCount =
+    typeof input.paidCount === "number" && Number.isFinite(input.paidCount)
+      ? input.paidCount
+      : 0;
+
+  if (paidCount > 0 || input.liveStatus === "active") {
+    return { action: "reconcile_paid" };
+  }
+
+  if (
+    input.liveStatus === "created" ||
+    input.liveStatus === "authenticated" ||
+    input.liveStatus === "pending"
+  ) {
+    return { action: "reuse_checkout" };
+  }
+
+  return {
+    action: "unavailable",
+    message: `This membership subscription is ${input.liveStatus} and cannot be used for checkout. Please try again or contact support if this persists.`,
+  };
+}
+
+/** Prefer the newest paid invoice that carries a payment_id for grant identity. */
+export function pickLatestPaidSubscriptionInvoice(
+  invoices: readonly RazorpayInvoiceEntity[],
+): RazorpayInvoiceEntity | null {
+  const paid = invoices.filter(
+    (invoice) =>
+      invoice.status === "paid" &&
+      typeof invoice.payment_id === "string" &&
+      invoice.payment_id.length > 0,
+  );
+  if (paid.length === 0) return null;
+
+  return [...paid].sort((a, b) => {
+    const aAt = a.paid_at ?? a.created_at ?? 0;
+    const bAt = b.paid_at ?? b.created_at ?? 0;
+    return bAt - aAt;
+  })[0]!;
+}
 
 /**
  * At most one open membership across Basic + Pro.

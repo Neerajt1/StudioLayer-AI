@@ -305,4 +305,50 @@ describe("Razorpay fetch timeout + non-JSON errors", () => {
     assert.equal(JSON.parse(seenBody).cancel_at_cycle_end, false);
   });
 
+  it("matchesExpectedMembershipPaymentAmount validates USD cents and INR paise", async () => {
+    const {
+      matchesExpectedMembershipPaymentAmount,
+      isRazorpayCancelAtCycleEndConfirmed,
+    } = await import("./razorpay-client.js");
+
+    assert.equal(
+      matchesExpectedMembershipPaymentAmount({
+        plan: "basic",
+        payment: { id: "p1", status: "captured", amount: 399_900, currency: "INR" },
+      }),
+      true,
+    );
+    assert.equal(
+      matchesExpectedMembershipPaymentAmount({
+        plan: "pro",
+        payment: { id: "p2", status: "captured", amount: 699_900, currency: "INR" },
+      }),
+      true,
+    );
+    assert.equal(
+      matchesExpectedMembershipPaymentAmount({
+        plan: "basic",
+        payment: { id: "p3", status: "captured", amount: 4_900, currency: "USD" },
+      }),
+      true,
+    );
+    assert.equal(
+      matchesExpectedMembershipPaymentAmount({
+        plan: "basic",
+        payment: { id: "p4", status: "captured", amount: 100, currency: "INR" },
+      }),
+      false,
+    );
+    assert.equal(
+      matchesExpectedMembershipPaymentAmount({
+        plan: "basic",
+        payment: { id: "p5", status: "captured" },
+      }),
+      null,
+    );
+    assert.equal(isRazorpayCancelAtCycleEndConfirmed({ cancel_at_cycle_end: true }), true);
+    assert.equal(isRazorpayCancelAtCycleEndConfirmed({ cancel_at_cycle_end: null }), false);
+    assert.equal(isRazorpayCancelAtCycleEndConfirmed({}), false);
+  });
+
 });

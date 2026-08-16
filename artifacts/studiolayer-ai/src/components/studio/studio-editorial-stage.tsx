@@ -3,7 +3,7 @@
 // ---------------------------------------------------------------------------
 
 import type { ReactNode } from 'react';
-import { Camera, Download, Wand2 } from 'lucide-react';
+import { Camera, Download, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { workspaceGenerationFailedSlotCopy } from '@/lib/generation-failure-copy';
 import { GenerationProgressIndicator } from '@/components/studio/generation-progress-indicator';
@@ -52,35 +52,35 @@ export function StudioEditorialEmptyState({ compact = false }: StudioEditorialEm
 interface EditorialImageActionsProps {
   renderId: number;
   outputImageUrl: string;
-  refineDisabled?: boolean;
-  refineActive?: boolean;
-  onRefine: () => void;
+  editDisabled?: boolean;
+  editActive?: boolean;
+  onEdit: () => void;
   onDownloadError?: (message: string) => void;
 }
 
-/** Compact Refine + Download controls overlaid on a result image. */
+/** Compact Edit + Download controls overlaid on a result image. */
 export function EditorialImageActions({
   renderId,
   outputImageUrl,
-  refineDisabled = false,
-  refineActive = false,
-  onRefine,
+  editDisabled = false,
+  editActive = false,
+  onEdit,
   onDownloadError,
 }: EditorialImageActionsProps) {
   return (
     <div className="flex items-center gap-1">
       <StudioWorkspaceButton
         variant="icon"
-        disabled={refineDisabled}
+        disabled={editDisabled}
         onClick={(event) => {
           event.stopPropagation();
-          onRefine();
+          onEdit();
         }}
-        aria-label="Refine image"
-        title="Refine image"
-        className={cn(refineActive && 'ring-1 ring-white/80')}
+        aria-label="Edit image"
+        title="Edit image"
+        className={cn(editActive && 'ring-1 ring-white/80')}
       >
-        <Wand2 className="h-4 w-4" aria-hidden />
+        <SlidersHorizontal className="h-4 w-4" aria-hidden />
       </StudioWorkspaceButton>
       <div onClick={(event) => event.stopPropagation()}>
         <EditorialDownloadMenu
@@ -102,11 +102,10 @@ interface StudioResultToolbarProps {
   onDownloadAll?: () => void;
   downloadAllLoading?: boolean;
   downloadAllPreparingLabel?: string;
-  onNewImage: () => void;
-  /** Omitted during V1 soft launch — refine control hidden when unset. */
-  onRefine?: () => void;
+  /** Opens post-production controls (Crop, Remove Background). */
+  onEdit?: () => void;
   downloadLabel?: string;
-  disableRefine?: boolean;
+  disableEdit?: boolean;
   onInsufficientCredits?: () => void;
   onDownloadError?: (message: string) => void;
   onCreditsConsumed?: () => void;
@@ -118,18 +117,24 @@ export function StudioResultToolbar({
   onDownloadAll,
   downloadAllLoading = false,
   downloadAllPreparingLabel = 'Preparing…',
-  onNewImage,
-  onRefine,
+  onEdit,
   downloadLabel = 'Download',
-  disableRefine = false,
+  disableEdit = false,
   onInsufficientCredits,
   onDownloadError,
   onCreditsConsumed,
 }: StudioResultToolbarProps) {
+  const hasDownload = Boolean(onDownloadAll || (renderId && outputImageUrl));
+  const hasEdit = Boolean(onEdit);
+
+  if (!hasDownload && !hasEdit) {
+    return null;
+  }
+
   return (
     <div className={cn(
       'sl-studio-result-toolbar',
-      !onDownloadAll && !(renderId && outputImageUrl) && 'sl-studio-result-toolbar--single',
+      !(hasDownload && hasEdit) && 'sl-studio-result-toolbar--single',
     )}>
       {onDownloadAll ? (
         <StudioWorkspaceButton
@@ -153,21 +158,14 @@ export function StudioResultToolbar({
           onDownloadError={onDownloadError}
         />
       ) : null}
-      <StudioWorkspaceButton
-        className="sl-studio-toolbar-btn"
-        onClick={onNewImage}
-        data-testid="button-new-photoshoot"
-      >
-        New Image
-      </StudioWorkspaceButton>
-      {onRefine ? (
+      {onEdit ? (
         <StudioWorkspaceButton
           className="sl-studio-toolbar-btn gap-2"
-          onClick={onRefine}
-          disabled={disableRefine}
+          onClick={onEdit}
+          disabled={disableEdit}
         >
-          <Wand2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          Refine Image
+          <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          Edit Image
         </StudioWorkspaceButton>
       ) : null}
     </div>

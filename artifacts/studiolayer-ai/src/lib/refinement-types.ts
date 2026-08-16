@@ -1,34 +1,14 @@
 // ---------------------------------------------------------------------------
-// V1 reliable refine types (Batch 21)
+// Remove Background — API refinement type (Phase 2)
+//
+// Backend POST /renders still accepts refinementType for lineage compatibility.
+// User-facing UI exposes only "Remove Background" — no Face/Garment enhance.
 // ---------------------------------------------------------------------------
 
-export type RefinementType =
-  | 'remove_background'
-  | 'enhance_model_face'
-  | 'enhance_garment';
+/** API value sent to POST /renders for background removal. */
+export type RemoveBackgroundRefinementType = 'remove_background';
 
-export const AI_REFINEMENT_OPTIONS: ReadonlyArray<{
-  type: RefinementType;
-  label: string;
-  description: string;
-  creditCost: 1;
-}> = [
-  {
-    type: 'remove_background',
-    label: 'Remove Background',
-    description: 'Transparent PNG — garment and model preserved',
-    creditCost: 1,
-  },
-  {
-    type: 'enhance_model_face',
-    label: 'Enhance Model Face',
-    description: 'Sharper facial detail — same person',
-    creditCost: 1,
-  },
-  {
-    type: 'enhance_garment',
-    label: 'Enhance Garment',
-    description: 'Richer fabric detail — same garment',
-    creditCost: 1,
-  },
-];
+/** @deprecated Use RemoveBackgroundRefinementType — kept for gradual migration. */
+export type RefinementType = RemoveBackgroundRefinementType;
+
+export const REMOVE_BACKGROUND_TYPE: RemoveBackgroundRefinementType = 'remove_background';

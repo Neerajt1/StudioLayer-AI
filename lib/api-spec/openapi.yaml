@@ -406,6 +406,90 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /payments/subscriptions/schedule-pro:
+    post:
+      operationId: scheduleMembershipUpgradeToPro
+      tags: [payments]
+      summary: Schedule Studio Pro for the next Basic billing date
+      description: >
+        Authenticated Studio Basic members schedule a separate future-start
+        Studio Pro subscription with start_at equal to the live Basic
+        current_end. Nothing is charged today. Credits and Pro entitlement
+        activate only via the normal Pro subscription.charged webhook.
+      responses:
+        "201":
+          description: Future-start Pro subscription created or existing schedule returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScheduledMembershipUpgradeCheckout"
+        "400":
+          description: Not eligible to schedule Studio Pro
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflicting membership state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Razorpay or persistence failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /payments/subscriptions/cancel:
+    post:
+      operationId: cancelMembershipAtCycleEnd
+      tags: [payments]
+      summary: Cancel membership renewal at the end of the current billing period
+      description: >
+        Authenticated paid members request cancel_at_cycle_end on their active
+        Razorpay subscription. Membership remains active until current_end.
+        The StudioLayer account and Creative Ledger history are preserved.
+        Does not pause or immediately cancel an active billing period.
+      responses:
+        "200":
+          description: Renewal cancellation confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MembershipCancellationResult"
+        "400":
+          description: Not eligible to cancel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Already scheduled to cancel at cycle end
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Razorpay confirmation failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /payments/add-ons/checkout:
     post:
       operationId: createStudioAddOnCheckout
@@ -923,12 +1007,106 @@ components:
           format: date-time
         subscriptionId:
           type: ["string", "null"]
+        cancelAtCycleEnd:
+          type: boolean
+          description: True when renewal cancellation at cycle end was requested
+        cancelEffectiveAt:
+          type: ["string", "null"]
+          format: date-time
+          description: Membership remains active until this instant when cancelAtCycleEnd is true
+        scheduledPro:
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ScheduledProMembershipStatus"
       required:
         - studioPlan
         - studioTier
         - status
         - currentEnd
         - subscriptionId
+        - cancelAtCycleEnd
+        - cancelEffectiveAt
+        - scheduledPro
+
+    MembershipCancellationResult:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+        studioPlan:
+          type: string
+          enum: [basic, pro]
+        status:
+          type: string
+        cancelAtCycleEnd:
+          type: boolean
+          enum: [true]
+        cancelEffectiveAt:
+          type: string
+          format: date-time
+      required:
+        - subscriptionId
+        - studioPlan
+        - status
+        - cancelAtCycleEnd
+        - cancelEffectiveAt
+
+    ScheduledProMembershipStatus:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+        status:
+          type: string
+        startAt:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - subscriptionId
+        - status
+        - startAt
+
+    ScheduledMembershipUpgradeCheckout:
+      type: object
+      properties:
+        subscriptionId:
+          type: string
+          description: Future-start Razorpay Pro subscription id for Checkout
+        keyId:
+          type: string
+          description: Public Razorpay Key ID (never the secret)
+        plan:
+          type: string
+          enum: [pro]
+        studioTier:
+          type: string
+          enum: [enterprise]
+        status:
+          type: string
+        shortUrl:
+          type: ["string", "null"]
+        startAt:
+          type: string
+          format: date-time
+          description: Pro start instant (Basic current_end)
+        basicSubscriptionId:
+          type: string
+        alreadyScheduled:
+          type: boolean
+        market:
+          type: string
+          enum: [india, international]
+      required:
+        - subscriptionId
+        - keyId
+        - plan
+        - studioTier
+        - status
+        - shortUrl
+        - startAt
+        - basicSubscriptionId
+        - alreadyScheduled
+        - market
 
     CreateStudioAddOnCheckoutInput:
       type: object

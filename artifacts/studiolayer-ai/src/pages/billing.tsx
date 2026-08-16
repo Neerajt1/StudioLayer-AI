@@ -40,6 +40,14 @@ import {
 } from '@/lib/membership';
 import { fetchPricingMarket, CLIENT_TIMEZONE_HEADER } from '@/lib/fetch-pricing-market';
 import { browserTimeZone } from '@/lib/pricing-market';
+import {
+  formatMembershipBillingDate,
+  fetchMembershipSubscriptionStatus,
+  cancelMembershipRenewalAtCycleEnd,
+  scheduleStudioProUpgrade,
+  scheduledProNeedsCheckout,
+  type MembershipSubscriptionStatus,
+} from '@/lib/schedule-studio-pro';
 import { createStudioAddOnCheckoutOrder } from '@/lib/studio-add-on-checkout';
 
 const INTRO_SUPPORTING =
@@ -134,7 +142,10 @@ interface MembershipCardProps {
   active: boolean;
   checkoutBusy: boolean;
   choosingThisPlan: boolean;
+  mode: 'choose' | 'upgrade' | 'scheduled' | 'scheduled-pending-auth' | 'hidden';
+  scheduledStartLabel: string | null;
   onChoose: (tier: (typeof MEMBERSHIP_TIERS)[number]) => void;
+  onUpgrade: () => void;
 }
 
 function MembershipCard({
@@ -143,8 +154,21 @@ function MembershipCard({
   active,
   checkoutBusy,
   choosingThisPlan,
+  mode,
+  scheduledStartLabel,
   onChoose,
+  onUpgrade,
 }: MembershipCardProps) {
+  if (mode === 'hidden') {
+    return null;
+  }
+
+  const showUpgradeCopy = mode === 'upgrade';
+  const showScheduledCopy =
+    mode === 'scheduled' || mode === 'scheduled-pending-auth';
+  const upgradeAction =
+    mode === 'upgrade' || mode === 'scheduled-pending-auth';
+
   return (
     <div
       className={cn(
@@ -174,6 +198,22 @@ function MembershipCard({
             <li key={feature}>{feature}</li>
           ))}
         </ul>
+        {showUpgradeCopy && scheduledStartLabel ? (
+          <div className="mt-4 space-y-2 text-center text-[0.75rem] leading-relaxed text-muted-foreground">
+            <p>
+              Studio Pro will start on your next billing date:{' '}
+              {scheduledStartLabel}.
+            </p>
+            <p>Your current Studio Basic membership remains active until then.</p>
+            <p>Nothing is charged today.</p>
+          </div>
+        ) : null}
+        {showScheduledCopy && scheduledStartLabel ? (
+          <p className="mt-4 text-center text-[0.75rem] leading-relaxed text-muted-foreground">
+            Studio Pro is scheduled for {scheduledStartLabel}. Your current
+            Studio Basic membership remains active until then.
+          </p>
+        ) : null}
       </div>
       <div className="sl-membership-tier-cta-wrap">
         {active ? (
@@ -185,19 +225,44 @@ function MembershipCard({
           >
             Current Membership
           </Button>
+        ) : mode === 'scheduled' ? (
+          <Button
+            className="w-full"
+            variant="outline"
+            disabled
+            data-testid="button-upgrade-to-pro"
+          >
+            Studio Pro scheduled
+          </Button>
         ) : (
           <>
             <Button
               className="w-full"
               variant={tier.recommended ? 'default' : 'outline'}
               disabled={checkoutBusy}
-              onClick={() => onChoose(tier)}
-              data-testid={tier.testId}
+              onClick={() => {
+                if (upgradeAction) {
+                  onUpgrade();
+                  return;
+                }
+                onChoose(tier);
+              }}
+              data-testid={
+                upgradeAction ? 'button-upgrade-to-pro' : tier.testId
+              }
             >
-              {choosingThisPlan ? 'Opening checkout…' : tier.chooseLabel}
+              {choosingThisPlan
+                ? 'Opening checkout…'
+                : mode === 'upgrade'
+                  ? 'Upgrade to Studio Pro'
+                  : mode === 'scheduled-pending-auth'
+                    ? 'Continue Studio Pro setup'
+                    : tier.chooseLabel}
             </Button>
             <p className="mt-2 text-center text-[0.6875rem] font-medium tracking-[0.04em] text-muted-foreground">
-              Auto-renews until cancelled
+              {upgradeAction
+                ? 'Nothing is charged today'
+                : 'Auto-renews until cancelled'}
             </p>
           </>
         )}
@@ -209,12 +274,28 @@ function MembershipCard({
 function CurrentMembershipSummary({
   tier,
   usage,
+  scheduledProStartLabel,
+  isProActive,
+  cancelAtCycleEnd,
+  cancelEffectiveLabel,
+  cancelBusy,
+  onCancelRenewal,
 }: {
   tier: string;
-  usage: { used: number; limit: number | null };
+  usage: { used: number; limit: number | null; remaining: number | null };
+  scheduledProStartLabel: string | null;
+  isProActive: boolean;
+  cancelAtCycleEnd: boolean;
+  cancelEffectiveLabel: string | null;
+  cancelBusy: boolean;
+  onCancelRenewal: () => void;
 }) {
   const isFree = tier === 'free';
-  const remaining = membershipCreditsRemaining(tier, usage.used, usage.limit);
+  // Prefer API spendable balance (membership + Top-Up + Pass lots). Fallback matches Workspace.
+  const remaining =
+    usage.remaining ??
+    membershipCreditsRemaining(tier, usage.used, usage.limit);
+  const isPaidMember = !isFree;
 
   return (
     <div className="sl-membership-current-summary">
@@ -233,7 +314,37 @@ function CurrentMembershipSummary({
         <>
           <p className="sl-membership-info-credits">{membershipAllowanceLabel(tier)}</p>
           <p className="sl-membership-info-remaining">{remaining} remaining</p>
-          <p className="sl-membership-info-footnote">Renews monthly</p>
+          {cancelAtCycleEnd && cancelEffectiveLabel ? (
+            <p className="sl-membership-info-footnote">
+              Cancellation requested. Your membership remains active until{' '}
+              {cancelEffectiveLabel}. It will not renew after that date.
+            </p>
+          ) : isProActive ? (
+            <p className="sl-membership-info-footnote">
+              Studio Pro is now active.{' '}
+              {formatStudioCredits(MembershipCreditAllowances.pro)} are available
+              for this billing period.
+            </p>
+          ) : scheduledProStartLabel ? (
+            <p className="sl-membership-info-footnote">
+              Studio Pro is scheduled for {scheduledProStartLabel}. Your current
+              Studio Basic membership remains active until then.
+            </p>
+          ) : (
+            <p className="sl-membership-info-footnote">Renews monthly</p>
+          )}
+          {isPaidMember && !cancelAtCycleEnd ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className="sl-membership-cancel-renewal"
+              disabled={cancelBusy}
+              onClick={onCancelRenewal}
+              data-testid="button-cancel-membership-renewal"
+            >
+              {cancelBusy ? 'Cancelling renewal…' : 'Cancel Subscription'}
+            </Button>
+          ) : null}
         </>
       )}
     </div>
@@ -273,6 +384,11 @@ function StudioPassCompact({
         <p className="sl-membership-pass-compact-meta">
           Valid 7 Days • No Subscription
         </p>
+        {!eligible ? (
+          <p className="sl-membership-pass-compact-eligibility">
+            Available to Complimentary Studio accounts
+          </p>
+        ) : null}
       </div>
       <Button
         className="sl-membership-pass-compact-cta"
@@ -283,11 +399,6 @@ function StudioPassCompact({
       >
         {choosing ? 'Opening checkout…' : 'Choose Studio Pass'}
       </Button>
-      {!eligible ? (
-        <p className="mt-2 text-center text-[0.6875rem] font-medium tracking-[0.04em] text-muted-foreground">
-          Available to Complimentary Studio accounts
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -349,13 +460,26 @@ export default function BillingPage() {
   });
   const [pricingMarket, setPricingMarket] =
     useState<MembershipPricingMarket>('international');
+  const [membershipStatus, setMembershipStatus] =
+    useState<MembershipSubscriptionStatus | null>(null);
+  const [schedulingPro, setSchedulingPro] = useState(false);
 
   const [pendingPlan, setPendingPlan] =
     useState<CreateMembershipSubscriptionInputPlan | null>(null);
   const [pendingAddOn, setPendingAddOn] = useState<StudioAddOnProductId | null>(
     null,
   );
+  const [cancellingMembership, setCancellingMembership] = useState(false);
   const checkoutInFlightRef = useRef(false);
+
+  const refreshMembershipStatus = async () => {
+    try {
+      const status = await fetchMembershipSubscriptionStatus();
+      setMembershipStatus(status);
+    } catch {
+      setMembershipStatus(null);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -367,26 +491,88 @@ export default function BillingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    void fetchMembershipSubscriptionStatus()
+      .then((status) => {
+        if (!cancelled) setMembershipStatus(status);
+      })
+      .catch(() => {
+        if (!cancelled) setMembershipStatus(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.subscriptionTier]);
+
   const tier = user?.subscriptionTier ?? 'free';
-  const usageData = { used: usage?.used ?? 0, limit: usage?.limit ?? null };
+  const usageData = {
+    used: usage?.used ?? 0,
+    limit: usage?.limit ?? null,
+    remaining: usage?.remaining ?? null,
+  };
   const purchaseBusy =
     pendingPlan != null ||
     pendingAddOn != null ||
-    createSubscription.isPending;
+    createSubscription.isPending ||
+    schedulingPro;
   const isPaidMember = tier === 'pro' || tier === 'enterprise';
+  const isBasicMember = tier === 'pro';
+  const isProMember = tier === 'enterprise';
   const passEligible = !isPaidMember;
   const topUpEligible = isPaidMember;
+  const scheduledStartLabel =
+    formatMembershipBillingDate(membershipStatus?.scheduledPro?.startAt) ??
+    formatMembershipBillingDate(membershipStatus?.currentEnd);
+  const scheduledNeedsAuth = scheduledProNeedsCheckout(
+    membershipStatus?.scheduledPro?.status,
+  );
 
   const releaseCheckoutLock = () => {
     checkoutInFlightRef.current = false;
     setPendingPlan(null);
     setPendingAddOn(null);
+    setSchedulingPro(false);
+  };
+
+  const handleCancelMembershipRenewal = async () => {
+    if (cancellingMembership) return;
+    const until =
+      formatMembershipBillingDate(membershipStatus?.currentEnd) ??
+      'the end of your current billing period';
+    const confirmed = window.confirm(
+      `Cancel your membership renewal?\n\nYour Studio membership will remain active until ${until}. It will not renew after that date. Your Studio account and Creative Ledger history will stay intact.`,
+    );
+    if (!confirmed) return;
+
+    setCancellingMembership(true);
+    try {
+      const result = await cancelMembershipRenewalAtCycleEnd();
+      const effective =
+        formatMembershipBillingDate(result.cancelEffectiveAt) ?? until;
+      toast({
+        title: 'Renewal cancelled',
+        description: `Your membership remains active until ${effective}. It will not renew after that date.`,
+      });
+      void refreshMembershipStatus();
+    } catch (error) {
+      toast({
+        title: "We couldn't cancel renewal.",
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Your membership is unchanged.',
+      });
+    } finally {
+      setCancellingMembership(false);
+    }
   };
 
   const handleChoosePlan = async (
     membershipTier: (typeof MEMBERSHIP_TIERS)[number],
   ) => {
     if (checkoutInFlightRef.current) return;
+    if (isBasicMember && membershipTier.plan === 'pro') return;
 
     checkoutInFlightRef.current = true;
     setPendingPlan(membershipTier.plan);
@@ -398,6 +584,26 @@ export default function BillingPage() {
 
       if (!checkout.keyId || !checkout.subscriptionId) {
         throw new Error('Checkout details were incomplete. Please try again.');
+      }
+
+      // Already paid / reconciled (e.g. local created while Razorpay active) — never reopen Checkout.
+      const needsCheckout =
+        checkout.status === 'created' ||
+        checkout.status === 'authenticated' ||
+        checkout.status === 'pending';
+      if (!needsCheckout) {
+        releaseCheckoutLock();
+        toast({
+          title: 'Membership confirmed',
+          description:
+            'Your Studio membership is already active. Studio Credits will appear once confirmation finishes.',
+        });
+        void queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+        void queryClient.invalidateQueries({
+          queryKey: getGetRenderUsageQueryKey(),
+        });
+        void refreshMembershipStatus();
+        return;
       }
 
       await openRazorpaySubscriptionCheckout({
@@ -415,6 +621,7 @@ export default function BillingPage() {
           void queryClient.invalidateQueries({
             queryKey: getGetRenderUsageQueryKey(),
           });
+          void refreshMembershipStatus();
         },
         onDismiss: () => {
           releaseCheckoutLock();
@@ -432,6 +639,71 @@ export default function BillingPage() {
       releaseCheckoutLock();
       toast({
         title: "We couldn't start checkout.",
+        description: membershipCheckoutErrorMessage(error),
+      });
+    }
+  };
+
+  const handleUpgradeToPro = async () => {
+    if (checkoutInFlightRef.current) return;
+    if (!isBasicMember) return;
+
+    checkoutInFlightRef.current = true;
+    setSchedulingPro(true);
+
+    try {
+      const checkout = await scheduleStudioProUpgrade();
+      const startLabel =
+        formatMembershipBillingDate(checkout.startAt) ?? 'your next billing date';
+
+      if (!scheduledProNeedsCheckout(checkout.status) && checkout.alreadyScheduled) {
+        releaseCheckoutLock();
+        toast({
+          title: 'Studio Pro is scheduled',
+          description: `Studio Pro is scheduled for ${startLabel}. Your current Studio Basic membership remains active until then.`,
+        });
+        void refreshMembershipStatus();
+        return;
+      }
+
+      if (!checkout.keyId || !checkout.subscriptionId) {
+        throw new Error('Checkout details were incomplete. Please try again.');
+      }
+
+      await openRazorpaySubscriptionCheckout({
+        keyId: checkout.keyId,
+        subscriptionId: checkout.subscriptionId,
+        description: 'Studio Pro',
+        onSuccess: () => {
+          releaseCheckoutLock();
+          toast({
+            title: 'Studio Pro scheduled',
+            description: `Studio Pro is scheduled for ${startLabel}. Your current Studio Basic membership remains active until then.`,
+          });
+          void queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+          void queryClient.invalidateQueries({
+            queryKey: getGetRenderUsageQueryKey(),
+          });
+          void refreshMembershipStatus();
+        },
+        onDismiss: () => {
+          releaseCheckoutLock();
+          void refreshMembershipStatus();
+        },
+        onPaymentFailed: (failure) => {
+          releaseCheckoutLock();
+          const copy = membershipPaymentFailedToastCopy(failure);
+          toast({
+            title: copy.title,
+            description: copy.description,
+          });
+          void refreshMembershipStatus();
+        },
+      });
+    } catch (error) {
+      releaseCheckoutLock();
+      toast({
+        title: "We couldn't schedule Studio Pro.",
         description: membershipCheckoutErrorMessage(error),
       });
     }
@@ -495,7 +767,24 @@ export default function BillingPage() {
         className="sl-page-header--membership"
       />
 
-      <CurrentMembershipSummary tier={tier} usage={usageData} />
+      <CurrentMembershipSummary
+        tier={tier}
+        usage={usageData}
+        scheduledProStartLabel={
+          isBasicMember && membershipStatus?.scheduledPro
+            ? scheduledStartLabel
+            : null
+        }
+        isProActive={isProMember}
+        cancelAtCycleEnd={Boolean(membershipStatus?.cancelAtCycleEnd)}
+        cancelEffectiveLabel={formatMembershipBillingDate(
+          membershipStatus?.cancelEffectiveAt ?? membershipStatus?.currentEnd,
+        )}
+        cancelBusy={cancellingMembership}
+        onCancelRenewal={() => {
+          void handleCancelMembershipRenewal();
+        }}
+      />
 
       <div className="sl-membership-page">
         <section className="sl-membership-plans-section">
@@ -503,6 +792,20 @@ export default function BillingPage() {
           <div className="sl-membership-plans-row">
             {MEMBERSHIP_TIERS.map((membershipTier) => {
               const active = isActiveTier(tier, membershipTier.id);
+              let mode: MembershipCardProps['mode'] = 'choose';
+              if (membershipTier.plan === 'pro' && isBasicMember) {
+                if (membershipStatus?.scheduledPro) {
+                  mode = scheduledNeedsAuth
+                    ? 'scheduled-pending-auth'
+                    : 'scheduled';
+                } else {
+                  mode = 'upgrade';
+                }
+              }
+              if (membershipTier.plan === 'basic' && isProMember) {
+                mode = 'hidden';
+              }
+
               return (
                 <MembershipCard
                   key={membershipTier.id}
@@ -513,8 +816,16 @@ export default function BillingPage() {
                   )}
                   active={active}
                   checkoutBusy={purchaseBusy}
-                  choosingThisPlan={pendingPlan === membershipTier.plan}
+                  choosingThisPlan={
+                    pendingPlan === membershipTier.plan ||
+                    (membershipTier.plan === 'pro' && schedulingPro)
+                  }
+                  mode={mode}
+                  scheduledStartLabel={
+                    membershipTier.plan === 'pro' ? scheduledStartLabel : null
+                  }
                   onChoose={handleChoosePlan}
+                  onUpgrade={handleUpgradeToPro}
                 />
               );
             })}

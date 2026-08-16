@@ -53,7 +53,7 @@ export function GalleryDashboardCard({ usage }: GalleryDashboardCardProps) {
           <div className="sl-gallery-dashboard-info-item">
             <Info aria-hidden className="sl-gallery-dashboard-info-icon" />
             <p>
-              Every image permanently records Studio Credit usage and refinement history.
+              Every image permanently records Studio Credit usage and post-production activity.
             </p>
           </div>
         </div>

@@ -17,10 +17,14 @@ import {
   finalizeGenerationCreditTransaction,
   getStudioCreditBalance,
 } from "../services/studio-credit-service.js";
-import { getBillingCycleActivityStats } from "../services/account-statement/billing-cycle-activity.js";
+import {
+  getCachedBillingCycleActivityStats,
+  invalidateBillingCycleActivityStatsCache,
+} from "../services/account-statement/billing-cycle-activity.js";
 import {
   findActiveGenerationBatch,
   reconcileStaleCommercialState,
+  scheduleDeferredCommercialReconciliation,
   withUserGenerationLock,
 } from "../services/generation-idempotency.js";
 import { logger } from "../lib/logger";
@@ -42,6 +46,13 @@ import {
   buildAssetLineageRecord,
 } from "../services/image-architecture/asset-lineage.js";
 import type { RefinementType } from "../services/refinement/refinement-types.js";
+import {
+  getPreviewImageUrl,
+  hydratePreviewCache,
+  clearPreviewAvailability,
+} from "../services/image-processing/preview-registry.js";
+import { deleteRenderPreviewFromR2 } from "../services/image-processing/preview-storage.js";
+import { scheduleRenderPreviewGeneration } from "../services/image-processing/schedule-render-preview.js";
 
 const router: IRouter = Router();
 
@@ -79,10 +90,12 @@ function validateGenerationImageCount(input: {
 }
 
 function serializeRender(render: typeof rendersTable.$inferSelect) {
+  const previewImageUrl = getPreviewImageUrl(render.id);
   return {
     ...render,
     workspaceId: render.userId,
     assetLineage: buildAssetLineageRecord(render),
+    previewImageUrl: previewImageUrl ?? null,
   };
 }
 
@@ -107,7 +120,7 @@ router.get("/renders/usage", async (req, res): Promise<void> => {
     return;
   }
 
-  await reconcileStaleCommercialState(userId);
+  scheduleDeferredCommercialReconciliation(userId);
 
   const [user] = await db
     .select()
@@ -127,7 +140,7 @@ router.get("/renders/usage", async (req, res): Promise<void> => {
     limit,
     isAdmin: user.isAdmin,
   });
-  const cycleStats = await getBillingCycleActivityStats(userId, tier);
+  const cycleStats = await getCachedBillingCycleActivityStats(userId, tier);
 
   res.json({
     used: balance.used,
@@ -147,13 +160,15 @@ router.get("/renders", async (req, res): Promise<void> => {
     return;
   }
 
-  await reconcileStaleCommercialState(userId);
+  scheduleDeferredCommercialReconciliation(userId);
 
   const renders = await db
     .select()
     .from(rendersTable)
     .where(eq(rendersTable.userId, userId))
     .orderBy(desc(rendersTable.createdAt));
+
+  await hydratePreviewCache(renders.map((render) => render.id));
 
   res.json(renders.map(serializeRender));
 });
@@ -164,6 +179,7 @@ router.post("/renders", async (req, res): Promise<void> => {
     res.status(401).json({ error: "Not authenticated" });
     return;
   }
+  const ownerUserId = userId;
 
   const pipelineTrace = createPipelineTrace({
     generationSessionId: null,
@@ -530,6 +546,7 @@ router.post("/renders", async (req, res): Promise<void> => {
         completedCount: batchTracker.completed,
         creditPerCompletedImage,
       });
+      invalidateBillingCycleActivityStatsCache(ownerUserId);
 
       if (chargedCredits > 0) {
         await db
@@ -620,6 +637,12 @@ router.post("/renders", async (req, res): Promise<void> => {
             );
           }
         }
+
+        scheduleRenderPreviewGeneration({
+          renderId: row.id,
+          sourceImageUrl: outputImageUrl,
+          preserveAlpha: row.refinementType === "remove_background",
+        });
       },
       onShotError: async (_error, imageIndex) => {
         const row = insertedRows[imageIndex];
@@ -788,6 +811,9 @@ router.delete("/renders/:id", async (req, res): Promise<void> => {
     deletedBy: user?.isAdmin ? "admin" : "user",
   });
 
+  await deleteRenderPreviewFromR2(render.id);
+  clearPreviewAvailability(render.id);
+
   await db
     .delete(rendersTable)
     .where(and(eq(rendersTable.id, id), eq(rendersTable.userId, userId)));
@@ -809,7 +835,7 @@ router.get("/renders/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  await reconcileStaleCommercialState(userId);
+  scheduleDeferredCommercialReconciliation(userId);
 
   const [render] = await db
     .select()
@@ -825,6 +851,8 @@ router.get("/renders/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Render not found" });
     return;
   }
+
+  await hydratePreviewCache([render.id]);
 
   res.json(serializeRender(render));
 });
@@ -918,7 +946,7 @@ router.get("/renders/:id/download/transparent", async (req, res): Promise<void> 
 
   if (!cachedTransparentUrl) {
     res.status(404).json({
-      error: "Transparent PNG not available. Use Remove Background refinement first.",
+      error: "Transparent PNG not available. Use Remove Background first.",
       code: "TRANSPARENT_NOT_AVAILABLE",
     });
     return;

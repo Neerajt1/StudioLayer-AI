@@ -7,6 +7,7 @@
  */
 import type { MembershipSubscriptionStatusStudioPlan } from './membershipSubscriptionStatusStudioPlan';
 import type { MembershipSubscriptionStatusStudioTier } from './membershipSubscriptionStatusStudioTier';
+import type { ScheduledProMembershipStatus } from './scheduledProMembershipStatus';
 
 export interface MembershipSubscriptionStatus {
   /** @nullable */
@@ -19,4 +20,12 @@ export interface MembershipSubscriptionStatus {
   currentEnd: Date | null;
   /** @nullable */
   subscriptionId: string | null;
+  /** True when renewal cancellation at cycle end was requested */
+  cancelAtCycleEnd: boolean;
+  /**
+     * Membership remains active until this instant when cancelAtCycleEnd is true
+     * @nullable
+     */
+  cancelEffectiveAt: Date | null;
+  scheduledPro: null | ScheduledProMembershipStatus;
 }

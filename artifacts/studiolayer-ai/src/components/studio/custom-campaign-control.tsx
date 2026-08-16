@@ -37,19 +37,24 @@ export function CustomCampaignControl({
         disabled={disabled}
         onClick={onSelect}
         className={cn(
-          'sl-custom-campaign-toggle flex h-full min-h-[3.125rem] w-full flex-col items-center justify-center gap-0.5 px-2 py-1.5',
+          'sl-shoot-type-option sl-custom-campaign-toggle flex h-full w-full flex-col items-center justify-center gap-1 px-2.5 py-2 sm:min-h-[3.125rem] sm:gap-0.5 sm:px-2 sm:py-2',
           premiumLocked && 'opacity-50 cursor-pointer',
         )}
       >
         <p
           className={cn(
-            'text-[11px] font-semibold leading-none',
+            'sl-shoot-type-option-label font-semibold',
             selected && !premiumLocked ? 'text-inherit' : 'text-muted-foreground',
           )}
         >
           Custom Campaign
         </p>
-        <p className="text-[9px] font-mono leading-none text-muted-foreground">
+        <p
+          className={cn(
+            'sl-shoot-type-option-sub font-mono',
+            selected && !premiumLocked ? 'opacity-75' : 'text-muted-foreground',
+          )}
+        >
           Choose 4–20 images
         </p>
       </StudioToggleOption>

@@ -138,6 +138,8 @@ export interface BillingCycleStats {
   studioCreditsUsed: number;
   imagesCreated: number;
   averageRefinementsPerImage: number;
+  /** Total paid post-production edits in the billing cycle — derived from cycleStats. */
+  editsMade: number;
   creditsRemaining: number;
   studioCreditAllowance: number;
 }
@@ -146,9 +148,24 @@ export const EMPTY_BILLING_CYCLE_STATS: BillingCycleStats = {
   studioCreditsUsed: 0,
   imagesCreated: 0,
   averageRefinementsPerImage: 0,
+  editsMade: 0,
   creditsRemaining: 0,
   studioCreditAllowance: 0,
 };
+
+/**
+ * Billing-cycle total of paid post-production edits.
+ * Server derives averageRefinementsPerImage from countMasterRefinements(cycleRows);
+ * this reverses that average to recover the authoritative cycle total for display.
+ */
+export function billingCycleEditsMade(
+  cycleStats?: Pick<BillingCycleStats, 'averageRefinementsPerImage' | 'imagesCreated'> | null,
+): number {
+  if (cycleStats == null || cycleStats.imagesCreated === 0) {
+    return 0;
+  }
+  return Math.round(cycleStats.averageRefinementsPerImage * cycleStats.imagesCreated);
+}
 
 /** Merge API cycle stats with live allowance — never estimate credit usage client-side. */
 export function mergeBillingCycleStats(
@@ -156,10 +173,15 @@ export function mergeBillingCycleStats(
   creditsRemaining = 0,
   studioCreditAllowance = 0,
 ): BillingCycleStats {
+  const studioCreditsUsed = cycleStats?.studioCreditsUsed ?? 0;
+  const imagesCreated = cycleStats?.imagesCreated ?? 0;
+  const averageRefinementsPerImage = cycleStats?.averageRefinementsPerImage ?? 0;
+
   return {
-    studioCreditsUsed: cycleStats?.studioCreditsUsed ?? 0,
-    imagesCreated: cycleStats?.imagesCreated ?? 0,
-    averageRefinementsPerImage: cycleStats?.averageRefinementsPerImage ?? 0,
+    studioCreditsUsed,
+    imagesCreated,
+    averageRefinementsPerImage,
+    editsMade: billingCycleEditsMade({ averageRefinementsPerImage, imagesCreated }),
     creditsRemaining,
     studioCreditAllowance,
   };

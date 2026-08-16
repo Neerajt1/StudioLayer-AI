@@ -9,6 +9,7 @@ import {
   normalizeOutputResolution,
   type OutputResolution,
 } from '@workspace/studio-credit-engine';
+import { REMOVE_BACKGROUND_TYPE } from '@/lib/refinement-types';
 
 export type GarmentPlacement = 'upper_body' | 'lower_body' | 'full_body' | '';
 export type GarmentLengthSelection =
@@ -287,19 +288,30 @@ export function buildGenerationRequest(
   };
 }
 
+export function buildRemoveBackgroundRequest(
+  workflow: StudioWorkflow,
+  identity: StudioIdentityPayload | undefined,
+  input: { parentRenderId: number },
+) {
+  return {
+    ...buildGenerationRequest(workflow, identity),
+    parentRenderId: input.parentRenderId,
+    refinementType: REMOVE_BACKGROUND_TYPE,
+  };
+}
+
+/** @deprecated Use buildRemoveBackgroundRequest */
 export function buildRefinementRequest(
   workflow: StudioWorkflow,
   identity: StudioIdentityPayload | undefined,
   input: {
     parentRenderId: number;
-    refinementType: 'remove_background' | 'enhance_model_face' | 'enhance_garment';
+    refinementType?: typeof REMOVE_BACKGROUND_TYPE;
   },
 ) {
-  return {
-    ...buildGenerationRequest(workflow, identity),
+  return buildRemoveBackgroundRequest(workflow, identity, {
     parentRenderId: input.parentRenderId,
-    refinementType: input.refinementType,
-  };
+  });
 }
 
 function storageKey(userId: number): string {

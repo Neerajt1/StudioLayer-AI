@@ -11,6 +11,7 @@ import {
   type GalleryShoot,
 } from '@/lib/gallery-shoots';
 import { galleryFailedRenderCopy } from '@/lib/generation-failure-copy';
+import { resolveGalleryCardImageUrl } from '@/lib/gallery-card-image';
 
 const SL_TOKEN_ICON = '/icons/sl-token.svg';
 const STUDIO_SPARK_ICON = '/icons/studio-spark.svg';
@@ -39,7 +40,7 @@ function ShootCoverImage({ src, priority }: { src: string; priority?: boolean })
 
 function ShootCover({ shoot, priority }: { shoot: GalleryShoot; priority?: boolean }) {
   const urls = shoot.images
-    .map((img) => img.outputImageUrl)
+    .map((img) => resolveGalleryCardImageUrl(img))
     .filter((url): url is string => Boolean(url));
 
   if (urls.length === 0) {
@@ -91,16 +92,22 @@ function ShootCover({ shoot, priority }: { shoot: GalleryShoot; priority?: boole
 function ShootMetricColumn({
   iconSrc,
   iconClassName,
+  label,
   tooltip,
   value,
 }: {
   iconSrc: string;
   iconClassName?: string;
+  label: string;
   tooltip: string;
   value: number;
 }) {
   return (
-    <div className="sl-shoot-metric sl-shoot-metric--compact">
+    <div
+      className="sl-shoot-metric sl-shoot-metric--compact"
+      role="group"
+      aria-label={`${label}: ${value}. ${tooltip}`}
+    >
       <Tooltip>
         <TooltipTrigger asChild>
           <span className="sl-shoot-metric-icon-wrap" tabIndex={0} aria-label={tooltip}>
@@ -117,10 +124,10 @@ function ShootMetricColumn({
           {tooltip}
         </TooltipContent>
       </Tooltip>
-      <span
-        className="sl-billing-cycle-stat-value"
-        aria-label={`${tooltip}: ${value}`}
-      >
+      <span className="sl-shoot-metric-label" aria-hidden="true">
+        {label}
+      </span>
+      <span className="sl-billing-cycle-stat-value" aria-hidden="true">
         {value}
       </span>
     </div>
@@ -162,13 +169,15 @@ export function ShootCard({
         <ShootMetricColumn
           iconSrc={SL_TOKEN_ICON}
           iconClassName="sl-shoot-metric-icon--studio-credit"
-          tooltip="Studio Credits Used"
+          label="Credits Used"
+          tooltip="Studio Credits used to generate this Shoot."
           value={shoot.studioCreditsUsed}
         />
         <ShootMetricColumn
           iconSrc={STUDIO_SPARK_ICON}
           iconClassName="sl-shoot-metric-icon--refinement"
-          tooltip="Refinements"
+          label="Edits Made"
+          tooltip="Paid image edits on this Shoot, such as Remove Background. Crop is free and not counted here."
           value={shoot.refinementCount}
         />
       </div>
@@ -208,13 +217,15 @@ export function ShootCardGhost({ index }: { index: number }) {
         <ShootMetricColumn
           iconSrc={SL_TOKEN_ICON}
           iconClassName="sl-shoot-metric-icon--studio-credit"
-          tooltip="Studio Credits Used"
+          label="Credits Used"
+          tooltip="Studio Credits used to generate this Shoot."
           value={0}
         />
         <ShootMetricColumn
           iconSrc={STUDIO_SPARK_ICON}
           iconClassName="sl-shoot-metric-icon--refinement"
-          tooltip="Refinements"
+          label="Edits Made"
+          tooltip="Paid image edits on this Shoot, such as Remove Background. Crop is free and not counted here."
           value={0}
         />
       </div>

@@ -10,6 +10,6 @@ import type { BackgroundRemovalInput, BackgroundRemovalResult } from "./types.js
 export interface BackgroundRemovalProvider {
   readonly name: string;
 
-  /** Remove the background and return a transparent PNG representation. */
+  /** Request a segmentation mask for background removal (not a final composited PNG). */
   processBackgroundRemoval(input: BackgroundRemovalInput): Promise<BackgroundRemovalResult>;
 }

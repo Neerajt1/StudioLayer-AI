@@ -18,6 +18,19 @@ export class PngTransparencyVerificationError extends Error {
   }
 }
 
+export class PngDimensionMismatchError extends Error {
+  readonly code = "PNG_DIMENSION_MISMATCH";
+
+  constructor(
+    message: string,
+    readonly expected: { width: number; height: number },
+    readonly actual: { width: number; height: number },
+  ) {
+    super(message);
+    this.name = "PngDimensionMismatchError";
+  }
+}
+
 export interface PngAlphaVerificationResult {
   mimeType: "image/png";
   colorType: number;
@@ -247,6 +260,24 @@ export function assertPngHasTransparency(buffer: Buffer): PngAlphaVerificationRe
   if (!result.hasTransparentPixels) {
     throw new PngTransparencyVerificationError(
       `PNG has no transparent pixels (colorType=${result.colorType}, ${result.width}x${result.height})`,
+    );
+  }
+
+  return result;
+}
+
+export function assertPngDimensionsMatch(
+  buffer: Buffer,
+  expected: { width: number; height: number },
+): PngAlphaVerificationResult {
+  const result = assertPngHasTransparency(buffer);
+
+  if (result.width !== expected.width || result.height !== expected.height) {
+    throw new PngDimensionMismatchError(
+      `PNG dimensions ${result.width}×${result.height} do not match `
+        + `source ${expected.width}×${expected.height}`,
+      expected,
+      { width: result.width, height: result.height },
     );
   }
 

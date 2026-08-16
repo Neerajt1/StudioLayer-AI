@@ -14,11 +14,16 @@ import { grantCreditAllocation } from "../services/studio-credit-service.js";
 import {
   cancelRazorpaySubscription,
   createRazorpaySubscription,
+  fetchRazorpayInvoicesForSubscription,
+  fetchRazorpayPayment,
+  fetchRazorpaySubscription,
   getRazorpayKeyId,
-  isCapturedRazorpayPayment,
   isOpenMembershipSubscriptionStatus,
+  isRazorpayCancelAtCycleEndConfirmed,
   isStudioMembershipPlanId,
   OPEN_MEMBERSHIP_SUBSCRIPTION_STATUSES,
+  RAZORPAY_EXPECTED_PLAN_AMOUNT_CENTS,
+  RAZORPAY_EXPECTED_PLAN_AMOUNT_PAISE,
   RazorpayWebhookProcessingStatus,
   type RazorpayPaymentEntity,
   type RazorpaySubscriptionEntity,
@@ -30,11 +35,22 @@ import {
 import {
   claimWebhookEventForProcessing,
   evaluateSubscriptionChargedGrant,
+  pickLatestPaidSubscriptionInvoice,
+  resolveLiveMembershipForCheckoutReuse,
   resolveOpenMembershipForCreate,
   resolveRazorpayWebhookEventId,
   resolveSubscriptionPlanSync,
   unixToDate,
 } from "./razorpay-membership-logic.js";
+import {
+  SCHEDULE_KIND_SCHEDULED_PRO,
+  findActiveBasicForScheduledUpgrade,
+  findExistingScheduledPro,
+  resolveCurrentMembershipEntitlement,
+  resolveScheduledProPlanMarket,
+  resolveScheduledProStartAtUnix,
+  shouldRequestBasicCycleEndCancel,
+} from "./razorpay-schedule-pro-logic.js";
 import { logger } from "../lib/logger.js";
 import type { PricingMarket } from "./pricing-market.js";
 import { grantStudioAddOnFromCapturedPayment } from "./razorpay-add-ons.js";
@@ -47,6 +63,20 @@ export type CreateMembershipSubscriptionResult = {
   razorpayPlanId: string;
   status: string;
   shortUrl: string | null;
+};
+
+export type ScheduleMembershipUpgradeToProResult = {
+  subscriptionId: string;
+  keyId: string;
+  plan: "pro";
+  studioTier: "enterprise";
+  razorpayPlanId: string;
+  status: string;
+  shortUrl: string | null;
+  startAt: string;
+  basicSubscriptionId: string;
+  alreadyScheduled: boolean;
+  market: PricingMarket;
 };
 
 
@@ -162,14 +192,56 @@ export async function createMembershipSubscription(input: {
 
     if (decision.action === "reuse") {
       const existing = decision.subscription;
+      let live: RazorpaySubscriptionEntity;
+      try {
+        live = await fetchRazorpaySubscription(existing.razorpaySubscriptionId);
+      } catch (error) {
+        logger.warn(
+          {
+            err: error,
+            subscriptionId: existing.razorpaySubscriptionId,
+            userId: input.userId,
+          },
+          "Unable to verify live Razorpay subscription before Checkout reuse",
+        );
+        throw new SubscriptionValidationError(
+          "Unable to verify your membership checkout. Please try again shortly.",
+        );
+      }
+
+      const liveDecision = resolveLiveMembershipForCheckoutReuse({
+        liveStatus: live.status,
+        paidCount: live.paid_count,
+      });
+
+      if (liveDecision.action === "reconcile_paid") {
+        await reconcilePaidMembershipSubscription({
+          razorpaySubscriptionId: existing.razorpaySubscriptionId,
+          live,
+        });
+        return {
+          subscriptionId: existing.razorpaySubscriptionId,
+          keyId: getRazorpayKeyId(),
+          plan,
+          studioTier: existing.studioTier as "pro" | "enterprise",
+          razorpayPlanId: existing.razorpayPlanId,
+          status: live.status || "active",
+          shortUrl: null,
+        };
+      }
+
+      if (liveDecision.action === "unavailable") {
+        throw new SubscriptionConflictError(liveDecision.message);
+      }
+
       return {
         subscriptionId: existing.razorpaySubscriptionId,
         keyId: getRazorpayKeyId(),
         plan,
         studioTier: existing.studioTier as "pro" | "enterprise",
         razorpayPlanId: existing.razorpayPlanId,
-        status: existing.status,
-        shortUrl: null,
+        status: live.status || existing.status,
+        shortUrl: live.short_url ?? null,
       };
     }
 
@@ -314,6 +386,346 @@ export async function createMembershipSubscription(input: {
   });
 }
 
+/**
+ * Schedule Studio Pro for the next Basic billing instant via a new future-start
+ * Pro subscription (start_at = Basic.current_end). Does not charge today and
+ * does not change Basic plan mid-cycle.
+ */
+export async function scheduleMembershipUpgradeToPro(input: {
+  userId: number;
+  pricingMarket?: PricingMarket;
+}): Promise<ScheduleMembershipUpgradeToProResult> {
+  const market = resolveScheduledProPlanMarket({
+    pricingMarket: input.pricingMarket,
+  });
+  const proPlanId = resolveRazorpayPlanId("pro", market);
+  const studioTier = "enterprise" as const;
+
+  return withMembershipSubscriptionUserLock(input.userId, async () => {
+    const openRows = await db
+      .select()
+      .from(studioRazorpaySubscriptionsTable)
+      .where(
+        and(
+          eq(studioRazorpaySubscriptionsTable.userId, input.userId),
+          inArray(studioRazorpaySubscriptionsTable.status, [
+            ...OPEN_MEMBERSHIP_SUBSCRIPTION_STATUSES,
+          ]),
+        ),
+      );
+
+    const existingPro = findExistingScheduledPro(
+      openRows.map((row) => ({
+        razorpaySubscriptionId: row.razorpaySubscriptionId,
+        studioPlan: row.studioPlan,
+        status: row.status,
+        scheduleKind: row.scheduleKind,
+        linkedSubscriptionId: row.linkedSubscriptionId,
+        razorpayStartAt: row.razorpayStartAt,
+      })),
+    );
+
+    const basic = findActiveBasicForScheduledUpgrade(
+      openRows.map((row) => ({
+        razorpaySubscriptionId: row.razorpaySubscriptionId,
+        studioPlan: row.studioPlan,
+        status: row.status,
+        currentEnd: row.currentEnd,
+        cancelAtCycleEndRequested: row.cancelAtCycleEndRequested,
+        linkedSubscriptionId: row.linkedSubscriptionId,
+      })),
+    );
+
+    if (!basic) {
+      throw new SubscriptionValidationError(
+        "An active Studio Basic membership is required to schedule Studio Pro.",
+      );
+    }
+
+    if (existingPro) {
+      const startAt =
+        existingPro.razorpayStartAt?.toISOString() ??
+        basic.currentEnd?.toISOString();
+      if (!startAt) {
+        throw new SubscriptionValidationError(
+          "Your Studio Basic billing period end could not be confirmed. Please try again shortly.",
+        );
+      }
+      await ensureBasicCycleEndCancelForScheduledPro({
+        userId: input.userId,
+        proSubscriptionId: existingPro.razorpaySubscriptionId,
+        proStatus: existingPro.status,
+        proScheduleKind: existingPro.scheduleKind,
+        linkedBasicSubscriptionId:
+          existingPro.linkedSubscriptionId ?? basic.razorpaySubscriptionId,
+      });
+      return {
+        subscriptionId: existingPro.razorpaySubscriptionId,
+        keyId: getRazorpayKeyId(),
+        plan: "pro",
+        studioTier,
+        razorpayPlanId: proPlanId,
+        status: existingPro.status,
+        shortUrl: null,
+        startAt,
+        basicSubscriptionId: basic.razorpaySubscriptionId,
+        alreadyScheduled: true,
+        market,
+      };
+    }
+
+    let liveCurrentEndUnix: number | null = null;
+    try {
+      const live = await fetchRazorpaySubscription(basic.razorpaySubscriptionId);
+      liveCurrentEndUnix =
+        typeof live.current_end === "number" ? live.current_end : null;
+    } catch (error) {
+      logger.warn(
+        {
+          err: error,
+          subscriptionId: basic.razorpaySubscriptionId,
+          userId: input.userId,
+        },
+        "Unable to fetch live Basic subscription for scheduled Pro start_at — using local currentEnd if present",
+      );
+    }
+
+    const startAtDecision = resolveScheduledProStartAtUnix({
+      liveCurrentEndUnix,
+      localCurrentEnd: basic.currentEnd,
+    });
+    if (!startAtDecision.ok) {
+      throw new SubscriptionValidationError(startAtDecision.message);
+    }
+
+    const nowUnix = Math.floor(Date.now() / 1000);
+    if (startAtDecision.startAtUnix <= nowUnix) {
+      throw new SubscriptionValidationError(
+        "Your Studio Basic period ends too soon to schedule Studio Pro. Please try again after your next renewal.",
+      );
+    }
+
+    const created = await createRazorpaySubscription({
+      planId: proPlanId,
+      startAt: startAtDecision.startAtUnix,
+      notes: {
+        studiolayer_user_id: String(input.userId),
+        studiolayer_plan: "pro",
+        studiolayer_tier: studioTier,
+        studiolayer_schedule: SCHEDULE_KIND_SCHEDULED_PRO,
+        studiolayer_basic_subscription_id: basic.razorpaySubscriptionId,
+      },
+    });
+
+    const startAtDate =
+      unixToDate(created.start_at) ??
+      unixToDate(startAtDecision.startAtUnix) ??
+      new Date(startAtDecision.startAtUnix * 1000);
+
+    try {
+      await db.insert(studioRazorpaySubscriptionsTable).values({
+        userId: input.userId,
+        razorpaySubscriptionId: created.id,
+        razorpayPlanId: created.plan_id,
+        studioPlan: "pro",
+        studioTier,
+        status: created.status || "created",
+        currentStart: unixToDate(created.current_start),
+        currentEnd: unixToDate(created.current_end),
+        razorpayCustomerId: created.customer_id ?? null,
+        scheduleKind: SCHEDULE_KIND_SCHEDULED_PRO,
+        linkedSubscriptionId: basic.razorpaySubscriptionId,
+        razorpayStartAt: startAtDate,
+      });
+    } catch (error) {
+      try {
+        await cancelRazorpaySubscription({
+          subscriptionId: created.id,
+          cancelAtCycleEnd: false,
+        });
+      } catch (cancelError) {
+        logger.error(
+          {
+            err: cancelError,
+            subscriptionId: created.id,
+            userId: input.userId,
+          },
+          "Failed to cancel orphaned scheduled Pro after local persistence failure",
+        );
+      }
+      throw new SubscriptionPersistenceError(
+        `Scheduled Pro subscription ${created.id} could not be saved locally`,
+        { cause: error },
+      );
+    }
+
+    return {
+      subscriptionId: created.id,
+      keyId: getRazorpayKeyId(),
+      plan: "pro",
+      studioTier,
+      razorpayPlanId: created.plan_id,
+      status: created.status || "created",
+      shortUrl: created.short_url ?? null,
+      startAt: startAtDate.toISOString(),
+      basicSubscriptionId: basic.razorpaySubscriptionId,
+      alreadyScheduled: false,
+      market,
+    };
+  });
+}
+
+/**
+ * Immediately cancel every open Razorpay membership for account deletion.
+ * Fail closed — callers must not delete the account if this throws.
+ */
+export async function cancelAllOpenRazorpayMembershipsForUser(input: {
+  userId: number;
+}): Promise<void> {
+  const openRows = await db
+    .select()
+    .from(studioRazorpaySubscriptionsTable)
+    .where(
+      and(
+        eq(studioRazorpaySubscriptionsTable.userId, input.userId),
+        inArray(studioRazorpaySubscriptionsTable.status, [
+          ...OPEN_MEMBERSHIP_SUBSCRIPTION_STATUSES,
+        ]),
+      ),
+    );
+
+  const failures: { subscriptionId: string; message: string }[] = [];
+
+  for (const row of openRows) {
+    try {
+      await cancelRazorpaySubscription({
+        subscriptionId: row.razorpaySubscriptionId,
+        cancelAtCycleEnd: false,
+      });
+      await db
+        .update(studioRazorpaySubscriptionsTable)
+        .set({
+          status: "cancelled",
+          updatedAt: new Date(),
+        })
+        .where(eq(studioRazorpaySubscriptionsTable.id, row.id));
+    } catch (error) {
+      failures.push({
+        subscriptionId: row.razorpaySubscriptionId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      logger.error(
+        {
+          err: error,
+          userId: input.userId,
+          subscriptionId: row.razorpaySubscriptionId,
+        },
+        "Failed to cancel Razorpay membership during account deletion",
+      );
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new SubscriptionPersistenceError(
+      `Unable to cancel ${failures.length} Razorpay membership subscription(s) before account deletion`,
+    );
+  }
+}
+
+async function ensureBasicCycleEndCancelForScheduledPro(input: {
+  userId: number;
+  proSubscriptionId: string;
+  proStatus: string;
+  proScheduleKind: string | null;
+  linkedBasicSubscriptionId: string | null;
+}): Promise<void> {
+  if (
+    !shouldRequestBasicCycleEndCancel({
+      proScheduleKind: input.proScheduleKind,
+      proStudioPlan: "pro",
+      proStatus: input.proStatus,
+      basicCancelAlreadyRequested: false,
+    })
+  ) {
+    return;
+  }
+
+  const basicId = input.linkedBasicSubscriptionId;
+  if (!basicId) return;
+
+  const [basic] = await db
+    .select()
+    .from(studioRazorpaySubscriptionsTable)
+    .where(
+      and(
+        eq(studioRazorpaySubscriptionsTable.userId, input.userId),
+        eq(studioRazorpaySubscriptionsTable.razorpaySubscriptionId, basicId),
+      ),
+    )
+    .limit(1);
+
+  if (!basic) return;
+  if (basic.cancelAtCycleEndRequested) return;
+  if (basic.status === "cancelled" || basic.status === "completed") return;
+
+  try {
+    const cancelled = await cancelRazorpaySubscription({
+      subscriptionId: basic.razorpaySubscriptionId,
+      cancelAtCycleEnd: true,
+    });
+
+    let confirmed = isRazorpayCancelAtCycleEndConfirmed(cancelled);
+    if (!confirmed) {
+      const live = await fetchRazorpaySubscription(
+        basic.razorpaySubscriptionId,
+      );
+      confirmed = isRazorpayCancelAtCycleEndConfirmed(live);
+    }
+
+    if (!confirmed) {
+      throw new Error(
+        `Razorpay did not confirm cancel_at_cycle_end for ${basic.razorpaySubscriptionId}`,
+      );
+    }
+  } catch (error) {
+    // Fail closed: cancel the future Pro so both do not bill.
+    try {
+      await cancelRazorpaySubscription({
+        subscriptionId: input.proSubscriptionId,
+        cancelAtCycleEnd: false,
+      });
+      await db
+        .update(studioRazorpaySubscriptionsTable)
+        .set({ status: "cancelled", updatedAt: new Date() })
+        .where(
+          eq(
+            studioRazorpaySubscriptionsTable.razorpaySubscriptionId,
+            input.proSubscriptionId,
+          ),
+        );
+    } catch (proCancelError) {
+      logger.error(
+        {
+          err: proCancelError,
+          proSubscriptionId: input.proSubscriptionId,
+          basicSubscriptionId: basicId,
+        },
+        "Failed to roll back scheduled Pro after Basic cycle-end cancel failure",
+      );
+    }
+    throw error;
+  }
+
+  await db
+    .update(studioRazorpaySubscriptionsTable)
+    .set({
+      cancelAtCycleEndRequested: true,
+      linkedSubscriptionId: input.proSubscriptionId,
+      updatedAt: new Date(),
+    })
+    .where(eq(studioRazorpaySubscriptionsTable.id, basic.id));
+}
+
 export async function getMembershipSubscriptionStatus(input: {
   userId: number;
 }): Promise<{
@@ -322,6 +734,13 @@ export async function getMembershipSubscriptionStatus(input: {
   status: string | null;
   currentEnd: string | null;
   subscriptionId: string | null;
+  cancelAtCycleEnd: boolean;
+  cancelEffectiveAt: string | null;
+  scheduledPro: {
+    subscriptionId: string;
+    status: string;
+    startAt: string | null;
+  } | null;
 }> {
   const openRows = await db
     .select()
@@ -333,33 +752,173 @@ export async function getMembershipSubscriptionStatus(input: {
           ...OPEN_MEMBERSHIP_SUBSCRIPTION_STATUSES,
         ]),
       ),
-    )
-    .limit(1);
+    );
 
-  const row = openRows[0];
-  if (!row) {
+  return resolveCurrentMembershipEntitlement({
+    openRows: openRows.map((row) => ({
+      studioPlan: row.studioPlan,
+      studioTier: row.studioTier,
+      status: row.status,
+      scheduleKind: row.scheduleKind,
+      currentEnd: row.currentEnd,
+      razorpaySubscriptionId: row.razorpaySubscriptionId,
+      razorpayStartAt: row.razorpayStartAt,
+      cancelAtCycleEndRequested: row.cancelAtCycleEndRequested,
+    })),
+  });
+}
+
+/**
+ * Customer self-serve: keep membership active until current_end, then stop renewal.
+ * Does not delete the account or Creative Ledger history.
+ */
+export async function cancelMembershipAtCycleEnd(input: {
+  userId: number;
+}): Promise<{
+  subscriptionId: string;
+  studioPlan: StudioMembershipPlanId;
+  status: string;
+  cancelAtCycleEnd: true;
+  cancelEffectiveAt: string;
+}> {
+  return withMembershipSubscriptionUserLock(input.userId, async () => {
+    const openRows = await db
+      .select()
+      .from(studioRazorpaySubscriptionsTable)
+      .where(
+        and(
+          eq(studioRazorpaySubscriptionsTable.userId, input.userId),
+          inArray(studioRazorpaySubscriptionsTable.status, [
+            ...OPEN_MEMBERSHIP_SUBSCRIPTION_STATUSES,
+          ]),
+        ),
+      );
+
+    const entitlement = resolveCurrentMembershipEntitlement({
+      openRows: openRows.map((row) => ({
+        studioPlan: row.studioPlan,
+        studioTier: row.studioTier,
+        status: row.status,
+        scheduleKind: row.scheduleKind,
+        currentEnd: row.currentEnd,
+        razorpaySubscriptionId: row.razorpaySubscriptionId,
+        razorpayStartAt: row.razorpayStartAt,
+        cancelAtCycleEndRequested: row.cancelAtCycleEndRequested,
+      })),
+    });
+
+    if (
+      !entitlement.subscriptionId ||
+      (entitlement.studioPlan !== "basic" && entitlement.studioPlan !== "pro") ||
+      entitlement.status !== "active"
+    ) {
+      throw new SubscriptionValidationError(
+        "An active paid membership is required to cancel renewal.",
+      );
+    }
+
+    if (entitlement.cancelAtCycleEnd) {
+      throw new SubscriptionConflictError(
+        "This membership is already set to end at the close of the current billing period.",
+      );
+    }
+
+    const [row] = openRows.filter(
+      (r) => r.razorpaySubscriptionId === entitlement.subscriptionId,
+    );
+    if (!row) {
+      throw new SubscriptionValidationError(
+        "An active paid membership is required to cancel renewal.",
+      );
+    }
+
+    // Scheduled Pro must not bill after the customer cancels Basic renewal.
+    const scheduledPro = openRows.find(
+      (r) =>
+        r.scheduleKind === SCHEDULE_KIND_SCHEDULED_PRO &&
+        r.studioPlan === "pro" &&
+        isOpenMembershipSubscriptionStatus(r.status),
+    );
+
+    try {
+      const cancelled = await cancelRazorpaySubscription({
+        subscriptionId: row.razorpaySubscriptionId,
+        cancelAtCycleEnd: true,
+      });
+
+      let confirmed = isRazorpayCancelAtCycleEndConfirmed(cancelled);
+      if (!confirmed) {
+        const live = await fetchRazorpaySubscription(row.razorpaySubscriptionId);
+        confirmed = isRazorpayCancelAtCycleEndConfirmed(live);
+      }
+      if (!confirmed) {
+        throw new Error(
+          `Razorpay did not confirm cancel_at_cycle_end for ${row.razorpaySubscriptionId}`,
+        );
+      }
+    } catch (error) {
+      logger.error(
+        {
+          err: error,
+          userId: input.userId,
+          subscriptionId: row.razorpaySubscriptionId,
+        },
+        "Customer membership cycle-end cancel failed or was not confirmed by Razorpay",
+      );
+      throw new SubscriptionPersistenceError(
+        "Unable to cancel membership renewal right now. Your membership is unchanged.",
+        { cause: error },
+      );
+    }
+
+    const cancelEffectiveAt =
+      entitlement.currentEnd ??
+      row.currentEnd?.toISOString() ??
+      null;
+    if (!cancelEffectiveAt) {
+      throw new SubscriptionValidationError(
+        "Your billing period end could not be confirmed. Please try again shortly.",
+      );
+    }
+
+    await db
+      .update(studioRazorpaySubscriptionsTable)
+      .set({
+        cancelAtCycleEndRequested: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(studioRazorpaySubscriptionsTable.id, row.id));
+
+    if (scheduledPro) {
+      try {
+        await cancelRazorpaySubscription({
+          subscriptionId: scheduledPro.razorpaySubscriptionId,
+          cancelAtCycleEnd: false,
+        });
+        await db
+          .update(studioRazorpaySubscriptionsTable)
+          .set({ status: "cancelled", updatedAt: new Date() })
+          .where(eq(studioRazorpaySubscriptionsTable.id, scheduledPro.id));
+      } catch (error) {
+        logger.error(
+          {
+            err: error,
+            userId: input.userId,
+            proSubscriptionId: scheduledPro.razorpaySubscriptionId,
+          },
+          "Failed to cancel scheduled Pro after customer cancelled Basic renewal — manual recovery may be required",
+        );
+      }
+    }
+
     return {
-      studioPlan: null,
-      studioTier: null,
-      status: null,
-      currentEnd: null,
-      subscriptionId: null,
+      subscriptionId: row.razorpaySubscriptionId,
+      studioPlan: entitlement.studioPlan,
+      status: row.status,
+      cancelAtCycleEnd: true as const,
+      cancelEffectiveAt,
     };
-  }
-
-  return {
-    studioPlan:
-      row.studioPlan === "basic" || row.studioPlan === "pro"
-        ? row.studioPlan
-        : null,
-    studioTier:
-      row.studioTier === "pro" || row.studioTier === "enterprise"
-        ? row.studioTier
-        : null,
-    status: row.status,
-    currentEnd: row.currentEnd?.toISOString() ?? null,
-    subscriptionId: row.razorpaySubscriptionId,
-  };
+  });
 }
 
 export class SubscriptionValidationError extends Error {
@@ -377,8 +936,8 @@ export class SubscriptionConflictError extends Error {
 }
 
 export class SubscriptionPersistenceError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
     this.name = "SubscriptionPersistenceError";
   }
 }
@@ -521,6 +1080,94 @@ async function handleRazorpayEvent(
   const invoiceId =
     payload.payload?.invoice?.entity?.id ?? payment?.invoice_id ?? null;
 
+  return syncMembershipSubscriptionRowAndMaybeGrant({
+    row,
+    subscription,
+    payment,
+    invoiceId,
+    eventType,
+  });
+}
+
+/**
+ * Missed/delayed webhook recovery: sync local membership from live Razorpay
+ * and grant via the same subscription.charged path (payment source_reference
+ * idempotency). Safe when the real webhook arrives later.
+ */
+export async function reconcilePaidMembershipSubscription(input: {
+  razorpaySubscriptionId: string;
+  live?: RazorpaySubscriptionEntity;
+}): Promise<{ grantedCredits: number; status: string }> {
+  const live =
+    input.live ??
+    (await fetchRazorpaySubscription(input.razorpaySubscriptionId));
+
+  const [row] = await db
+    .select()
+    .from(studioRazorpaySubscriptionsTable)
+    .where(
+      eq(
+        studioRazorpaySubscriptionsTable.razorpaySubscriptionId,
+        input.razorpaySubscriptionId,
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    throw new SubscriptionValidationError(
+      "Membership subscription was not found for reconciliation.",
+    );
+  }
+
+  let payment: RazorpayPaymentEntity | null = null;
+  let invoiceId: string | null = null;
+
+  try {
+    const invoices = await fetchRazorpayInvoicesForSubscription(
+      input.razorpaySubscriptionId,
+    );
+    const paidInvoice = pickLatestPaidSubscriptionInvoice(invoices);
+    invoiceId = paidInvoice?.id ?? null;
+    if (paidInvoice?.payment_id) {
+      payment = await fetchRazorpayPayment(paidInvoice.payment_id);
+    }
+  } catch (error) {
+    logger.warn(
+      {
+        err: error,
+        subscriptionId: input.razorpaySubscriptionId,
+        userId: row.userId,
+      },
+      "Unable to fetch Razorpay invoice/payment during membership reconciliation",
+    );
+  }
+
+  const result = await syncMembershipSubscriptionRowAndMaybeGrant({
+    row,
+    subscription: live,
+    payment,
+    invoiceId,
+    eventType: "subscription.charged",
+  });
+
+  return {
+    grantedCredits: result.grantedCredits,
+    status: live.status || row.status,
+  };
+}
+
+type LocalMembershipSubscriptionRow =
+  typeof studioRazorpaySubscriptionsTable.$inferSelect;
+
+async function syncMembershipSubscriptionRowAndMaybeGrant(input: {
+  row: LocalMembershipSubscriptionRow;
+  subscription: RazorpaySubscriptionEntity;
+  payment: RazorpayPaymentEntity | null | undefined;
+  invoiceId: string | null;
+  eventType: string;
+}): Promise<{ handled: boolean; grantedCredits: number }> {
+  const { row, subscription, payment, invoiceId, eventType } = input;
+
   const planSync = resolveSubscriptionPlanSync({
     studioPlan: row.studioPlan,
     studioTier: row.studioTier,
@@ -561,6 +1208,17 @@ async function handleRazorpayEvent(
     })
     .where(eq(studioRazorpaySubscriptionsTable.id, row.id));
 
+  const nextStatus = subscription.status || row.status;
+  if (row.scheduleKind === SCHEDULE_KIND_SCHEDULED_PRO) {
+    await ensureBasicCycleEndCancelForScheduledPro({
+      userId: row.userId,
+      proSubscriptionId: row.razorpaySubscriptionId,
+      proStatus: nextStatus,
+      proScheduleKind: row.scheduleKind,
+      linkedBasicSubscriptionId: row.linkedSubscriptionId,
+    });
+  }
+
   // Lifecycle updates without credit grants.
   if (
     eventType === "subscription.authenticated" ||
@@ -578,6 +1236,16 @@ async function handleRazorpayEvent(
 
   if (eventType !== "subscription.charged") {
     return { handled: false, grantedCredits: 0 };
+  }
+
+  if (row.scheduleKind === SCHEDULE_KIND_SCHEDULED_PRO) {
+    await ensureBasicCycleEndCancelForScheduledPro({
+      userId: row.userId,
+      proSubscriptionId: row.razorpaySubscriptionId,
+      proStatus: nextStatus,
+      proScheduleKind: row.scheduleKind,
+      linkedBasicSubscriptionId: row.linkedSubscriptionId,
+    });
   }
 
   if (effectiveStudioPlan !== "basic" && effectiveStudioPlan !== "pro") {
@@ -601,6 +1269,32 @@ async function handleRazorpayEvent(
       throw new Error(
         `subscription.charged missing current_start/current_end for ${subscription.id}`,
       );
+    }
+    if (decision.reason === "amount_mismatch") {
+      const currency = payment?.currency?.toUpperCase() ?? null;
+      const expectedAmount =
+        currency === "INR"
+          ? RAZORPAY_EXPECTED_PLAN_AMOUNT_PAISE[
+              effectiveStudioPlan as "basic" | "pro"
+            ]
+          : currency === "USD"
+            ? RAZORPAY_EXPECTED_PLAN_AMOUNT_CENTS[
+                effectiveStudioPlan as "basic" | "pro"
+              ]
+            : null;
+      logger.warn(
+        {
+          subscriptionId: subscription.id,
+          studioPlan: effectiveStudioPlan,
+          paymentId: payment?.id ?? null,
+          paymentAmount: payment?.amount ?? null,
+          paymentCurrency: currency,
+          expectedAmount,
+          expectedCurrency: currency === "INR" || currency === "USD" ? currency : null,
+        },
+        "subscription.charged amount/currency mismatch — membership credits not granted",
+      );
+      return { handled: true, grantedCredits: 0 };
     }
     logger.info(
       {

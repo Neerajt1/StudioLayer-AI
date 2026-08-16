@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Gallery Image Edit — slim post-production dialog (Fix #10 UX)
+// Gallery Image Edit — slim post-production dialog
 // ---------------------------------------------------------------------------
 
 import { useEffect, useMemo, useState } from 'react';
@@ -12,7 +12,6 @@ import {
 import { GalleryPostProductionPanel } from '@/components/gallery/gallery-post-production-panel';
 import { StudioCustomCropDialog } from '@/components/studio/studio-custom-crop-dialog';
 import type { CreativeLedgerCardRender } from '@/components/gallery/creative-ledger-card';
-import type { RefinementType } from '@/lib/refinement-types';
 import {
   cropImageBlobToRect,
   revokeCropObjectUrl,
@@ -20,6 +19,12 @@ import {
   type NormalizedCropRect,
 } from '@/lib/studio-crop';
 import { fetchEditorialImageBlob } from '@/lib/download-image';
+import { isBackgroundRemovedRender } from '@/lib/gallery-transparent-output';
+import {
+  activeLineageVersionId,
+  lineageVersionsForSlot,
+} from '@/lib/gallery-render-lineage';
+import { GalleryRenderVersionControl } from '@/components/gallery/gallery-render-version-control';
 import { useToast } from '@/hooks/use-toast';
 
 export interface GalleryCropState {
@@ -30,25 +35,27 @@ export interface GalleryCropState {
 
 interface GalleryImageEditDialogProps {
   render: CreativeLedgerCardRender | null;
+  allRenders: CreativeLedgerCardRender[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   cropState?: GalleryCropState;
   onCropStateChange: (renderId: number, state: GalleryCropState | null) => void;
-  refineInFlight?: boolean;
-  activeRefinement?: RefinementType | null;
-  onRefine: (render: CreativeLedgerCardRender, type: RefinementType) => void;
+  removeBackgroundInFlight?: boolean;
+  onRemoveBackground: (render: CreativeLedgerCardRender) => void;
+  onRenderChange: (render: CreativeLedgerCardRender) => void;
   onDownloadError?: (message: string) => void;
 }
 
 export function GalleryImageEditDialog({
   render,
+  allRenders,
   open,
   onOpenChange,
   cropState,
   onCropStateChange,
-  refineInFlight = false,
-  activeRefinement = null,
-  onRefine,
+  removeBackgroundInFlight = false,
+  onRemoveBackground,
+  onRenderChange,
   onDownloadError,
 }: GalleryImageEditDialogProps) {
   const { toast } = useToast();
@@ -57,6 +64,16 @@ export function GalleryImageEditDialog({
   useEffect(() => {
     if (!open) setCropDialogOpen(false);
   }, [open]);
+
+  const lineageVersions = useMemo(() => {
+    if (!render) return [];
+    return lineageVersionsForSlot(allRenders, render.id);
+  }, [allRenders, render]);
+
+  const activeVersionId = useMemo(() => {
+    if (!render) return 'original';
+    return activeLineageVersionId(allRenders, render.id);
+  }, [allRenders, render]);
 
   const displayUrl = useMemo(() => {
     if (!render) return null;
@@ -69,6 +86,14 @@ export function GalleryImageEditDialog({
 
   const masterUrl = render.outputImageUrl;
   const hasCropApplied = cropState?.displayUrl != null;
+  const preservePngAlpha = isBackgroundRemovedRender(render);
+  const removeBackgroundParent =
+    lineageVersions.find((version) => version.id === 'original')?.render ?? render;
+
+  const handleVersionSelect = (version: (typeof lineageVersions)[number]) => {
+    if (version.render.id === render.id) return;
+    onRenderChange(version.render);
+  };
 
   const handleCropApply = async (
     rect: NormalizedCropRect,
@@ -102,8 +127,15 @@ export function GalleryImageEditDialog({
               Edit Image
             </DialogTitle>
             <p className="text-[11px] text-muted-foreground">
-              Original preserved · crop is free · refinements use Studio Credits
+              Original preserved · crop is free
             </p>
+            <GalleryRenderVersionControl
+              versions={lineageVersions}
+              activeVersionId={activeVersionId}
+              disabled={removeBackgroundInFlight}
+              onSelect={handleVersionSelect}
+              className="sl-gallery-edit-lineage"
+            />
           </DialogHeader>
 
           <div className="sl-gallery-edit-layout">
@@ -125,10 +157,10 @@ export function GalleryImageEditDialog({
               masterUrl={masterUrl}
               renderId={render.id}
               disabled={!masterUrl}
-              refineInFlight={refineInFlight}
-              activeRefinement={activeRefinement}
+              removeBackgroundInFlight={removeBackgroundInFlight}
+              preservePngAlpha={preservePngAlpha}
               onOpenCrop={() => setCropDialogOpen(true)}
-              onRefine={(type) => onRefine(render, type)}
+              onRemoveBackground={() => onRemoveBackground(removeBackgroundParent)}
               onDownloadError={onDownloadError}
             />
           </div>

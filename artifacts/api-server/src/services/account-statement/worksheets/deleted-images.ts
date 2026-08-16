@@ -14,7 +14,7 @@ import {
 } from "../labels.js";
 
 export const DELETED_IMAGES_SHEET_NOTE =
-  "Deleted Images is for record-keeping and credit reconciliation. Credits are charged for successful generations and refinements.";
+  "Deleted Images is for record-keeping and credit reconciliation. Credits are charged for successful generations and post-production actions such as Remove Background. Crop is free.";
 
 function formatOptionalDate(date: Date | null): string {
   return date ? formatStatementDate(date) : "—";

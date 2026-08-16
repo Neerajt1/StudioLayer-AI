@@ -1454,6 +1454,24 @@
     margin-bottom: 0.25rem;
   }
 
+  .sl-membership-cancel-renewal {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+    height: auto;
+    padding: 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: hsl(var(--muted-foreground));
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .sl-membership-cancel-renewal:hover {
+    color: hsl(var(--foreground));
+    background: transparent;
+  }
+
   .sl-membership-info-cta {
     align-self: flex-start;
     margin-top: 0.375rem;
@@ -1747,6 +1765,16 @@
     color: hsl(var(--muted-foreground));
   }
 
+  /* Sit above the CTA so both Pass / Top-Up buttons share one bottom baseline. */
+  .sl-membership-pass-compact-eligibility {
+    margin: 0.5rem 0 0;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    line-height: 1.45;
+    color: hsl(var(--muted-foreground));
+  }
+
   .sl-membership-topup-compact-price {
     margin: 0;
     font-family: var(--app-font-mono);
@@ -1775,7 +1803,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem;
     align-items: stretch;
-    padding-top: 0;
+    /* Reserved band keeps credit labels above cards, clear of the top border */
+    padding-top: 1.5rem;
   }
 
   @media (min-width: 640px) {
@@ -1785,60 +1814,65 @@
     }
   }
 
-  .sl-shoot-type-option {
+  .sl-shoot-type-option-wrap {
+    min-width: 0;
+  }
+
+  .sl-shoot-type-option,
+  .sl-custom-campaign-toggle {
+    box-sizing: border-box;
+    min-width: 0;
     min-height: 3.5rem;
+    overflow: hidden;
+  }
+
+  .sl-shoot-type-option-label,
+  .sl-shoot-type-option-sub,
+  .sl-custom-campaign-toggle > p {
+    max-width: 100%;
+    margin: 0;
+    text-align: center;
+    overflow-wrap: anywhere;
   }
 
   .sl-shoot-type-option-label {
     font-size: 0.8125rem;
     line-height: 1.25;
-    text-align: center;
   }
 
   .sl-shoot-type-option-sub {
     font-size: 0.6875rem;
     line-height: 1.35;
-    text-align: center;
     text-wrap: pretty;
   }
 
   @media (min-width: 640px) {
-    .sl-shoot-type-option {
+    .sl-shoot-type-option,
+    .sl-custom-campaign-toggle {
       min-height: 3.125rem;
     }
 
     .sl-shoot-type-option-label {
       font-size: 0.6875rem;
-      line-height: 1;
+      line-height: 1.2;
     }
 
     .sl-shoot-type-option-sub {
       font-size: 0.5625rem;
-      line-height: 1;
-      text-wrap: nowrap;
+      line-height: 1.25;
+      text-wrap: balance;
     }
   }
 
-  .sl-shoot-type-credit-hint--selected {
-    display: none;
-    margin: 0.125rem 0 0;
-    text-align: center;
-    font-family: var(--app-font-mono);
-    font-size: 0.6875rem;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    line-height: 1.25;
+  .sl-shoot-type-credit-hint--selected-above {
+    opacity: 1;
+    transform: none;
     color: #6E896A;
-    text-wrap: pretty;
   }
 
   @media (max-width: 639px) {
     .sl-shoot-type-credit-hint--hover {
       display: none;
-    }
-
-    .sl-shoot-type-credit-hint--selected {
-      display: block;
     }
   }
 
@@ -3133,12 +3167,13 @@
     position: absolute;
     left: 0;
     right: 0;
-    bottom: calc(100% + 0.375rem);
+    bottom: calc(100% + 0.5rem);
     z-index: 2;
     margin: 0;
+    padding: 0 0.125rem;
     text-align: center;
     font-family: var(--app-font-mono);
-    font-size: 0.8125rem;
+    font-size: 0.75rem;
     font-weight: 500;
     letter-spacing: 0.02em;
     line-height: 1.2;
@@ -3147,7 +3182,7 @@
     border: none;
     box-shadow: none;
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(4px);
     transition:
       opacity 200ms ease-out,
       transform 200ms ease-out;
@@ -3163,7 +3198,7 @@
 
   .sl-shoot-type-credit-hint--exit {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(4px);
     transition:
       opacity 125ms ease-out,
       transform 125ms ease-out;
@@ -4369,7 +4404,7 @@
   }
 
   .sl-shoot-accounting-strip--skeleton {
-    min-height: 3.75rem;
+    min-height: 4.5rem;
   }
 
   .sl-shoot-metric {
@@ -4383,7 +4418,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: 0.3125rem;
     min-width: 0;
     text-align: center;
   }
@@ -4458,12 +4493,21 @@
   }
 
   .sl-shoot-metric-label {
+    display: block;
+    max-width: 100%;
+    padding-inline: 0.125rem;
     font-family: var(--app-font-mono);
     font-size: 0.5625rem;
+    font-weight: 500;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: hsl(var(--muted-foreground));
     line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .sl-shoot-metric--compact .sl-billing-cycle-stat-value {
+    margin-top: 0.125rem;
   }
 
   .sl-shoot-card--skeleton,
@@ -4563,6 +4607,13 @@
     font-size: 0.875rem;
     font-weight: 600;
     color: hsl(var(--foreground));
+  }
+
+  .sl-shoot-detail-stats-helper {
+    margin: 0.625rem 0 0;
+    font-size: 0.6875rem;
+    line-height: 1.45;
+    color: hsl(var(--muted-foreground));
   }
 
   .sl-shoot-detail-body {
@@ -4783,12 +4834,6 @@
     gap: 0.25rem;
   }
 
-  .sl-shoot-detail-refine {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-
   .sl-gallery-edit-dialog {
     width: min(920px, 96vw);
     max-width: min(920px, 96vw);
@@ -4805,6 +4850,53 @@
 
   .sl-gallery-edit-header p {
     margin-top: 0.25rem;
+  }
+
+  .sl-gallery-edit-lineage {
+    margin-top: 0.625rem;
+  }
+
+  .sl-gallery-lineage-control {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .sl-gallery-lineage-option {
+    min-height: 1.625rem;
+    padding: 0 0.625rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: calc(var(--radius) - 2px);
+    background: hsl(var(--background));
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: hsl(var(--muted-foreground));
+    transition:
+      border-color 160ms ease-out,
+      background-color 160ms ease-out,
+      color 160ms ease-out;
+  }
+
+  .sl-gallery-lineage-option:hover:not(:disabled) {
+    border-color: hsl(var(--foreground) / 0.18);
+    color: hsl(var(--foreground));
+  }
+
+  .sl-gallery-lineage-option.is-active {
+    border-color: hsl(var(--foreground) / 0.28);
+    background: hsl(var(--foreground) / 0.04);
+    color: hsl(var(--foreground));
+    box-shadow: 0 0 0 1px hsl(var(--foreground) / 0.12);
+  }
+
+  .sl-gallery-lineage-option:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .sl-gallery-post-credit-below-action {
+    margin-top: -0.125rem;
   }
 
   .sl-gallery-edit-layout {
@@ -4909,6 +5001,13 @@
     font-family: var(--app-font-mono, ui-monospace, monospace);
     color: hsl(var(--muted-foreground));
     line-height: 1.35;
+  }
+
+  .sl-post-production-credit-note {
+    font-family: var(--app-font-mono, ui-monospace, monospace);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: #6E896A;
   }
 
   .sl-gallery-post-chip-row {
@@ -5122,6 +5221,8 @@
 
   .sl-gallery-dashboard-card .sl-billing-cycle-summary--dashboard {
     min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .sl-gallery-dashboard-card .sl-billing-cycle-stats {
@@ -5131,27 +5232,46 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
+    width: 100%;
+    max-width: 100%;
     margin: 0;
+    box-sizing: border-box;
+    /* Keep the rightmost value clear of the card border without a brittle fixed margin. */
+    padding-inline-end: clamp(0.375rem, 1.2vw, 0.875rem);
   }
 
   .sl-gallery-dashboard-card .sl-billing-cycle-stat {
     display: flex;
     flex: 1 1 0;
     min-width: 0;
+    max-width: 100%;
     flex-direction: column;
     align-items: flex-start;
     justify-content: flex-start;
     gap: 0.375rem;
+    box-sizing: border-box;
+  }
+
+  /* Spendable-balance copy is longer — give it a slightly larger share of the row. */
+  .sl-gallery-dashboard-card .sl-billing-cycle-stat:last-child {
+    flex: 1.35 1 0;
   }
 
   .sl-gallery-dashboard-card .sl-billing-cycle-stat dt {
     flex: none;
+    max-width: 100%;
   }
 
-  .sl-gallery-dashboard-card .sl-billing-cycle-stat dd {
+  .sl-gallery-dashboard-card .sl-billing-cycle-stat dd,
+  .sl-gallery-dashboard-card .sl-billing-cycle-stat-value {
     margin: 0;
+    min-width: 0;
+    max-width: 100%;
+    flex-shrink: 1;
     text-align: left;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: break-word;
+    text-wrap: pretty;
   }
 
   .sl-gallery-dashboard-card .sl-billing-cycle-stat-icon--lucide {
@@ -5159,6 +5279,23 @@
     height: 0.875rem;
     opacity: 0.72;
     color: hsl(var(--muted-foreground));
+  }
+
+  /* Tablet / narrow desktop: 2×2 so long remaining copy never clips the card edge. */
+  @media (max-width: 1100px) and (min-width: 768px) {
+    .sl-gallery-dashboard-card .sl-billing-cycle-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem 1.25rem;
+      flex-wrap: unset;
+      padding-inline-end: clamp(0.25rem, 1vw, 0.625rem);
+    }
+
+    .sl-gallery-dashboard-card .sl-billing-cycle-stat,
+    .sl-gallery-dashboard-card .sl-billing-cycle-stat:last-child {
+      flex: unset;
+      min-width: 0;
+    }
   }
 
   @media (max-width: 767px) {
@@ -5177,9 +5314,11 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 1rem 0.75rem;
       flex-wrap: unset;
+      padding-inline-end: 0;
     }
 
-    .sl-gallery-dashboard-card .sl-billing-cycle-stat {
+    .sl-gallery-dashboard-card .sl-billing-cycle-stat,
+    .sl-gallery-dashboard-card .sl-billing-cycle-stat:last-child {
       flex: unset;
       min-width: 0;
     }

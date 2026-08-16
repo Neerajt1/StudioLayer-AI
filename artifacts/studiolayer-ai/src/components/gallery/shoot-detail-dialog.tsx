@@ -18,7 +18,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Wand2 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { GalleryImageDownloadButton } from '@/components/shared/gallery-image-download-button';
 import { FixedBatchViewport } from '@/components/shared/fixed-batch-viewport';
@@ -32,8 +31,13 @@ import {
   GALLERY_FAILED_CREATE_AGAIN_PATH,
   galleryFailedRenderCopy,
 } from '@/lib/generation-failure-copy';
+import {
+  lineageVersionsForSlot,
+  slotRootForRender,
+} from '@/lib/gallery-render-lineage';
 import { GALLERY_EXIT_ANIMATION_MS } from '@/lib/gallery-shoot-stability';
 import { fetchEditorialImageBlob } from '@/lib/download-image';
+import { isBackgroundRemovedRender } from '@/lib/gallery-transparent-output';
 import { formatDownloadPreparingLabel } from '@/lib/download-preparing-label';
 import { useDownloadInFlight } from '@/hooks/use-download-in-flight';
 import { useStudioPressFeedback } from '@/components/studio/studio-workspace-controls';
@@ -41,6 +45,7 @@ import type { CreativeLedgerCardRender } from '@/components/gallery/creative-led
 
 interface ShootDetailDialogProps {
   shoot: GalleryShoot | null;
+  allRenders: CreativeLedgerCardRender[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onInspect: (render: CreativeLedgerCardRender) => void;
@@ -52,6 +57,7 @@ interface ShootDetailDialogProps {
 
 export function ShootDetailDialog({
   shoot,
+  allRenders,
   open,
   onOpenChange,
   onInspect,
@@ -107,6 +113,17 @@ export function ShootDetailDialog({
     const imageUrl = isFailedSlot
       ? null
       : (getDisplayUrl?.(render) ?? render.outputImageUrl);
+    const lineageVersions = isFailedSlot
+      ? []
+      : lineageVersionsForSlot(allRenders, render.id);
+    const originalRender = isFailedSlot
+      ? undefined
+      : slotRootForRender(allRenders, render.id);
+    const canViewOriginal =
+      !isFailedSlot
+      && originalRender != null
+      && originalRender.id !== render.id
+      && lineageVersions.some((version) => version.id === 'original');
 
     const handleCreateAgain = () => {
       onOpenChange(false);
@@ -172,17 +189,27 @@ export function ShootDetailDialog({
               </button>
               <button
                 type="button"
-                className="sl-ledger-card-action sl-shoot-detail-refine"
+                className="sl-ledger-card-action"
                 disabled={deleteInFlight || !render.outputImageUrl}
                 onClick={() => onEdit(render)}
               >
-                <Wand2 className="size-3 shrink-0 opacity-70" aria-hidden />
                 Edit
               </button>
+              {canViewOriginal && originalRender ? (
+                <button
+                  type="button"
+                  className="sl-ledger-card-action"
+                  disabled={deleteInFlight}
+                  onClick={() => onInspect(originalRender)}
+                >
+                  Original
+                </button>
+              ) : null}
               <GalleryImageDownloadButton
                 renderId={render.id}
                 outputImageUrl={imageUrl ?? render.outputImageUrl!}
                 disabled={!imageUrl || deleteInFlight}
+                preservePngAlpha={isBackgroundRemovedRender(render)}
                 onDownloadError={onDownloadError}
               />
             </>
@@ -214,7 +241,9 @@ export function ShootDetailDialog({
       await Promise.all(
         displayImages.map(async (render, index) => {
           if (!render.outputImageUrl) return;
-          const blob = await fetchEditorialImageBlob(render.outputImageUrl, render.id);
+          const blob = await fetchEditorialImageBlob(render.outputImageUrl, render.id, {
+            preservePngAlpha: isBackgroundRemovedRender(render),
+          });
           if (blob.size === 0) return;
           zip.file(`image_${index + 1}.png`, blob);
         }),
@@ -301,14 +330,17 @@ export function ShootDetailDialog({
             </div>
             <dl className="sl-shoot-detail-stats">
               <div>
-                <dt>Studio Credits Used</dt>
+                <dt>Credits Used</dt>
                 <dd>{shoot.studioCreditsUsed}</dd>
               </div>
               <div>
-                <dt>Refinements</dt>
+                <dt>Edits Made</dt>
                 <dd>{shoot.refinementCount}</dd>
               </div>
             </dl>
+            <p className="sl-shoot-detail-stats-helper">
+              Crop is free and not included in Edits Made.
+            </p>
           </DialogHeader>
 
           <div className="sl-shoot-detail-body">

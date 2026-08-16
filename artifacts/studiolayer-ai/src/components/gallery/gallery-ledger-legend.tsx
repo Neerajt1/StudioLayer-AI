@@ -5,13 +5,14 @@ const LEGEND_ITEMS = [
   {
     icon: SL_TOKEN_ICON,
     studioCredit: true,
-    label: 'Studio Credits',
-    description: 'Credits used to generate this Shoot.',
+    label: 'Credits Used',
+    description: 'Studio Credits used to generate this Shoot.',
   },
   {
     icon: STUDIO_SPARK_ICON,
-    label: 'Refinements',
-    description: 'Total AI refinements performed within this Shoot.',
+    label: 'Edits Made',
+    description:
+      'Paid image edits on this Shoot, such as Remove Background. Crop is free and not counted.',
   },
 ] as const;
 

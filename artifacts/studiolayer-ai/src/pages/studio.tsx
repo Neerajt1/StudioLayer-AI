@@ -4,10 +4,9 @@
 // Simplified AI-first workflow:
 //   1. Upload garment photo
 //   2. Choose model
-//   → Create → Refine (Batch 21)
+//   → Create → Crop / Remove Background
 //
-// V1 AI Refinements: Remove Background, Enhance Model Face, Enhance Garment (1 credit each).
-// Free Studio Tools: Crop, Revert, Zoom, Download.
+// Post-production: Crop (free), Remove Background (resolution-preserving).
 // ---------------------------------------------------------------------------
 
 import { useState, useEffect, useRef } from 'react';
@@ -89,15 +88,15 @@ import { useStudioWorkflow } from '@/context/studio-workflow-context';
 import type { GarmentPlacement } from '@/lib/studio-workflow';
 import {
   buildGenerationRequest,
-  buildRefinementRequest,
+  buildRemoveBackgroundRequest,
   canGenerateStudioWorkflow,
   GARMENT_LENGTH_OPTIONS,
   resolveWorkflowImageCount,
   trimUsedPosesToShotCount,
   validateStudioWorkflow,
 } from '@/lib/studio-workflow';
-import { StudioRefinePanel } from '@/components/studio/studio-refine-panel';
-import type { RefinementType } from '@/lib/refinement-types';
+import { StudioPostProductionPanel } from '@/components/studio/studio-refine-panel';
+import { REMOVE_BACKGROUND_TYPE } from '@/lib/refinement-types';
 import {
   cropImageBlobToRect,
   revokeCropObjectUrl,
@@ -260,9 +259,6 @@ export default function StudioPage() {
   const [displayUrlOverrides, setDisplayUrlOverrides] = useState<Record<number, string>>({});
   const [customCropDialogOpen, setCustomCropDialogOpen] = useState(false);
   const [refineInFlight, setRefineInFlight] = useState(() => refinementPending != null);
-  const [activeRefinement, setActiveRefinement] = useState<RefinementType | null>(
-    () => refinementPending?.refinementType ?? null,
-  );
   const [showValidation, setShowValidation]     = useState(false);
 
   const [showProRequiredDialog, setShowProRequiredDialog] = useState(false);
@@ -361,7 +357,7 @@ export default function StudioPage() {
       pendingRefinementRender.status === 'processing' ||
       pendingRefinementRender.status === 'pending');
 
-  const showRefinementProgress = isRefinementProcessing;
+  const showRemoveBackgroundProgress = isRefinementProcessing;
 
   const isGenerationBusy =
     awaitingResultDisplay ||
@@ -468,7 +464,7 @@ export default function StudioPage() {
     void queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
   }, [activeRenderIds, allRenderData, queryClient]);
 
-  // Finalize refinement only after the child render settles — keep parent visible until then.
+  // Finalize Remove Background only after the child render settles.
   useEffect(() => {
     if (!refinementPending || !pendingRefinementRender) return;
 
@@ -480,9 +476,9 @@ export default function StudioPage() {
     refinementHandledRef.current = childRenderId;
 
     const outputUrl = extractRenderOutputUrl(pendingRefinementRender);
-    const refinementSucceeded = status === 'completed' && outputUrl != null;
+    const succeeded = status === 'completed' && outputUrl != null;
 
-    if (refinementSucceeded) {
+    if (succeeded) {
       setActiveRenderIds((prev) => {
         const next = [...prev];
         next[slot] = childRenderId;
@@ -511,14 +507,13 @@ export default function StudioPage() {
         });
       }
       toast({
-        title: "We couldn't complete this refinement.",
+        title: "We couldn't remove the background.",
         description: withErrorContactHelper('Your original image is unchanged. Please try again.'),
       });
     }
 
     setRefinementPending(null);
     setRefineInFlight(false);
-    setActiveRefinement(null);
     void queryClient.invalidateQueries({ queryKey: getGetRenderUsageQueryKey() });
     void queryClient.invalidateQueries({ queryKey: getListRendersQueryKey() });
   }, [
@@ -671,7 +666,6 @@ export default function StudioPage() {
     setRefinePanelSlot(null);
     setDisplayUrlOverrides({});
     setRefineInFlight(false);
-    setActiveRefinement(null);
     refinementHandledRef.current = null;
     setShowValidation(false);
     resetGenerationFeedback();
@@ -695,7 +689,7 @@ export default function StudioPage() {
     setRefinePanelSlot(slot);
   };
 
-  const handleRefine = (type: RefinementType, slot: number) => {
+  const handleRemoveBackground = (slot: number) => {
     if (refineInFlight || awaitingResultDisplay || createRender.isPending || isProcessing) return;
     if (refinementPending != null && refinementPending.slot === slot && isRefinementProcessing) return;
 
@@ -716,13 +710,11 @@ export default function StudioPage() {
 
     setRefinePanelSlot(slot);
     setRefineInFlight(true);
-    setActiveRefinement(type);
 
     createRender.mutate(
       {
-        data: buildRefinementRequest(workflow, selectedIdentity, {
+        data: buildRemoveBackgroundRequest(workflow, selectedIdentity, {
           parentRenderId,
-          refinementType: type,
         }),
       },
       {
@@ -730,9 +722,8 @@ export default function StudioPage() {
           const childId = (renders as unknown as { id: number }[])?.[0]?.id;
           if (!childId) {
             setRefineInFlight(false);
-            setActiveRefinement(null);
             toast({
-              title: "We couldn't complete this refinement.",
+              title: "We couldn't remove the background.",
               description: withErrorContactHelper('Please try again in a few moments.'),
             });
             return;
@@ -743,15 +734,14 @@ export default function StudioPage() {
             slot,
             parentRenderId,
             childRenderId: childId,
-            refinementType: type,
+            refinementType: REMOVE_BACKGROUND_TYPE,
           });
         },
         onError: (error: unknown) => {
           setRefineInFlight(false);
-          setActiveRefinement(null);
           setRefinementPending(null);
           toast({
-            title: "We couldn't complete this refinement.",
+            title: "We couldn't remove the background.",
             description: withErrorContactHelper(renderApiErrorDescription(error)),
           });
         },
@@ -894,19 +884,19 @@ export default function StudioPage() {
     });
   };
 
-  const showResultToolbar = hasOutput && allResultsDisplayed && !showGenerationProgress && !showRefinementProgress;
+  const showResultToolbar = hasOutput && allResultsDisplayed && !showGenerationProgress && !showRemoveBackgroundProgress;
 
   const refinePanelImageLabel =
     activeRenderIds.length > 1 && refinePanelSlot != null
       ? `Image ${refinePanelSlot + 1}`
       : undefined;
 
-  const isSlotRefining = (slotIndex: number) =>
+  const isSlotRemovingBackground = (slotIndex: number) =>
     refinementPending != null
     && refinementPending.slot === slotIndex
     && isRefinementProcessing;
 
-  const showRefinePanel = refinePanelSlot != null && showResultToolbar;
+  const showPostProductionPanel = refinePanelSlot != null && showResultToolbar;
 
   useEffect(() => {
     if (!showResultToolbar || rootRenderIds.length > 0 || activeRenderIds.length === 0) return;
@@ -986,19 +976,19 @@ export default function StudioPage() {
     const url = getSlotDisplayUrl(slotIndex);
     const status = render?.status ?? 'pending';
     const imageVisible =
-      status === 'completed' && !!url && !showGenerationProgress && !showRefinementProgress;
-    const isRefineTarget = refinePanelSlot === slotIndex;
+      status === 'completed' && !!url && !showGenerationProgress && !showRemoveBackgroundProgress;
+    const isEditTarget = refinePanelSlot === slotIndex;
 
     return (
       <div
         key={id}
         className={cn(
           'sl-studio-editorial-cell',
-          isRefineTarget && showResultToolbar && 'ring-2 ring-foreground/20 rounded',
+          isEditTarget && showResultToolbar && 'ring-2 ring-foreground/20 rounded',
         )}
       >
         <div className="sl-studio-editorial-cell-inner">
-          {!url && !showGenerationProgress && !showRefinementProgress && status !== 'failed' && (
+          {!url && !showGenerationProgress && !showRemoveBackgroundProgress && status !== 'failed' && (
             <StudioEditorialPlaceholder visible compact />
           )}
           {status === 'completed' && url && (
@@ -1022,14 +1012,14 @@ export default function StudioPage() {
             />
           )}
         </div>
-        {status === 'completed' && url && !showGenerationProgress && !showRefinementProgress && (
+        {status === 'completed' && url && !showGenerationProgress && !showRemoveBackgroundProgress && (
           <div className="absolute bottom-0 left-0 right-0 flex justify-end bg-gradient-to-t from-black/25 to-transparent p-2">
             <EditorialImageActions
               renderId={id}
               outputImageUrl={url}
-              refineDisabled={isSlotRefining(slotIndex)}
-              refineActive={isRefineTarget}
-              onRefine={() => handleOpenRefine(slotIndex)}
+              editDisabled={isSlotRemovingBackground(slotIndex)}
+              editActive={isEditTarget}
+              onEdit={() => handleOpenRefine(slotIndex)}
               onDownloadError={handleDownloadError}
             />
           </div>
@@ -1078,7 +1068,7 @@ export default function StudioPage() {
           <div className="sl-studio-workspace-grid mb-10">
 
             {/* ── LEFT PANEL — Controls ───────────────────────────────── */}
-            <div className={cn('order-2 lg:order-1 space-y-8 transition-opacity duration-300', (showGenerationProgress || showRefinementProgress) && 'opacity-[0.68]')}>
+            <div className={cn('order-2 lg:order-1 space-y-8 transition-opacity duration-300', (showGenerationProgress || showRemoveBackgroundProgress) && 'opacity-[0.68]')}>
               {/* Step 1: Upload Outfit */}
               <section className="space-y-3">
                 <StepLabel number={1} title="Upload Outfit" />
@@ -1246,18 +1236,18 @@ export default function StudioPage() {
                 <>
                   <StudioEditorialCanvas className="relative">
                     <StudioEditorialProgressOverlay
-                      visible={showGenerationProgress || showRefinementProgress}
-                      label={showRefinementProgress ? 'Applying refinement…' : 'Creating your image…'}
+                      visible={showGenerationProgress || showRemoveBackgroundProgress}
+                      label={showRemoveBackgroundProgress ? 'Removing background…' : 'Creating your image…'}
                       elapsedSec={elapsedSec}
                     />
                     <StudioEditorialPlaceholder
-                      visible={!resolvedOutputUrl && !showGenerationProgress && !showRefinementProgress}
+                      visible={!resolvedOutputUrl && !showGenerationProgress && !showRemoveBackgroundProgress}
                     />
                     {resolvedOutputUrl ? (
                       <StudioEditorialImage
                         src={resolvedOutputUrl}
                         alt="Editorial fashion image"
-                        visible={!showGenerationProgress && !showRefinementProgress}
+                        visible={!showGenerationProgress && !showRemoveBackgroundProgress}
                         onLoad={() => markResultImageLoaded(resolvedOutputUrl)}
                         imageRef={bindResultImageRef(resolvedOutputUrl)}
                         testId="img-render-output"
@@ -1273,37 +1263,31 @@ export default function StudioPage() {
                         <EditorialImageActions
                           renderId={activeRenderIds[0]!}
                           outputImageUrl={resolvedOutputUrl}
-                          refineDisabled={isSlotRefining(0)}
-                          refineActive={refinePanelSlot === 0}
-                          onRefine={() => handleOpenRefine(0)}
+                          editDisabled={isSlotRemovingBackground(0)}
+                          editActive={refinePanelSlot === 0}
+                          onEdit={() => handleOpenRefine(0)}
                           onDownloadError={handleDownloadError}
                         />
                       </div>
                     )}
                   </StudioEditorialCanvas>
 
-                  {showResultToolbar && (
+                  {showResultToolbar && showPostProductionPanel && refinePanelSlot != null && (
                     <div className="space-y-3">
-                      <StudioResultToolbar
-                        onNewImage={handleNewPhotoshoot}
+                      <StudioPostProductionPanel
+                        disabled={isGenerationBusy}
+                        removeBackgroundInFlight={refineInFlight}
+                        imageLabel={refinePanelImageLabel}
+                        hasCropApplied={displayUrlOverrides[refinePanelSlot] != null}
+                        canRevert={
+                          rootRenderIds[refinePanelSlot] != null
+                          && activeRenderIds[refinePanelSlot] !== rootRenderIds[refinePanelSlot]
+                        }
+                        onRemoveBackground={() => handleRemoveBackground(refinePanelSlot)}
+                        onOpenCrop={handleOpenCrop}
+                        onRevert={handleRevertToOriginal}
+                        onZoom={handleRefineZoom}
                       />
-                      {showRefinePanel && refinePanelSlot != null && (
-                        <StudioRefinePanel
-                          disabled={isGenerationBusy}
-                          refineInFlight={refineInFlight}
-                          activeRefinement={activeRefinement}
-                          imageLabel={refinePanelImageLabel}
-                          hasCropApplied={displayUrlOverrides[refinePanelSlot] != null}
-                          canRevert={
-                            rootRenderIds[refinePanelSlot] != null
-                            && activeRenderIds[refinePanelSlot] !== rootRenderIds[refinePanelSlot]
-                          }
-                          onRefine={(type) => handleRefine(type, refinePanelSlot)}
-                          onOpenCrop={handleOpenCrop}
-                          onRevert={handleRevertToOriginal}
-                          onZoom={handleRefineZoom}
-                        />
-                      )}
                     </div>
                   )}
                 </>
@@ -1315,15 +1299,15 @@ export default function StudioPage() {
                     maxHeightClass="max-h-none"
                   >
                     <StudioEditorialProgressOverlay
-                      visible={showGenerationProgress || showRefinementProgress}
-                      label={showRefinementProgress ? 'Applying refinement…' : 'Creating your images…'}
+                      visible={showGenerationProgress || showRemoveBackgroundProgress}
+                      label={showRemoveBackgroundProgress ? 'Removing background…' : 'Creating your images…'}
                       elapsedSec={elapsedSec}
                     />
                     {activeRenderIds.length > 0 && (
                       <FixedBatchViewport
                         totalCount={activeRenderIds.length}
                         gridClassName={cn(
-                          (showGenerationProgress || showRefinementProgress) && 'opacity-35',
+                          (showGenerationProgress || showRemoveBackgroundProgress) && 'opacity-35',
                         )}
                         renderCell={(index) => renderEditorialCell(index)}
                       />
@@ -1337,20 +1321,18 @@ export default function StudioPage() {
                         onDownloadAll={handleDownloadAll}
                         downloadAllLoading={downloadAllInFlight}
                         downloadAllPreparingLabel={formatDownloadPreparingLabel(downloadAllElapsedSec)}
-                        onNewImage={handleNewPhotoshoot}
                       />
-                      {showRefinePanel && refinePanelSlot != null && (
-                        <StudioRefinePanel
+                      {showPostProductionPanel && refinePanelSlot != null && (
+                        <StudioPostProductionPanel
                           disabled={isGenerationBusy}
-                          refineInFlight={refineInFlight}
-                          activeRefinement={activeRefinement}
+                          removeBackgroundInFlight={refineInFlight}
                           imageLabel={refinePanelImageLabel}
                           hasCropApplied={displayUrlOverrides[refinePanelSlot] != null}
                           canRevert={
                             rootRenderIds[refinePanelSlot] != null
                             && activeRenderIds[refinePanelSlot] !== rootRenderIds[refinePanelSlot]
                           }
-                          onRefine={(type) => handleRefine(type, refinePanelSlot)}
+                          onRemoveBackground={() => handleRemoveBackground(refinePanelSlot)}
                           onOpenCrop={handleOpenCrop}
                           onRevert={handleRevertToOriginal}
                           onZoom={handleRefineZoom}

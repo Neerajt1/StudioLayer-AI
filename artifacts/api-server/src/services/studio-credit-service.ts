@@ -656,6 +656,26 @@ export async function consumeAllocationsForUsageTransaction(input: {
   });
 }
 
+/**
+ * Free-tier spendable balance: complimentary lifetime residual + active lots
+ * (e.g. Studio Pass). Complimentary is never an allocation lot.
+ */
+export function composeFreeTierRemaining(input: {
+  complimentaryAllowance: number;
+  lifetimeUsed: number;
+  spendableFromLots: number;
+  pendingHeld: number;
+}): number {
+  const complimentaryResidual = Math.max(
+    0,
+    input.complimentaryAllowance - Math.max(0, input.lifetimeUsed),
+  );
+  return computeAvailableStudioCredits({
+    spendableFromLots: input.spendableFromLots + complimentaryResidual,
+    pendingHeld: input.pendingHeld,
+  });
+}
+
 export async function getStudioCreditBalance(input: {
   userId: number;
   tier: string;
@@ -675,13 +695,30 @@ export async function getStudioCreditBalance(input: {
   const now = new Date();
   const pendingHeld = await sumPendingStudioCreditsHeld(input.userId);
 
-  // Free complimentary: lifetime pool, no allocation lots.
+  // Free: lifetime complimentary pool + spendable purchased lots (e.g. Studio Pass).
   if (input.tier === "free") {
+    await lazyExpireAllocationLots(input.userId, now);
+
     const used = await sumStudioCreditsUsed(input.userId);
-    const remaining = computeAvailableStudioCredits({
-      spendableFromLots: Math.max(0, allowance - used),
+    const lots = await loadUserAllocationLots(input.userId);
+    const lotViews = lots.map((row) => ({
+      id: row.id,
+      reasonCode: row.reasonCode,
+      remainingAmount: row.remainingAmount,
+      startsAt: row.startsAt,
+      expiresAt: row.expiresAt,
+      status: row.status,
+      createdAt: row.createdAt,
+      periodKey: row.periodKey,
+    }));
+    const spendableFromLots = sumSpendableAllocationCredits(lotViews, now);
+    const remaining = composeFreeTierRemaining({
+      complimentaryAllowance: allowance,
+      lifetimeUsed: used,
+      spendableFromLots,
       pendingHeld,
     });
+
     return {
       used,
       limit: allowance,

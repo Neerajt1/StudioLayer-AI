@@ -26,12 +26,14 @@ import type {
   HealthStatus,
   Identity,
   LoginInput,
+  MembershipCancellationResult,
   MembershipSubscriptionCheckout,
   MembershipSubscriptionStatus,
   RegisterInput,
   Render,
   RenderInput,
   RenderUsage,
+  ScheduledMembershipUpgradeCheckout,
   StudioAddOnCheckout,
   SupportTicket,
   SupportTicketInput,
@@ -1245,6 +1247,150 @@ export function useGetMembershipSubscriptionStatus<TData = Awaited<ReturnType<ty
 
 
 
+
+export const getScheduleMembershipUpgradeToProUrl = () => {
+
+
+
+
+  return `/api/payments/subscriptions/schedule-pro`
+}
+
+/**
+ * Authenticated Studio Basic members schedule a separate future-start Studio Pro subscription with start_at equal to the live Basic current_end. Nothing is charged today. Credits and Pro entitlement activate only via the normal Pro subscription.charged webhook.
+ * @summary Schedule Studio Pro for the next Basic billing date
+ */
+export const scheduleMembershipUpgradeToPro = async ( options?: Parameters<typeof customFetch>[1]): Promise<ScheduledMembershipUpgradeCheckout> => {
+
+  return customFetch<ScheduledMembershipUpgradeCheckout>(getScheduleMembershipUpgradeToProUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getScheduleMembershipUpgradeToProMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scheduleMembershipUpgradeToPro>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof scheduleMembershipUpgradeToPro>>, TError,void, TContext> => {
+
+const mutationKey = ['scheduleMembershipUpgradeToPro'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof scheduleMembershipUpgradeToPro>>, void> = () => {
+
+
+          return  scheduleMembershipUpgradeToPro(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ScheduleMembershipUpgradeToProMutationResult = NonNullable<Awaited<ReturnType<typeof scheduleMembershipUpgradeToPro>>>
+
+    export type ScheduleMembershipUpgradeToProMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Schedule Studio Pro for the next Basic billing date
+ */
+export const useScheduleMembershipUpgradeToPro = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scheduleMembershipUpgradeToPro>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof scheduleMembershipUpgradeToPro>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getScheduleMembershipUpgradeToProMutationOptions(options));
+    }
+
+export const getCancelMembershipAtCycleEndUrl = () => {
+
+
+
+
+  return `/api/payments/subscriptions/cancel`
+}
+
+/**
+ * Authenticated paid members request cancel_at_cycle_end on their active Razorpay subscription. Membership remains active until current_end. The StudioLayer account and Creative Ledger history are preserved. Does not pause or immediately cancel an active billing period.
+ * @summary Cancel membership renewal at the end of the current billing period
+ */
+export const cancelMembershipAtCycleEnd = async ( options?: Parameters<typeof customFetch>[1]): Promise<MembershipCancellationResult> => {
+
+  return customFetch<MembershipCancellationResult>(getCancelMembershipAtCycleEndUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCancelMembershipAtCycleEndMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelMembershipAtCycleEnd>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelMembershipAtCycleEnd>>, TError,void, TContext> => {
+
+const mutationKey = ['cancelMembershipAtCycleEnd'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelMembershipAtCycleEnd>>, void> = () => {
+
+
+          return  cancelMembershipAtCycleEnd(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelMembershipAtCycleEndMutationResult = NonNullable<Awaited<ReturnType<typeof cancelMembershipAtCycleEnd>>>
+
+    export type CancelMembershipAtCycleEndMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Cancel membership renewal at the end of the current billing period
+ */
+export const useCancelMembershipAtCycleEnd = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelMembershipAtCycleEnd>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelMembershipAtCycleEnd>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getCancelMembershipAtCycleEndMutationOptions(options));
+    }
 
 export const getCreateStudioAddOnCheckoutUrl = () => {
 

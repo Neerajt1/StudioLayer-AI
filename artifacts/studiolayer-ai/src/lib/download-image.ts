@@ -19,6 +19,11 @@ export class InsufficientStudioCreditsError extends Error {
 export interface ImageDownloadOptions {
   renderId?: number;
   filenameBase?: string;
+  /**
+   * When true, never route through canvas (which flattens PNG alpha).
+   * Used for Remove Background child renders streamed via the API proxy.
+   */
+  preservePngAlpha?: boolean;
 }
 
 function logDownload(step: string, detail?: unknown): void {
@@ -235,8 +240,15 @@ function loadImageBlobViaCanvas(url: string): Promise<Blob> {
   });
 }
 
-async function resolveImageBlob(url: string, renderId?: number): Promise<Blob> {
+type ResolveImageBlobOptions = Pick<ImageDownloadOptions, 'preservePngAlpha'>;
+
+async function resolveImageBlob(
+  url: string,
+  renderId?: number,
+  options?: ResolveImageBlobOptions,
+): Promise<Blob> {
   const resolvedRenderId = renderId ?? parseRenderIdFromOutputUrl(url);
+  const preservePngAlpha = options?.preservePngAlpha === true;
   const errors: unknown[] = [];
 
   if (resolvedRenderId != null) {
@@ -249,11 +261,16 @@ async function resolveImageBlob(url: string, renderId?: number): Promise<Blob> {
     }
   }
 
-  for (const attempt of [
+  const bytePreservingAttempts: Array<() => Promise<Blob>> = [
     () => fetchImageBlobViaFetch(url),
     () => fetchImageBlobViaXHR(url),
-    () => loadImageBlobViaCanvas(url),
-  ]) {
+  ];
+
+  const fallbacks = preservePngAlpha
+    ? bytePreservingAttempts
+    : [...bytePreservingAttempts, () => loadImageBlobViaCanvas(url)];
+
+  for (const attempt of fallbacks) {
     try {
       const blob = await attempt();
       if (blob.size > 0) return blob;
@@ -263,7 +280,7 @@ async function resolveImageBlob(url: string, renderId?: number): Promise<Blob> {
     }
   }
 
-  logDownload('failed', { url, renderId: resolvedRenderId, errors });
+  logDownload('failed', { url, renderId: resolvedRenderId, preservePngAlpha, errors });
   throw errors[errors.length - 1] ?? new Error('Download failed');
 }
 
@@ -271,8 +288,9 @@ async function resolveImageBlob(url: string, renderId?: number): Promise<Blob> {
 export async function fetchEditorialImageBlob(
   url: string,
   renderId?: number,
+  options?: Pick<ImageDownloadOptions, 'preservePngAlpha'>,
 ): Promise<Blob> {
-  return resolveImageBlob(url, renderId);
+  return resolveImageBlob(url, renderId, options);
 }
 
 /** Triggers the OS save dialog for a remote editorial image URL. */
@@ -281,7 +299,9 @@ export async function triggerImageDownload(
   options?: ImageDownloadOptions,
 ): Promise<void> {
   logDownload('trigger', { url, renderId: options?.renderId });
-  const blob = await resolveImageBlob(url, options?.renderId);
+  const blob = await resolveImageBlob(url, options?.renderId, {
+    preservePngAlpha: options?.preservePngAlpha,
+  });
   const filename = options?.filenameBase
     ? `${options.filenameBase.replace(/\.(png|jpe?g|webp)$/i, '')}.${extensionForImageBlob(blob, url)}`
     : buildHeroDownloadFilename(url, blob);

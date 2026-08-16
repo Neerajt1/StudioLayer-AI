@@ -78,7 +78,7 @@ export function buildAccountSummarySheet(
     "Images Generated",
     computeStatementCycleImagesGenerated(ctx),
   );
-  addSummaryRow(sheet, "Images Refined", computeStatementCycleRefinements(ctx));
+  addSummaryRow(sheet, "Post-Production", computeStatementCycleRefinements(ctx));
   addSummaryRow(sheet, "Images Deleted", ctx.imagesDeletedInCycle);
   addSummaryRow(
     sheet,

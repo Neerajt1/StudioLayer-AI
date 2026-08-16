@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   pgTable,
   serial,
@@ -27,14 +28,29 @@ export const studioRazorpaySubscriptionsTable = pgTable(
     razorpayCustomerId: text("razorpay_customer_id"),
     latestPaymentId: text("latest_payment_id"),
     latestInvoiceId: text("latest_invoice_id"),
-    /** Scheduled Basic → Pro at cycle_end (null when none). */
+    /**
+     * Legacy columns from the removed ₹3,000 upgrade Order flow.
+     * Not used by the scheduled future-start Pro path.
+     */
     pendingUpgradePlan: text("pending_upgrade_plan"),
     pendingRazorpayPlanId: text("pending_razorpay_plan_id"),
     pendingUpgradeScheduledAt: timestamp("pending_upgrade_scheduled_at", {
       withTimezone: true,
     }),
-    /** Captured upgrade-difference payment id (idempotency). */
     pendingUpgradePaymentId: text("pending_upgrade_payment_id"),
+    /**
+     * Scheduled Basic → Pro successor subscription.
+     * `scheduled_pro` on the future-start Pro row; null for normal memberships.
+     */
+    scheduleKind: text("schedule_kind"),
+    /** Paired subscription id (Basic ↔ scheduled Pro). */
+    linkedSubscriptionId: text("linked_subscription_id"),
+    /** Razorpay start_at for future-start Pro (authoritative schedule instant). */
+    razorpayStartAt: timestamp("razorpay_start_at", { withTimezone: true }),
+    /** StudioLayer recorded that Basic cancel_at_cycle_end was requested. */
+    cancelAtCycleEndRequested: boolean("cancel_at_cycle_end_requested")
+      .notNull()
+      .default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

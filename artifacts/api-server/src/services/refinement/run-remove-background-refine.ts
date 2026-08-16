@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
-// Remove Background refinement — Fal/BirefNet path (V1)
+// Remove Background refinement — resolution-preserving mask composite (Phase 1)
 //
-// Does not invoke OpenRouter. Produces verified transparent PNG via BirefNet.
+// Does not invoke OpenRouter. FAL mask → composite on original → R2.
 // ---------------------------------------------------------------------------
 
 import { logger } from "../../lib/logger.js";
@@ -10,35 +10,25 @@ import {
   PipelineStage,
   type PipelineTraceContext,
 } from "../../lib/render-pipeline-observability.js";
-import {
-  fetchRemoteImageBuffer,
-  uploadTransparentPngBufferToR2,
-} from "../../rendering/image-storage.js";
+import { uploadTransparentPngBufferToR2 } from "../../rendering/image-storage.js";
 import {
   FAL_BIREFNET_TIMEOUT_MS,
 } from "../image-processing/birefnet-background-removal-provider.js";
 import {
   FeatureTemporarilyUnavailableError,
-  getImageProcessingProvider,
   isImageProcessingNotImplementedError,
 } from "../image-processing/index.js";
 import {
-  assertPngHasTransparency,
-  PngTransparencyVerificationError,
-} from "../image-processing/verify-png-alpha.js";
+  isRemoveBackgroundFailedError,
+  produceResolutionPreservingTransparentPng,
+  RemoveBackgroundFailedError,
+} from "../remove-background-service.js";
 
-export class RemoveBackgroundFailedError extends Error {
-  readonly code = "REMOVE_BACKGROUND_FAILED";
+export { RemoveBackgroundFailedError };
 
-  constructor(message: string) {
-    super(message);
-    this.name = "RemoveBackgroundFailedError";
-  }
-}
-
-/** Overall refinement deadline — BirefNet + fetch + alpha verify + R2 upload. */
+/** Overall refinement deadline — FAL mask + fetch + composite + verify + R2 upload. */
 const REMOVE_BACKGROUND_PIPELINE_TIMEOUT_MS =
-  FAL_BIREFNET_TIMEOUT_MS + 45_000;
+  FAL_BIREFNET_TIMEOUT_MS + 60_000;
 
 function withAsyncTimeout<T>(
   promise: Promise<T>,
@@ -72,34 +62,11 @@ async function runRemoveBackgroundPipeline(params: {
     provider: "birefnet",
   });
 
-  const imageProcessing = getImageProcessingProvider();
-
-  const removalResult = await imageProcessing.processBackgroundRemoval({
+  const { buffer, alphaVerification } = await produceResolutionPreservingTransparentPng({
     sourceImageUrl: previousOutputUrl,
     renderId,
     purpose: "refine-remove-background",
   });
-
-  if (removalResult.kind !== "url") {
-    throw new RemoveBackgroundFailedError(
-      "remove-background-refine: buffer output not supported",
-    );
-  }
-
-  const { buffer, contentType } = await fetchRemoteImageBuffer(removalResult.url, {
-    timeoutMs: 30_000,
-  });
-
-  if (
-    !contentType.includes("png")
-    && !buffer.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))
-  ) {
-    throw new RemoveBackgroundFailedError(
-      `remove-background-refine: provider returned non-PNG asset (${contentType})`,
-    );
-  }
-
-  const alphaVerification = assertPngHasTransparency(buffer);
 
   logger.info(
     {
@@ -110,7 +77,7 @@ async function runRemoveBackgroundPipeline(params: {
       height: alphaVerification.height,
       transparentPixelCount: alphaVerification.transparentPixelCount,
     },
-    "refinement: transparent PNG alpha verified",
+    "refinement: transparent PNG alpha verified at source resolution",
   );
 
   const transparentUrl = await uploadTransparentPngBufferToR2(buffer, renderId);
@@ -145,8 +112,8 @@ export async function runRemoveBackgroundRefine(params: {
     if (isImageProcessingNotImplementedError(error)) {
       throw new FeatureTemporarilyUnavailableError();
     }
-    if (error instanceof PngTransparencyVerificationError) {
-      throw new RemoveBackgroundFailedError(error.message);
+    if (isRemoveBackgroundFailedError(error)) {
+      throw error;
     }
     if (error instanceof Error && error.message.includes("timed out")) {
       throw new RemoveBackgroundFailedError(error.message);

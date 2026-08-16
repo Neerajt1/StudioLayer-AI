@@ -342,8 +342,13 @@ export async function runAIPipeline(params: {
   try {
     logPipelineStage(pipelineTrace, PipelineStage.AI_PIPELINE_STARTED, { shots, taskType });
 
-    // ── Batch 21: Remove Background — BirefNet path (no OpenRouter) ──────────
-    if (resolvedRefinementType === "remove_background" && previousOutputUrl) {
+    // ── Remove Background — resolution-preserving mask composite (no OpenRouter) ─
+    if (resolvedRefinementType === "remove_background") {
+      if (!previousOutputUrl) {
+        throw new Error(
+          "remove-background: parent render has no output image URL",
+        );
+      }
       const transparentUrl = await runRemoveBackgroundRefine({
         renderId,
         previousOutputUrl,

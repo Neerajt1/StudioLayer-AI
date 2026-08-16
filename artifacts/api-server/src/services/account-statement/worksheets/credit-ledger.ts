@@ -46,12 +46,20 @@ export function buildCreditLedgerSheet(
     const runningBalance = ctx.isAdmin
       ? "Unlimited"
       : computeLedgerRunningBalance(ctx, index);
+    const linkedRender =
+      tx.renderId != null
+        ? ctx.renders.find((render) => render.id === tx.renderId)
+        : undefined;
 
     const row = sheet.addRow([
       index + 1,
       formatStatementDate(tx.createdAt),
-      transactionTypeLabel(tx.reasonCode),
-      transactionDescription(tx.reasonCode, tx.renderId),
+      transactionTypeLabel(tx.reasonCode, linkedRender?.refinementType),
+      transactionDescription(
+        tx.reasonCode,
+        tx.renderId,
+        linkedRender?.refinementType,
+      ),
       creditsAdded || "",
       creditsUsed || "",
       runningBalance,

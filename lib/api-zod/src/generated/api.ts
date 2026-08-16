@@ -342,7 +342,45 @@ export const GetMembershipSubscriptionStatusResponse = zod.object({
   "studioTier": zod.union([zod.literal('pro'),zod.literal('enterprise'),zod.literal(null)]).nullable(),
   "status": zod.string().nullable(),
   "currentEnd": zod.coerce.date().nullable(),
-  "subscriptionId": zod.string().nullable()
+  "subscriptionId": zod.string().nullable(),
+  "cancelAtCycleEnd": zod.boolean().describe('True when renewal cancellation at cycle end was requested'),
+  "cancelEffectiveAt": zod.coerce.date().nullable().describe('Membership remains active until this instant when cancelAtCycleEnd is true'),
+  "scheduledPro": zod.union([zod.null(),zod.object({
+  "subscriptionId": zod.string(),
+  "status": zod.string(),
+  "startAt": zod.coerce.date().nullable()
+})])
+})
+
+
+/**
+ * Authenticated Studio Basic members schedule a separate future-start Studio Pro subscription with start_at equal to the live Basic current_end. Nothing is charged today. Credits and Pro entitlement activate only via the normal Pro subscription.charged webhook.
+ * @summary Schedule Studio Pro for the next Basic billing date
+ */
+export const ScheduleMembershipUpgradeToProResponse = zod.object({
+  "subscriptionId": zod.string().describe('Future-start Razorpay Pro subscription id for Checkout'),
+  "keyId": zod.string().describe('Public Razorpay Key ID (never the secret)'),
+  "plan": zod.enum(['pro']),
+  "studioTier": zod.enum(['enterprise']),
+  "status": zod.string(),
+  "shortUrl": zod.string().nullable(),
+  "startAt": zod.coerce.date().describe('Pro start instant (Basic current_end)'),
+  "basicSubscriptionId": zod.string(),
+  "alreadyScheduled": zod.boolean(),
+  "market": zod.enum(['india', 'international'])
+})
+
+
+/**
+ * Authenticated paid members request cancel_at_cycle_end on their active Razorpay subscription. Membership remains active until current_end. The StudioLayer account and Creative Ledger history are preserved. Does not pause or immediately cancel an active billing period.
+ * @summary Cancel membership renewal at the end of the current billing period
+ */
+export const CancelMembershipAtCycleEndResponse = zod.object({
+  "subscriptionId": zod.string(),
+  "studioPlan": zod.enum(['basic', 'pro']),
+  "status": zod.string(),
+  "cancelAtCycleEnd": zod.literal(true),
+  "cancelEffectiveAt": zod.coerce.date()
 })
 
 

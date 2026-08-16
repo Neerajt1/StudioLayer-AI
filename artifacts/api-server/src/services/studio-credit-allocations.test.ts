@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  MembershipCreditAllowances,
   StudioCreditReasonCode,
   computeAvailableStudioCredits,
   expectedCreditsForAllocation,
@@ -9,8 +10,11 @@ import {
   planAllocationConsumption,
   razorpayMembershipPeriodKey,
   studioPassExpiresAt,
+  sumSpendableAllocationCredits,
   StudioCreditAllocationStatus,
+  compareLotsForConsumption,
 } from "@workspace/studio-credit-engine";
+import { composeFreeTierRemaining } from "./studio-credit-service.js";
 
 /**
  * Service-adjacent contracts for grant / consume / pending without DB.
@@ -96,5 +100,108 @@ describe("pending + finalize contracts", () => {
       studioPassExpiresAt(starts).toISOString(),
       "2026-08-08T00:00:00.000Z",
     );
+  });
+});
+
+describe("free-tier balance: complimentary + Studio Pass lots", () => {
+  const complimentary = MembershipCreditAllowances.complimentary;
+  const now = new Date("2026-08-16T09:00:00.000Z");
+
+  it("free user with only complimentary credit → remaining 1", () => {
+    const spendableFromLots = sumSpendableAllocationCredits([], now);
+    assert.equal(spendableFromLots, 0);
+    assert.equal(
+      composeFreeTierRemaining({
+        complimentaryAllowance: complimentary,
+        lifetimeUsed: 0,
+        spendableFromLots,
+        pendingHeld: 0,
+      }),
+      1,
+    );
+  });
+
+  it("free user with active 40-credit Pass + complimentary → remaining 41", () => {
+    const passLot = {
+      id: 30,
+      reasonCode: StudioCreditReasonCode.STUDIO_PASS_ALLOCATION,
+      remainingAmount: MembershipCreditAllowances.studioPass,
+      startsAt: new Date("2026-08-16T08:39:10.000Z"),
+      expiresAt: studioPassExpiresAt(new Date("2026-08-16T08:39:10.000Z")),
+      status: StudioCreditAllocationStatus.ACTIVE,
+      createdAt: new Date("2026-08-16T08:39:10.000Z"),
+    };
+    const spendableFromLots = sumSpendableAllocationCredits([passLot], now);
+    assert.equal(spendableFromLots, 40);
+    assert.equal(
+      composeFreeTierRemaining({
+        complimentaryAllowance: complimentary,
+        lifetimeUsed: 0,
+        spendableFromLots,
+        pendingHeld: 0,
+      }),
+      41,
+    );
+  });
+
+  it("free user with expired Pass → Pass excluded, complimentary remains", () => {
+    const starts = new Date("2026-08-01T00:00:00.000Z");
+    const expiredPass = {
+      id: 31,
+      reasonCode: StudioCreditReasonCode.STUDIO_PASS_ALLOCATION,
+      remainingAmount: 40,
+      startsAt: starts,
+      expiresAt: studioPassExpiresAt(starts),
+      status: StudioCreditAllocationStatus.ACTIVE,
+      createdAt: starts,
+    };
+    const afterExpiry = new Date("2026-08-10T00:00:00.000Z");
+    const spendableFromLots = sumSpendableAllocationCredits(
+      [expiredPass],
+      afterExpiry,
+    );
+    assert.equal(spendableFromLots, 0);
+    assert.equal(
+      composeFreeTierRemaining({
+        complimentaryAllowance: complimentary,
+        lifetimeUsed: 0,
+        spendableFromLots,
+        pendingHeld: 0,
+      }),
+      1,
+    );
+  });
+
+  it("Pass remains an allocation lot; complimentary stays separate (Pass spent first)", () => {
+    assert.equal(
+      StudioCreditReasonCode.STUDIO_PASS_ALLOCATION,
+      "studio_pass_allocation",
+    );
+    assert.equal(MembershipCreditAllowances.complimentary, 1);
+    assert.notEqual(
+      StudioCreditReasonCode.STUDIO_PASS_ALLOCATION,
+      "complimentary",
+    );
+
+    const passStarts = new Date("2026-08-16T08:00:00.000Z");
+    const passLot = {
+      id: 1,
+      reasonCode: StudioCreditReasonCode.STUDIO_PASS_ALLOCATION,
+      remainingAmount: 40,
+      startsAt: passStarts,
+      expiresAt: studioPassExpiresAt(passStarts),
+      status: StudioCreditAllocationStatus.ACTIVE,
+      createdAt: passStarts,
+    };
+    // Complimentary is not in the lot list — consumption order only sees Pass.
+    const ordered = [passLot].sort(compareLotsForConsumption);
+    assert.equal(
+      ordered[0]?.reasonCode,
+      StudioCreditReasonCode.STUDIO_PASS_ALLOCATION,
+    );
+    const plan = planAllocationConsumption([passLot], 1, now);
+    assert.deepEqual(plan, [
+      { allocationId: 1, amount: 1, remainingAfter: 39 },
+    ]);
   });
 });

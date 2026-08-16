@@ -1,97 +1,82 @@
 // ---------------------------------------------------------------------------
-// Studio Refine Panel — Batch 21 Reliable Refine (Fix #5 simplified UX)
+// Studio Post-Production Panel — Crop (free) + Remove Background
 // ---------------------------------------------------------------------------
 
-import { RotateCcw, Scissors, Wand2, ZoomIn } from 'lucide-react';
+import { Eraser, RotateCcw, Scissors, ZoomIn } from 'lucide-react';
+import { postProductionStudioCreditLabel } from '@workspace/studio-credit-engine';
 import { cn } from '@/lib/utils';
-import {
-  StudioToggleOption,
-  StudioWorkspaceButton,
-} from '@/components/studio/studio-workspace-controls';
-import { AI_REFINEMENT_OPTIONS, type RefinementType } from '@/lib/refinement-types';
+import { StudioWorkspaceButton } from '@/components/studio/studio-workspace-controls';
 
-interface StudioRefinePanelProps {
+interface StudioPostProductionPanelProps {
   disabled?: boolean;
-  refineInFlight?: boolean;
-  activeRefinement?: RefinementType | null;
+  removeBackgroundInFlight?: boolean;
   hasCropApplied?: boolean;
   canRevert: boolean;
   imageLabel?: string;
-  onRefine: (type: RefinementType) => void;
+  onRemoveBackground: () => void;
   onOpenCrop: () => void;
   onRevert: () => void;
   onZoom: () => void;
 }
 
-export function StudioRefinePanel({
+/** @deprecated Use StudioPostProductionPanel */
+export type StudioRefinePanelProps = StudioPostProductionPanelProps;
+
+export function StudioPostProductionPanel({
   disabled = false,
-  refineInFlight = false,
-  activeRefinement = null,
+  removeBackgroundInFlight = false,
   hasCropApplied = false,
   canRevert,
   imageLabel,
-  onRefine,
+  onRemoveBackground,
   onOpenCrop,
   onRevert,
   onZoom,
-}: StudioRefinePanelProps) {
-  const busy = disabled || refineInFlight;
+}: StudioPostProductionPanelProps) {
+  const busy = disabled || removeBackgroundInFlight;
 
   return (
     <div className="space-y-4 rounded-lg border border-border/60 bg-card/40 p-3">
       <div className="space-y-1">
-        <p className="text-xs font-semibold text-foreground">Refine</p>
+        <p className="text-xs font-semibold text-foreground">Post-Production</p>
         <p className="sl-ui-helper">
           {imageLabel
-            ? `Choose one AI refinement for ${imageLabel}. Each uses 1 Studio Credit.`
-            : 'Choose one AI refinement for this image. Each uses 1 Studio Credit.'}
+            ? `Crop or remove the background for ${imageLabel}.`
+            : 'Crop or remove the background for this image.'}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {AI_REFINEMENT_OPTIONS.map((option) => {
-          const isRunning = refineInFlight && activeRefinement === option.type;
-          return (
-            <StudioToggleOption
-              key={option.type}
-              selected={isRunning}
-              disabled={busy}
-              onClick={() => onRefine(option.type)}
-              className="rounded px-2 py-2.5 text-left"
-            >
-              <p className="text-xs font-semibold flex items-center gap-1.5">
-                {!isRunning ? <Wand2 className="size-3 shrink-0 opacity-70" aria-hidden /> : null}
-                {isRunning ? 'Refining…' : option.label}
-              </p>
-              <p className={cn(
-                'text-[10px] font-mono mt-0.5 leading-tight',
-                isRunning ? 'opacity-75' : 'text-muted-foreground',
-              )}>
-                {option.description} · 1 credit
-              </p>
-            </StudioToggleOption>
-          );
-        })}
+      <div className="flex flex-wrap gap-2">
+        <StudioWorkspaceButton
+          className={cn(
+            'h-8 px-3 text-xs gap-1.5',
+            hasCropApplied && 'ring-1 ring-foreground/20',
+          )}
+          disabled={busy}
+          onClick={onOpenCrop}
+        >
+          <Scissors className="size-3.5" aria-hidden />
+          Crop
+        </StudioWorkspaceButton>
+        <StudioWorkspaceButton
+          className="h-8 px-3 text-xs gap-1.5"
+          disabled={busy}
+          loading={removeBackgroundInFlight}
+          onClick={onRemoveBackground}
+        >
+          {!removeBackgroundInFlight ? (
+            <Eraser className="size-3.5" aria-hidden />
+          ) : null}
+          {removeBackgroundInFlight ? 'Removing background…' : 'Remove Background'}
+        </StudioWorkspaceButton>
       </div>
 
       <div className="space-y-2 pt-1 border-t border-border/50">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold text-foreground">Studio Tools</p>
-          <p className="sl-ui-helper">Free — no AI, no Studio Credits.</p>
-        </div>
-
+        <p className="sl-post-production-credit-note text-[10px]">
+          Remove Background · {postProductionStudioCreditLabel()}
+        </p>
+        <p className="text-[10px] text-muted-foreground">Crop is free — no Studio Credits.</p>
         <div className="flex flex-wrap gap-2">
-          <StudioWorkspaceButton
-            className={cn(
-              'h-8 px-3 text-xs gap-1.5',
-              hasCropApplied && 'ring-1 ring-foreground/20',
-            )}
-            disabled={busy}
-            onClick={onOpenCrop}
-          >
-            <Scissors className="size-3.5" aria-hidden />
-            Crop
-          </StudioWorkspaceButton>
           <StudioWorkspaceButton
             className="h-8 px-3 text-xs gap-1.5"
             disabled={busy || !canRevert}
@@ -113,3 +98,6 @@ export function StudioRefinePanel({
     </div>
   );
 }
+
+/** @deprecated Use StudioPostProductionPanel */
+export const StudioRefinePanel = StudioPostProductionPanel;

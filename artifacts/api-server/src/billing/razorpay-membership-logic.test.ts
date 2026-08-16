@@ -12,6 +12,8 @@ import {
   claimWebhookEventForProcessing,
   evaluateSubscriptionChargedGrant,
   expectedMembershipCreditsForPlan,
+  pickLatestPaidSubscriptionInvoice,
+  resolveLiveMembershipForCheckoutReuse,
   resolveOpenMembershipForCreate,
   resolveRazorpayWebhookEventId,
   resolveSubscriptionPlanSync,
@@ -230,6 +232,66 @@ describe("evaluateSubscriptionChargedGrant — captured payment gate", () => {
     assert.equal(decision.grant, false);
     if (!decision.grant) assert.equal(decision.reason, "amount_mismatch");
   });
+
+  it("captured INR Basic 399900 paise grants; wrong INR amount rejects", () => {
+    const ok = evaluateSubscriptionChargedGrant({
+      studioPlan: "basic",
+      studioTier: "pro",
+      subscription: period,
+      payment: {
+        id: "pay_inr_basic",
+        status: "captured",
+        amount: 399_900,
+        currency: "INR",
+      },
+    });
+    assert.equal(ok.grant, true);
+    if (ok.grant) assert.equal(ok.credits, 120);
+
+    const bad = evaluateSubscriptionChargedGrant({
+      studioPlan: "basic",
+      studioTier: "pro",
+      subscription: period,
+      payment: {
+        id: "pay_inr_bad",
+        status: "captured",
+        amount: 300_000,
+        currency: "INR",
+      },
+    });
+    assert.equal(bad.grant, false);
+    if (!bad.grant) assert.equal(bad.reason, "amount_mismatch");
+  });
+
+  it("captured INR Pro 699900 paise grants; unsupported currency rejects", () => {
+    const ok = evaluateSubscriptionChargedGrant({
+      studioPlan: "pro",
+      studioTier: "enterprise",
+      subscription: period,
+      payment: {
+        id: "pay_inr_pro",
+        status: "captured",
+        amount: 699_900,
+        currency: "INR",
+      },
+    });
+    assert.equal(ok.grant, true);
+    if (ok.grant) assert.equal(ok.credits, 240);
+
+    const eur = evaluateSubscriptionChargedGrant({
+      studioPlan: "basic",
+      studioTier: "pro",
+      subscription: period,
+      payment: {
+        id: "pay_eur",
+        status: "captured",
+        amount: 399_900,
+        currency: "EUR",
+      },
+    });
+    assert.equal(eur.grant, false);
+    if (!eur.grant) assert.equal(eur.reason, "amount_mismatch");
+  });
 });
 
 describe("webhook claim / retry / idempotency", () => {
@@ -380,6 +442,131 @@ describe("webhook claim / retry / idempotency", () => {
     attempt("evt_fail");
     attempt("evt_fail");
     assert.equal(grants.length, 1);
+  });
+});
+
+describe("live Razorpay verification before Checkout reuse", () => {
+  it("local created + Razorpay still checkout-eligible → reuse_checkout", () => {
+    for (const liveStatus of ["created", "authenticated", "pending"] as const) {
+      const decision = resolveLiveMembershipForCheckoutReuse({
+        liveStatus,
+        paidCount: 0,
+      });
+      assert.equal(decision.action, "reuse_checkout", liveStatus);
+    }
+  });
+
+  it("local created + Razorpay active/paid → reconcile_paid (no Checkout reuse)", () => {
+    assert.equal(
+      resolveLiveMembershipForCheckoutReuse({
+        liveStatus: "active",
+        paidCount: 1,
+      }).action,
+      "reconcile_paid",
+    );
+    assert.equal(
+      resolveLiveMembershipForCheckoutReuse({
+        liveStatus: "active",
+        paidCount: 0,
+      }).action,
+      "reconcile_paid",
+    );
+    assert.equal(
+      resolveLiveMembershipForCheckoutReuse({
+        liveStatus: "created",
+        paidCount: 1,
+      }).action,
+      "reconcile_paid",
+    );
+  });
+
+  it("halted / cancelled live subscription is unavailable for Checkout", () => {
+    const halted = resolveLiveMembershipForCheckoutReuse({
+      liveStatus: "halted",
+      paidCount: 0,
+    });
+    assert.equal(halted.action, "unavailable");
+  });
+
+  it("pickLatestPaidSubscriptionInvoice prefers newest paid invoice with payment_id", () => {
+    const picked = pickLatestPaidSubscriptionInvoice([
+      {
+        id: "inv_old",
+        status: "paid",
+        payment_id: "pay_old",
+        paid_at: 100,
+      },
+      {
+        id: "inv_unpaid",
+        status: "issued",
+        payment_id: null,
+        paid_at: 999,
+      },
+      {
+        id: "inv_new",
+        status: "paid",
+        payment_id: "pay_new",
+        paid_at: 200,
+      },
+    ]);
+    assert.equal(picked?.id, "inv_new");
+    assert.equal(picked?.payment_id, "pay_new");
+  });
+
+  it("repeated reconciliation of the same captured payment shares one 120-credit source_reference", () => {
+    const payment = {
+      id: "pay_reconcile_once",
+      status: "captured" as const,
+      amount: 4900,
+      currency: "USD",
+      invoice_id: "inv_reconcile_once",
+    };
+    const subscription = {
+      id: "sub_reconcile",
+      current_start: period.current_start,
+      current_end: period.current_end,
+    };
+
+    const first = evaluateSubscriptionChargedGrant({
+      studioPlan: "basic",
+      studioTier: "pro",
+      subscription,
+      payment,
+      invoiceId: "inv_reconcile_once",
+    });
+    const second = evaluateSubscriptionChargedGrant({
+      studioPlan: "basic",
+      studioTier: "pro",
+      subscription,
+      payment,
+      invoiceId: "inv_reconcile_once",
+    });
+
+    assert.equal(first.grant, true);
+    assert.equal(second.grant, true);
+    if (!first.grant || !second.grant) return;
+
+    assert.equal(first.credits, MembershipCreditAllowances.basic);
+    assert.equal(first.credits, 120);
+    assert.equal(first.sourceReference, second.sourceReference);
+    assert.equal(first.sourceReference, "rzp_payment:pay_reconcile_once");
+
+    // Simulate grantCreditAllocation UNIQUE(source_reference) across reconcile + webhook.
+    const granted = new Set<string>();
+    const applyOnce = (sourceReference: string) => {
+      if (granted.has(sourceReference)) return { created: false, credits: 0 };
+      granted.add(sourceReference);
+      return { created: true, credits: 120 };
+    };
+    assert.deepEqual(applyOnce(first.sourceReference), {
+      created: true,
+      credits: 120,
+    });
+    assert.deepEqual(applyOnce(second.sourceReference), {
+      created: false,
+      credits: 0,
+    });
+    assert.equal(granted.size, 1);
   });
 });
 

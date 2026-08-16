@@ -1,18 +1,19 @@
 // ---------------------------------------------------------------------------
-// Gallery refinement — reuse Studio API with render-row metadata
+// Gallery Remove Background — reuse Studio API with render-row metadata
 // ---------------------------------------------------------------------------
 
-import type { RefinementType } from '@/lib/refinement-types';
+import { REMOVE_BACKGROUND_TYPE } from '@/lib/refinement-types';
 import type { CreativeLedgerCardRender } from '@/components/gallery/creative-ledger-card';
 
-/** Build POST /renders payload for Gallery-initiated refinements. */
-export function buildGalleryRefinementRequest(
-  render: CreativeLedgerCardRender,
-  refinementType: RefinementType,
-) {
+/** Build POST /renders payload for Gallery-initiated Remove Background. */
+export function buildGalleryRemoveBackgroundRequest(render: CreativeLedgerCardRender) {
   const sourceImageUrl = render.sourceImageUrl;
   if (!sourceImageUrl) {
     throw new Error('Gallery render is missing sourceImageUrl');
+  }
+
+  if (!render.outputImageUrl) {
+    throw new Error('Gallery render is missing outputImageUrl');
   }
 
   return {
@@ -22,6 +23,9 @@ export function buildGalleryRefinementRequest(
     smartLighting: true,
     imageDimensions: 'portrait_45' as const,
     parentRenderId: render.id,
-    refinementType,
+    refinementType: REMOVE_BACKGROUND_TYPE,
   };
 }
+
+/** @deprecated Use buildGalleryRemoveBackgroundRequest */
+export const buildGalleryRefinementRequest = buildGalleryRemoveBackgroundRequest;

@@ -9,7 +9,6 @@ import {
   rendersTable,
   studioCreditTransactionsTable,
 } from "@workspace/db";
-import { reconcileStaleCommercialState } from "../generation-idempotency.js";
 import { billingCycleStart } from "../studio-credit-service.js";
 import {
   buildMasterCreativeActivity,
@@ -68,13 +67,68 @@ export async function getBillingCycleActivityStats(
   userId: number,
   tier: string,
 ): Promise<BillingCycleLedgerStats> {
-  await reconcileStaleCommercialState(userId);
-
   const ctx = await loadCreativeActivityContext(userId, tier);
   const master = buildMasterCreativeActivity(ctx);
   const cycleRows = filterMasterRowsForCycle(ctx, master.rows);
 
   return deriveBillingCycleActivityStats(cycleRows);
+}
+
+/** Short-lived reuse of already-calculated Gallery cycle stats. Not used by Account Statement. */
+const GALLERY_CYCLE_STATS_CACHE_TTL_MS = 30_000;
+
+interface CachedCycleStats {
+  tier: string;
+  stats: BillingCycleLedgerStats;
+  expiresAt: number;
+}
+
+const cycleStatsCache = new Map<number, CachedCycleStats>();
+const cycleStatsInFlight = new Map<number, Promise<BillingCycleLedgerStats>>();
+
+export function invalidateBillingCycleActivityStatsCache(userId: number): void {
+  cycleStatsCache.delete(userId);
+}
+
+/** @internal Test-only reset. */
+export function resetBillingCycleActivityStatsCache(): void {
+  cycleStatsCache.clear();
+  cycleStatsInFlight.clear();
+}
+
+/**
+ * Same numbers as getBillingCycleActivityStats — reused for GET /renders/usage only.
+ * Account Statement and commercial reconciliation continue to compute uncached.
+ */
+export async function getCachedBillingCycleActivityStats(
+  userId: number,
+  tier: string,
+): Promise<BillingCycleLedgerStats> {
+  const cached = cycleStatsCache.get(userId);
+  if (cached && cached.tier === tier && cached.expiresAt > Date.now()) {
+    return cached.stats;
+  }
+
+  const inFlight = cycleStatsInFlight.get(userId);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const pending = getBillingCycleActivityStats(userId, tier)
+    .then((stats) => {
+      cycleStatsCache.set(userId, {
+        tier,
+        stats,
+        expiresAt: Date.now() + GALLERY_CYCLE_STATS_CACHE_TTL_MS,
+      });
+      return stats;
+    })
+    .finally(() => {
+      cycleStatsInFlight.delete(userId);
+    });
+
+  cycleStatsInFlight.set(userId, pending);
+  return pending;
 }
 
 export {

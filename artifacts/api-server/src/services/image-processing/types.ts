@@ -11,14 +11,18 @@ export interface BackgroundRemovalInput {
   sourceImageUrl: string;
   renderId: number;
   purpose?: string;
+  /** Original pixel width — used to select FAL operating resolution. */
+  sourceWidth?: number;
+  /** Original pixel height — used to select FAL operating resolution. */
+  sourceHeight?: number;
 }
 
 /**
- * Result of a successful background-removal operation.
- * Implementations may return a remote URL or in-memory PNG bytes.
+ * Result of a successful background-removal mask request.
+ * FAL returns a segmentation mask only — never the final composited asset.
  */
 export type BackgroundRemovalResult =
-  | { kind: "url"; url: string }
+  | { kind: "mask_url"; maskUrl: string }
   | { kind: "buffer"; buffer: Buffer; mimeType: "image/png" };
 
 /** Future: upscaleImage(), denoiseImage(), generateMask(), colourMatch(), exportPsd(), … */

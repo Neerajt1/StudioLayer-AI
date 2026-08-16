@@ -24,7 +24,7 @@ export function buildMonthlySummarySheet(
     "Activity Credits Used",
     "Credits Reconciliation Gap",
     "Images Generated",
-    "Refinements",
+    "Post-Production",
     "Images Deleted",
     "Closing Balance",
   ];

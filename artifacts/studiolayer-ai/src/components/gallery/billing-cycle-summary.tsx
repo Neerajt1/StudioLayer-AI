@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import type { BillingCycleStats } from '@/lib/creative-ledger';
 import { EMPTY_BILLING_CYCLE_STATS } from '@/lib/creative-ledger';
+import { formatStudioCredits } from '@workspace/studio-credit-engine';
 import { ImageIcon } from 'lucide-react';
 
 const SL_TOKEN_ICON = '/icons/sl-token.svg';
@@ -12,15 +13,10 @@ export interface BillingCycleSummaryProps {
   variant?: 'default' | 'dashboard';
 }
 
-function formatAverage(value: number): string {
-  if (!Number.isFinite(value)) return '0';
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
-}
-
-function formatStudioCreditRemaining(remaining: number, allowance: number): string {
+/** Spendable balance only — do not pair with membership allowance (Top-Ups make X of Y misleading). */
+function formatStudioCreditRemaining(remaining: number): string {
   const safeRemaining = Number.isFinite(remaining) ? remaining : 0;
-  const safeAllowance = Number.isFinite(allowance) ? allowance : 0;
-  return `${safeRemaining} of ${safeAllowance}`;
+  return formatStudioCredits(safeRemaining);
 }
 
 function resolveStats(stats?: BillingCycleStats | null): BillingCycleStats {
@@ -40,9 +36,8 @@ export function BillingCycleSummary({
   const {
     studioCreditsUsed,
     imagesCreated,
-    averageRefinementsPerImage,
+    editsMade,
     creditsRemaining,
-    studioCreditAllowance,
   } = resolveStats(stats);
 
   if (variant === 'dashboard') {
@@ -78,10 +73,8 @@ export function BillingCycleSummary({
               aria-hidden
               className="sl-billing-cycle-stat-icon"
             />
-            <dt>Avg. Refinements / Image</dt>
-            <dd className="sl-billing-cycle-stat-value">
-              {formatAverage(averageRefinementsPerImage)}
-            </dd>
+            <dt>Edits Made</dt>
+            <dd className="sl-billing-cycle-stat-value">{editsMade}</dd>
           </div>
           <div className="sl-billing-cycle-stat">
             <img
@@ -92,7 +85,7 @@ export function BillingCycleSummary({
             />
             <dt>Studio Credit Remaining</dt>
             <dd className="sl-billing-cycle-stat-value">
-              {formatStudioCreditRemaining(creditsRemaining, studioCreditAllowance)}
+              {formatStudioCreditRemaining(creditsRemaining)}
             </dd>
           </div>
         </dl>
@@ -113,10 +106,8 @@ export function BillingCycleSummary({
           <dd className="sl-billing-cycle-stat-value">{imagesCreated}</dd>
         </div>
         <div className="sl-billing-cycle-stat">
-          <dt>Avg. Refinements / Image</dt>
-          <dd className="sl-billing-cycle-stat-value">
-            {formatAverage(averageRefinementsPerImage)}
-          </dd>
+          <dt>Edits Made</dt>
+          <dd className="sl-billing-cycle-stat-value">{editsMade}</dd>
         </div>
         <div className="sl-billing-cycle-stat">
           <dt>Studio Credit Remaining</dt>
@@ -127,7 +118,7 @@ export function BillingCycleSummary({
               aria-hidden
               className="sl-billing-cycle-stat-icon sl-billing-cycle-stat-icon--studio-credit"
             />
-            <span>{formatStudioCreditRemaining(creditsRemaining, studioCreditAllowance)}</span>
+            <span>{formatStudioCreditRemaining(creditsRemaining)}</span>
           </dd>
         </div>
       </dl>

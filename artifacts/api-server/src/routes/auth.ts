@@ -164,7 +164,9 @@ router.delete("/auth/studio", async (req, res): Promise<void> => {
 
     res.status(503).json({
       error:
-        "We couldn't complete your Studio deletion at this time. Please try again in a few moments.",
+        step === "razorpay_cancellation"
+          ? "We couldn't cancel your membership billing before deleting your Studio. Please try again in a few moments — your Studio was not deleted."
+          : "We couldn't complete your Studio deletion at this time. Please try again in a few moments.",
     });
     return;
   }

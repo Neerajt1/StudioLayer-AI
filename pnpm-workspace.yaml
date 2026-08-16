@@ -71,3 +71,4 @@ overrides:
 
 allowBuilds:
   esbuild: true
+  sharp: true

@@ -80,6 +80,35 @@ describe("payments route auth + webhook session contract", () => {
     assert.match(paymentsSource, /status\(409\)/);
   });
 
+  it("Checkout reuse verifies live Razorpay and reconciles already-paid subscriptions", () => {
+    assert.match(membershipSource, /fetchRazorpaySubscription/);
+    assert.match(membershipSource, /resolveLiveMembershipForCheckoutReuse/);
+    assert.match(membershipSource, /reconcilePaidMembershipSubscription/);
+    assert.match(membershipSource, /fetchRazorpayInvoicesForSubscription/);
+    assert.match(logicSource, /reconcile_paid/);
+    assert.match(logicSource, /reuse_checkout/);
+    const reuseIdx = membershipSource.indexOf('if (decision.action === "reuse")');
+    const verifyIdx = membershipSource.indexOf(
+      "resolveLiveMembershipForCheckoutReuse",
+      reuseIdx,
+    );
+    const reconcileIdx = membershipSource.indexOf(
+      "reconcilePaidMembershipSubscription",
+      reuseIdx,
+    );
+    assert.ok(reuseIdx > 0 && verifyIdx > reuseIdx && reconcileIdx > verifyIdx);
+  });
+
+  it("paid reconciliation reuses subscription.charged grant path (idempotent with webhooks)", () => {
+    assert.match(membershipSource, /syncMembershipSubscriptionRowAndMaybeGrant/);
+    assert.match(
+      membershipSource,
+      /eventType:\s*"subscription\.charged"/,
+    );
+    assert.match(membershipSource, /evaluateSubscriptionChargedGrant/);
+    assert.match(membershipSource, /withRazorpayPaymentGrantLock/);
+  });
+
   it("orphan persistence failure attempts Razorpay cancel and never returns success", () => {
     assert.match(membershipSource, /cancelRazorpaySubscription/);
     assert.match(membershipSource, /cancelAtCycleEnd: false/);
@@ -105,6 +134,13 @@ describe("payments route auth + webhook session contract", () => {
     assert.equal(membershipSource.includes("upgradeMembershipToPro"), false);
     assert.equal(membershipSource.includes("immediateUpgradeEntitlement"), false);
     assert.equal(logicSource.includes("resolveBasicToProUpgrade"), false);
+  });
+
+  it("scheduled future-start Pro path is wired without mid-cycle Order upgrade", () => {
+    assert.match(paymentsSource, /\/payments\/subscriptions\/schedule-pro/);
+    assert.match(membershipSource, /scheduleMembershipUpgradeToPro/);
+    assert.match(membershipSource, /SCHEDULE_KIND_SCHEDULED_PRO/);
+    assert.equal(membershipSource.includes("createRazorpayOrder"), false);
   });
 
   it("Pass / Top-Up use one-time Orders + payment.captured grants", () => {

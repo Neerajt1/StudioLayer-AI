@@ -19,14 +19,14 @@ import {
 } from "../labels.js";
 
 export const LEDGER_RECONCILIATION_SHEET_NOTE =
-  "This sheet lists completed Studio Credit transactions that could not be linked to an identifiable image or refinement in the available activity records. This does not necessarily mean no output was produced — only that the activity cannot be reconstructed from persisted records.";
+  "This sheet lists completed Studio Credit transactions that could not be linked to an identifiable image or post-production activity in the available activity records. This does not necessarily mean no output was produced — only that the activity cannot be reconstructed from persisted records.";
 
 function mappingStatusForUnmapped(tx: UnmappedHistoricalTransaction): string {
   if (tx.renderId != null) {
     return "Unlinked — referenced image not found in activity records";
   }
   if (isRefinementReasonCode(tx.reasonCode)) {
-    return "Unlinked — no identifiable refinement activity";
+    return "Unlinked — no identifiable post-production activity";
   }
   if (isGenerationReasonCode(tx.reasonCode)) {
     return "Unlinked — no identifiable generation activity";
@@ -36,15 +36,15 @@ function mappingStatusForUnmapped(tx: UnmappedHistoricalTransaction): string {
 
 function customerFacingExplanation(tx: UnmappedHistoricalTransaction): string {
   if (tx.renderId != null) {
-    return "Historical credit transaction could not be linked to an identifiable image or refinement in the available activity records.";
+    return "Historical credit transaction could not be linked to an identifiable image or post-production activity in the available activity records.";
   }
   if (isRefinementReasonCode(tx.reasonCode)) {
-    return "Historical refinement credit could not be linked to an identifiable refinement in the available activity records.";
+    return "Historical post-production credit could not be linked to an identifiable post-production activity in the available activity records.";
   }
   if (isGenerationReasonCode(tx.reasonCode)) {
     return "Historical generation credit could not be linked to an identifiable image in the available activity records.";
   }
-  return "Historical credit transaction could not be linked to an identifiable image or refinement in the available activity records.";
+  return "Historical credit transaction could not be linked to an identifiable image or post-production activity in the available activity records.";
 }
 
 export function buildLedgerReconciliationSheet(
@@ -108,11 +108,15 @@ export function buildLedgerReconciliationSheet(
     row.eachCell((cell) => applyDataCell(cell));
   } else {
     reconciliation.unmappedTransactions.forEach((tx, index) => {
+      const linkedRender =
+        tx.renderId != null
+          ? ctx.renders.find((render) => render.id === tx.renderId)
+          : undefined;
       const row = sheet.addRow([
         index + 1,
         formatStatementDate(tx.date),
         tx.transactionId,
-        transactionTypeLabel(tx.reasonCode),
+        transactionTypeLabel(tx.reasonCode, linkedRender?.refinementType),
         tx.amount,
         tx.renderId ?? "—",
         mappingStatusForUnmapped(tx),
