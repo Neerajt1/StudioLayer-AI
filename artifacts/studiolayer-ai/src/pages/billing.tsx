@@ -835,7 +835,7 @@ export default function BillingPage() {
         <section className="sl-membership-credits-note">
           <h3 className="sl-membership-credits-note-heading">Understanding Studio Credits</h3>
           <p className="sl-membership-credits-note-body">
-            <sup>*</sup>2K generation uses 1 Studio Credit. 4K uses 2 credits. Remove Background uses 1 Studio Credit.
+            <sup>*</sup>2K generation uses 1 Studio Credit. 4K uses 2 Studio Credits. Remove Background uses 1 Studio Credit.
           </p>
         </section>
 

@@ -57,10 +57,10 @@ export function ShootTypeSelector({
     <div className="sl-shoot-type-grid">
       {options.map((opt) => {
         const isSelected = !customCampaignActive && imageCount === opt.value;
-        const premiumLocked = isPremiumLocked(opt.value);
+        const unavailable = isPremiumLocked(opt.value);
         const hintVisible = activeHint === opt.value;
         const creditLabel = formatStudioCredits(creditCostForImageCount(opt.value));
-        const showSelectedCredit = isSelected && !premiumLocked;
+        const showSelectedCredit = isSelected && !unavailable;
 
         return (
           <div key={opt.value} className="sl-shoot-type-option-wrap relative">
@@ -81,7 +81,7 @@ export function ShootTypeSelector({
               </p>
             ) : null}
             <StudioToggleOption
-              selected={isSelected && !premiumLocked}
+              selected={isSelected}
               disabled={disabled}
               onClick={() => onSelect(opt.value)}
               onMouseEnter={() => showHint(opt.value)}
@@ -90,13 +90,13 @@ export function ShootTypeSelector({
               onBlur={() => hideHint(opt.value)}
               className={cn(
                 'sl-shoot-type-option flex h-full w-full flex-col items-center justify-center gap-1 px-2.5 py-2 sm:min-h-[3.125rem] sm:gap-0.5 sm:px-2 sm:py-2',
-                premiumLocked && 'cursor-pointer opacity-50',
+                unavailable && 'cursor-pointer opacity-50',
               )}
             >
               <p
                 className={cn(
                   'sl-shoot-type-option-label font-semibold',
-                  isSelected && !premiumLocked ? 'text-inherit' : 'text-muted-foreground',
+                  isSelected ? 'text-inherit' : 'text-muted-foreground',
                 )}
               >
                 {opt.label}
@@ -104,9 +104,7 @@ export function ShootTypeSelector({
               <p
                 className={cn(
                   'sl-shoot-type-option-sub font-mono',
-                  isSelected && !premiumLocked
-                    ? 'opacity-75'
-                    : 'text-muted-foreground',
+                  isSelected ? 'opacity-75' : 'text-muted-foreground',
                 )}
               >
                 {opt.sub}

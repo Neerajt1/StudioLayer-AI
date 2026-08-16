@@ -33,7 +33,7 @@ export function CustomCampaignControl({
   return (
     <div className="sl-custom-campaign-option">
       <StudioToggleOption
-        selected={selected && !premiumLocked}
+        selected={selected}
         disabled={disabled}
         onClick={onSelect}
         className={cn(
@@ -44,7 +44,7 @@ export function CustomCampaignControl({
         <p
           className={cn(
             'sl-shoot-type-option-label font-semibold',
-            selected && !premiumLocked ? 'text-inherit' : 'text-muted-foreground',
+            selected ? 'text-inherit' : 'text-muted-foreground',
           )}
         >
           Custom Campaign
@@ -52,7 +52,7 @@ export function CustomCampaignControl({
         <p
           className={cn(
             'sl-shoot-type-option-sub font-mono',
-            selected && !premiumLocked ? 'opacity-75' : 'text-muted-foreground',
+            selected ? 'opacity-75' : 'text-muted-foreground',
           )}
         >
           Choose 4–20 images
