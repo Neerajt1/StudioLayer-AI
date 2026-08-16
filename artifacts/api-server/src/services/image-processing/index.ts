@@ -26,8 +26,13 @@ import type { ImageProcessingProvider } from "./image-processing-provider.js";
 
 let cachedProvider: ImageProcessingProvider | null = null;
 
+/** True when FAL/BirefNet credentials are present for Remove Background. */
+export function isFalBackgroundRemovalConfigured(): boolean {
+  return Boolean(process.env["FAL_KEY"]?.trim());
+}
+
 function createDefaultBackgroundRemovalProvider() {
-  if (process.env["FAL_KEY"]) {
+  if (isFalBackgroundRemovalConfigured()) {
     return new BirefNetBackgroundRemovalProvider();
   }
   return new NotImplementedBackgroundRemovalProvider();

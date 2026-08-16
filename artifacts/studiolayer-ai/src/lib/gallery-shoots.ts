@@ -47,7 +47,11 @@ export interface GalleryShoot {
   locationEnvironment?: string;
   /** Studio Credits for the whole Shoot (one generation transaction). */
   studioCreditsUsed: number;
-  /** Highest refinement depth reached in this Shoot. */
+  /**
+   * Paid completed post-production edits on this Shoot (e.g. Remove Background).
+   * Crop is client-only / free and must never appear here. Failed refinements
+   * are excluded so Shoot accounting matches Gallery cycle "Edits Made".
+   */
   refinementCount: number;
   imageCount: number;
 }
@@ -218,31 +222,48 @@ function studioCreditsForShootBatch(batch: CreativeLedgerCardRender[]): number {
   return galleryGenerationCreditLabel(generationTypeOf(root));
 }
 
+/** Completed paid edit rows only — Crop never creates render rows. */
+export function isCompletedPaidEditRender(
+  render: Pick<
+    CreativeLedgerCardRender,
+    'status' | 'parentRenderId' | 'refinementType' | 'assetType' | 'outputImageUrl'
+  >,
+): boolean {
+  if (render.parentRenderId == null) return false;
+  if (!isCompletedWithOutput(render as CreativeLedgerCardRender)) return false;
+
+  if (render.refinementType === 'remove_background') return true;
+  if (render.assetType === 'background_removed') return true;
+  return false;
+}
+
 function refinementCountForShoot(
   shootRootId: number,
   batchRootIds: Set<number>,
   allRenders: CreativeLedgerCardRender[],
 ): number {
-  let max = 0;
+  let count = 0;
   for (const render of allRenders) {
+    if (!isCompletedPaidEditRender(render)) continue;
     const root = shootRootForRender(allRenders, render.id);
     if (!root || !batchRootIds.has(root.id)) continue;
     if (Math.min(...batchRootIds) !== shootRootId) continue;
-    max = Math.max(max, render.refinementCount ?? 0);
+    count += 1;
   }
-  return max;
+  return count;
 }
 
 function refinementCountForSession(
   sessionId: string,
   allRenders: CreativeLedgerCardRender[],
 ): number {
-  let max = 0;
+  let count = 0;
   for (const render of allRenders) {
     if (render.generationSessionId !== sessionId) continue;
-    max = Math.max(max, render.refinementCount ?? 0);
+    if (!isCompletedPaidEditRender(render)) continue;
+    count += 1;
   }
-  return max;
+  return count;
 }
 
 function buildShootFromRoots(

@@ -53,6 +53,7 @@ import {
 } from "../services/image-processing/preview-registry.js";
 import { deleteRenderPreviewFromR2 } from "../services/image-processing/preview-storage.js";
 import { scheduleRenderPreviewGeneration } from "../services/image-processing/schedule-render-preview.js";
+import { isFalBackgroundRemovalConfigured } from "../services/image-processing/index.js";
 
 const router: IRouter = Router();
 
@@ -271,6 +272,20 @@ router.post("/renders", async (req, res): Promise<void> => {
       userId,
     });
     res.status(400).json({ error: imageCountValidation.error });
+    return;
+  }
+
+  // Fail before creating a child render / credit hold when FAL is not configured.
+  // Without FAL_KEY the pipeline uses NotImplemented and never reaches fal.subscribe.
+  if (validatedRefinementType === "remove_background" && !isFalBackgroundRemovalConfigured()) {
+    logger.error(
+      { userId, parentRenderId, pipelineTrace },
+      "Remove Background rejected: FAL_KEY is not configured on the API service",
+    );
+    res.status(503).json({
+      error:
+        "Remove Background is temporarily unavailable. Your original image is unchanged.",
+    });
     return;
   }
 

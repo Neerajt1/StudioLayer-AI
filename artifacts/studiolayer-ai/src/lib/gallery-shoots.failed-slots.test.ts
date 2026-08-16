@@ -24,6 +24,8 @@ function render(
     createdAt: partial.createdAt ?? '2026-08-15T10:00:00.000Z',
     studioCreditsUsed: partial.studioCreditsUsed,
     refinementCount: partial.refinementCount,
+    refinementType: partial.refinementType,
+    assetType: partial.assetType,
     modelPersona: partial.modelPersona,
     locationEnvironment: partial.locationEnvironment,
   };
@@ -112,6 +114,73 @@ describe('displayRenderForRoot / buildGalleryShoots failed slots', () => {
 
     assert.equal(displayRenderForRoot(20, renders), undefined);
     assert.equal(buildGalleryShoots(renders).length, 0);
+  });
+
+  it('failed Remove Background does not inflate Shoot Edits Made', () => {
+    const renders = [
+      render({
+        id: 50,
+        status: 'completed',
+        outputImageUrl: 'https://cdn.example/ok.png',
+        generationType: 'campaign',
+        generationSessionId: 'session-failed-rembg',
+        studioCreditsUsed: 2,
+        refinementCount: 0,
+      }),
+      render({
+        id: 51,
+        status: 'completed',
+        outputImageUrl: 'https://cdn.example/ok2.png',
+        generationType: 'campaign',
+        generationSessionId: 'session-failed-rembg',
+        studioCreditsUsed: 2,
+        refinementCount: 0,
+      }),
+      render({
+        id: 52,
+        status: 'failed',
+        outputImageUrl: null,
+        parentRenderId: 50,
+        generationType: 'campaign',
+        generationSessionId: 'session-failed-rembg',
+        refinementType: 'remove_background',
+        refinementCount: 1,
+      }),
+    ];
+
+    const shoots = buildGalleryShoots(renders);
+    assert.equal(shoots.length, 1);
+    assert.equal(shoots[0]!.studioCreditsUsed, 2);
+    assert.equal(shoots[0]!.refinementCount, 0);
+  });
+
+  it('successful Remove Background counts as one paid edit; Crop has no row', () => {
+    const renders = [
+      render({
+        id: 60,
+        status: 'completed',
+        outputImageUrl: 'https://cdn.example/ok.png',
+        generationType: 'hero',
+        generationSessionId: 'session-rembg-ok',
+        studioCreditsUsed: 1,
+        refinementCount: 0,
+      }),
+      render({
+        id: 61,
+        status: 'completed',
+        outputImageUrl: 'https://cdn.example/transparent-abc.png',
+        parentRenderId: 60,
+        generationType: 'hero',
+        generationSessionId: 'session-rembg-ok',
+        refinementType: 'remove_background',
+        assetType: 'background_removed',
+        refinementCount: 1,
+      }),
+    ];
+
+    const shoots = buildGalleryShoots(renders);
+    assert.equal(shoots.length, 1);
+    assert.equal(shoots[0]!.refinementCount, 1);
   });
 
   it('prefers a completed tip over a failed root with no completed descendants', () => {

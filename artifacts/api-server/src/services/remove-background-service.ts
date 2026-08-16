@@ -19,6 +19,7 @@ import {
   PngTransparencyVerificationError,
   type PngAlphaVerificationResult,
 } from "./image-processing/verify-png-alpha.js";
+import { isImageProcessingNotImplementedError } from "./image-processing/errors.js";
 
 export class RemoveBackgroundFailedError extends Error {
   readonly code = "REMOVE_BACKGROUND_FAILED";
@@ -96,6 +97,9 @@ export async function produceResolutionPreservingTransparentPng(
       sourceHeight,
     });
   } catch (error) {
+    if (isImageProcessingNotImplementedError(error)) {
+      throw error;
+    }
     throw new RemoveBackgroundFailedError(
       `remove-background: FAL mask request failed (${error instanceof Error ? error.message : String(error)})`,
     );
