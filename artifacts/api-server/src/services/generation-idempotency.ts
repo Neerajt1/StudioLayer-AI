@@ -1,11 +1,17 @@
-import { and, desc, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 import {
   db,
-  pool,
   rendersTable,
   studioCreditTransactionsTable,
   type Render,
 } from "@workspace/db";
+import {
+  GENERATION_LOCK_ACQUIRE_FN,
+  GENERATION_LOCK_TIMEOUT,
+  GenerationLockBusyError,
+  extractPostgresBackendPid,
+  isPostgresLockTimeoutError,
+} from "./generation-lock.js";
 import {
   STUDIO_CREDIT_USAGE_REASON_CODES,
   StudioCreditTransactionStatus,
@@ -22,11 +28,17 @@ import {
 } from "./generation-credit-reconciliation.js";
 import { invalidateBillingCycleActivityStatsCache } from "./account-statement/billing-cycle-activity.js";
 import { logger } from "../lib/logger.js";
+import {
+  ACTIVE_GENERATION_STATUSES,
+  STALE_GENERATION_TTL_MS,
+} from "./generation-lifecycle.js";
 
-const ACTIVE_RENDER_STATUSES = ["pending", "processing"] as const;
+const ACTIVE_RENDER_STATUSES = ACTIVE_GENERATION_STATUSES;
 
-/** Renders older than this in pending/processing are treated as abandoned (crash/timeout). */
-export const STALE_GENERATION_TTL_MS = 20 * 60 * 1000;
+export { STALE_GENERATION_TTL_MS };
+
+/** Drizzle pool or a transaction client — protected writes must use the tx. */
+export type GenerationExecutor = Pick<typeof db, "select" | "insert" | "update" | "execute">;
 
 /** Refinements are single-shot — shorter TTL than multi-shot generations. */
 export const STALE_REFINEMENT_TTL_MS = 5 * 60 * 1000;
@@ -262,54 +274,20 @@ export async function reconcilePendingGenerationCreditFinalization(
  * Reconciles stuck generations and orphan pending credit transactions.
  * Prevents users from being permanently blocked after process crashes.
  *
+ * Live pipelines heartbeat `updatedAt`; only rows whose heartbeat is older
+ * than the TTL are treated as abandoned. Wall-clock age since create is
+ * not enough to fail a still-running OpenRouter generation.
+ *
  * Idempotent: only pending/processing renders and pending credit transactions
  * are modified; completed charges and failed zero-amount rows are untouched.
  */
 export async function reconcileStaleCommercialState(
   userId: number,
 ): Promise<StaleReconcileResult> {
-  const generationCutoff = new Date(Date.now() - STALE_GENERATION_TTL_MS);
   const refinementCutoff = new Date(Date.now() - STALE_REFINEMENT_TTL_MS);
   const failedTransactionIds: string[] = [];
 
-  const staleRenders = await db
-    .select({ id: rendersTable.id })
-    .from(rendersTable)
-    .where(
-      and(
-        eq(rendersTable.userId, userId),
-        inArray(rendersTable.status, [...ACTIVE_RENDER_STATUSES]),
-        or(
-          and(
-            isNotNull(rendersTable.parentRenderId),
-            lt(rendersTable.updatedAt, refinementCutoff),
-          ),
-          and(
-            isNull(rendersTable.parentRenderId),
-            lt(rendersTable.updatedAt, generationCutoff),
-          ),
-        ),
-      ),
-    );
-
-  const staleIds = staleRenders.map((row) => row.id);
-
-  if (staleIds.length > 0) {
-    await db
-      .update(rendersTable)
-      .set({ status: "failed" })
-      .where(
-        and(
-          inArray(rendersTable.id, staleIds),
-          inArray(rendersTable.status, [...ACTIVE_RENDER_STATUSES]),
-        ),
-      );
-
-    logger.warn(
-      { userId, staleRenderIds: staleIds, count: staleIds.length },
-      "commercial-reconcile: marked stale in-flight renders as failed",
-    );
-  }
+  const staleIds = await failStaleActiveGenerations(userId, db);
 
   const orphanPending = await db
     .select({
@@ -361,11 +339,68 @@ export async function reconcileStaleCommercialState(
 }
 
 /**
+ * Marks this user's abandoned in-flight renders failed.
+ * Bounded: only currently pending/processing rows, not historical credit scans.
+ * Pass the generation transaction client so this runs on the lock connection.
+ */
+export async function failStaleActiveGenerations(
+  userId: number,
+  executor: GenerationExecutor = db,
+): Promise<number[]> {
+  const generationCutoff = new Date(Date.now() - STALE_GENERATION_TTL_MS);
+  const refinementCutoff = new Date(Date.now() - STALE_REFINEMENT_TTL_MS);
+
+  const staleRenders = await executor
+    .select({ id: rendersTable.id })
+    .from(rendersTable)
+    .where(
+      and(
+        eq(rendersTable.userId, userId),
+        inArray(rendersTable.status, [...ACTIVE_RENDER_STATUSES]),
+        or(
+          and(
+            isNotNull(rendersTable.parentRenderId),
+            lt(rendersTable.updatedAt, refinementCutoff),
+          ),
+          and(
+            isNull(rendersTable.parentRenderId),
+            lt(rendersTable.updatedAt, generationCutoff),
+          ),
+        ),
+      ),
+    );
+
+  const staleIds = staleRenders.map((row) => row.id);
+  if (staleIds.length === 0) return [];
+
+  await executor
+    .update(rendersTable)
+    .set({ status: "failed" })
+    .where(
+      and(
+        inArray(rendersTable.id, staleIds),
+        inArray(rendersTable.status, [...ACTIVE_RENDER_STATUSES]),
+      ),
+    );
+
+  logger.warn(
+    { userId, staleRenderIds: staleIds, count: staleIds.length },
+    "commercial-reconcile: marked stale in-flight renders as failed",
+  );
+
+  return staleIds;
+}
+
+/**
  * Returns the most recent in-flight generation batch for a user, if any.
  * Rows are grouped by generationSessionId when present.
+ * Pass the generation transaction client when used inside the lock.
  */
-export async function findActiveGenerationBatch(userId: number): Promise<Render[]> {
-  const activeRows = await db
+export async function findActiveGenerationBatch(
+  userId: number,
+  executor: GenerationExecutor = db,
+): Promise<Render[]> {
+  const activeRows = await executor
     .select()
     .from(rendersTable)
     .where(
@@ -387,21 +422,85 @@ export async function findActiveGenerationBatch(userId: number): Promise<Render[
   return [anchor];
 }
 
+export interface GenerationLockOptions {
+  reqId?: string | number;
+}
+
 /**
- * Serializes concurrent POST /renders requests for the same user so only one
- * generation batch can begin at a time. Uses a dedicated pool connection so
- * pg advisory lock/unlock run on the same session.
+ * Serializes generation creation for one user on a single transaction connection.
+ * Uses pg_advisory_xact_lock + local lock_timeout. No session-level unlock.
  */
 export async function withUserGenerationLock<T>(
   userId: number,
-  fn: () => Promise<T>,
+  fn: (tx: GenerationExecutor) => Promise<T>,
+  options: GenerationLockOptions = {},
 ): Promise<T> {
-  const client = await pool.connect();
+  const startedAt = Date.now();
+  const reqId = options.reqId ?? null;
+
+  logger.info(
+    {
+      event: "generation_lock_wait_start",
+      userId,
+      reqId,
+      elapsedMs: 0,
+      pid: process.pid,
+    },
+    "generation_lock_wait_start",
+  );
+
   try {
-    await client.query("SELECT pg_advisory_lock($1)", [userId]);
-    return await fn();
-  } finally {
-    await client.query("SELECT pg_advisory_unlock($1)", [userId]);
-    client.release();
+    return await db.transaction(async (tx) => {
+      const executor = tx as unknown as GenerationExecutor;
+      await executor.execute(sql`SELECT set_config('lock_timeout', ${GENERATION_LOCK_TIMEOUT}, true)`);
+      await executor.execute(sql`SELECT pg_advisory_xact_lock(${userId})`);
+
+      const pidResult = await executor.execute(sql`SELECT pg_backend_pid() AS pid`);
+      const postgresBackendPid = extractPostgresBackendPid(pidResult);
+
+      logger.info(
+        {
+          event: "generation_lock_acquired",
+          userId,
+          reqId,
+          elapsedMs: Date.now() - startedAt,
+          pid: process.pid,
+          postgresBackendPid,
+          lockFn: GENERATION_LOCK_ACQUIRE_FN,
+        },
+        "generation_lock_acquired",
+      );
+
+      const value = await fn(executor);
+
+      logger.info(
+        {
+          event: "generation_transaction_complete",
+          userId,
+          reqId,
+          elapsedMs: Date.now() - startedAt,
+          pid: process.pid,
+          postgresBackendPid,
+        },
+        "generation_transaction_complete",
+      );
+
+      return value;
+    });
+  } catch (error) {
+    if (isPostgresLockTimeoutError(error)) {
+      logger.info(
+        {
+          event: "generation_lock_busy",
+          userId,
+          reqId,
+          elapsedMs: Date.now() - startedAt,
+          pid: process.pid,
+        },
+        "generation_lock_busy",
+      );
+      throw new GenerationLockBusyError();
+    }
+    throw error;
   }
 }

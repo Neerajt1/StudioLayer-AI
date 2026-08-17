@@ -87,9 +87,11 @@ export async function beginStudioCreditTransaction(input: {
   amount: number;
   reasonCode: StudioCreditReasonCodeValue;
   renderId?: number | null;
+  executor?: Pick<typeof db, "insert">;
 }): Promise<string> {
   const transactionId = randomUUID();
-  await db.insert(studioCreditTransactionsTable).values({
+  const executor = input.executor ?? db;
+  await executor.insert(studioCreditTransactionsTable).values({
     transactionId,
     userId: input.userId,
     workspaceId: input.userId,
@@ -866,6 +868,7 @@ export async function beginGenerationCreditTransaction(input: {
   customCampaign?: boolean;
   outputResolution?: import("@workspace/studio-credit-engine").OutputResolution;
   renderId: number;
+  executor?: Pick<typeof db, "insert">;
 }): Promise<string> {
   const amount = creditCostForRequest(
     input.imageCount,
@@ -886,6 +889,7 @@ export async function beginGenerationCreditTransaction(input: {
     amount,
     reasonCode,
     renderId: input.renderId,
+    executor: input.executor,
   });
 }
 

@@ -5,7 +5,8 @@ import {
   galleryFailedRenderCopy,
   isUnchargedFailedRenderStatus,
   workspaceGenerationFailedSlotCopy,
-  workspaceShootGenerationFailedToast,
+  workspaceShootGenerationBusyToast,
+  workspaceShootGenerationRejectedToast,
 } from './generation-failure-copy.js';
 
 describe('isUnchargedFailedRenderStatus', () => {
@@ -17,18 +18,24 @@ describe('isUnchargedFailedRenderStatus', () => {
   });
 });
 
-describe('workspaceShootGenerationFailedToast', () => {
-  it('states shoot failure, no credits, garment unchanged, try again', () => {
-    const toast = workspaceShootGenerationFailedToast();
+describe('workspaceShootGenerationBusyToast', () => {
+  it('does not claim the Shoot failed to create', () => {
+    const toast = workspaceShootGenerationBusyToast();
+    assert.equal(toast.title, 'This Shoot is still being prepared.');
+    assert.equal(/couldn't create this Shoot/i.test(`${toast.title} ${toast.description}`), false);
+  });
+});
+
+describe('workspaceShootGenerationRejectedToast', () => {
+  it('states shoot rejection without claiming credits were unused', () => {
+    const toast = workspaceShootGenerationRejectedToast();
     assert.equal(toast.title, "We couldn't create this Shoot.");
-    assert.equal(
-      toast.description,
-      'No Studio Credits were used. Your garment upload is unchanged. Please try again.',
-    );
+    assert.equal(toast.description, 'Your garment upload is unchanged. Please try again.');
+    assert.equal(/No Studio Credits were used/i.test(toast.description), false);
   });
 
   it('does not use the generic complete-request or payment wording', () => {
-    const text = `${workspaceShootGenerationFailedToast().title} ${workspaceShootGenerationFailedToast().description}`;
+    const text = `${workspaceShootGenerationRejectedToast().title} ${workspaceShootGenerationRejectedToast().description}`;
     assert.equal(/couldn't complete your request/i.test(text), false);
     assert.equal(/Payment [Ff]ailed/i.test(text), false);
     assert.equal(/Studio Credit used/i.test(text), false);

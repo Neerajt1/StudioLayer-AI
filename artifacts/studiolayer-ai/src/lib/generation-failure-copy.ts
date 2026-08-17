@@ -16,13 +16,25 @@ export function isUnchargedFailedRenderStatus(status: string): boolean {
   return status === 'failed';
 }
 
-/** Workspace: createRender request failed before a successful Shoot. */
-export function workspaceShootGenerationFailedToast(): GenerationFailureToast {
+/** Workspace: server rejected the generation before it started. */
+export function workspaceShootGenerationRejectedToast(): GenerationFailureToast {
   return {
     title: "We couldn't create this Shoot.",
-    description:
-      'No Studio Credits were used. Your garment upload is unchanged. Please try again.',
+    description: 'Your garment upload is unchanged. Please try again.',
   };
+}
+
+/** Workspace: another Create is still coordinating — not a failed Shoot. */
+export function workspaceShootGenerationBusyToast(): GenerationFailureToast {
+  return {
+    title: 'This Shoot is still being prepared.',
+    description: 'Create remains unavailable until this Shoot is ready.',
+  };
+}
+
+/** @deprecated Use workspaceShootGenerationRejectedToast — do not claim credits unused on transport failure. */
+export function workspaceShootGenerationFailedToast(): GenerationFailureToast {
+  return workspaceShootGenerationRejectedToast();
 }
 
 /** Workspace editorial slot when a render settles as failed. */

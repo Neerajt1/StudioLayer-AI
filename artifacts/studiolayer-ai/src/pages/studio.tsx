@@ -20,6 +20,7 @@ import {
   useGetIdentities,
   getGetRenderUsageQueryKey,
   getListRendersQueryKey,
+  listRenders,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useActiveRenders } from '@/hooks/use-active-renders';
@@ -31,7 +32,8 @@ import {
   hasSufficientStudioCreditsForCost,
   resolveAvailableStudioCreditsForGate,
 } from '@/lib/studio-credit-availability';
-import { workspaceShootGenerationFailedToast } from '@/lib/generation-failure-copy';
+import { workspaceShootGenerationBusyToast, workspaceShootGenerationRejectedToast } from '@/lib/generation-failure-copy';
+import { isGenerationCoordinationBusyError, selectActiveRootGenerationBatch } from '@/lib/recover-active-generation';
 import {
   PRESET_SHOOT_TYPE_LABEL,
   PRESET_SHOOT_TYPE_OPTIONS,
@@ -473,6 +475,77 @@ export default function StudioPage() {
     setElapsedSec(0);
   };
 
+  const resumeActiveGeneration = (ids: number[]) => {
+    if (ids.length === 0) return;
+    setActiveRenderIds(ids);
+    setRootRenderIds(ids);
+    setGenerationInFlight(true);
+    beginGenerationFeedback();
+  };
+
+  const recoverActiveGenerationAfterPostFailure = async (error: unknown) => {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[Studio] generate POST failed — attempting recovery', error);
+    }
+    const busy = isGenerationCoordinationBusyError(error);
+
+    const tryRecover = async (): Promise<boolean> => {
+      try {
+        const renders = await listRenders();
+        const recovered = selectActiveRootGenerationBatch(renders);
+        if (recovered.length > 0) {
+          resumeActiveGeneration(recovered.map((render) => render.id));
+          return true;
+        }
+      } catch {
+        /* listing failed */
+      }
+      return false;
+    };
+
+    if (await tryRecover()) return;
+
+    if (busy) {
+      const copy = workspaceShootGenerationBusyToast();
+      toast({
+        title: copy.title,
+        description: copy.description,
+      });
+      window.setTimeout(() => {
+        void tryRecover();
+      }, 1500);
+      return;
+    }
+
+    resetGenerationFeedback();
+    const copy = workspaceShootGenerationRejectedToast();
+    toast({
+      title: copy.title,
+      description: copy.description,
+    });
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const renders = await listRenders();
+        if (cancelled) return;
+        const recovered = selectActiveRootGenerationBatch(renders);
+        if (recovered.length === 0) return;
+        resumeActiveGeneration(recovered.map((render) => render.id));
+      } catch {
+        /* keep any session-restored IDs */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated]);
+
   const markResultImageLoaded = (url: string) => {
     setLoadedResultUrls((prev) => {
       if (prev.has(url)) return prev;
@@ -772,17 +845,11 @@ export default function StudioPage() {
         onSuccess: (renders) => {
           const ids = (renders as unknown as { id: number }[]).map((r) => r.id);
           setActiveRenderIds(ids);
+          setRootRenderIds(ids);
+          setGenerationInFlight(true);
         },
         onError: (error: unknown) => {
-          resetGenerationFeedback();
-          if (process.env.NODE_ENV === 'development') {
-            console.error('[Studio] generate failed', error);
-          }
-          const copy = workspaceShootGenerationFailedToast();
-          toast({
-            title: copy.title,
-            description: copy.description,
-          });
+          void recoverActiveGenerationAfterPostFailure(error);
         },
       },
     );
@@ -1381,7 +1448,7 @@ export default function StudioPage() {
                   <StudioEditorialCanvas className="relative">
                     <StudioEditorialProgressOverlay
                       visible={showGenerationProgress || showRemoveBackgroundProgress}
-                      label={showRemoveBackgroundProgress ? 'Removing background…' : 'Creating your image…'}
+                      label={showRemoveBackgroundProgress ? 'Removing background…' : 'Creating your Shoot…'}
                       elapsedSec={elapsedSec}
                     />
                     <StudioEditorialPlaceholder
@@ -1444,7 +1511,7 @@ export default function StudioPage() {
                   >
                     <StudioEditorialProgressOverlay
                       visible={showGenerationProgress || showRemoveBackgroundProgress}
-                      label={showRemoveBackgroundProgress ? 'Removing background…' : 'Creating your images…'}
+                      label={showRemoveBackgroundProgress ? 'Removing background…' : 'Creating your Shoot…'}
                       elapsedSec={elapsedSec}
                     />
                     {activeRenderIds.length > 0 && (

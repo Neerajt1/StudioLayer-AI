@@ -22,11 +22,17 @@ import {
   invalidateBillingCycleActivityStatsCache,
 } from "../services/account-statement/billing-cycle-activity.js";
 import {
+  failStaleActiveGenerations,
   findActiveGenerationBatch,
-  reconcileStaleCommercialState,
   scheduleDeferredCommercialReconciliation,
   withUserGenerationLock,
 } from "../services/generation-idempotency.js";
+import {
+  GENERATION_BUSY_ERROR_CODE,
+  GENERATION_BUSY_HTTP_STATUS,
+  isGenerationLockBusyError,
+} from "../services/generation-lock.js";
+import { ACTIVE_GENERATION_STATUSES } from "../services/generation-lifecycle.js";
 import { logger } from "../lib/logger";
 import { traceRenderFailure } from "../lib/render-pipeline-trace.js";
 import {
@@ -188,6 +194,7 @@ router.post("/renders", async (req, res): Promise<void> => {
     renderIds: [],
     userId,
     shots: 0,
+    httpRequestId: req.id == null ? undefined : String(req.id),
   });
 
   logPipelineStage(pipelineTrace, PipelineStage.REQUEST_RECEIVED);
@@ -306,13 +313,15 @@ router.post("/renders", async (req, res): Promise<void> => {
           previousOutputUrl: string | null;
         };
 
+    scheduleDeferredCommercialReconciliation(userId);
+
     const lockResult = await withUserGenerationLock<GenerationLockResult>(
       userId,
-      async () => {
-        await reconcileStaleCommercialState(userId);
+      async (tx) => {
+        await failStaleActiveGenerations(userId, tx);
 
         if (isRefinement && parentRenderId) {
-          const activeOnParent = await db
+          const activeOnParent = await tx
             .select()
             .from(rendersTable)
             .where(
@@ -328,7 +337,7 @@ router.post("/renders", async (req, res): Promise<void> => {
           }
         }
 
-        const activeBatch = await findActiveGenerationBatch(userId);
+        const activeBatch = await findActiveGenerationBatch(userId, tx);
         if (activeBatch.length > 0) {
           return { type: "duplicate", renders: activeBatch };
         }
@@ -355,7 +364,7 @@ router.post("/renders", async (req, res): Promise<void> => {
         let assetLineage = resolveAssetLineageForMaster();
 
         if (parentRenderId) {
-          const [foundParent] = await db
+          const [foundParent] = await tx
             .select()
             .from(rendersTable)
             .where(
@@ -369,7 +378,7 @@ router.post("/renders", async (req, res): Promise<void> => {
           previousOutputUrl = foundParent.outputImageUrl ?? null;
 
           masterRender = await resolveMasterRenderFromDb(foundParent, async (id) => {
-            const [row] = await db
+            const [row] = await tx
               .select()
               .from(rendersTable)
               .where(and(eq(rendersTable.id, id), eq(rendersTable.userId, userId)));
@@ -411,44 +420,39 @@ router.post("/renders", async (req, res): Promise<void> => {
               ? parentRender.generationSessionId ?? null
               : randomUUID();
 
-        const insertedRows = await Promise.all(
-          Array.from({ length: shots }, () =>
-            db
-              .insert(rendersTable)
-              .values({
-                userId,
-                sourceImageUrl,
-                modelPersona,
-                locationEnvironment,
-                status: "pending",
-                parentRenderId: assetLineage.parentRenderId,
-                masterRenderId: assetLineage.masterRenderId,
-                assetVersion: assetLineage.assetVersion,
-                assetType: assetLineage.assetType,
-                refinementType: assetLineage.refinementType,
-                sourceAssetVersion: assetLineage.sourceAssetVersion,
-                cropPreset: assetLineage.cropPreset,
-                generationType: ledgerMetadata.generationType,
-                studioCreditsUsed: ledgerMetadata.studioCreditsUsed,
-                refinementCount: ledgerMetadata.refinementCount,
-                generationSessionId,
-                outputResolution: isRefinement ? "2K" : outputResolution,
-              })
-              .returning()
-              .then(([row]) => row!),
-          ),
-        );
+        const insertedRows: (typeof rendersTable.$inferSelect)[] = [];
+        for (let i = 0; i < shots; i++) {
+          const [row] = await tx
+            .insert(rendersTable)
+            .values({
+              userId,
+              sourceImageUrl,
+              modelPersona,
+              locationEnvironment,
+              status: "pending",
+              parentRenderId: assetLineage.parentRenderId,
+              masterRenderId: assetLineage.masterRenderId,
+              assetVersion: assetLineage.assetVersion,
+              assetType: assetLineage.assetType,
+              refinementType: assetLineage.refinementType,
+              sourceAssetVersion: assetLineage.sourceAssetVersion,
+              cropPreset: assetLineage.cropPreset,
+              generationType: ledgerMetadata.generationType,
+              studioCreditsUsed: ledgerMetadata.studioCreditsUsed,
+              refinementCount: ledgerMetadata.refinementCount,
+              generationSessionId,
+              outputResolution: isRefinement ? "2K" : outputResolution,
+            })
+            .returning();
+          insertedRows.push(row!);
+        }
 
         if (!isRefinement) {
-          await Promise.all(
-            insertedRows.map((row) =>
-              db
-                .update(rendersTable)
-                .set({ masterRenderId: row.id })
-                .where(eq(rendersTable.id, row.id)),
-            ),
-          );
           for (const row of insertedRows) {
+            await tx
+              .update(rendersTable)
+              .set({ masterRenderId: row.id })
+              .where(eq(rendersTable.id, row.id));
             row.masterRenderId = row.id;
           }
         }
@@ -462,52 +466,36 @@ router.post("/renders", async (req, res): Promise<void> => {
           renderIds: pipelineTrace.renderIds,
         });
 
-        let newCreditTransactionId: string | undefined;
-        try {
-          newCreditTransactionId = await beginGenerationCreditTransaction({
-            userId,
-            imageCount: shots,
-            isRefinement,
-            customCampaign: isCustomCampaign,
-            outputResolution: isRefinement ? "2K" : outputResolution,
-            renderId: insertedRows[0]!.id,
-          });
+        const newCreditTransactionId = await beginGenerationCreditTransaction({
+          userId,
+          imageCount: shots,
+          isRefinement,
+          customCampaign: isCustomCampaign,
+          outputResolution: isRefinement ? "2K" : outputResolution,
+          renderId: insertedRows[0]!.id,
+          executor: tx,
+        });
 
-          logPipelineStage(pipelineTrace, PipelineStage.CREDIT_DEDUCTION_COMPLETE, {
-            creditTransactionId: newCreditTransactionId,
-          });
+        logPipelineStage(pipelineTrace, PipelineStage.CREDIT_DEDUCTION_COMPLETE, {
+          creditTransactionId: newCreditTransactionId,
+        });
 
-          await Promise.all(
-            insertedRows.map((row) =>
-              db
-                .update(rendersTable)
-                .set({ status: "processing" })
-                .where(eq(rendersTable.id, row.id)),
-            ),
-          );
-        } catch (setupError) {
-          if (newCreditTransactionId) {
-            await failStudioCreditTransaction(newCreditTransactionId);
-          }
-          await Promise.all(
-            insertedRows.map((row) =>
-              db
-                .update(rendersTable)
-                .set({ status: "failed" })
-                .where(eq(rendersTable.id, row.id)),
-            ),
-          );
-          throw setupError;
+        for (const row of insertedRows) {
+          await tx
+            .update(rendersTable)
+            .set({ status: "processing" })
+            .where(eq(rendersTable.id, row.id));
         }
 
         return {
-          type: "created",
+          type: "created" as const,
           insertedRows,
           creditTransactionId: newCreditTransactionId,
           generationSessionId,
           previousOutputUrl,
         };
       },
+      { reqId: req.id == null ? undefined : String(req.id) },
     );
 
     if (lockResult.type === "duplicate") {
@@ -621,10 +609,24 @@ router.post("/renders", async (req, res): Promise<void> => {
       onComplete: async (outputImageUrl, imageIndex, poseSelection) => {
         const row = insertedRows[imageIndex];
         if (!row) return;
-        await db
+        const updated = await db
           .update(rendersTable)
           .set({ status: "completed", outputImageUrl })
-          .where(eq(rendersTable.id, row.id));
+          .where(
+            and(
+              eq(rendersTable.id, row.id),
+              inArray(rendersTable.status, [...ACTIVE_GENERATION_STATUSES]),
+            ),
+          )
+          .returning({ id: rendersTable.id });
+
+        if (updated.length === 0) {
+          logger.warn(
+            { renderId: row.id, imageIndex },
+            "onComplete ignored — render is no longer an active generation",
+          );
+          return;
+        }
 
         logPipelineStage(pipelineTrace, PipelineStage.DATABASE_UPDATE_COMPLETED, {
           renderId: row.id,
@@ -662,10 +664,20 @@ router.post("/renders", async (req, res): Promise<void> => {
       onShotError: async (_error, imageIndex) => {
         const row = insertedRows[imageIndex];
         if (!row) return;
-        await db
+        const updated = await db
           .update(rendersTable)
           .set({ status: "failed" })
-          .where(eq(rendersTable.id, row.id));
+          .where(
+            and(
+              eq(rendersTable.id, row.id),
+              inArray(rendersTable.status, [...ACTIVE_GENERATION_STATUSES]),
+            ),
+          )
+          .returning({ id: rendersTable.id });
+
+        if (updated.length === 0) {
+          return;
+        }
 
         logPipelineStage(pipelineTrace, PipelineStage.DATABASE_UPDATE_COMPLETED, {
           renderId: row.id,
@@ -750,6 +762,31 @@ router.post("/renders", async (req, res): Promise<void> => {
       insertedRows.map((row) => serializeRender({ ...row, status: "processing" })),
     );
   } catch (error) {
+    if (isGenerationLockBusyError(error)) {
+      const activeBatch = await findActiveGenerationBatch(userId);
+      if (activeBatch.length > 0) {
+        logPipelineStage(pipelineTrace, PipelineStage.API_RESPONSE_RETURNED, {
+          renderIds: activeBatch.map((row) => row.id),
+          httpStatus: 200,
+          deduplicated: true,
+          lockBusy: true,
+        });
+        res.setHeader("X-Studio-Generation-Deduplicated", "true");
+        res.status(200).json(
+          activeBatch.map((row) =>
+            serializeRender({ ...row, status: "processing" }),
+          ),
+        );
+        return;
+      }
+
+      res.status(GENERATION_BUSY_HTTP_STATUS).json({
+        error: "Studio is still preparing this Shoot.",
+        code: GENERATION_BUSY_ERROR_CODE,
+      });
+      return;
+    }
+
     if (creditTransactionId) {
       try {
         await failStudioCreditTransaction(creditTransactionId);

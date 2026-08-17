@@ -64,6 +64,7 @@ export interface PipelineTraceContext {
   traceStartedAtMs: number;
   lastStageAtMs: number;
   openRouterRetryCount: number;
+  httpRequestId?: string | number;
 }
 
 export function createPipelineTrace(params: {
@@ -72,6 +73,7 @@ export function createPipelineTrace(params: {
   renderIds: number[];
   userId?: number;
   shots?: number;
+  httpRequestId?: string | number;
 }): PipelineTraceContext {
   const now = Date.now();
   return {
@@ -83,6 +85,7 @@ export function createPipelineTrace(params: {
     traceStartedAtMs: now,
     lastStageAtMs: now,
     openRouterRetryCount: 0,
+    httpRequestId: params.httpRequestId,
   };
 }
 
@@ -113,6 +116,9 @@ function baseFields(ctx: PipelineTraceContext | PipelineTraceRef) {
     generationSessionId: ctx.generationSessionId,
     renderId: ctx.primaryRenderId,
     ...(ctx.userId != null ? { userId: ctx.userId } : {}),
+    ...("httpRequestId" in ctx && ctx.httpRequestId != null
+      ? { reqId: ctx.httpRequestId }
+      : {}),
   };
 }
 
