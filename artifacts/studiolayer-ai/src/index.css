@@ -1903,7 +1903,16 @@
   }
 
   .sl-garment-category-option {
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
     min-height: 3.5rem;
+  }
+
+  .sl-garment-category-label,
+  .sl-garment-category-sub {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   .sl-garment-category-label {
@@ -1930,7 +1939,7 @@
     .sl-garment-category-sub {
       font-size: 0.625rem;
       line-height: 1.25;
-      text-wrap: nowrap;
+      text-wrap: pretty;
     }
   }
 
