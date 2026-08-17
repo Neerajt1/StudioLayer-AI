@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
-import { AuthGuard } from '@/components/layout/auth-guard';
 import HomePage from '@/pages/home';
 import LoginPage from '@/pages/login';
 import RegisterPage from '@/pages/register';
@@ -40,31 +39,12 @@ function Router() {
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/cookies" component={CookiePolicyPage} />
       <Route path="/legal" component={LegalIndexPage} />
-      <Route path="/studio">
-        <AuthGuard>
-          <StudioPage />
-        </AuthGuard>
-      </Route>
-      <Route path="/casting">
-        <AuthGuard>
-          <CastingPage />
-        </AuthGuard>
-      </Route>
-      <Route path="/gallery">
-        <AuthGuard>
-          <GalleryPage />
-        </AuthGuard>
-      </Route>
-      <Route path="/billing">
-        <AuthGuard>
-          <BillingPage />
-        </AuthGuard>
-      </Route>
-      <Route path="/account">
-        <AuthGuard>
-          <AccountPage />
-        </AuthGuard>
-      </Route>
+      {/* Public exploration — member-only mutations gate in-page, not via AuthGuard. */}
+      <Route path="/studio" component={StudioPage} />
+      <Route path="/casting" component={CastingPage} />
+      <Route path="/gallery" component={GalleryPage} />
+      <Route path="/billing" component={BillingPage} />
+      <Route path="/account" component={AccountPage} />
       <Route component={NotFound} />
     </Switch>
   );

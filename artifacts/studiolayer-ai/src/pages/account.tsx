@@ -13,8 +13,11 @@ import { membershipAllowanceForTier, membershipLabel } from '@/lib/membership';
 import { isStudioCreditLimitBlocked } from '@workspace/studio-credit-engine';
 
 export default function AccountPage() {
-  const { data: user, isLoading: userLoading } = useGetMe();
-  const { data: usage, isLoading: usageLoading } = useGetRenderUsage();
+  const { data: user, isLoading: userLoading, isSuccess: isAuthenticated } =
+    useGetMe();
+  const { data: usage, isLoading: usageLoading } = useGetRenderUsage({
+    query: { enabled: isAuthenticated },
+  } as never);
   const [showPasswordMsg, setShowPasswordMsg] = useState(false);
   const [showBillingDetails, setShowBillingDetails] = useState(false);
   const [taxId, setTaxId] = useState('');
@@ -36,17 +39,50 @@ export default function AccountPage() {
     return `Studio Credits · ${used} of ${limit} used`;
   };
 
+  const showAuthenticatedProfile = isAuthenticated && Boolean(user);
+  const showVisitorProfile = !userLoading && !showAuthenticatedProfile;
+
   return (
     <AppShell footer>
+          <div className={showVisitorProfile ? 'sl-visitor-page-emphasis' : undefined}>
           <EditorialPageHeader
             companion="Profile"
             supporting="Studio Identity & Usage"
-            tagline="Manage your studio credentials and subscription"
+            tagline={
+              showVisitorProfile
+                ? 'Sign in to manage your studio credentials and subscription'
+                : 'Manage your studio credentials and subscription'
+            }
             className="sl-page-header--workspace"
-            aside={<AccountStatementDownloadLink variant="header" />}
+            aside={
+              showAuthenticatedProfile ? (
+                <AccountStatementDownloadLink variant="header" />
+              ) : undefined
+            }
           />
 
           <div className="sl-editorial-narrow">
+          {showVisitorProfile ? (
+            <section className="mb-6 border border-border rounded bg-card p-6">
+              <h3 className="sl-section-label mb-4">Identity Credentials</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                Your Studio Profile appears here after you create an account.
+                Explore Membership and the Workspace freely — sign in when you are ready.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/login" className="sl-studio-btn no-underline">
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="sl-studio-btn sl-studio-btn--primary no-underline"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            </section>
+          ) : (
+            <>
           <section className="mb-6 border border-border rounded bg-card p-6">
             <h3 className="sl-section-label mb-4">
               Identity Credentials
@@ -240,9 +276,12 @@ export default function AccountPage() {
             )}
           </section>
 
-          <ProfileContactSection />
-
           <StudioDeletionSection />
+            </>
+          )}
+
+          <ProfileContactSection />
+          </div>
           </div>
     </AppShell>
   );

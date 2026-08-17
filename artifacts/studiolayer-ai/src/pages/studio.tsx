@@ -266,6 +266,7 @@ export default function StudioPage() {
   const [showValidation, setShowValidation]     = useState(false);
 
   const [showProRequiredDialog, setShowProRequiredDialog] = useState(false);
+  const [showAuthRequiredDialog, setShowAuthRequiredDialog] = useState(false);
   const [creditGateDialog, setCreditGateDialog] = useState<{
     requiredCredits: number;
   } | null>(null);
@@ -298,9 +299,13 @@ export default function StudioPage() {
   // ── API hooks ──────────────────────────────────────────────────────────────
   const queryClient  = useQueryClient();
   const { toast }    = useToast();
-  const { data: user }                            = useGetMe();
-  const { data: usage }  = useGetRenderUsage();
-  const { data: identities = [] }                 = useGetIdentities();
+  const { data: user, isSuccess: isAuthenticated } = useGetMe();
+  const { data: usage }  = useGetRenderUsage({
+    query: { enabled: isAuthenticated },
+  } as never);
+  const { data: identities = [] }                 = useGetIdentities({
+    query: { enabled: isAuthenticated },
+  } as never);
   const createRender = useCreateRender();
   const {
     inFlight: downloadAllInFlight,
@@ -376,14 +381,15 @@ export default function StudioPage() {
   const isComplimentaryTier = isComplimentaryMembershipTier(usage);
   const isAdminUser = resolveStudioAdminFlag(user, usage);
   const availableStudioCredits = resolveAvailableStudioCreditsForGate(usage, user);
-  const limitBlocked = isStudioCreditLimitBlocked(usage) && !isAdminUser;
+  const limitBlocked =
+    isAuthenticated && isStudioCreditLimitBlocked(usage) && !isAdminUser;
   const generationCreditCost = resolveGenerationCreditCost({
     imageCount: resolveWorkflowImageCount(workflow),
     customCampaign: workflow.customCampaign,
     outputResolution: workflow.outputResolution,
   });
   const cannotAffordSelectedShoot =
-    !isAdminUser && availableStudioCredits < generationCreditCost;
+    isAuthenticated && !isAdminUser && availableStudioCredits < generationCreditCost;
   const canCreate = canGenerateStudioWorkflow(workflow, {
     limitBlocked: limitBlocked || cannotAffordSelectedShoot,
     isPending: createRender.isPending,
@@ -394,10 +400,25 @@ export default function StudioPage() {
 
   const closeCreditGateDialog = () => setCreditGateDialog(null);
   const closeMembershipDialog = () => setShowProRequiredDialog(false);
+  const closeAuthRequiredDialog = () => setShowAuthRequiredDialog(false);
 
   const openCreditGateDialog = (requiredCredits: number) => {
     setShowProRequiredDialog(false);
+    setShowAuthRequiredDialog(false);
     setCreditGateDialog({ requiredCredits });
+  };
+
+  const openAuthRequiredDialog = () => {
+    setCreditGateDialog(null);
+    setShowProRequiredDialog(false);
+    setShowAuthRequiredDialog(true);
+  };
+
+  /** Visitor exploration: block mutations until Login / Sign Up. */
+  const requireAuthentication = (): boolean => {
+    if (isAuthenticated && user) return true;
+    openAuthRequiredDialog();
+    return false;
   };
 
   const canAffordShootType = (imageCount: 1 | 2 | 4) =>
@@ -431,11 +452,14 @@ export default function StudioPage() {
       user,
     );
 
-  const isShootTypeUnavailable = (value: 1 | 2 | 4) =>
-    isPremiumShootTypeLocked(usage, value) || !canAffordShootType(value);
+  const isShootTypeUnavailable = (value: 1 | 2 | 4) => {
+    if (!isAuthenticated) return false;
+    return isPremiumShootTypeLocked(usage, value) || !canAffordShootType(value);
+  };
 
   const isCustomCampaignUnavailable =
-    isPremiumShootTypeLocked(usage, 2) || !canAffordCustomCampaign();
+    isAuthenticated &&
+    (isPremiumShootTypeLocked(usage, 2) || !canAffordCustomCampaign());
 
   const createButtonLabel = workflow.customCampaign
     ? 'Custom Campaign'
@@ -601,6 +625,14 @@ export default function StudioPage() {
 
   const handleShootTypeSelect = (value: 1 | 2 | 4) => {
     if (isGenerationBusy) return;
+    if (!isAuthenticated) {
+      patchWorkflow({
+        imageCount: value,
+        customCampaign: false,
+        usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, value),
+      });
+      return;
+    }
     if (isPremiumShootTypeLocked(usage, value)) {
       setCreditGateDialog(null);
       setShowProRequiredDialog(true);
@@ -623,6 +655,13 @@ export default function StudioPage() {
 
   const handleCustomCampaignSelect = () => {
     if (isGenerationBusy) return;
+    if (!isAuthenticated) {
+      patchWorkflow({
+        customCampaign: true,
+        usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, workflow.customImageCount),
+      });
+      return;
+    }
     if (isPremiumShootTypeLocked(usage, 2)) {
       setCreditGateDialog(null);
       setShowProRequiredDialog(true);
@@ -644,6 +683,10 @@ export default function StudioPage() {
 
   const handleResolutionSelect = (outputResolution: '2K' | '4K') => {
     if (isGenerationBusy) return;
+    if (!isAuthenticated) {
+      patchWorkflow({ outputResolution });
+      return;
+    }
     const required = resolveGenerationCreditCost({
       imageCount: resolveWorkflowImageCount(workflow),
       customCampaign: workflow.customCampaign,
@@ -658,6 +701,14 @@ export default function StudioPage() {
 
   const handleCustomImageCountChange = (count: number) => {
     if (isGenerationBusy) return;
+    if (!isAuthenticated) {
+      patchWorkflow({
+        customCampaign: true,
+        customImageCount: count,
+        usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, count),
+      });
+      return;
+    }
     const required = generationCreditCostForCustomCampaign({
       imageCount: count,
       outputResolution: workflow.outputResolution,
@@ -693,6 +744,7 @@ export default function StudioPage() {
 
   const handleRender = () => {
     if (isGenerationBusy) return;
+    if (!requireAuthentication()) return;
     if (!workflowValidation.isComplete) {
       setShowValidation(true);
       toast({ title: 'Almost there', description: workflowValidation.message ?? undefined });
@@ -777,6 +829,7 @@ export default function StudioPage() {
   const handleRemoveBackground = (slot: number) => {
     if (refineInFlight || awaitingResultDisplay || createRender.isPending || isProcessing) return;
     if (refinementPending != null && refinementPending.slot === slot && isRefinementProcessing) return;
+    if (!requireAuthentication()) return;
 
     if (!isAdminUser) {
       const refineCost = creditCostForRefine();
@@ -1142,7 +1195,9 @@ export default function StudioPage() {
                     Refresh
                   </TooltipContent>
                 </Tooltip>
-                <AccountStatementDownloadLink variant="header" />
+                {isAuthenticated ? (
+                  <AccountStatementDownloadLink variant="header" />
+                ) : null}
               </div>
             )}
           />
@@ -1252,6 +1307,13 @@ export default function StudioPage() {
                   <SelectedTalentSummary
                     talent={(identities as ModelIdentity[]).find((i) => i.id === workflow.talentId) ?? null}
                     disabled={isGenerationBusy}
+                    onChooseTalent={
+                      isAuthenticated
+                        ? undefined
+                        : () => {
+                            openAuthRequiredDialog();
+                          }
+                    }
                   />
                 </div>
               </section>
@@ -1279,7 +1341,9 @@ export default function StudioPage() {
                   <ResolutionSelector
                     value={workflow.outputResolution}
                     disabled={isGenerationBusy}
-                    isOptionUnavailable={(resolution) => !canAffordResolution(resolution)}
+                    isOptionUnavailable={(resolution) =>
+                      isAuthenticated ? !canAffordResolution(resolution) : false
+                    }
                     onChange={handleResolutionSelect}
                   />
                   <p className="sl-shoot-type-credit-total">
@@ -1457,6 +1521,55 @@ export default function StudioPage() {
           </div>
             </div>
           </div>
+
+      <Dialog
+        open={showAuthRequiredDialog}
+        onOpenChange={(open) => {
+          if (!open) closeAuthRequiredDialog();
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Studio Membership Required</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 pt-2 text-sm leading-relaxed text-muted-foreground">
+                <p>
+                  Create a Studio account or sign in to generate Editorial Images,
+                  choose Studio Talent, and use post-production tools.
+                </p>
+                <p>
+                  You can continue exploring the Workspace freely.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+            <StudioWorkspaceButton
+              type="button"
+              onClick={closeAuthRequiredDialog}
+              data-testid="button-auth-gate-cancel"
+            >
+              Cancel
+            </StudioWorkspaceButton>
+            <Link
+              href="/login"
+              className="sl-studio-btn no-underline"
+              onClick={closeAuthRequiredDialog}
+              data-testid="button-auth-gate-login"
+            >
+              Login
+            </Link>
+            <Link
+              href="/register"
+              className="sl-studio-btn sl-studio-btn--primary no-underline"
+              onClick={closeAuthRequiredDialog}
+              data-testid="button-auth-gate-signup"
+            >
+              Sign Up
+            </Link>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={creditGateDialog != null}

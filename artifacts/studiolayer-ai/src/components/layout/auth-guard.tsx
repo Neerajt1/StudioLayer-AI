@@ -15,11 +15,16 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const { data: user, isLoading, error } = useGetMe();
 
   useEffect(() => {
-    if (!isLoading && (error || !user)) {
-      // One-shot notice for Login; no return-to destination is wired in routing today.
+    if (isLoading) return;
+    if (user) return;
+
+    // Expired/invalid session → Login with notice. Never-authenticated visitor → Login only.
+    if (error) {
       markSessionEndedNoticePending();
       setLocation(buildLoginPathAfterSessionEnded());
+      return;
     }
+    setLocation('/login');
   }, [isLoading, error, user, setLocation]);
 
   if (isLoading) {

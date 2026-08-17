@@ -64,8 +64,9 @@ export function EditorialNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
-  const { data: user } = useGetMe();
+  const { data: user, isLoading: authLoading } = useGetMe();
   const logoutMutation = useLogout();
+  const isAuthenticated = Boolean(user);
 
   const displayName = navDisplayFirstName(user?.name);
 
@@ -105,12 +106,15 @@ export function EditorialNav() {
         // TODO(dev-workaround): Remove full page reload once SelectedTalentProvider
         // synchronizes selectedTalentId correctly across logout/login without remount.
         const appBase = import.meta.env.BASE_URL.replace(/\/$/, '');
-        window.location.assign(`${appBase}/login`);
+        window.location.assign(`${appBase}/studio`);
       },
     });
   };
 
-  const prefetchGallery = () => prefetchGalleryQueries(queryClient);
+  const prefetchGallery = () => {
+    if (!isAuthenticated) return;
+    prefetchGalleryQueries(queryClient);
+  };
 
   const renderNavLink = (
     item: (typeof navItems)[number],
@@ -134,38 +138,61 @@ export function EditorialNav() {
     );
   };
 
+  const visitorAuthControls = (
+    <div className="sl-editorial-nav-auth-links flex items-center gap-3">
+      <Link
+        href="/login"
+        className="sl-editorial-nav-link"
+        data-testid="nav-login"
+      >
+        Login
+      </Link>
+      <Link
+        href="/register"
+        className="sl-editorial-nav-link"
+        data-testid="nav-signup"
+      >
+        Sign Up
+      </Link>
+    </div>
+  );
+
+  const authenticatedAccountControls = (
+    <div className="relative" ref={userMenuRef}>
+      <button
+        type="button"
+        onClick={() => setUserMenuOpen((open) => !open)}
+        aria-expanded={userMenuOpen}
+        aria-haspopup="menu"
+        className={cn('sl-editorial-nav-link', userMenuOpen && 'is-active')}
+        data-testid="nav-user-menu"
+      >
+        {displayName} ▾
+      </button>
+
+      {userMenuOpen && (
+        <div className="sl-editorial-user-menu" role="menu">
+          <button
+            type="button"
+            role="menuitem"
+            onClick={handleLogout}
+            disabled={logoutMutation.isPending}
+            className="sl-editorial-user-menu-item disabled:opacity-50"
+            data-testid="nav-logout"
+          >
+            Log Out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
       <nav className="sl-editorial-nav-bar sl-editorial-nav-bar--desktop" aria-label="Main navigation">
         {navItems.map((item) => renderNavLink(item))}
 
-        <div className="relative" ref={userMenuRef}>
-          <button
-            type="button"
-            onClick={() => setUserMenuOpen((open) => !open)}
-            aria-expanded={userMenuOpen}
-            aria-haspopup="menu"
-            className={cn('sl-editorial-nav-link', userMenuOpen && 'is-active')}
-            data-testid="nav-user-menu"
-          >
-            {displayName} ▾
-          </button>
-
-          {userMenuOpen && (
-            <div className="sl-editorial-user-menu" role="menu">
-              <button
-                type="button"
-                role="menuitem"
-                onClick={handleLogout}
-                disabled={logoutMutation.isPending}
-                className="sl-editorial-user-menu-item disabled:opacity-50"
-                data-testid="nav-logout"
-              >
-                Log Out
-              </button>
-            </div>
-          )}
-        </div>
+        {!authLoading && (isAuthenticated ? authenticatedAccountControls : visitorAuthControls)}
       </nav>
 
       <div className="sl-editorial-nav-mobile">
@@ -220,16 +247,39 @@ export function EditorialNav() {
               </div>
 
               <div className="sl-editorial-nav-mobile-account">
-                <p className="sl-editorial-nav-mobile-account-name">{displayName}</p>
-                <button
-                  type="button"
-                  className="sl-editorial-nav-mobile-logout"
-                  onClick={handleLogout}
-                  disabled={logoutMutation.isPending}
-                  data-testid="nav-mobile-logout"
-                >
-                  Log Out
-                </button>
+                {isAuthenticated ? (
+                  <>
+                    <p className="sl-editorial-nav-mobile-account-name">{displayName}</p>
+                    <button
+                      type="button"
+                      className="sl-editorial-nav-mobile-logout"
+                      onClick={handleLogout}
+                      disabled={logoutMutation.isPending}
+                      data-testid="nav-mobile-logout"
+                    >
+                      Log Out
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      href="/login"
+                      className="sl-editorial-nav-mobile-link"
+                      data-testid="nav-mobile-login"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/register"
+                      className="sl-editorial-nav-mobile-link"
+                      data-testid="nav-mobile-signup"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </>

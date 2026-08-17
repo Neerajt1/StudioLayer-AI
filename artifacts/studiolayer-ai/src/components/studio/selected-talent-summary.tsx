@@ -13,20 +13,37 @@ interface SelectedTalentSummaryProps {
   talent: ModelIdentity | null;
   disabled?: boolean;
   className?: string;
+  /** When set, Choose/Change Talent is intercepted (e.g. visitor auth gate). */
+  onChooseTalent?: () => void;
 }
 
 function TalentCtaLink({
   href,
   label,
   disabled,
+  onChooseTalent,
 }: {
   href: string;
   label: string;
   disabled?: boolean;
+  onChooseTalent?: () => void;
 }) {
   if (disabled) {
     return (
       <StudioWorkspaceButton className="h-9 w-fit px-3.5 text-sm" disabled>
+        {label}
+      </StudioWorkspaceButton>
+    );
+  }
+
+  if (onChooseTalent) {
+    return (
+      <StudioWorkspaceButton
+        type="button"
+        className="h-9 w-fit px-3.5 text-sm"
+        onClick={onChooseTalent}
+        data-testid="button-choose-talent"
+      >
         {label}
       </StudioWorkspaceButton>
     );
@@ -47,12 +64,18 @@ export function SelectedTalentSummary({
   talent,
   disabled,
   className,
+  onChooseTalent,
 }: SelectedTalentSummaryProps) {
   if (!talent) {
     return (
       <div className={cn('space-y-3', className)}>
         <p className="text-sm text-muted-foreground">No Studio Talent selected</p>
-        <TalentCtaLink href="/casting" label="Choose Studio Talent" disabled={disabled} />
+        <TalentCtaLink
+          href="/casting"
+          label="Choose Studio Talent"
+          disabled={disabled}
+          onChooseTalent={onChooseTalent}
+        />
       </div>
     );
   }
@@ -71,7 +94,12 @@ export function SelectedTalentSummary({
         <p className="truncate text-[20px] font-medium leading-snug text-[#2D2D2D]">
           {talent.displayName}
         </p>
-        <TalentCtaLink href="/casting" label="Change Studio Talent" disabled={disabled} />
+        <TalentCtaLink
+          href="/casting"
+          label="Change Studio Talent"
+          disabled={disabled}
+          onChooseTalent={onChooseTalent}
+        />
       </div>
     </div>
   );

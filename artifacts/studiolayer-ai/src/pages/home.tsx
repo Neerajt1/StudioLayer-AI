@@ -1,20 +1,16 @@
 import { useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { useGetMe } from '@workspace/api-client-react';
 
+/**
+ * Public entry — Studio Workspace is the landing experience for every visitor.
+ * Auth is not required to view Workspace; protected actions gate in-page.
+ */
 export default function HomePage() {
   const [, setLocation] = useLocation();
-  const { data: user, isLoading, error } = useGetMe();
 
   useEffect(() => {
-    if (!isLoading) {
-      if (user && !error) {
-        setLocation('/studio');
-      } else {
-        setLocation('/login');
-      }
-    }
-  }, [isLoading, user, error, setLocation]);
+    setLocation('/studio');
+  }, [setLocation]);
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-background">

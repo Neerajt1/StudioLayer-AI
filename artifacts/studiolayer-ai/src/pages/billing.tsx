@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { AppShell } from '@/components/layout/app-shell';
 import {
   getGetMeQueryKey,
@@ -448,8 +449,11 @@ function StudioTopUpCompact({
 export default function BillingPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data: user } = useGetMe();
-  const { data: usage } = useGetRenderUsage();
+  const [, setLocation] = useLocation();
+  const { data: user, isSuccess: isAuthenticated } = useGetMe();
+  const { data: usage } = useGetRenderUsage({
+    query: { enabled: isAuthenticated },
+  } as never);
   const clientTimeZone = browserTimeZone();
   const createSubscription = useCreateMembershipSubscription({
     request: {
@@ -472,7 +476,17 @@ export default function BillingPage() {
   const [cancellingMembership, setCancellingMembership] = useState(false);
   const checkoutInFlightRef = useRef(false);
 
+  const requireAuthenticatedCheckout = () => {
+    if (isAuthenticated && user) return true;
+    setLocation('/register');
+    return false;
+  };
+
   const refreshMembershipStatus = async () => {
+    if (!isAuthenticated) {
+      setMembershipStatus(null);
+      return;
+    }
     try {
       const status = await fetchMembershipSubscriptionStatus();
       setMembershipStatus(status);
@@ -492,6 +506,10 @@ export default function BillingPage() {
   }, []);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      setMembershipStatus(null);
+      return;
+    }
     let cancelled = false;
     void fetchMembershipSubscriptionStatus()
       .then((status) => {
@@ -503,7 +521,7 @@ export default function BillingPage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.subscriptionTier]);
+  }, [isAuthenticated, user?.subscriptionTier]);
 
   const tier = user?.subscriptionTier ?? 'free';
   const usageData = {
@@ -516,9 +534,10 @@ export default function BillingPage() {
     pendingAddOn != null ||
     createSubscription.isPending ||
     schedulingPro;
-  const isPaidMember = tier === 'pro' || tier === 'enterprise';
-  const isBasicMember = tier === 'pro';
-  const isProMember = tier === 'enterprise';
+  const isPaidMember = isAuthenticated && (tier === 'pro' || tier === 'enterprise');
+  const isBasicMember = isAuthenticated && tier === 'pro';
+  const isProMember = isAuthenticated && tier === 'enterprise';
+  // Visitors may open Pass checkout CTA → Sign Up. Top-Up stays paid-member only.
   const passEligible = !isPaidMember;
   const topUpEligible = isPaidMember;
   const scheduledStartLabel =
@@ -536,6 +555,7 @@ export default function BillingPage() {
   };
 
   const handleCancelMembershipRenewal = async () => {
+    if (!requireAuthenticatedCheckout()) return;
     if (cancellingMembership) return;
     const until =
       formatMembershipBillingDate(membershipStatus?.currentEnd) ??
@@ -571,6 +591,7 @@ export default function BillingPage() {
   const handleChoosePlan = async (
     membershipTier: (typeof MEMBERSHIP_TIERS)[number],
   ) => {
+    if (!requireAuthenticatedCheckout()) return;
     if (checkoutInFlightRef.current) return;
     if (isBasicMember && membershipTier.plan === 'pro') return;
 
@@ -645,6 +666,7 @@ export default function BillingPage() {
   };
 
   const handleUpgradeToPro = async () => {
+    if (!requireAuthenticatedCheckout()) return;
     if (checkoutInFlightRef.current) return;
     if (!isBasicMember) return;
 
@@ -710,6 +732,7 @@ export default function BillingPage() {
   };
 
   const handleChooseAddOn = async (product: StudioAddOnProductId) => {
+    if (!requireAuthenticatedCheckout()) return;
     if (checkoutInFlightRef.current) return;
     if (product === 'studioPass' && !passEligible) return;
     if (product === 'topUp' && !topUpEligible) return;
@@ -767,24 +790,26 @@ export default function BillingPage() {
         className="sl-page-header--membership"
       />
 
-      <CurrentMembershipSummary
-        tier={tier}
-        usage={usageData}
-        scheduledProStartLabel={
-          isBasicMember && membershipStatus?.scheduledPro
-            ? scheduledStartLabel
-            : null
-        }
-        isProActive={isProMember}
-        cancelAtCycleEnd={Boolean(membershipStatus?.cancelAtCycleEnd)}
-        cancelEffectiveLabel={formatMembershipBillingDate(
-          membershipStatus?.cancelEffectiveAt ?? membershipStatus?.currentEnd,
-        )}
-        cancelBusy={cancellingMembership}
-        onCancelRenewal={() => {
-          void handleCancelMembershipRenewal();
-        }}
-      />
+      {isAuthenticated ? (
+        <CurrentMembershipSummary
+          tier={tier}
+          usage={usageData}
+          scheduledProStartLabel={
+            isBasicMember && membershipStatus?.scheduledPro
+              ? scheduledStartLabel
+              : null
+          }
+          isProActive={isProMember}
+          cancelAtCycleEnd={Boolean(membershipStatus?.cancelAtCycleEnd)}
+          cancelEffectiveLabel={formatMembershipBillingDate(
+            membershipStatus?.cancelEffectiveAt ?? membershipStatus?.currentEnd,
+          )}
+          cancelBusy={cancellingMembership}
+          onCancelRenewal={() => {
+            void handleCancelMembershipRenewal();
+          }}
+        />
+      ) : null}
 
       <div className="sl-membership-page">
         <section className="sl-membership-plans-section">

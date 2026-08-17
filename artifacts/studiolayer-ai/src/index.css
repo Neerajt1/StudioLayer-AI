@@ -1286,6 +1286,20 @@
     margin-bottom: 0.625rem;
   }
 
+  /**
+   * Subtle visual quieting for visitor Gallery / Profile only.
+   * Must not disable interaction — navigation and CTAs stay clickable.
+   */
+  .sl-visitor-page-emphasis {
+    opacity: 0.88;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .sl-visitor-page-emphasis {
+      transition: opacity 220ms ease-out;
+    }
+  }
+
   @media (min-width: 768px) {
     .sl-page-header--gallery.sl-page-header-with-aside {
       grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.65fr);

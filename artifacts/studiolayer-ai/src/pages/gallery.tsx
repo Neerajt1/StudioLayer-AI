@@ -112,6 +112,7 @@ function toCreativeLedgerCardRender(render: Render): CreativeLedgerCardRender {
 }
 
 export default function GalleryPage() {
+  const { data: user, isLoading: authLoading, isSuccess: isAuthenticated } = useGetMe();
   const {
     data: renders,
     isPending: rendersPending,
@@ -120,15 +121,18 @@ export default function GalleryPage() {
     isSuccess: rendersSuccess,
     refetch: refetchRenders,
   } = useListRenders({
-    query: galleryQueryOptions as never,
+    query: {
+      ...galleryQueryOptions,
+      // Visitors see an empty ledger — never fetch another account's renders.
+      enabled: isAuthenticated,
+    } as never,
   });
   const { data: usage } = useGetRenderUsage({
     query: {
       ...galleryUsageQueryOptions,
-      enabled: !rendersPending,
+      enabled: isAuthenticated && !rendersPending,
     } as never,
   });
-  const { data: user } = useGetMe();
   const createRender = useCreateRender();
   const deleteRender = useDeleteRender();
   const queryClient = useQueryClient();
@@ -174,9 +178,15 @@ export default function GalleryPage() {
   /**
    * Initial load only — not errors, not background refetches on an empty ledger.
    * Cached shoots stay visible during background refetch (keepPreviousData).
+   * Visitors skip the list query and land on the empty Creative Ledger state.
    */
-  const isGalleryLoading = !hasCachedShoots && rendersPending && !rendersError;
-  const isGalleryEmpty = rendersSuccess && !hasCachedShoots && !rendersError;
+  const isVisitor = !authLoading && !isAuthenticated;
+  const isGalleryLoading =
+    !hasCachedShoots
+    && !rendersError
+    && (authLoading || (isAuthenticated && rendersPending));
+  const isGalleryEmpty =
+    (isVisitor || rendersSuccess) && !hasCachedShoots && !rendersError;
 
   const gridShoots = useMemo(() => {
     const activeIds = new Set(shoots.map((shoot) => shoot.id));
@@ -399,17 +409,18 @@ export default function GalleryPage() {
 
   return (
     <AppShell footer>
+      <div className={isVisitor ? 'sl-visitor-page-emphasis' : undefined}>
       <EditorialPageHeader
         companion="Gallery"
         supporting="Every Render, Preserved."
         tagline="Your Creative Ledger."
         className="sl-page-header--gallery"
-        aside={<GalleryDashboardCard usage={usage} />}
+        aside={<GalleryDashboardCard usage={isAuthenticated ? usage : null} />}
       />
 
       <GalleryLedgerLegend />
 
-      {rendersError ? (
+      {isAuthenticated && rendersError ? (
         <section
           className="sl-creative-ledger-stage sl-creative-ledger-stage--empty mx-auto max-w-lg text-center"
           aria-live="polite"
@@ -433,14 +444,15 @@ export default function GalleryPage() {
         >
           <h2 className="sl-section-label mb-3">Your Creative Ledger is empty</h2>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-            Every generation you create in Studio appears here — with Studio Credit usage and
-            post-production activity preserved for each Shoot.
+            {isVisitor
+              ? 'Your personal Creative Ledger appears here after you create Editorial Images in Studio. Sign up or log in when you are ready to begin.'
+              : 'Every generation you create in Studio appears here — with Studio Credit usage and post-production activity preserved for each Shoot.'}
           </p>
           <StudioWorkspaceButton
             variant="primary"
             onClick={() => setLocation('/studio')}
           >
-            Create your first Shoot
+            {isVisitor ? 'Explore Studio Workspace' : 'Create your first Shoot'}
           </StudioWorkspaceButton>
         </section>
       ) : (
@@ -448,7 +460,7 @@ export default function GalleryPage() {
           shoots={gridShoots}
           exitingShootIds={exitingShootIds}
           isInitialLoading={isGalleryLoading}
-          isRefreshing={rendersFetching && hasCachedShoots}
+          isRefreshing={isAuthenticated && rendersFetching && hasCachedShoots}
           onOpenShoot={handleOpenShoot}
         />
       )}
@@ -470,6 +482,7 @@ export default function GalleryPage() {
             ))}
           </Accordion>
         </section>
+      </div>
 
       <ShootDetailDialog
         shoot={openShoot}
