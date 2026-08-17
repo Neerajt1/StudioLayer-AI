@@ -4,8 +4,8 @@
  */
 export const StudioCreditRules = {
   hero: 1,
-  campaign: 2,
-  editorial: 4,
+  editorial: 2,
+  campaign: 4,
   refine: 1,
   regenerate: 1,
 } as const;

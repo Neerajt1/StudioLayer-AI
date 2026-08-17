@@ -815,14 +815,14 @@ components:
           maximum: 20
           description: >
             Number of output images to generate.
-            Preset shoots: 1 (Hero), 2 (Campaign), or 4 (Editorial).
+            Preset shoots: 1 (Hero), 2 (Editorial), or 4 (Campaign).
             When customCampaign is true, must be an integer from 4 to 20.
             Defaults to 1.
         customCampaign:
           type: boolean
           description: >
             When true, generates a Custom Campaign batch at the specified imageCount (4–20).
-            Uses Campaign per-image pricing. Editorial preset (imageCount=4 without this flag)
+            Uses Campaign per-image pricing. Campaign preset (imageCount=4 without this flag)
             remains unchanged.
         outputResolution:
           type: string

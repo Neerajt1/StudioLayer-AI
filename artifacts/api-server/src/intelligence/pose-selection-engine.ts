@@ -593,8 +593,8 @@ export function selectNextPose(
 }
 
 export function imageCountToShootType(shots: number): ShootType {
-  if (shots >= 4) return "editorial";
-  if (shots >= 2) return "campaign";
+  if (shots >= 4) return "campaign";
+  if (shots >= 2) return "editorial";
   return "hero";
 }
 

@@ -36,4 +36,40 @@ describe("studio workflow output resolution", () => {
     const request = buildGenerationRequest(workflow, { id: "F-CA-01" });
     assert.equal(request.outputResolution, "2K");
   });
+
+  it("sends imageCount 1 / 2 / 4 and Custom Campaign 4–20", () => {
+    const identity = { id: "F-CA-01" };
+    const base = {
+      sourceImageUrl: "data:image/jpeg;base64,abc",
+      garmentPlacement: "upper_body" as const,
+      talentId: "F-CA-01",
+    };
+
+    assert.equal(
+      buildGenerationRequest(normalizeStudioWorkflow({ ...base, imageCount: 1 }), identity)
+        .imageCount,
+      1,
+    );
+    assert.equal(
+      buildGenerationRequest(normalizeStudioWorkflow({ ...base, imageCount: 2 }), identity)
+        .imageCount,
+      2,
+    );
+    assert.equal(
+      buildGenerationRequest(normalizeStudioWorkflow({ ...base, imageCount: 4 }), identity)
+        .imageCount,
+      4,
+    );
+
+    const custom = buildGenerationRequest(
+      normalizeStudioWorkflow({
+        ...base,
+        customCampaign: true,
+        customImageCount: 6,
+      }),
+      identity,
+    );
+    assert.equal(custom.customCampaign, true);
+    assert.equal(custom.imageCount, 6);
+  });
 });

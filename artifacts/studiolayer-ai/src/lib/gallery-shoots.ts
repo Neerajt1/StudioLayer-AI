@@ -18,8 +18,8 @@ import type { CreativeLedgerCardRender } from '@/components/gallery/creative-led
 /** Images per original generation — extensible for future storyboard / video. */
 export const SHOOT_BATCH_SIZE: Record<GenerationType, number> = {
   hero: 1,
-  campaign: 2,
-  editorial: 4,
+  editorial: 2,
+  campaign: 4,
 };
 
 export const SHOOT_TYPE_LABEL: Record<GenerationType, string> = {

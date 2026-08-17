@@ -55,11 +55,11 @@ export function studioCreditsForRender<T extends LedgerRender>(render: T): numbe
     return 0;
   }
 
+  if (render.studioCreditsUsed != null && render.studioCreditsUsed > 0) {
+    return render.studioCreditsUsed;
+  }
   if (render.generationType) {
     return galleryGenerationCreditLabel(render.generationType);
-  }
-  if (render.studioCreditsUsed != null) {
-    return render.studioCreditsUsed;
   }
   return galleryGenerationCreditLabel('hero');
 }

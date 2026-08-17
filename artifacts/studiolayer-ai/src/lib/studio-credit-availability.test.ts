@@ -19,7 +19,7 @@ describe('studio-credit-availability', () => {
     );
   });
 
-  it('1 credit: 2K hero affordable; 4K and campaign not', () => {
+  it('1 credit: 2K hero affordable; 4K, Editorial, and Campaign not', () => {
     const usage = { remaining: 1, tier: 'free' as const };
     assert.equal(hasSufficientStudioCreditsForCost(usage, 1), true);
     assert.equal(
@@ -54,7 +54,7 @@ describe('studio-credit-availability', () => {
     );
   });
 
-  it('2 credits: 4K and campaign ok; editorial not', () => {
+  it('2 credits: 4K hero and Editorial 2K ok; Campaign 2K not', () => {
     const usage = { remaining: 2, tier: 'pro' as const };
     assert.equal(
       hasSufficientStudioCreditsForCost(

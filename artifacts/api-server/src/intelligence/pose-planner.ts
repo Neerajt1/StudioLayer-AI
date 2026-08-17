@@ -2,7 +2,7 @@
 // Pose Planner — Phase 2
 //
 // Family-aware, recency-aware, same-garment-aware batch pose planning.
-// Supports current Hero (1) / Campaign (2) / Editorial (4) and future N-image
+// Supports current Hero (1) / Editorial (2) / Campaign (4) and future N-image
 // campaigns (12–20) without UI changes.
 // ---------------------------------------------------------------------------
 
@@ -640,7 +640,7 @@ export function planPosesWithBucketSlots(
 
 /** Default image count for a shoot type — overridable for future custom campaigns. */
 export function defaultShotCountForShootType(shootType: ShootType): number {
-  if (shootType === "editorial") return 4;
-  if (shootType === "campaign") return 2;
+  if (shootType === "campaign") return 4;
+  if (shootType === "editorial") return 2;
   return 1;
 }

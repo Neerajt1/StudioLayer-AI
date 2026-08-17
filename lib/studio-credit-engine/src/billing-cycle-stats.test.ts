@@ -14,7 +14,7 @@ describe('computeBillingCycleLedgerStats', () => {
       transactions,
     });
 
-    assert.equal(stats.imagesCreated, 4);
+    assert.equal(stats.imagesCreated, 2);
   });
 
   it('remains identical before and after deleting every generated image', () => {
@@ -52,8 +52,8 @@ describe('computeBillingCycleLedgerStats', () => {
       transactions,
     });
 
-    assert.equal(stats.imagesCreated, 4);
-    assert.equal(stats.averageRefinementsPerImage, 0.3);
+    assert.equal(stats.imagesCreated, 2);
+    assert.equal(stats.averageRefinementsPerImage, 0.5);
   });
 
   it('ignores transparent download transactions for image and refinement totals', () => {

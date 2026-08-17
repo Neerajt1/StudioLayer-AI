@@ -203,8 +203,8 @@ function accessoryContextShots(
   generationType?: IntelligenceParams["generationType"],
 ): 1 | 2 | 4 | 8 {
   if (generationType === "hero") return 1;
-  if (generationType === "campaign") return 2;
-  if (generationType === "editorial") return 4;
+  if (generationType === "editorial") return 2;
+  if (generationType === "campaign") return 4;
   if (shots === 1 || shots === 2 || shots === 4 || shots === 8) return shots;
   return shots >= 4 ? 4 : shots >= 2 ? 2 : 1;
 }

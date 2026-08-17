@@ -16,8 +16,8 @@ import {
 } from './reason-codes';
 
 export function imageCountToGenerationType(imageCount: ImageCount): GenerationType {
-  if (imageCount === 4) return 'editorial';
-  if (imageCount === 2) return 'campaign';
+  if (imageCount === 2) return 'editorial';
+  if (imageCount === 4) return 'campaign';
   return 'hero';
 }
 
@@ -29,9 +29,9 @@ export function creditCostForImageCount(imageCount: ImageCount): number {
   return creditCostForGenerationType(imageCountToGenerationType(imageCount));
 }
 
-/** Per-image Campaign cost — derived from the existing 2-image Campaign price. */
+/** Per-image Campaign cost — 2K Campaign is 4 images / 4 credits. */
 export function campaignCreditCostPerImage(): number {
-  return StudioCreditRules.campaign / 2;
+  return StudioCreditRules.campaign / 4;
 }
 
 export function isValidCustomCampaignImageCount(imageCount: number): boolean {

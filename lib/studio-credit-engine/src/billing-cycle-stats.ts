@@ -33,9 +33,9 @@ export function imagesCreatedForReasonCode(
     case StudioCreditReasonCode.HERO_GENERATION:
       return 1;
     case StudioCreditReasonCode.CAMPAIGN_GENERATION:
-      return 2;
-    case StudioCreditReasonCode.EDITORIAL_GENERATION:
       return 4;
+    case StudioCreditReasonCode.EDITORIAL_GENERATION:
+      return 2;
     default:
       return 0;
   }

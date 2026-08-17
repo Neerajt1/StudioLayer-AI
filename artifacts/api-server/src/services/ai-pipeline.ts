@@ -458,7 +458,7 @@ export async function runAIPipeline(params: {
 
     // ── Step 4: Editorial diversity — build per-shot prompts ──────────────────
     //
-    // When shots === 1 (Hero), 2 (Campaign), or 4 (Editorial) and this is not
+    // When shots === 1 (Hero), 2 (Editorial), or 4 (Campaign) and this is not
     // a refinement, the Pose Selection Engine generates distinct per-shot briefs
     // from the professional pose library.
     const basePrompt = intelligenceResult.prompt ?? "";

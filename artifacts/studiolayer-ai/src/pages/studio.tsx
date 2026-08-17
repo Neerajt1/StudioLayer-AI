@@ -32,6 +32,10 @@ import {
   resolveAvailableStudioCreditsForGate,
 } from '@/lib/studio-credit-availability';
 import { workspaceShootGenerationFailedToast } from '@/lib/generation-failure-copy';
+import {
+  PRESET_SHOOT_TYPE_LABEL,
+  PRESET_SHOOT_TYPE_OPTIONS,
+} from '@/lib/shoot-type-mapping';
 import { useDownloadInFlight } from '@/hooks/use-download-in-flight';
 import { AppShell } from '@/components/layout/app-shell';
 import { FileUpload } from '@/components/ui/file-upload';
@@ -142,18 +146,6 @@ function renderApiErrorDescription(error: unknown): string {
   }
   return 'Please try again in a few moments.';
 }
-
-const IMAGE_COUNT_OPTIONS = [
-  { value: 1 as const, label: 'Hero Shot',             sub: '1 Editorial Image' },
-  { value: 2 as const, label: 'Campaign Collections',  sub: '2 Editorial Images' },
-  { value: 4 as const, label: 'Editorial Portraits',   sub: '4 Editorial Images' },
-];
-
-const SHOOT_TYPE_LABEL: Record<1 | 2 | 4, string> = {
-  1: 'Hero Shot',
-  2: 'Campaign Collections',
-  4: 'Editorial Portraits',
-};
 
 const FAQ_ITEMS = [
   {
@@ -463,7 +455,7 @@ export default function StudioPage() {
 
   const createButtonLabel = workflow.customCampaign
     ? 'Custom Campaign'
-    : SHOOT_TYPE_LABEL[workflow.imageCount];
+    : PRESET_SHOOT_TYPE_LABEL[workflow.imageCount];
 
   const beginGenerationFeedback = (preloadedUrls: string[] = []) => {
     setAwaitingResultDisplay(true);
@@ -1323,7 +1315,7 @@ export default function StudioPage() {
                 <StepLabel number={3} title="Shoot Type" />
                 <div className="sl-shoot-type-panel">
                   <ShootTypeSelector
-                    options={IMAGE_COUNT_OPTIONS}
+                    options={PRESET_SHOOT_TYPE_OPTIONS}
                     imageCount={workflow.imageCount}
                     customCampaignActive={workflow.customCampaign}
                     isPremiumLocked={isShootTypeUnavailable}
