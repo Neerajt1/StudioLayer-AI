@@ -8,6 +8,7 @@ import {
   creditCostForGenerationType,
   imageCountToGenerationType,
   isValidCustomCampaignImageCount,
+  reconcileLegacyShootGenerationType,
   reasonCodeForImageRequest,
   resolveGenerationCreditCost,
 } from './index.js';
@@ -62,6 +63,21 @@ describe('shoot type ↔ imageCount mapping', () => {
       }),
       12,
     );
+  });
+
+  it('reconciles only the inverted 2-image campaign and 4-image editorial pairs', () => {
+    assert.equal(reconcileLegacyShootGenerationType('campaign', 2), 'editorial');
+    assert.equal(reconcileLegacyShootGenerationType('editorial', 4), 'campaign');
+
+    assert.equal(reconcileLegacyShootGenerationType('editorial', 2), 'editorial');
+    assert.equal(reconcileLegacyShootGenerationType('campaign', 4), 'campaign');
+    assert.equal(reconcileLegacyShootGenerationType('campaign', 6), 'campaign');
+    assert.equal(reconcileLegacyShootGenerationType('campaign', 20), 'campaign');
+    assert.equal(reconcileLegacyShootGenerationType('hero', 1), 'hero');
+    assert.equal(reconcileLegacyShootGenerationType('hero', 2), 'hero');
+    assert.equal(reconcileLegacyShootGenerationType('hero', 4), 'hero');
+    assert.equal(reconcileLegacyShootGenerationType('editorial', 3), 'editorial');
+    assert.equal(reconcileLegacyShootGenerationType('campaign', 3), 'campaign');
   });
 
   it('reason codes follow the corrected generation types', () => {

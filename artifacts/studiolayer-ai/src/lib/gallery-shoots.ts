@@ -7,6 +7,7 @@
 
 import {
   galleryGenerationCreditLabel,
+  reconcileLegacyShootGenerationType,
   type GenerationType,
 } from '@workspace/studio-credit-engine';
 import {
@@ -63,6 +64,20 @@ function parseTime(value: string | Date | undefined): number {
 
 function generationTypeOf(render: LedgerRender): GenerationType {
   return (render.generationType ?? 'hero') as GenerationType;
+}
+
+/**
+ * Gallery shoot type from original roots. Rewrites only the inverted historical
+ * pairs (2×campaign → editorial, 4×editorial → campaign). Mixed types, Hero,
+ * and Custom Campaign counts stay as stored.
+ */
+function shootGenerationTypeFromRoots(
+  roots: CreativeLedgerCardRender[],
+): GenerationType {
+  const stored = generationTypeOf(roots[0]!);
+  const types = new Set(roots.map(generationTypeOf));
+  if (types.size !== 1) return stored;
+  return reconcileLegacyShootGenerationType(stored, roots.length);
 }
 
 /** Walk parent chain to the original generation root. */
@@ -219,7 +234,7 @@ function studioCreditsForShootBatch(batch: CreativeLedgerCardRender[]): number {
   if (fromRow != null && fromRow > 0) {
     return fromRow;
   }
-  return galleryGenerationCreditLabel(generationTypeOf(root));
+  return galleryGenerationCreditLabel(shootGenerationTypeFromRoots(batch));
 }
 
 /** Completed paid edit rows only — Crop never creates render rows. */
@@ -284,7 +299,7 @@ function buildShootFromRoots(
   return {
     id,
     rootId: shootRootId,
-    generationType: generationTypeOf(sortedRoots[0]!),
+    generationType: shootGenerationTypeFromRoots(sortedRoots),
     createdAt: new Date(sortedRoots[0]!.createdAt ?? Date.now()),
     images,
     sourceImageUrl: sortedRoots[0]!.sourceImageUrl ?? null,

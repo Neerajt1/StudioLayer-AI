@@ -22,6 +22,7 @@ export {
 
 export {
   imageCountToGenerationType,
+  reconcileLegacyShootGenerationType,
   creditCostForGenerationType,
   creditCostForImageCount,
   campaignCreditCostPerImage,

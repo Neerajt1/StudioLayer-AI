@@ -21,6 +21,26 @@ export function imageCountToGenerationType(imageCount: ImageCount): GenerationTy
   return 'hero';
 }
 
+/**
+ * Corrects the pre-15aacc7 inverted mapping on historical Gallery shoots.
+ *
+ * Only the contradictory pairs are rewritten:
+ * - 2 roots stored as campaign → editorial
+ * - 4 roots stored as editorial → campaign
+ *
+ * Hero, already-consistent pairs, and Custom Campaign counts (campaign + 4–20)
+ * are left unchanged. Does not inspect credit amounts.
+ */
+export function reconcileLegacyShootGenerationType(
+  generationType: GenerationType,
+  rootImageCount: number,
+): GenerationType {
+  if (generationType === 'hero') return generationType;
+  if (generationType === 'campaign' && rootImageCount === 2) return 'editorial';
+  if (generationType === 'editorial' && rootImageCount === 4) return 'campaign';
+  return generationType;
+}
+
 export function creditCostForGenerationType(generationType: GenerationType): number {
   return StudioCreditRules[generationType];
 }
