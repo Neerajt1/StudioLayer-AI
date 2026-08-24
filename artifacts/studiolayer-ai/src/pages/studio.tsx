@@ -65,7 +65,6 @@ import {
   type StudioImageInspectionTarget,
 } from '@/components/studio/studio-image-inspector';
 import { ShootTypeSelector } from '@/components/studio/shoot-type-selector';
-import { CustomCampaignControl } from '@/components/studio/custom-campaign-control';
 import { ResolutionSelector } from '@/components/studio/resolution-selector';
 import { DirectShootDialog } from '@/components/studio/direct-shoot-dialog';
 import {
@@ -351,11 +350,25 @@ export default function StudioPage() {
     }))
     .filter((slot) => slot.status === 'completed' && typeof slot.url === 'string');
 
+  const failedOrCompletedCount = activeRenderIds.filter((_, index) => {
+    const status = allRenderData[index]?.status;
+    return status === 'completed' || status === 'failed';
+  }).length;
+
+  /** Server results are ready — do not wait on image onLoad to leave processing UI. */
+  const resultsReadyForDisplay =
+    activeRenderIds.length > 0
+    && failedOrCompletedCount === activeRenderIds.length
+    && (
+      completedOutputSlots.length > 0
+      || activeRenderIds.every((_, index) => allRenderData[index]?.status === 'failed')
+    );
+
   const allResultsDisplayed =
     completedOutputSlots.length > 0 &&
     completedOutputSlots.every((slot) => loadedResultUrls.has(slot.url!));
 
-  const showGenerationProgress = awaitingResultDisplay && !allResultsDisplayed;
+  const showGenerationProgress = awaitingResultDisplay && !resultsReadyForDisplay;
 
   const isRefinementProcessing =
     refinementPending != null &&
@@ -567,6 +580,15 @@ export default function StudioPage() {
     }
   }, [isComplimentaryTier, workflow.imageCount, workflow.customCampaign, patchWorkflow]);
 
+  // Customer UI no longer exposes Custom Campaign — clear any persisted session so
+  // credit totals and shoot-type selection stay on the three preset formats.
+  useEffect(() => {
+    if (!workflow.customCampaign) return;
+    const presetImageCount =
+      workflow.imageCount === 2 || workflow.imageCount === 4 ? workflow.imageCount : 1;
+    patchWorkflow({ customCampaign: false, imageCount: presetImageCount });
+  }, [workflow.customCampaign, workflow.imageCount, patchWorkflow]);
+
   useEffect(() => {
     if (!awaitingResultDisplay || generationStartedAt == null) return;
     const tick = () => {
@@ -669,21 +691,20 @@ export default function StudioPage() {
   ]);
 
   useEffect(() => {
-    if (!awaitingResultDisplay || !allResultsDisplayed || !resolvedOutputUrl) return;
-    if (!workflow.sourceImageUrl) return;
+    if (!awaitingResultDisplay || !resultsReadyForDisplay) return;
+    if (!workflow.sourceImageUrl && completedOutputSlots.length === 0) return;
 
-    const completionKey = `${activeRenderIds.join(',')}:${resolvedOutputUrl}`;
+    const completionKey = `${activeRenderIds.join(',')}:${completedOutputSlots.map((s) => s.url).join('|') || 'failed-only'}`;
     if (completionHandledRef.current === completionKey) return;
     completionHandledRef.current = completionKey;
 
-    // Generation lifecycle complete — reset progress UI only.
-    // Presentation is intentionally silent; completionHandledRef is reserved
-    // for a future subtle completion experience.
+    // Generation lifecycle complete — reset progress UI / timer immediately.
+    // Image fade-in may still use loadedResultUrls independently.
     resetGenerationFeedback();
   }, [
     awaitingResultDisplay,
-    allResultsDisplayed,
-    resolvedOutputUrl,
+    resultsReadyForDisplay,
+    completedOutputSlots,
     workflow.sourceImageUrl,
     activeRenderIds,
   ]);
@@ -1083,7 +1104,7 @@ export default function StudioPage() {
     });
   };
 
-  const showResultToolbar = hasOutput && allResultsDisplayed && !showGenerationProgress && !showRemoveBackgroundProgress;
+  const showResultToolbar = hasOutput && resultsReadyForDisplay && !showGenerationProgress && !showRemoveBackgroundProgress;
 
   const refinePanelImageLabel =
     activeRenderIds.length > 1 && refinePanelSlot != null
@@ -1235,30 +1256,11 @@ export default function StudioPage() {
             supporting="Garment to Campaign"
             tagline="Professional fashion photography in minutes"
             className="sl-page-header--workspace"
-            aside={(
+            aside={isAuthenticated ? (
               <div className="sl-workspace-header-actions">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <StudioWorkspaceButton
-                      variant="icon"
-                      className="sl-workspace-refresh"
-                      onClick={handleNewPhotoshoot}
-                      disabled={isGenerationBusy}
-                      aria-label="Refresh"
-                      data-testid="button-new-photoshoot"
-                    >
-                      <RefreshCw className="size-3.5" aria-hidden />
-                    </StudioWorkspaceButton>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="sl-workspace-refresh-tooltip">
-                    Refresh
-                  </TooltipContent>
-                </Tooltip>
-                {isAuthenticated ? (
-                  <AccountStatementDownloadLink variant="header" />
-                ) : null}
+                <AccountStatementDownloadLink variant="header" />
               </div>
-            )}
+            ) : undefined}
           />
 
           <div className="relative">
@@ -1272,7 +1274,26 @@ export default function StudioPage() {
             <div className={cn('order-2 lg:order-1 space-y-8 transition-opacity duration-300', (showGenerationProgress || showRemoveBackgroundProgress) && 'opacity-[0.68]')}>
               {/* Step 1: Upload Outfit */}
               <section className="space-y-3">
-                <StepLabel number={1} title="Upload Outfit" />
+                <div className="sl-garment-references-heading">
+                  <StepLabel number={1} title="Upload Outfit" />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <StudioWorkspaceButton
+                        variant="icon"
+                        className="sl-workspace-refresh"
+                        onClick={handleNewPhotoshoot}
+                        disabled={isGenerationBusy}
+                        aria-label="Refresh"
+                        data-testid="button-new-photoshoot"
+                      >
+                        <RefreshCw className="size-3.5" aria-hidden />
+                      </StudioWorkspaceButton>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="sl-workspace-refresh-tooltip">
+                      Refresh
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
 
                 <div className={cn(showValidation && !workflowValidation.hasGarment && 'rounded ring-2 ring-destructive ring-offset-1')}>
                   <FileUpload
@@ -1381,30 +1402,23 @@ export default function StudioPage() {
               <section className="sl-shoot-type-section space-y-3 pt-1">
                 <StepLabel number={3} title="Shoot Type" />
                 <div className="sl-shoot-type-panel">
-                  <ShootTypeSelector
-                    options={PRESET_SHOOT_TYPE_OPTIONS}
-                    imageCount={workflow.imageCount}
-                    customCampaignActive={workflow.customCampaign}
-                    isPremiumLocked={isShootTypeUnavailable}
-                    disabled={isGenerationBusy}
-                    onSelect={handleShootTypeSelect}
-                  />
-                  <CustomCampaignControl
-                    selected={workflow.customCampaign}
-                    imageCount={workflow.customImageCount}
-                    premiumLocked={isCustomCampaignUnavailable}
-                    disabled={isGenerationBusy}
-                    onSelect={handleCustomCampaignSelect}
-                    onImageCountChange={handleCustomImageCountChange}
-                  />
-                  <ResolutionSelector
-                    value={workflow.outputResolution}
-                    disabled={isGenerationBusy}
-                    isOptionUnavailable={(resolution) =>
-                      isAuthenticated ? !canAffordResolution(resolution) : false
-                    }
-                    onChange={handleResolutionSelect}
-                  />
+                  <div className="sl-studio-filter-row">
+                    <ShootTypeSelector
+                      options={PRESET_SHOOT_TYPE_OPTIONS}
+                      imageCount={workflow.imageCount}
+                      isPremiumLocked={isShootTypeUnavailable}
+                      disabled={isGenerationBusy}
+                      onSelect={handleShootTypeSelect}
+                    />
+                    <ResolutionSelector
+                      value={workflow.outputResolution}
+                      disabled={isGenerationBusy}
+                      isOptionUnavailable={(resolution) =>
+                        isAuthenticated ? !canAffordResolution(resolution) : false
+                      }
+                      onChange={handleResolutionSelect}
+                    />
+                  </div>
                   <p className="sl-shoot-type-credit-total">
                     {formatStudioCredits(generationCreditCost)}
                   </p>

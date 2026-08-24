@@ -1,9 +1,10 @@
-import { cn } from '@/lib/utils';
 import {
   DEFAULT_OUTPUT_RESOLUTION,
+  formatStudioCredits,
+  resolutionCreditMultiplier,
   type OutputResolution,
 } from '@workspace/studio-credit-engine';
-import { StudioToggleOption } from '@/components/studio/studio-workspace-controls';
+import { StudioCompactSelect } from '@/components/studio/studio-compact-select';
 
 interface ResolutionSelectorProps {
   value: OutputResolution;
@@ -13,14 +14,15 @@ interface ResolutionSelectorProps {
   onChange: (value: OutputResolution) => void;
 }
 
-const OPTIONS: ReadonlyArray<{
-  value: OutputResolution;
-  label: string;
-  description: string;
-}> = [
-  { value: '2K', label: '2K', description: '1 Studio Credit per image' },
-  { value: '4K', label: '4K', description: '4K = 2 Studio Credits' },
-];
+const OPTIONS: ReadonlyArray<OutputResolution> = ['2K', '4K'];
+
+function resolutionCreditDetail(resolution: OutputResolution): string {
+  return `${formatStudioCredits(resolutionCreditMultiplier(resolution))} per image`;
+}
+
+function resolutionTriggerLabel(resolution: OutputResolution): string {
+  return `${resolution} · ${formatStudioCredits(resolutionCreditMultiplier(resolution))}`;
+}
 
 export function ResolutionSelector({
   value,
@@ -31,30 +33,19 @@ export function ResolutionSelector({
   const selected = value || DEFAULT_OUTPUT_RESOLUTION;
 
   return (
-    <div className="sl-resolution-selector" role="group" aria-label="Output resolution">
-      <p className="sl-resolution-selector-label">Resolution</p>
-      <div className="sl-resolution-selector-grid">
-        {OPTIONS.map((opt) => {
-          const unavailable = isOptionUnavailable?.(opt.value) ?? false;
-          return (
-            <StudioToggleOption
-              key={opt.value}
-              selected={selected === opt.value}
-              disabled={disabled}
-              onClick={() => onChange(opt.value)}
-              className={cn(
-                'sl-resolution-option',
-                selected === opt.value && 'sl-resolution-option--selected',
-                unavailable && 'cursor-pointer opacity-50',
-              )}
-              data-testid={`resolution-${opt.value.toLowerCase()}`}
-            >
-              <span className="sl-resolution-option-label">{opt.label}</span>
-              <span className="sl-resolution-option-desc">{opt.description}</span>
-            </StudioToggleOption>
-          );
-        })}
-      </div>
-    </div>
+    <StudioCompactSelect
+      label="Resolution"
+      value={selected}
+      triggerLabel={resolutionTriggerLabel(selected)}
+      disabled={disabled}
+      onChange={onChange}
+      options={OPTIONS.map((resolution) => ({
+        value: resolution,
+        label: resolution,
+        description: resolutionCreditDetail(resolution),
+        unavailable: isOptionUnavailable?.(resolution) ?? false,
+        testId: `resolution-${resolution.toLowerCase()}`,
+      }))}
+    />
   );
 }

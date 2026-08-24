@@ -40,8 +40,7 @@ export function StudioEditorialEmptyState({ compact = false }: StudioEditorialEm
         <div className="sl-studio-editorial-placeholder-copy">
           <p className="text-base font-medium text-foreground">Your Editorial Image</p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Upload a garment and choose a Studio Talent to begin creating professional fashion
-            photography.
+            Your generated fashion image will appear here.
           </p>
         </div>
       </div>
