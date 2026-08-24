@@ -1,0 +1,1499 @@
+{
+  "version": 1,
+  "purpose": "Backend-only Stage-1 Pose Master face-neutral variants. Not for frontend display.",
+  "count": 75,
+  "plateGray": 165,
+  "poses": [
+    {
+      "poseId": "Pose1",
+      "sourceFilename": "Pose1.png",
+      "backendFilename": "Pose1-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9233416318893433,
+      "box": [
+        482.26,
+        56.71,
+        92.98,
+        120.39
+      ],
+      "ellipse": {
+        "cx": 528.75,
+        "cy": 128.94,
+        "rx": 91.12,
+        "ry": 144.47
+      }
+    },
+    {
+      "poseId": "Pose2",
+      "sourceFilename": "Pose2.png",
+      "backendFilename": "Pose2-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9287713170051575,
+      "box": [
+        463.48,
+        62.17,
+        94.63,
+        128.7
+      ],
+      "ellipse": {
+        "cx": 510.8,
+        "cy": 139.39,
+        "rx": 92.74,
+        "ry": 154.44
+      }
+    },
+    {
+      "poseId": "Pose3",
+      "sourceFilename": "Pose3.png",
+      "backendFilename": "Pose3-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9176163077354431,
+      "box": [
+        463.4,
+        51.04,
+        95.69,
+        125.43
+      ],
+      "ellipse": {
+        "cx": 511.24,
+        "cy": 126.3,
+        "rx": 93.78,
+        "ry": 150.52
+      }
+    },
+    {
+      "poseId": "Pose4",
+      "sourceFilename": "Pose4.png",
+      "backendFilename": "Pose4-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.8910588622093201,
+      "box": [
+        434.55,
+        38.66,
+        122.13,
+        141.99
+      ],
+      "ellipse": {
+        "cx": 495.62,
+        "cy": 123.85,
+        "rx": 119.68,
+        "ry": 170.39
+      }
+    },
+    {
+      "poseId": "Pose5",
+      "sourceFilename": "Pose5.png",
+      "backendFilename": "Pose5-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9303134083747864,
+      "box": [
+        474.69,
+        51.66,
+        98.39,
+        123.53
+      ],
+      "ellipse": {
+        "cx": 523.89,
+        "cy": 125.78,
+        "rx": 96.43,
+        "ry": 148.23
+      }
+    },
+    {
+      "poseId": "Pose6",
+      "sourceFilename": "Pose6.png",
+      "backendFilename": "Pose6-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9237805008888245,
+      "box": [
+        446.75,
+        56.83,
+        95.6,
+        121.74
+      ],
+      "ellipse": {
+        "cx": 494.55,
+        "cy": 129.87,
+        "rx": 93.69,
+        "ry": 146.08
+      }
+    },
+    {
+      "poseId": "Pose7",
+      "sourceFilename": "Pose7.png",
+      "backendFilename": "Pose7-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9264402389526367,
+      "box": [
+        390.33,
+        70.52,
+        102.5,
+        138.46
+      ],
+      "ellipse": {
+        "cx": 441.59,
+        "cy": 153.59,
+        "rx": 100.45,
+        "ry": 166.15
+      }
+    },
+    {
+      "poseId": "Pose8",
+      "sourceFilename": "Pose8.png",
+      "backendFilename": "Pose8-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9213442206382751,
+      "box": [
+        438.92,
+        62.52,
+        140.23,
+        175.48
+      ],
+      "ellipse": {
+        "cx": 509.04,
+        "cy": 167.81,
+        "rx": 137.43,
+        "ry": 210.58
+      }
+    },
+    {
+      "poseId": "Pose9",
+      "sourceFilename": "Pose9.png",
+      "backendFilename": "Pose9-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.91910719871521,
+      "box": [
+        605.7,
+        38.34,
+        83.4,
+        108.13
+      ],
+      "ellipse": {
+        "cx": 647.4,
+        "cy": 103.22,
+        "rx": 81.73,
+        "ry": 129.75
+      }
+    },
+    {
+      "poseId": "Pose10",
+      "sourceFilename": "Pose10.png",
+      "backendFilename": "Pose10-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9129313826560974,
+      "box": [
+        485.38,
+        46.02,
+        103.92,
+        125.85
+      ],
+      "ellipse": {
+        "cx": 537.35,
+        "cy": 121.53,
+        "rx": 101.84,
+        "ry": 151.02
+      }
+    },
+    {
+      "poseId": "Pose11",
+      "sourceFilename": "Pose11.png",
+      "backendFilename": "Pose11-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.91917884349823,
+      "box": [
+        481.0,
+        51.94,
+        99.47,
+        121.73
+      ],
+      "ellipse": {
+        "cx": 530.74,
+        "cy": 124.97,
+        "rx": 97.48,
+        "ry": 146.08
+      }
+    },
+    {
+      "poseId": "Pose12",
+      "sourceFilename": "Pose12.png",
+      "backendFilename": "Pose12-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9189434051513672,
+      "box": [
+        467.23,
+        39.17,
+        99.56,
+        127.94
+      ],
+      "ellipse": {
+        "cx": 517.01,
+        "cy": 115.93,
+        "rx": 97.56,
+        "ry": 153.53
+      }
+    },
+    {
+      "poseId": "Pose13",
+      "sourceFilename": "Pose13.png",
+      "backendFilename": "Pose13-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9249659776687622,
+      "box": [
+        505.94,
+        54.75,
+        103.65,
+        120.29
+      ],
+      "ellipse": {
+        "cx": 557.76,
+        "cy": 126.92,
+        "rx": 101.57,
+        "ry": 144.34
+      }
+    },
+    {
+      "poseId": "Pose14",
+      "sourceFilename": "Pose14.png",
+      "backendFilename": "Pose14-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.907081127166748,
+      "box": [
+        478.29,
+        53.27,
+        100.33,
+        128.18
+      ],
+      "ellipse": {
+        "cx": 528.45,
+        "cy": 130.17,
+        "rx": 98.32,
+        "ry": 153.82
+      }
+    },
+    {
+      "poseId": "Pose15",
+      "sourceFilename": "Pose15.png",
+      "backendFilename": "Pose15-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9165606498718262,
+      "box": [
+        494.38,
+        52.14,
+        96.21,
+        142.65
+      ],
+      "ellipse": {
+        "cx": 542.48,
+        "cy": 137.73,
+        "rx": 94.29,
+        "ry": 171.18
+      }
+    },
+    {
+      "poseId": "Pose16",
+      "sourceFilename": "Pose16.png",
+      "backendFilename": "Pose16-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.930428147315979,
+      "box": [
+        465.56,
+        48.68,
+        98.76,
+        131.82
+      ],
+      "ellipse": {
+        "cx": 514.94,
+        "cy": 127.77,
+        "rx": 96.78,
+        "ry": 158.18
+      }
+    },
+    {
+      "poseId": "Pose17",
+      "sourceFilename": "Pose17.png",
+      "backendFilename": "Pose17-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9225126504898071,
+      "box": [
+        420.63,
+        55.18,
+        99.7,
+        133.04
+      ],
+      "ellipse": {
+        "cx": 470.48,
+        "cy": 135.0,
+        "rx": 97.71,
+        "ry": 159.65
+      }
+    },
+    {
+      "poseId": "Pose18",
+      "sourceFilename": "Pose18.png",
+      "backendFilename": "Pose18-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9124594330787659,
+      "box": [
+        520.82,
+        50.57,
+        101.02,
+        135.04
+      ],
+      "ellipse": {
+        "cx": 571.33,
+        "cy": 131.6,
+        "rx": 99.0,
+        "ry": 162.05
+      }
+    },
+    {
+      "poseId": "Pose19",
+      "sourceFilename": "Pose19.png",
+      "backendFilename": "Pose19-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.920582115650177,
+      "box": [
+        499.81,
+        49.16,
+        99.36,
+        131.63
+      ],
+      "ellipse": {
+        "cx": 549.5,
+        "cy": 128.13,
+        "rx": 97.38,
+        "ry": 157.96
+      }
+    },
+    {
+      "poseId": "Pose20",
+      "sourceFilename": "Pose20.png",
+      "backendFilename": "Pose20-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9200142025947571,
+      "box": [
+        424.23,
+        63.92,
+        99.93,
+        137.21
+      ],
+      "ellipse": {
+        "cx": 474.19,
+        "cy": 146.24,
+        "rx": 97.93,
+        "ry": 164.66
+      }
+    },
+    {
+      "poseId": "Pose21",
+      "sourceFilename": "Pose21.png",
+      "backendFilename": "Pose21-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9069578647613525,
+      "box": [
+        610.65,
+        50.35,
+        106.48,
+        131.74
+      ],
+      "ellipse": {
+        "cx": 663.89,
+        "cy": 129.39,
+        "rx": 104.35,
+        "ry": 158.08
+      }
+    },
+    {
+      "poseId": "Pose22",
+      "sourceFilename": "Pose22.png",
+      "backendFilename": "Pose22-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.917309582233429,
+      "box": [
+        477.34,
+        40.04,
+        99.82,
+        129.1
+      ],
+      "ellipse": {
+        "cx": 527.25,
+        "cy": 117.5,
+        "rx": 97.83,
+        "ry": 154.92
+      }
+    },
+    {
+      "poseId": "Pose23",
+      "sourceFilename": "Pose23.png",
+      "backendFilename": "Pose23-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9381847977638245,
+      "box": [
+        490.33,
+        47.94,
+        97.01,
+        141.81
+      ],
+      "ellipse": {
+        "cx": 538.84,
+        "cy": 133.02,
+        "rx": 95.07,
+        "ry": 170.18
+      }
+    },
+    {
+      "poseId": "Pose24",
+      "sourceFilename": "Pose24.png",
+      "backendFilename": "Pose24-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.8979690670967102,
+      "box": [
+        477.47,
+        43.28,
+        101.8,
+        129.44
+      ],
+      "ellipse": {
+        "cx": 528.37,
+        "cy": 120.94,
+        "rx": 99.76,
+        "ry": 155.33
+      }
+    },
+    {
+      "poseId": "Pose25",
+      "sourceFilename": "Pose25.png",
+      "backendFilename": "Pose25-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9245496392250061,
+      "box": [
+        486.46,
+        49.37,
+        99.06,
+        142.47
+      ],
+      "ellipse": {
+        "cx": 535.99,
+        "cy": 134.85,
+        "rx": 97.08,
+        "ry": 170.96
+      }
+    },
+    {
+      "poseId": "Pose26",
+      "sourceFilename": "Pose26.png",
+      "backendFilename": "Pose26-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9269724488258362,
+      "box": [
+        573.4,
+        48.15,
+        92.1,
+        122.55
+      ],
+      "ellipse": {
+        "cx": 619.45,
+        "cy": 121.68,
+        "rx": 90.26,
+        "ry": 147.06
+      }
+    },
+    {
+      "poseId": "Pose27",
+      "sourceFilename": "Pose27.png",
+      "backendFilename": "Pose27-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9315941333770752,
+      "box": [
+        404.44,
+        47.25,
+        119.79,
+        157.37
+      ],
+      "ellipse": {
+        "cx": 464.33,
+        "cy": 141.67,
+        "rx": 117.39,
+        "ry": 188.84
+      }
+    },
+    {
+      "poseId": "Pose28",
+      "sourceFilename": "Pose28.png",
+      "backendFilename": "Pose28-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9211353063583374,
+      "box": [
+        399.36,
+        51.41,
+        115.27,
+        171.59
+      ],
+      "ellipse": {
+        "cx": 457.0,
+        "cy": 154.37,
+        "rx": 112.96,
+        "ry": 205.91
+      }
+    },
+    {
+      "poseId": "Pose29",
+      "sourceFilename": "Pose29.png",
+      "backendFilename": "Pose29-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9275427460670471,
+      "box": [
+        541.01,
+        57.12,
+        104.87,
+        134.5
+      ],
+      "ellipse": {
+        "cx": 593.44,
+        "cy": 137.82,
+        "rx": 102.77,
+        "ry": 161.39
+      }
+    },
+    {
+      "poseId": "Pose30",
+      "sourceFilename": "Pose30.png",
+      "backendFilename": "Pose30-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9170708060264587,
+      "box": [
+        361.9,
+        60.62,
+        123.88,
+        176.69
+      ],
+      "ellipse": {
+        "cx": 423.84,
+        "cy": 166.63,
+        "rx": 121.4,
+        "ry": 212.03
+      }
+    },
+    {
+      "poseId": "Pose31",
+      "sourceFilename": "Pose31.png",
+      "backendFilename": "Pose31-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9269382953643799,
+      "box": [
+        443.09,
+        70.51,
+        140.51,
+        175.05
+      ],
+      "ellipse": {
+        "cx": 513.34,
+        "cy": 175.54,
+        "rx": 137.7,
+        "ry": 210.06
+      }
+    },
+    {
+      "poseId": "Pose32",
+      "sourceFilename": "Pose32.png",
+      "backendFilename": "Pose32-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9176668524742126,
+      "box": [
+        586.04,
+        85.1,
+        129.03,
+        171.58
+      ],
+      "ellipse": {
+        "cx": 650.56,
+        "cy": 188.05,
+        "rx": 126.45,
+        "ry": 205.89
+      }
+    },
+    {
+      "poseId": "Pose33",
+      "sourceFilename": "Pose33.png",
+      "backendFilename": "Pose33-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9223051071166992,
+      "box": [
+        411.7,
+        77.14,
+        126.68,
+        167.84
+      ],
+      "ellipse": {
+        "cx": 475.04,
+        "cy": 177.84,
+        "rx": 124.15,
+        "ry": 201.41
+      }
+    },
+    {
+      "poseId": "Pose34",
+      "sourceFilename": "Pose34.png",
+      "backendFilename": "Pose34-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.922758936882019,
+      "box": [
+        604.25,
+        58.01,
+        127.94,
+        157.67
+      ],
+      "ellipse": {
+        "cx": 668.22,
+        "cy": 152.61,
+        "rx": 125.38,
+        "ry": 189.2
+      }
+    },
+    {
+      "poseId": "Pose35",
+      "sourceFilename": "Pose35.png",
+      "backendFilename": "Pose35-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9239505529403687,
+      "box": [
+        440.02,
+        71.33,
+        139.17,
+        168.57
+      ],
+      "ellipse": {
+        "cx": 509.6,
+        "cy": 172.48,
+        "rx": 136.38,
+        "ry": 202.29
+      }
+    },
+    {
+      "poseId": "Pose36",
+      "sourceFilename": "Pose36.png",
+      "backendFilename": "Pose36-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "forensic-dev-copy",
+      "score": 1.0,
+      "box": null,
+      "ellipse": null
+    },
+    {
+      "poseId": "Pose37",
+      "sourceFilename": "Pose37.png",
+      "backendFilename": "Pose37-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9297122359275818,
+      "box": [
+        338.25,
+        123.33,
+        185.39,
+        217.64
+      ],
+      "ellipse": {
+        "cx": 430.94,
+        "cy": 253.91,
+        "rx": 181.69,
+        "ry": 261.17
+      }
+    },
+    {
+      "poseId": "Pose38",
+      "sourceFilename": "Pose38.png",
+      "backendFilename": "Pose38-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9296766519546509,
+      "box": [
+        324.44,
+        93.22,
+        166.17,
+        206.53
+      ],
+      "ellipse": {
+        "cx": 407.52,
+        "cy": 217.13,
+        "rx": 162.85,
+        "ry": 247.83
+      }
+    },
+    {
+      "poseId": "Pose39",
+      "sourceFilename": "Pose39.png",
+      "backendFilename": "Pose39-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9270439147949219,
+      "box": [
+        376.45,
+        78.64,
+        153.13,
+        196.1
+      ],
+      "ellipse": {
+        "cx": 453.02,
+        "cy": 196.3,
+        "rx": 150.07,
+        "ry": 235.32
+      }
+    },
+    {
+      "poseId": "Pose40",
+      "sourceFilename": "Pose40.png",
+      "backendFilename": "Pose40-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9290316700935364,
+      "box": [
+        355.67,
+        65.2,
+        141.49,
+        181.68
+      ],
+      "ellipse": {
+        "cx": 426.42,
+        "cy": 174.21,
+        "rx": 138.66,
+        "ry": 218.02
+      }
+    },
+    {
+      "poseId": "Pose41",
+      "sourceFilename": "Pose41.png",
+      "backendFilename": "Pose41-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9260258078575134,
+      "box": [
+        455.62,
+        94.0,
+        142.61,
+        176.45
+      ],
+      "ellipse": {
+        "cx": 526.93,
+        "cy": 199.87,
+        "rx": 139.76,
+        "ry": 211.74
+      }
+    },
+    {
+      "poseId": "Pose42",
+      "sourceFilename": "Pose42.png",
+      "backendFilename": "Pose42-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9304002523422241,
+      "box": [
+        402.84,
+        81.68,
+        141.79,
+        173.46
+      ],
+      "ellipse": {
+        "cx": 473.73,
+        "cy": 185.75,
+        "rx": 138.95,
+        "ry": 208.15
+      }
+    },
+    {
+      "poseId": "Pose43",
+      "sourceFilename": "Pose43.png",
+      "backendFilename": "Pose43-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9250513315200806,
+      "box": [
+        481.98,
+        137.69,
+        195.58,
+        228.15
+      ],
+      "ellipse": {
+        "cx": 579.77,
+        "cy": 274.58,
+        "rx": 191.67,
+        "ry": 273.78
+      }
+    },
+    {
+      "poseId": "Pose44",
+      "sourceFilename": "pose44.png",
+      "backendFilename": "Pose44-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9254186749458313,
+      "box": [
+        305.34,
+        53.21,
+        97.69,
+        126.26
+      ],
+      "ellipse": {
+        "cx": 354.18,
+        "cy": 128.96,
+        "rx": 95.73,
+        "ry": 151.51
+      }
+    },
+    {
+      "poseId": "Pose45",
+      "sourceFilename": "Pose45.png",
+      "backendFilename": "Pose45-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9169498682022095,
+      "box": [
+        440.89,
+        31.37,
+        94.27,
+        135.67
+      ],
+      "ellipse": {
+        "cx": 488.03,
+        "cy": 112.78,
+        "rx": 92.38,
+        "ry": 162.81
+      }
+    },
+    {
+      "poseId": "Pose46",
+      "sourceFilename": "Pose46.png",
+      "backendFilename": "Pose46-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9272303581237793,
+      "box": [
+        460.54,
+        36.98,
+        100.49,
+        134.39
+      ],
+      "ellipse": {
+        "cx": 510.78,
+        "cy": 117.61,
+        "rx": 98.48,
+        "ry": 161.26
+      }
+    },
+    {
+      "poseId": "Pose47",
+      "sourceFilename": "Pose47.png",
+      "backendFilename": "Pose47-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9007894992828369,
+      "box": [
+        556.07,
+        64.98,
+        109.34,
+        138.2
+      ],
+      "ellipse": {
+        "cx": 610.74,
+        "cy": 147.9,
+        "rx": 107.15,
+        "ry": 165.85
+      }
+    },
+    {
+      "poseId": "Pose48",
+      "sourceFilename": "pose48.png",
+      "backendFilename": "Pose48-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.890526294708252,
+      "box": [
+        493.94,
+        38.07,
+        124.01,
+        132.45
+      ],
+      "ellipse": {
+        "cx": 555.95,
+        "cy": 117.54,
+        "rx": 121.53,
+        "ry": 158.94
+      }
+    },
+    {
+      "poseId": "Pose49",
+      "sourceFilename": "Pose49.png",
+      "backendFilename": "Pose49-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9161847233772278,
+      "box": [
+        455.61,
+        38.19,
+        103.05,
+        134.35
+      ],
+      "ellipse": {
+        "cx": 507.13,
+        "cy": 118.8,
+        "rx": 100.98,
+        "ry": 161.22
+      }
+    },
+    {
+      "poseId": "Pose50",
+      "sourceFilename": "Pose50.png",
+      "backendFilename": "Pose50-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.907092809677124,
+      "box": [
+        462.77,
+        84.65,
+        100.64,
+        122.18
+      ],
+      "ellipse": {
+        "cx": 513.08,
+        "cy": 157.96,
+        "rx": 98.62,
+        "ry": 146.62
+      }
+    },
+    {
+      "poseId": "Pose51",
+      "sourceFilename": "Pose51.png",
+      "backendFilename": "Pose51-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9126336574554443,
+      "box": [
+        466.36,
+        55.54,
+        101.93,
+        125.95
+      ],
+      "ellipse": {
+        "cx": 517.32,
+        "cy": 131.11,
+        "rx": 99.89,
+        "ry": 151.14
+      }
+    },
+    {
+      "poseId": "Pose52",
+      "sourceFilename": "Pose52.png",
+      "backendFilename": "Pose52-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9235386252403259,
+      "box": [
+        498.61,
+        41.84,
+        97.38,
+        130.58
+      ],
+      "ellipse": {
+        "cx": 547.31,
+        "cy": 120.18,
+        "rx": 95.44,
+        "ry": 156.69
+      }
+    },
+    {
+      "poseId": "Pose53",
+      "sourceFilename": "Pose53.png",
+      "backendFilename": "Pose53-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.8996782898902893,
+      "box": [
+        458.24,
+        154.19,
+        208.75,
+        279.24
+      ],
+      "ellipse": {
+        "cx": 562.61,
+        "cy": 321.74,
+        "rx": 204.58,
+        "ry": 335.09
+      }
+    },
+    {
+      "poseId": "Pose54",
+      "sourceFilename": "Pose54.png",
+      "backendFilename": "Pose54-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9374766945838928,
+      "box": [
+        438.19,
+        62.54,
+        111.52,
+        144.76
+      ],
+      "ellipse": {
+        "cx": 493.95,
+        "cy": 149.39,
+        "rx": 109.29,
+        "ry": 173.71
+      }
+    },
+    {
+      "poseId": "Pose55",
+      "sourceFilename": "Pose55.png",
+      "backendFilename": "Pose55-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.8866557478904724,
+      "box": [
+        555.42,
+        99.06,
+        110.53,
+        139.12
+      ],
+      "ellipse": {
+        "cx": 610.69,
+        "cy": 182.53,
+        "rx": 108.32,
+        "ry": 166.94
+      }
+    },
+    {
+      "poseId": "Pose56",
+      "sourceFilename": "Pose56.png",
+      "backendFilename": "Pose56-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.8526422381401062,
+      "box": [
+        519.5,
+        95.01,
+        101.49,
+        135.27
+      ],
+      "ellipse": {
+        "cx": 570.25,
+        "cy": 176.17,
+        "rx": 99.46,
+        "ry": 162.32
+      }
+    },
+    {
+      "poseId": "Pose57",
+      "sourceFilename": "Pose57.png",
+      "backendFilename": "Pose57-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9260790348052979,
+      "box": [
+        318.61,
+        165.48,
+        288.62,
+        384.92
+      ],
+      "ellipse": {
+        "cx": 462.92,
+        "cy": 396.43,
+        "rx": 282.85,
+        "ry": 461.9
+      }
+    },
+    {
+      "poseId": "Pose58",
+      "sourceFilename": "Pose58.png",
+      "backendFilename": "Pose58-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9047935605049133,
+      "box": [
+        512.38,
+        83.91,
+        142.31,
+        225.07
+      ],
+      "ellipse": {
+        "cx": 583.54,
+        "cy": 218.95,
+        "rx": 139.47,
+        "ry": 270.09
+      }
+    },
+    {
+      "poseId": "Pose59",
+      "sourceFilename": "Pose59.png",
+      "backendFilename": "Pose59-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9275548458099365,
+      "box": [
+        436.89,
+        115.47,
+        202.32,
+        287.17
+      ],
+      "ellipse": {
+        "cx": 538.05,
+        "cy": 287.77,
+        "rx": 198.27,
+        "ry": 344.6
+      }
+    },
+    {
+      "poseId": "Pose60",
+      "sourceFilename": "Pose60.png",
+      "backendFilename": "Pose60-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.8929150700569153,
+      "box": [
+        302.25,
+        135.81,
+        369.8,
+        471.51
+      ],
+      "ellipse": {
+        "cx": 487.15,
+        "cy": 418.71,
+        "rx": 362.4,
+        "ry": 565.82
+      }
+    },
+    {
+      "poseId": "Pose61",
+      "sourceFilename": "Pose61.png",
+      "backendFilename": "Pose61-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9292482137680054,
+      "box": [
+        427.99,
+        48.19,
+        100.79,
+        145.26
+      ],
+      "ellipse": {
+        "cx": 478.39,
+        "cy": 135.34,
+        "rx": 98.78,
+        "ry": 174.31
+      }
+    },
+    {
+      "poseId": "Pose62",
+      "sourceFilename": "Pose62.png",
+      "backendFilename": "Pose62-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9200881719589233,
+      "box": [
+        445.9,
+        48.73,
+        100.4,
+        142.0
+      ],
+      "ellipse": {
+        "cx": 496.1,
+        "cy": 133.93,
+        "rx": 98.39,
+        "ry": 170.41
+      }
+    },
+    {
+      "poseId": "Pose63",
+      "sourceFilename": "Pose63.png",
+      "backendFilename": "Pose63-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9218616485595703,
+      "box": [
+        452.01,
+        49.05,
+        107.68,
+        146.51
+      ],
+      "ellipse": {
+        "cx": 505.85,
+        "cy": 136.95,
+        "rx": 105.53,
+        "ry": 175.81
+      }
+    },
+    {
+      "poseId": "Pose64",
+      "sourceFilename": "Pose64.png",
+      "backendFilename": "Pose64-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.927233099937439,
+      "box": [
+        455.38,
+        49.91,
+        99.15,
+        139.76
+      ],
+      "ellipse": {
+        "cx": 504.95,
+        "cy": 133.76,
+        "rx": 97.16,
+        "ry": 167.71
+      }
+    },
+    {
+      "poseId": "Pose65",
+      "sourceFilename": "Pose65.png",
+      "backendFilename": "Pose65-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9181544780731201,
+      "box": [
+        446.71,
+        40.49,
+        99.2,
+        143.89
+      ],
+      "ellipse": {
+        "cx": 496.31,
+        "cy": 126.83,
+        "rx": 97.21,
+        "ry": 172.67
+      }
+    },
+    {
+      "poseId": "Pose66",
+      "sourceFilename": "Pose66.png",
+      "backendFilename": "Pose66-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9229801297187805,
+      "box": [
+        447.44,
+        52.89,
+        101.54,
+        136.48
+      ],
+      "ellipse": {
+        "cx": 498.21,
+        "cy": 134.78,
+        "rx": 99.51,
+        "ry": 163.78
+      }
+    },
+    {
+      "poseId": "Pose67",
+      "sourceFilename": "Pose67.png",
+      "backendFilename": "Pose67-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9204762578010559,
+      "box": [
+        371.5,
+        58.95,
+        107.96,
+        155.26
+      ],
+      "ellipse": {
+        "cx": 425.48,
+        "cy": 152.11,
+        "rx": 105.81,
+        "ry": 186.32
+      }
+    },
+    {
+      "poseId": "Pose68",
+      "sourceFilename": "Pose68.png",
+      "backendFilename": "Pose68-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.8917214274406433,
+      "box": [
+        438.78,
+        59.8,
+        105.69,
+        157.07
+      ],
+      "ellipse": {
+        "cx": 491.62,
+        "cy": 154.04,
+        "rx": 103.57,
+        "ry": 188.48
+      }
+    },
+    {
+      "poseId": "Pose69",
+      "sourceFilename": "Pose69.png",
+      "backendFilename": "Pose69-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9427794218063354,
+      "box": [
+        433.07,
+        69.81,
+        112.44,
+        146.24
+      ],
+      "ellipse": {
+        "cx": 489.29,
+        "cy": 157.56,
+        "rx": 110.19,
+        "ry": 175.49
+      }
+    },
+    {
+      "poseId": "Pose70",
+      "sourceFilename": "Pose70.png",
+      "backendFilename": "Pose70-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9400515556335449,
+      "box": [
+        409.95,
+        68.31,
+        113.78,
+        142.32
+      ],
+      "ellipse": {
+        "cx": 466.84,
+        "cy": 153.7,
+        "rx": 111.5,
+        "ry": 170.79
+      }
+    },
+    {
+      "poseId": "Pose71",
+      "sourceFilename": "Pose71.png",
+      "backendFilename": "Pose71-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9337679147720337,
+      "box": [
+        348.28,
+        69.89,
+        117.62,
+        147.14
+      ],
+      "ellipse": {
+        "cx": 407.09,
+        "cy": 158.17,
+        "rx": 115.27,
+        "ry": 176.56
+      }
+    },
+    {
+      "poseId": "Pose72",
+      "sourceFilename": "Pose72.png",
+      "backendFilename": "Pose72-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9040364027023315,
+      "box": [
+        320.12,
+        126.65,
+        138.76,
+        146.38
+      ],
+      "ellipse": {
+        "cx": 389.5,
+        "cy": 214.48,
+        "rx": 135.98,
+        "ry": 175.65
+      }
+    },
+    {
+      "poseId": "Pose73",
+      "sourceFilename": "Pose73.png",
+      "backendFilename": "Pose73-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9281111359596252,
+      "box": [
+        365.24,
+        49.28,
+        114.25,
+        141.42
+      ],
+      "ellipse": {
+        "cx": 422.37,
+        "cy": 134.14,
+        "rx": 111.97,
+        "ry": 169.71
+      }
+    },
+    {
+      "poseId": "Pose74",
+      "sourceFilename": "Pose74.png",
+      "backendFilename": "Pose74-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9380510449409485,
+      "box": [
+        338.72,
+        75.94,
+        131.08,
+        173.5
+      ],
+      "ellipse": {
+        "cx": 404.26,
+        "cy": 180.03,
+        "rx": 128.46,
+        "ry": 208.2
+      }
+    },
+    {
+      "poseId": "Pose75",
+      "sourceFilename": "Pose75.png",
+      "backendFilename": "Pose75-face-neutral-backend.png",
+      "identicalToSource": false,
+      "method": "yunet",
+      "score": 0.9263918995857239,
+      "box": [
+        360.54,
+        124.73,
+        158.95,
+        206.56
+      ],
+      "ellipse": {
+        "cx": 440.02,
+        "cy": 248.67,
+        "rx": 155.77,
+        "ry": 247.88
+      }
+    }
+  ],
+  "errors": []
+}

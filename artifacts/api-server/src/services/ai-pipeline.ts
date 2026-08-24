@@ -70,8 +70,8 @@ import {
   mapStyleModeToTemplate,
   isLocalIdentityImageUrl,
   loadStudioTalentImageAsDataUri,
-  loadPoseReferenceImageAsDataUri,
 }                                    from "../rendering/preprocessing";
+import { loadStage1PoseReferenceImageAsDataUri } from "../rendering/pose-face-neutral-backend.js";
 import { mapToFashnCategory }        from "../rendering/types";
 import { uploadBase64Image }         from "../rendering/image-storage";
 import { getRenderingEngine }        from "./rendering/RenderingEngine";
@@ -493,7 +493,12 @@ export async function runAIPipeline(params: {
             const lookupKey = planned.poseId ?? planned.name;
             const definition = getPoseDefinition(lookupKey);
             const relativePath = definition?.poseReferenceImage;
-            if (!relativePath) {
+            // Stage-1 uses backend-only face-neutral Pose Master bytes.
+            // Frontend display assets (PoseN.png) remain face-bearing and unchanged.
+            const stage1PoseKey =
+              definition?.poseId ?? planned.poseId ?? relativePath ?? lookupKey;
+
+            if (!relativePath && !definition?.poseId && !planned.poseId) {
               logger.warn(
                 { renderId, poseKey: lookupKey },
                 "AI pipeline: Pose Master visual reference path missing",
@@ -501,11 +506,20 @@ export async function runAIPipeline(params: {
               return null;
             }
             try {
-              return loadPoseReferenceImageAsDataUri(relativePath, renderId);
+              return loadStage1PoseReferenceImageAsDataUri(
+                stage1PoseKey,
+                renderId,
+              );
             } catch (error) {
               logger.warn(
-                { renderId, poseKey: lookupKey, relativePath, err: error },
-                "AI pipeline: failed to load Pose Master visual reference — continuing without it",
+                {
+                  renderId,
+                  poseKey: lookupKey,
+                  stage1PoseKey,
+                  relativePath,
+                  err: error,
+                },
+                "AI pipeline: failed to load face-neutral Stage-1 Pose Master — continuing without it",
               );
               return null;
             }
