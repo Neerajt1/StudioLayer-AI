@@ -66,6 +66,7 @@ import {
 } from '@/components/studio/studio-image-inspector';
 import { ShootTypeSelector } from '@/components/studio/shoot-type-selector';
 import { ResolutionSelector } from '@/components/studio/resolution-selector';
+import { GarmentCategorySelector } from '@/components/studio/garment-category-selector';
 import { DirectShootDialog } from '@/components/studio/direct-shoot-dialog';
 import {
   FixedBatchViewport,
@@ -94,7 +95,6 @@ import {
   resolveStudioAdminFlag,
 } from '@workspace/studio-credit-engine';
 import { useStudioWorkflow } from '@/context/studio-workflow-context';
-import type { GarmentPlacement } from '@/lib/studio-workflow';
 import {
   buildGenerationRequest,
   buildRemoveBackgroundRequest,
@@ -125,12 +125,6 @@ import {
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const GARMENT_TYPES = [
-  { value: 'upper_body', label: 'Topwear',     sub: 'Shirts · T-Shirts · Jackets · Knitwear' },
-  { value: 'lower_body', label: 'Bottomwear',  sub: 'Jeans · Trousers · Shorts · Skirts' },
-  { value: 'full_body',  label: 'Full Outfit', sub: 'Dresses · Jumpsuits · Co-ords · Suits' },
-] as const;
 
 /** Surface API error detail in development instead of a generic toast only. */
 function renderApiErrorDescription(error: unknown): string {
@@ -1308,37 +1302,14 @@ export default function StudioPage() {
 
                 {/* Garment type selector */}
                 <div className="space-y-2">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-foreground">Garment Category</p>
-                    <p className="sl-ui-helper">
-                      Helps StudioLayer AI understand your garment more accurately.
-                    </p>
-                  </div>
-                  <div className="sl-garment-category-grid">
-                    {GARMENT_TYPES.map((g) => {
-                      const isSelected = workflow.garmentPlacement === g.value;
-                      return (
-                        <StudioToggleOption
-                          key={g.value}
-                          selected={isSelected}
-                          disabled={isGenerationBusy}
-                          onClick={() => {
-                            setGarmentPlacement(g.value as GarmentPlacement);
-                            setShowValidation(false);
-                          }}
-                          className="sl-garment-category-option rounded px-2.5 py-3 sm:px-2 sm:py-2.5"
-                        >
-                          <p className="sl-garment-category-label font-semibold">{g.label}</p>
-                          <p className={cn(
-                            'sl-garment-category-sub font-mono mt-0.5',
-                            isSelected ? 'opacity-75' : 'text-muted-foreground',
-                          )}>
-                            {g.sub}
-                          </p>
-                        </StudioToggleOption>
-                      );
-                    })}
-                  </div>
+                  <GarmentCategorySelector
+                    value={workflow.garmentPlacement}
+                    disabled={isGenerationBusy}
+                    onChange={(placement) => {
+                      setGarmentPlacement(placement);
+                      setShowValidation(false);
+                    }}
+                  />
                   {showValidation && !workflowValidation.hasCategory && (
                     <p className="text-xs text-destructive font-mono">Please select a garment type.</p>
                   )}
