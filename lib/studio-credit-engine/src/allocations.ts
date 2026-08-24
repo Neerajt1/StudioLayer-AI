@@ -17,6 +17,7 @@ export const STUDIO_CREDIT_ALLOCATION_REASON_CODES = [
   StudioCreditReasonCode.MEMBERSHIP_UPGRADE_ALLOCATION,
   StudioCreditReasonCode.TOP_UP_ALLOCATION,
   StudioCreditReasonCode.STUDIO_PASS_ALLOCATION,
+  StudioCreditReasonCode.ADMIN_GRANT_ALLOCATION,
 ] as const;
 
 export type StudioCreditAllocationReasonCode =
@@ -70,6 +71,13 @@ export function expectedCreditsForAllocation(input: {
       return MembershipCreditAllowances.topUp;
     case StudioCreditReasonCode.STUDIO_PASS_ALLOCATION:
       return MembershipCreditAllowances.studioPass;
+    case StudioCreditReasonCode.ADMIN_GRANT_ALLOCATION:
+      // Admin grants are explicitly allowed to specify an arbitrary positive
+      // integer amount (see api-server grantCreditAllocation). This helper is
+      // used only for commercial fixed-price grants.
+      throw new Error(
+        "admin_grant_allocation is arbitrary; expectedCreditsForAllocation is not applicable",
+      );
     default: {
       const _exhaustive: never = input.reasonCode;
       return _exhaustive;

@@ -11,6 +11,8 @@ export const StudioCreditReasonCode = {
   MEMBERSHIP_UPGRADE_ALLOCATION: 'membership_upgrade_allocation',
   TOP_UP_ALLOCATION: 'top_up_allocation',
   STUDIO_PASS_ALLOCATION: 'studio_pass_allocation',
+  /** Arbitrary admin/manual grant lot — immediately spendable, optional expiry. */
+  ADMIN_GRANT_ALLOCATION: 'admin_grant_allocation',
   REFUND: 'refund',
   ADJUSTMENT: 'adjustment',
 } as const;

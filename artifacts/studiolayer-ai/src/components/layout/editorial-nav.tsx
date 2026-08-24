@@ -17,6 +17,8 @@ const navItems = [
   { href: '/billing', label: 'Studio Membership' },
 ] as const;
 
+const adminNavItem = { href: '/admin', label: 'Studio Admin' } as const;
+
 function navDisplayFirstName(name: string | undefined): string {
   const trimmed = name?.trim();
   if (!trimmed) {
@@ -67,6 +69,8 @@ export function EditorialNav() {
   const { data: user, isLoading: authLoading } = useGetMe();
   const logoutMutation = useLogout();
   const isAuthenticated = Boolean(user);
+  const isAdmin = user?.isAdmin === true;
+  const items = isAdmin ? [...navItems, adminNavItem] : [...navItems];
 
   const displayName = navDisplayFirstName(user?.name);
 
@@ -117,7 +121,7 @@ export function EditorialNav() {
   };
 
   const renderNavLink = (
-    item: (typeof navItems)[number],
+    item: { href: string; label: string },
     className?: string,
     onNavigate?: () => void,
   ) => {
@@ -190,7 +194,7 @@ export function EditorialNav() {
   return (
     <>
       <nav className="sl-editorial-nav-bar sl-editorial-nav-bar--desktop" aria-label="Main navigation">
-        {navItems.map((item) => renderNavLink(item))}
+        {items.map((item) => renderNavLink(item))}
 
         {!authLoading && (isAuthenticated ? authenticatedAccountControls : visitorAuthControls)}
       </nav>
@@ -241,7 +245,7 @@ export function EditorialNav() {
               </div>
 
               <div className="sl-editorial-nav-mobile-links">
-                {navItems.map((item) =>
+                {items.map((item) =>
                   renderNavLink(item, 'sl-editorial-nav-mobile-link', () => setMobileMenuOpen(false)),
                 )}
               </div>

@@ -440,14 +440,25 @@ export async function grantCreditAllocation(input: {
     throw new Error("Membership upgrade allocations are not available");
   }
 
-  const expected = expectedCreditsForAllocation({
-    reasonCode: input.reasonCode,
-    tier,
-  });
-  if (input.credits !== expected) {
-    throw new Error(
-      `Allocation credits must be ${expected} for ${input.reasonCode} (got ${input.credits})`,
-    );
+  if (input.reasonCode === StudioCreditReasonCode.ADMIN_GRANT_ALLOCATION) {
+    if (
+      !Number.isInteger(input.credits) ||
+      input.credits <= 0
+    ) {
+      throw new Error(
+        "Admin grant allocations require a positive integer credits amount",
+      );
+    }
+  } else {
+    const expected = expectedCreditsForAllocation({
+      reasonCode: input.reasonCode,
+      tier,
+    });
+    if (input.credits !== expected) {
+      throw new Error(
+        `Allocation credits must be ${expected} for ${input.reasonCode} (got ${input.credits})`,
+      );
+    }
   }
 
   if (input.reasonCode === StudioCreditReasonCode.TOP_UP_ALLOCATION) {
