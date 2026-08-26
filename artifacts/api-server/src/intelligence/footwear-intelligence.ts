@@ -1,19 +1,34 @@
 // ---------------------------------------------------------------------------
-// StudioLayer AI — Footwear Intelligence (Fix #6)
+// StudioLayer AI — Footwear Intelligence (Fix #6 + Look-Context V1)
 //
-// Makes footwear an intentional, predictable part of styling logic.
-// Reuses GarmentProfile + OutfitRecommendation — no parallel footwear system.
+// Footwear is styling context for clothing heroes, reference evidence when
+// the uploaded product itself is footwear. Talent shoes are never evidence.
 // ---------------------------------------------------------------------------
 
 import type { GarmentProfile, RecommendedOutfit } from "./types";
+import {
+  describeLookDirection,
+  resolveLookDirection,
+  type LookDirection,
+} from "./look-direction";
 
 export type FootwearStylingMode = "footwear" | "barefoot";
+
+/** Whether footwear is product evidence or complementary styling. */
+export type FootwearRole = "evidence" | "styling";
 
 export interface FootwearStylingResolution {
   mode: FootwearStylingMode;
   /** Established footwear description when mode is "footwear". */
   description: string | null;
+  role: FootwearRole;
+  lookDirection: LookDirection;
 }
+
+export type FootwearStylingOptions = {
+  outfitStyle?: string | null;
+  lookDirection?: LookDirection;
+};
 
 const BAREFOOT_SUBCATEGORY_KEYWORDS = [
   "swim",
@@ -69,20 +84,53 @@ export function isBarefootAppropriateContext(profile: GarmentProfile): boolean {
   return false;
 }
 
+const TALENT_FOOTWEAR_EXCLUSION =
+  "Talent / model reference footwear is NOT footwear styling evidence — do not copy, inherit, or restyle from shoes visible on the talent reference. Never use talent footwear to determine styling.";
+
 /**
- * Resolves whether this shoot should be styled with footwear or intentional barefoot,
- * using the intelligence layer's outfit recommendation when footwear is required.
+ * Resolves footwear mode + established description for the shoot.
+ *
+ * Hero product = footwear → REFERENCE EVIDENCE (preserve uploaded product).
+ * Hero product = clothing → STYLING CONTEXT (look-direction-aware recommendation).
+ * Talent footwear is never used as evidence or styling source.
  */
 export function resolveFootwearStyling(
   profile: GarmentProfile,
   recommendedOutfit: RecommendedOutfit,
+  options?: FootwearStylingOptions,
 ): FootwearStylingResolution {
+  const direction =
+    options?.lookDirection ??
+    resolveLookDirection(profile, options?.outfitStyle);
+
+  if (profile.category === "footwear") {
+    const evidenceDescription =
+      profile.subcategory?.trim() ||
+      "the uploaded footwear product exactly as shown";
+    return {
+      mode: "footwear",
+      description: evidenceDescription,
+      role: "evidence",
+      lookDirection: direction,
+    };
+  }
+
   if (isBarefootAppropriateContext(profile)) {
-    return { mode: "barefoot", description: null };
+    return {
+      mode: "barefoot",
+      description: null,
+      role: "styling",
+      lookDirection: direction,
+    };
   }
 
   const footwear = recommendedOutfit.footwear?.trim() || null;
-  return { mode: "footwear", description: footwear };
+  return {
+    mode: "footwear",
+    description: footwear,
+    role: "styling",
+    lookDirection: direction,
+  };
 }
 
 /**
@@ -91,8 +139,20 @@ export function resolveFootwearStyling(
 export function buildFootwearStylingPrompt(
   profile: GarmentProfile,
   recommendedOutfit: RecommendedOutfit,
+  options?: FootwearStylingOptions,
 ): string {
-  const styling = resolveFootwearStyling(profile, recommendedOutfit);
+  const styling = resolveFootwearStyling(profile, recommendedOutfit, options);
+  const directionLabel = describeLookDirection(styling.lookDirection);
+
+  if (styling.role === "evidence") {
+    return [
+      "FOOTWEAR — REFERENCE EVIDENCE:",
+      `The uploaded hero product is footwear (${styling.description}).`,
+      "Preserve the uploaded footwear faithfully as product evidence — colour, construction, and design must match the reference.",
+      TALENT_FOOTWEAR_EXCLUSION,
+      "FOOTWEAR BATCH CONSISTENCY — identical footwear product appearance in every shot of this generation batch.",
+    ].join(" ");
+  }
 
   if (styling.mode === "barefoot") {
     return [
@@ -101,17 +161,21 @@ export function buildFootwearStylingPrompt(
       "Barefoot is intentional here — not an accidental omission of footwear.",
       "Remain consistently barefoot across every image in this generation batch unless creative direction explicitly requires footwear.",
       "Do not randomly add shoes, sandals, or heels across parallel generations.",
+      TALENT_FOOTWEAR_EXCLUSION,
     ].join(" ");
   }
 
   const establishedFootwear = styling.description
-    ? `Established footwear for this shoot: ${styling.description}.`
-    : "Wear appropriate commercial footwear that complements the garment — professional fashion styling, visible whenever feet appear in frame.";
+    ? `Established footwear for this shoot (styling context for look direction: ${directionLabel}): ${styling.description}.`
+    : `Wear footwear that fits the overall fashion direction of the completed look (${directionLabel}) — professional fashion styling, visible whenever feet appear in frame.`;
 
   return [
-    "FOOTWEAR STYLING — MANDATORY FOR COMMERCIAL FASHION:",
+    "FOOTWEAR STYLING — STYLING CONTEXT FOR THE COMPLETE LOOK:",
+    `Footwear belongs with the garment as complementary styling for the overall fashion direction (${directionLabel}) — not as an isolated prop.`,
     "Standard commercial fashion photography — bare feet are NOT the default and are NOT acceptable for this garment.",
     establishedFootwear,
+    TALENT_FOOTWEAR_EXCLUSION,
+    "Do not invent footwear that conflicts with the completed look direction.",
     "Footwear must be visible and correctly placed whenever feet appear in the frame.",
     "Walking, standing, cross-leg, and editorial movement poses must ALL preserve the same footwear — a pose must never cause footwear to disappear.",
     "FOOTWEAR BATCH CONSISTENCY — every image in this generation batch must show identical footwear styling:",
@@ -119,7 +183,6 @@ export function buildFootwearStylingPrompt(
       ? `Same footwear type, colour, and style (${styling.description}) in every shot.`
       : "Same footwear type, colour, and style in every shot — never switch between barefoot, heels, sandals, sneakers, or boots.",
     "Never independently invent, remove, or switch footwear between parallel generations.",
-    "Do not hallucinate unusual footwear — choose conservative, garment-appropriate styling only.",
   ].join(" ");
 }
 
@@ -127,14 +190,16 @@ export function buildFootwearStylingPrompt(
 export function buildFootwearBatchConsistencyRules(
   profile: GarmentProfile,
   recommendedOutfit: RecommendedOutfit,
+  options?: FootwearStylingOptions,
 ): string {
-  const styling = resolveFootwearStyling(profile, recommendedOutfit);
+  const styling = resolveFootwearStyling(profile, recommendedOutfit, options);
 
   if (styling.mode === "barefoot") {
     return [
       "FOOTWEAR BATCH LOCK:",
       "Intentional barefoot for this shoot — remain barefoot in every image.",
       "Never add footwear in one shot and omit it in another.",
+      TALENT_FOOTWEAR_EXCLUSION,
     ].join(" ");
   }
 
@@ -147,5 +212,7 @@ export function buildFootwearBatchConsistencyRules(
     lockDetail,
     "Same garment + same shoot = coherent footwear styling across the batch.",
     "Never switch between barefoot, heels, sandals, sneakers, or boots between shots.",
+    "Do not invent footwear that conflicts with the completed look.",
+    TALENT_FOOTWEAR_EXCLUSION,
   ].join(" ");
 }

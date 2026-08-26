@@ -6,18 +6,73 @@
 //
 // Environment variables:
 //   OPENROUTER_API_KEY          Required. User-supplied OpenRouter API key.
-//   OR_RENDER_MODEL             Override the default generation model.
+//   OR_RENDER_MODEL             Override the default generation model (flash path).
+//   OR_RENDER_4K_MODEL          Override the 4K flash-preview model.
+//   OR_RENDER_ENGINE            "flash" (default / Nano Regular) | "nano_pro".
+//                               flux_max is NOT an active production Create engine —
+//                               if set, Create falls back to flash (Nano Regular).
 //   OR_RENDER_TIMEOUT_MS        Override per-request timeout (ms). Default 90 000.
 //   OR_RENDER_RETRY_COUNT       Override retry count. Default 1.
 // ---------------------------------------------------------------------------
 
 import { RENDERING_REALISM_INSTRUCTION } from "./rendering-realism.js";
-import { RENDERING_BACKGROUND_INSTRUCTION } from "./rendering-background.js";
 import { RENDERING_COLOR_FIDELITY_INSTRUCTION } from "./rendering-color-fidelity.js";
+import { RENDERING_PHOTOGRAPHY_INSTRUCTION } from "./rendering-photography.js";
 import {
   PLATFORM_IMAGE_STANDARD_INSTRUCTION,
 } from "../image-architecture/master-asset.js";
 import { STUDIO_LAYER_PREDICTABILITY_CONTRACT } from "../predictability-contract.js";
+
+/**
+ * Compact evidence-local decoration principle for every fresh generation
+ * (Front-only and multi-view). Does not replace garmentInstruction or
+ * multi-view panel correspondence — interprets how garment evidence applies.
+ *
+ * @param talentReferenceImageNumber — OpenRouter index of the Talent image
+ *   (2 for sheet / Front-only; higher when separate Back/Detail precede Talent).
+ */
+export function buildSurfaceComponentEvidencePrinciple(
+  talentReferenceImageNumber = 2,
+): string {
+  return `SURFACE / COMPONENT EVIDENCE PRINCIPLE:
+Decoration and construction detail on any generated garment surface or component are allowed only when evidenced on that same surface or component in the garment reference(s) — evidence is local and does not transfer across surfaces (including Back, sleeves, cuffs, hems, neckline, bottoms, or companion pieces). When a surface is visibly plain in the references, keep it plain; when it is decorated, preserve the decoration shown there; when a surface is not visible, infer only what is needed for a believable garment without borrowing decoration from another surface. Do not transfer, mirror, complete, or aesthetically balance decoration across surfaces. Companion or outfit-completion pieces must not inherit the hero garment's decoration unless a garment reference evidences that decoration. Reference Image ${talentReferenceImageNumber} provides talent identity and body context only — never use clothing visible on the talent as evidence for garment construction or decoration.`;
+}
+
+/** Default principle text (Talent = Reference Image 2) — sheet / Front-only. */
+export const SURFACE_COMPONENT_EVIDENCE_PRINCIPLE =
+  buildSurfaceComponentEvidencePrinciple(2);
+
+/**
+ * A/B VARIANT — single Garment Authority Source of Truth.
+ * Consolidates overlapping garment-authority text formerly spread across
+ * GARMENT FIDELITY, MATERIAL/SURFACE, STRUCTURAL, WHAT MUST NEVER CHANGE,
+ * premium fence, FINAL closer, AUTHORITY #2 garment clause, and compose protection.
+ * Supporting layers (realism, surface principle, orientation, bottoms replacement,
+ * batch consistency, GI preservation/colour/fabric) remain outside this block.
+ */
+export const GARMENT_AUTHORITY_SOT = `GARMENT AUTHORITY — REFERENCE IMAGE 1
+
+Ref1 is the selected product. Reproduce this exact garment.
+Do not substitute a similar, generic, or redesigned garment.
+Ref1 outranks category priors and analyzer text; Do not invent embroidery, prints, logos, pockets, closures, seams, hardware, or textures absent from Ref1; plain stays plain.
+
+CONSTRUCTION:
+Preserve visible construction from Ref1: silhouette, proportions, panels, seams, closures, pockets, sleeves, collar/lapel, cuffs, hem, hardware and design details.
+
+AS-WORN STATE:
+Preserve intentional as-worn states visible in Ref1 — including rolled, creased or folded cuffs/sleeves and visible hem state. Do not "correct" them into neat, default, or catalogue-normalized construction.
+
+MATERIAL / SURFACE:
+Preserve visible material character from Ref1: crinkle, wrinkles, weave/grain, surface variation, finish, natural irregularity and material-specific light response. Do not smooth, polish, flatten, clean up or genericize the surface into a digitally reconstructed fabric.
+
+POSE ADAPTATION:
+The garment may take natural pose-induced folds, compression and drape on the target body. Those folds are additive only — they must not erase source material character or as-worn construction.
+
+COLOUR:
+Preserve Ref1 colour identity.
+
+PHOTOGRAPHY SERVES THE PRODUCT:
+Premium / clean / luxury studio quality means lighting and photographic finish only — never permission to redesign, smooth or genericize the garment.`;
 
 export const OPENROUTER_RENDERING_CONFIG = {
   /** Provider label — internal only, never surfaced in UI. */
@@ -53,56 +108,17 @@ export const OPENROUTER_RENDERING_CONFIG = {
    * This is the authoritative instruction for virtual try-on generation.
    * Do not modify without reviewing the content-array order in callOpenRouter.
    */
-  garmentInstruction: `Reference Image 1 is the garment.
+  garmentInstruction: `Reference Image 1 is the garment reference.
 
 Reference Image 2 is the human model.
 
 Your task is to dress the person shown in Reference Image 2 using the exact garment shown in Reference Image 1.
 
-The uploaded garment is the single source of truth. It must appear in the output exactly as uploaded.
+Ignore the hanger, background and any non-garment objects present in Reference Image 1. Use only the garment itself for dressing the model.
 
-TECHNICAL REFERENCE — NOT INSPIRATION:
-Reference Image 1 is a technical garment reference, not a creative mood board. Treat it like a production spec sheet. Reproduce only what is visibly present — never infer, extend, or embellish missing details.
-
-GARMENT FIDELITY — NON-NEGOTIABLE:
-- Preserve every garment construction detail exactly as visible in Reference Image 1.
-- Preserve embroidery locations exactly. If embroidery appears only on the chest, it must appear only on the chest — never on sleeves, cuffs, hem, or back unless already present there.
-- Do not invent embroidery anywhere it does not exist in Reference Image 1.
-- Do not invent prints, patterns, logos, or graphics on any part of the garment.
-- Do not invent pockets, buttons, zippers, plackets, collars, or collar stands.
-- Do not invent sleeve detailing — no added cuffs, embroidery, piping, or embellishment on sleeves unless clearly visible in Reference Image 1.
-- Do not invent stitching, topstitching, decorative seams, or contrast thread.
-- Do not invent borders, trims, piping, fringe, beads, sequins, appliqués, or embellishments.
-- Do not invent seams, panels, or hardware.
-- Do not invent textures or weaves.
-- If an area is plain, solid, or unembellished in Reference Image 1, it must remain plain in the output.
-- Do not "complete" or "balance" the design by adding symmetric details on the opposite side unless they already exist in Reference Image 1.
-
-STRUCTURAL ELEMENTS — YOU MUST PRESERVE EVERY ONE OF THESE EXACTLY:
-
-1. Neckline shape — the exact cut and depth of the neckline (V-neck, scoop, square, boat, crew, etc.) must not change in any way.
-2. Straps — every strap must be preserved exactly: count, thickness, placement, and attachment point. Do not add, remove, reposition, or narrow any strap.
-3. Collar — the collar shape, stand height, and lapel style must not be altered.
-4. Sleeves — sleeve type, length, and cut (sleeveless, cap, short, long, balloon, off-shoulder) must be exactly reproduced.
-5. Cuffs — cuff style and length must not change.
-6. Garment length and hemline — the exact hem position relative to the body must be preserved. Do not shorten or lengthen the garment by even a small amount.
-7. Silhouette — the overall outline and drape of the garment (A-line, fitted, relaxed, boxy, flared, etc.) must be maintained.
-8. Seam placement — visible seams, darts, and panel lines must appear in the same position as the original.
-9. Construction details — buttons, pockets, zippers, drawstrings, belts, ties, and trims must appear as shown.
-10. Surface details — colour, fabric texture, prints, patterns, embroidery, logos, graphics, and branding must be reproduced faithfully.
-
-WHAT MUST NEVER CHANGE:
-- Do not redesign, reinterpret, alter, replace, or restyle the uploaded garment in any way.
-- Do not reinterpret the garment's dimensions, scale, or proportions — they must remain identical to Reference Image 1 in every output.
-- Do not remove straps or change their position.
-- Do not change the neckline depth or shape.
-- Do not shorten or lengthen the garment.
-- Do not change the sleeve length or type.
-- Do not alter the silhouette, overall shape, or relative measurements (waist position, hem height, shoulder width, body coverage).
+${GARMENT_AUTHORITY_SOT}
 
 BATCH CONSISTENCY — when multiple images are generated from the same upload, every image must show the identical garment with identical proportions, dimensions, colour, hue, saturation, print, pattern, and fabric appearance. Never vary garment length, silhouette, scale, or colour between shots.
-
-FOOTWEAR BATCH CONSISTENCY — when multiple images are generated from the same upload, every image must show identical footwear styling. Same garment + same shoot = coherent footwear across the batch. Never switch between barefoot, heels, sandals, sneakers, or boots between parallel generations. Once footwear styling is established for the shoot, preserve it in every shot unless creative direction explicitly requires a footwear change. Bare feet are not the default for commercial fashion — barefoot is valid only when garment category or styling context supports it (swimwear, beach/resort, loungewear/sleepwear, deliberate editorial barefoot). Do not hallucinate unusual footwear — choose conservative, garment-appropriate styling only.
 
 ORIENTATION — Reproduce the garment in its exact original left/right orientation as shown in Reference Image 1. Do not flip, mirror, or horizontally reverse the garment for any reason. All asymmetric details — embroidery, prints, logos, button plackets, chest pockets, side slits, off-shoulder drops, and any embellishments — must remain on the same side as the original. If the garment has a logo on the left chest, it must appear on the left chest in the output.
 
@@ -115,23 +131,14 @@ When the uploaded garment is jeans, trousers, chinos, shorts, a skirt, or any lo
 - Seams along the inner leg, outer leg, crotch, and waistband must read as continuous, natural clothing.
 - If the result looks like the garment was digitally pasted onto a different pair of trousers, you have failed.
 
-OUTFIT COMPLETION — When generating complementary clothing to complete the outfit around the uploaded garment, select intentional, fashion-forward pieces that a professional fashion stylist would choose. Never default to a plain grey T-shirt, plain white undershirt, or any generic filler garment as an inner layer or companion piece unless the uploaded garment is structured outerwear (a tailored blazer, coat, or jacket) that physically requires an inner layer. For tops, shirts, and blouses, complete the outfit with styled bottoms and footwear only — do not add any inner layer beneath the uploaded garment.
-
 WHAT MAY VARY NATURALLY:
 - Model pose and body position
-- Camera angle and framing
-- Lighting and shadows cast by the garment (within soft studio lighting — background remains pure white)
-- Complementary styling (accessories and outfit-completion pieces around the hero garment) — footwear styling is locked for the batch once established; see FOOTWEAR BATCH CONSISTENCY
+- Camera angle and framing — only when the directed shot does not specify an explicit framing requirement; when preferredFraming or CAMERA/FRAMING is set (full_body, portrait, chest_up, waist_up, etc.), preserve that requested framing
+- Lighting and shadows cast by the garment (within soft studio lighting)
+- Complementary styling (accessories and outfit-completion pieces around the hero garment) — footwear styling is locked for the batch once established by the creative brief
 - Facial expression
 - Complementary clothing items (trousers, skirt) that complete the outfit around the uploaded garment — these must not cover or obscure the uploaded garment in any way
-
-BACKGROUND IS FIXED — pure white seamless studio in every output. Never vary the background between shots or introduce environmental scenery.
-
-If the uploaded garment represents only part of an outfit (such as a blazer, jacket, shirt, top, skirt or trousers), intelligently generate the remaining clothing so that it naturally complements the uploaded garment while keeping the uploaded garment completely unchanged.
-
-Ignore the hanger, background and any non-garment objects present in Reference Image 1. Use only the garment itself for dressing the model.
-
-Generate a premium commercial fashion photograph suitable for an ecommerce clothing brand with realistic lighting, natural body proportions, accurate garment draping, and a clean professional studio appearance.${PLATFORM_IMAGE_STANDARD_INSTRUCTION}${RENDERING_REALISM_INSTRUCTION}${RENDERING_BACKGROUND_INSTRUCTION}${RENDERING_COLOR_FIDELITY_INSTRUCTION}`,
+${PLATFORM_IMAGE_STANDARD_INSTRUCTION}${RENDERING_REALISM_INSTRUCTION}${RENDERING_PHOTOGRAPHY_INSTRUCTION}${RENDERING_COLOR_FIDELITY_INSTRUCTION}`,
 
   /**
    * Primary instruction for OpenRouter refinements (Enhance Model Face, Enhance Garment).
@@ -163,7 +170,23 @@ Reference Image 1 confirms garment fidelity — preserve it exactly except where
   flashPreviewModel:
     process.env["OR_RENDER_4K_MODEL"] ?? "google/gemini-3.1-flash-image-preview",
 
-  /** Platform aspect ratio passed to OpenRouter image_config. */
+  /**
+   * Nano Banana Pro (Gemini 3 Pro Image) — used when OR_RENDER_ENGINE=nano_pro.
+   * OpenRouter Images API: POST /api/v1/images
+   * Verified: resolution 1K|2K|4K (Vertex: 1K|2K), aspect_ratio includes 4:5.
+   */
+  nanoBananaProModel:
+    process.env["OR_NANO_BANANA_PRO_MODEL"] ?? "google/gemini-3-pro-image",
+
+  /**
+   * FLUX.2 Max model id — DORMANT. Not used by production Create.
+   * Kept for experimental / historical flux-max-request helpers only.
+   * Verified model: black-forest-labs/flux.2-max
+   */
+  fluxMaxModel:
+    process.env["OR_FLUX_MAX_MODEL"] ?? "black-forest-labs/flux.2-max",
+
+  /** Platform aspect ratio passed to OpenRouter image_config / Images API. */
   outputAspectRatio: "4:5" as const,
 
   /**
@@ -176,14 +199,118 @@ Reference Image 1 confirms garment fidelity — preserve it exactly except where
 
 export type NativeOutputResolution = "2K" | "4K";
 
-/** Select the OpenRouter model slug for the requested native resolution tier. */
+/**
+ * V1 Create engine path. When false, fresh Create uses one Nano Regular (flash)
+ * generation request. Nano Pro → Nano Regular cascade code is retained for V3.
+ */
+export const V1_CREATE_USE_NANO_PRO_CASCADE = false;
+
+/** Active production Create engines only. FLUX.2 Max is intentionally excluded. */
+export type OpenRouterRenderEngine = "flash" | "nano_pro";
+
+const FLUX_MAX_ENGINE_ALIASES = new Set([
+  "flux_max",
+  "flux-max",
+  "fluxmax",
+  "flux.2-max",
+  "flux2_max",
+  "flux2-max",
+]);
+
+function isFluxMaxEngineAlias(raw: string): boolean {
+  return FLUX_MAX_ENGINE_ALIASES.has(raw);
+}
+
+/**
+ * Production Create rendering engine.
+ * Default: flash (Nano Regular / google/gemini-3.1-flash-image chat path).
+ * Set OR_RENDER_ENGINE=nano_pro for Nano Banana Pro Images API.
+ *
+ * Per-call `engineOverride` (Create cascade Stage-1/Stage-2) wins over env.
+ * When override is omitted, behaviour is unchanged.
+ *
+ * FLUX.2 Max is NOT an active production Create engine. If OR_RENDER_ENGINE is
+ * set to a Flux alias (or any other unrecognized value), Create uses flash.
+ * There is no Nano→Flux fallback and no unknown→Flux fallback.
+ */
+export function resolveOpenRouterRenderEngine(
+  engineOverride?: OpenRouterRenderEngine | null,
+): OpenRouterRenderEngine {
+  if (engineOverride === "flash" || engineOverride === "nano_pro") {
+    return engineOverride;
+  }
+  const raw = (process.env["OR_RENDER_ENGINE"] ?? "flash").trim().toLowerCase();
+  if (
+    raw === "nano_pro" ||
+    raw === "nano-pro" ||
+    raw === "nanopro" ||
+    raw === "gemini-3-pro-image"
+  ) {
+    return "nano_pro";
+  }
+  if (raw === "flash" || raw === "nano" || raw === "nano_regular" || raw === "nano-regular") {
+    return "flash";
+  }
+  if (isFluxMaxEngineAlias(raw)) {
+    // Rejected: do not route production Create to FLUX.2 Max.
+    console.warn(
+      `[rendering] OR_RENDER_ENGINE=${raw} is not an active production Create engine; using flash (Nano Regular)`,
+    );
+    return "flash";
+  }
+  // Missing / invalid / unknown → Nano Regular (never Flux).
+  if (raw.length > 0 && raw !== "flash") {
+    console.warn(
+      `[rendering] OR_RENDER_ENGINE=${raw} is unrecognized; using flash (Nano Regular)`,
+    );
+  }
+  return "flash";
+}
+
+export function isNanoBananaProEngine(
+  engineOverride?: OpenRouterRenderEngine | null,
+): boolean {
+  return resolveOpenRouterRenderEngine(engineOverride) === "nano_pro";
+}
+
+/**
+ * Always false for production Create.
+ * FLUX.2 Max is dormant — OpenRouterProvider retains historical Flux branch
+ * code, but this gate never opens via OR_RENDER_ENGINE.
+ */
+export function isFluxMaxEngine(): boolean {
+  return false;
+}
+
+/**
+ * Select the OpenRouter model slug for the requested native resolution tier.
+ * Nano Pro uses one model for both 2K and 4K — resolution is sent as Images API `resolution`.
+ * Flash (Nano Regular) path keeps separate stable (2K) vs preview (4K) chat models.
+ * FLUX.2 Max is never selected here.
+ */
 export function resolveOpenRouterModelForResolution(
   resolution: NativeOutputResolution,
+  engineOverride?: OpenRouterRenderEngine | null,
 ): string {
+  if (isNanoBananaProEngine(engineOverride)) {
+    return OPENROUTER_RENDERING_CONFIG.nanoBananaProModel;
+  }
   if (resolution === "4K") {
     return OPENROUTER_RENDERING_CONFIG.flashPreviewModel;
   }
   return OPENROUTER_RENDERING_CONFIG.defaultModel;
+}
+
+/**
+ * Nano Pro Images API resolution parameter.
+ * Sends the requested tier as-is (no silent downgrade).
+ * Note: Google Vertex lists 1K|2K only; Google AI Studio lists 1K|2K|4K.
+ * Native resolution validation rejects claiming 4K if a smaller image is returned.
+ */
+export function resolveNanoProImageResolution(
+  resolution: NativeOutputResolution,
+): "2K" | "4K" {
+  return resolution === "4K" ? "4K" : "2K";
 }
 
 /**

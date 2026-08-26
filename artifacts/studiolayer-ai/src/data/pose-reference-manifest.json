@@ -140,7 +140,6 @@
     "Pose69": "/pose-references/Pose69.png",
     "Male Walking Toward Camera": "/pose-references/Pose69.png",
     "Pose70": "/pose-references/Pose70.png",
-    "Male Side Walking Pose": "/pose-references/Pose70.png",
     "Pose71": "/pose-references/Pose71.png",
     "Male Turning Walk": "/pose-references/Pose71.png",
     "Pose72": "/pose-references/Pose72.png",
@@ -150,6 +149,7 @@
     "Pose74": "/pose-references/Pose74.png",
     "Female Forward Lean Sit": "/pose-references/Pose74.png",
     "Pose75": "/pose-references/Pose75.png",
-    "Female Relaxed sitting Pose": "/pose-references/Pose75.png"
+    "Female Relaxed sitting Pose": "/pose-references/Pose75.png",
+    "Male Standing Beside Chair": "/pose-references/Pose70.png"
   }
 }

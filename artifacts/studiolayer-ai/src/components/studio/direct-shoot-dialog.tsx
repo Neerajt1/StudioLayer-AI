@@ -9,14 +9,21 @@ import {
 import { DirectShootPoseBoard } from '@/components/studio/direct-shoot-pose-board';
 import { DirectShootMobileBoard } from '@/components/studio/direct-shoot-mobile-board';
 import { useDirectShootMobilePresentation } from '@/hooks/use-direct-shoot-mobile';
+import {
+  seedDirectShootSelection,
+  toggleDirectShootSelection,
+} from '@/lib/direct-shoot-selection';
 import { cn } from '@/lib/utils';
 
 interface DirectShootDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shootImageCount: number;
+  /** Canonical workflow selection — seeds picker whenever it opens. */
+  initialSelectedPoseIds?: readonly string[];
   onConfirm?: (selectedPoseIds: string[]) => void;
-  onDismiss?: () => void;
+  /** Keeps workflow.usedPoses in sync while the picker is open (V1 single-shot). */
+  onSelectionChange?: (selectedPoseIds: string[]) => void;
 }
 
 /** Cleared on open so stale experiment modes cannot persist. */
@@ -26,8 +33,9 @@ export function DirectShootDialog({
   open,
   onOpenChange,
   shootImageCount,
+  initialSelectedPoseIds = [],
   onConfirm,
-  onDismiss,
+  onSelectionChange,
 }: DirectShootDialogProps) {
   const [selectedPoseIds, setSelectedPoseIds] = useState<string[]>([]);
   const confirmedThisSessionRef = useRef(false);
@@ -41,14 +49,16 @@ export function DirectShootDialog({
 
   useEffect(() => {
     if (!open) {
-      setSelectedPoseIds([]);
       return;
     }
     confirmedThisSessionRef.current = false;
+    setSelectedPoseIds(
+      seedDirectShootSelection(initialSelectedPoseIds, shootImageCount),
+    );
     if (typeof window !== 'undefined') {
       window.sessionStorage.removeItem(LEGACY_LAYOUT_STORAGE_KEY);
     }
-  }, [open]);
+  }, [open, initialSelectedPoseIds, shootImageCount]);
 
   const isSingleShotSelection = shootImageCount === 1;
   const selectionLimitReached = selectedPoseIds.length >= shootImageCount;
@@ -60,23 +70,14 @@ export function DirectShootDialog({
   const togglePose = useCallback(
     (poseId: string) => {
       setSelectedPoseIds((current) => {
+        const next = toggleDirectShootSelection(current, poseId, shootImageCount);
         if (isSingleShotSelection) {
-          if (current.includes(poseId)) {
-            return current.filter((id) => id !== poseId);
-          }
-          return [poseId];
+          onSelectionChange?.(next);
         }
-
-        if (current.includes(poseId)) {
-          return current.filter((id) => id !== poseId);
-        }
-        if (current.length >= shootImageCount) {
-          return current;
-        }
-        return [...current, poseId];
+        return next;
       });
     },
-    [isSingleShotSelection, shootImageCount],
+    [isSingleShotSelection, onSelectionChange, shootImageCount],
   );
 
   const selectionPrimaryLabel = useMemo(() => {
@@ -100,12 +101,9 @@ export function DirectShootDialog({
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen && !confirmedThisSessionRef.current) {
-        onDismiss?.();
-      }
       onOpenChange(nextOpen);
     },
-    [onDismiss, onOpenChange],
+    [onOpenChange],
   );
 
   const handleDirectShoot = () => {

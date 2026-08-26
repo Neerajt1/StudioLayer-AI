@@ -1,0 +1,3238 @@
+{
+  "version": 1,
+  "generatedAt": "2026-08-21T09:04:55.499Z",
+  "model": "gpt-4o",
+  "byPoseId": {
+    "Pose7": {
+      "specification": {
+        "poseId": "Pose7",
+        "action": "casually sitting",
+        "bodyOrientation": "slightly angled to the right",
+        "headDirection": "forward",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "on chair edge",
+        "leftArm": "bent, hand on chair",
+        "rightArm": "resting on chair back",
+        "leftHand": "holding chair edge",
+        "rightHand": "on chair back",
+        "leftLeg": "bent, foot flat on floor",
+        "rightLeg": "crossed over left",
+        "leftFoot": "flat on floor",
+        "rightFoot": "toes touching floor",
+        "weightDistribution": "supported by chair and legs",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "sitting on edge"
+        },
+        "criticalPoseGeometry": [
+          "torso upright",
+          "legs crossed",
+          "arm on chair",
+          "sitting on edge"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose7",
+        "sourceFilename": "Pose7.png",
+        "analyzedAt": "2026-08-21T09:00:43.963Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose49": {
+      "specification": {
+        "poseId": "Pose49",
+        "action": "walking with stride",
+        "bodyOrientation": "forward",
+        "headDirection": "slightly turned to left",
+        "gazeDirection": "forward",
+        "torso": "upright, slight twist to left",
+        "pelvis": "aligned with torso",
+        "leftArm": "bent, hand in pocket",
+        "rightArm": "extended downward",
+        "leftHand": "in pocket",
+        "rightHand": "relaxed",
+        "leftLeg": "extended forward",
+        "rightLeg": "bent, behind left",
+        "leftFoot": "flat on ground",
+        "rightFoot": "lifted, toes pointed",
+        "weightDistribution": "on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left arm bent",
+          "right leg back",
+          "weight on left leg",
+          "head slightly left"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose49",
+        "sourceFilename": "Pose49.png",
+        "analyzedAt": "2026-08-21T09:00:44.046Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose1": {
+      "specification": {
+        "poseId": "Pose1",
+        "action": "walking forward",
+        "bodyOrientation": "frontal",
+        "headDirection": "forward",
+        "gazeDirection": "forward",
+        "torso": "slight angle left",
+        "pelvis": "neutral",
+        "leftArm": "relaxed alongside body",
+        "rightArm": "bent, hand in pocket",
+        "leftHand": "relaxed",
+        "rightHand": "in pocket",
+        "leftLeg": "forward, knee slightly bent",
+        "rightLeg": "behind, straight",
+        "leftFoot": "flat on ground",
+        "rightFoot": "heel raised",
+        "weightDistribution": "on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left leg forward",
+          "right hand in pocket"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose1",
+        "sourceFilename": "Pose1.png",
+        "analyzedAt": "2026-08-21T09:01:02.336Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose2": {
+      "specification": {
+        "poseId": "Pose2",
+        "action": "standing relaxed",
+        "bodyOrientation": "frontal",
+        "headDirection": "forward",
+        "gazeDirection": "forward",
+        "torso": "straight, aligned with hips",
+        "pelvis": "neutral position",
+        "leftArm": "straight down",
+        "rightArm": "straight down",
+        "leftHand": "resting by side",
+        "rightHand": "resting by side",
+        "leftLeg": "straight, weight bearing",
+        "rightLeg": "straight, relaxed",
+        "leftFoot": "flat on floor",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "evenly distributed on both feet",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "straight torso",
+          "arms down by sides",
+          "even weight distribution",
+          "head facing forward"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose2",
+        "sourceFilename": "Pose2.png",
+        "analyzedAt": "2026-08-21T09:01:02.437Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose3": {
+      "specification": {
+        "poseId": "Pose3",
+        "action": "casual walking",
+        "bodyOrientation": "facing forward",
+        "headDirection": "slightly tilted",
+        "gazeDirection": "forward",
+        "torso": "straight, relaxed",
+        "pelvis": "neutral",
+        "leftArm": "hanging down",
+        "rightArm": "hand in pocket",
+        "leftHand": "relaxed",
+        "rightHand": "in pocket",
+        "leftLeg": "straight, bearing weight",
+        "rightLeg": "slightly bent, stepping forward",
+        "leftFoot": "flat on ground",
+        "rightFoot": "heel raised, toes touching ground",
+        "weightDistribution": "mostly on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "right leg forward",
+          "left arm down",
+          "right hand in pocket",
+          "head tilted"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose3",
+        "sourceFilename": "Pose3.png",
+        "analyzedAt": "2026-08-21T09:01:02.729Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose5": {
+      "specification": {
+        "poseId": "Pose5",
+        "action": "standing with hands in pockets",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "neutral",
+        "leftArm": "bent, hand in pocket",
+        "rightArm": "bent, hand in pocket",
+        "leftHand": "in pocket",
+        "rightHand": "in pocket",
+        "leftLeg": "straight, weight-bearing",
+        "rightLeg": "crossed over left leg",
+        "leftFoot": "flat on ground",
+        "rightFoot": "toes touching ground",
+        "weightDistribution": "left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "hands in pockets",
+          "right leg crossed",
+          "weight on left leg"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose5",
+        "sourceFilename": "Pose5.png",
+        "analyzedAt": "2026-08-21T09:01:07.109Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose4": {
+      "specification": {
+        "poseId": "Pose4",
+        "action": "standing with playful gesture",
+        "bodyOrientation": "facing slightly right",
+        "headDirection": "turned right",
+        "gazeDirection": "looking back at viewer",
+        "torso": "twisted slightly to the right",
+        "pelvis": "tilted slightly forward",
+        "leftArm": "hanging down relaxed",
+        "rightArm": "bent, hand resting on hip",
+        "leftHand": "fingers relaxed",
+        "rightHand": "resting on hip",
+        "leftLeg": "straight, bearing weight",
+        "rightLeg": "bent backward at knee",
+        "leftFoot": "flat on ground",
+        "rightFoot": "raised, toes pointed",
+        "weightDistribution": "on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "torso twist",
+          "right leg bent",
+          "gaze back"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose4",
+        "sourceFilename": "Pose4.png",
+        "analyzedAt": "2026-08-21T09:01:07.163Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose6": {
+      "specification": {
+        "poseId": "Pose6",
+        "action": "standing with hands in pockets",
+        "bodyOrientation": "facing forward, slight left tilt",
+        "headDirection": "tilted backward slightly",
+        "gazeDirection": "forward",
+        "torso": "relaxed, slight left twist",
+        "pelvis": "neutral",
+        "leftArm": "bent, hand in pocket",
+        "rightArm": "bent, hand in pocket",
+        "leftHand": "in pocket",
+        "rightHand": "in pocket",
+        "leftLeg": "straight, supporting weight",
+        "rightLeg": "bent, relaxed",
+        "leftFoot": "flat on floor",
+        "rightFoot": "forward, slightly lifted",
+        "weightDistribution": "mainly on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left leg straight",
+          "hands in pockets",
+          "head slightly tilted backward",
+          "weight on left leg"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose6",
+        "sourceFilename": "Pose6.png",
+        "analyzedAt": "2026-08-21T09:01:07.402Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose9": {
+      "specification": {
+        "poseId": "Pose9",
+        "action": "standing with arms crossed",
+        "bodyOrientation": "forward",
+        "headDirection": "slightly right",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "centered",
+        "leftArm": "crossed over torso",
+        "rightArm": "crossed over torso",
+        "leftHand": "on right upper arm",
+        "rightHand": "on left upper arm",
+        "leftLeg": "straight",
+        "rightLeg": "relaxed, slightly bent",
+        "leftFoot": "flat on ground",
+        "rightFoot": "toes touching ground, heel raised",
+        "weightDistribution": "on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "arms crossed",
+          "left leg straight",
+          "right leg relaxed",
+          "head angled slightly right"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose9",
+        "sourceFilename": "Pose9.png",
+        "analyzedAt": "2026-08-21T09:01:10.159Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose10": {
+      "specification": {
+        "poseId": "Pose10",
+        "action": "standing casually",
+        "bodyOrientation": "frontal",
+        "headDirection": "tilted right",
+        "gazeDirection": "forward",
+        "torso": "upright, slight curve",
+        "pelvis": "neutral alignment",
+        "leftArm": "bent hand in pocket",
+        "rightArm": "bent, resting on body",
+        "leftHand": "in pocket",
+        "rightHand": "resting on torso",
+        "leftLeg": "straight, bearing weight",
+        "rightLeg": "bent, foot forward",
+        "leftFoot": "flat on ground",
+        "rightFoot": "slightly raised, toe pointing down",
+        "weightDistribution": "mostly on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left leg straight",
+          "right leg bent",
+          "right arm resting",
+          "left hand in pocket"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose10",
+        "sourceFilename": "Pose10.png",
+        "analyzedAt": "2026-08-21T09:01:12.078Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose8": {
+      "specification": {
+        "poseId": "Pose8",
+        "action": "seated on floor, leaning slightly back",
+        "bodyOrientation": "facing forward, slightly angled",
+        "headDirection": "turned slightly right",
+        "gazeDirection": "forward and slightly downward",
+        "torso": "upright, slight lean to right",
+        "pelvis": "on floor, tilted slightly back",
+        "leftArm": "bent, hand supporting face",
+        "rightArm": "extended back, palm on ground",
+        "leftHand": "touching face",
+        "rightHand": "palm on floor for support",
+        "leftLeg": "bent, foot on ground",
+        "rightLeg": "extended forward, slightly bent",
+        "leftFoot": "flat on ground",
+        "rightFoot": "heel on ground, slightly raised",
+        "weightDistribution": "majority on pelvis and right hand",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "right arm extended back",
+          "left knee raised",
+          "pelvis on ground"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose8",
+        "sourceFilename": "Pose8.png",
+        "analyzedAt": "2026-08-21T09:01:12.833Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose11": {
+      "specification": {
+        "poseId": "Pose11",
+        "action": "standing with arms crossing",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly to the left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "neutral",
+        "leftArm": "crossed across body",
+        "rightArm": "crossed over left",
+        "leftHand": "holding right arm",
+        "rightHand": "near left elbow",
+        "leftLeg": "straight",
+        "rightLeg": "crossed in front of left",
+        "leftFoot": "flat on ground",
+        "rightFoot": "crossed, heel lifted",
+        "weightDistribution": "balanced, more on left",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "arms folded",
+          "right leg crossed",
+          "head slightly left",
+          "left foot forward"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose11",
+        "sourceFilename": "Pose11.png",
+        "analyzedAt": "2026-08-21T09:01:14.921Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose12": {
+      "specification": {
+        "poseId": "Pose12",
+        "action": "standing with hands in pockets",
+        "bodyOrientation": "facing forward",
+        "headDirection": "slightly tilted right",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "neutral",
+        "leftArm": "relaxed, hand in pocket",
+        "rightArm": "relaxed, hand in pocket",
+        "leftHand": "in pocket",
+        "rightHand": "in pocket",
+        "leftLeg": "straight, slight bend",
+        "rightLeg": "supporting weight",
+        "leftFoot": "flat on ground",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "mainly on right leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "arms relaxed, hands in pockets",
+          "right leg supporting weight",
+          "head slightly tilted right"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose12",
+        "sourceFilename": "Pose12.png",
+        "analyzedAt": "2026-08-21T09:01:17.643Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose13": {
+      "specification": {
+        "poseId": "Pose13",
+        "action": "casual standing",
+        "bodyOrientation": "facing forward",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "slightly angled left",
+        "pelvis": "neutral",
+        "leftArm": "bent, hand in pocket",
+        "rightArm": "bent, hand in pocket",
+        "leftHand": "in pocket",
+        "rightHand": "in pocket",
+        "leftLeg": "straight, supporting",
+        "rightLeg": "crossed over left",
+        "leftFoot": "flat on ground",
+        "rightFoot": "toe touching ground",
+        "weightDistribution": "on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "crossed legs",
+          "hands in pockets"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose13",
+        "sourceFilename": "Pose13.png",
+        "analyzedAt": "2026-08-21T09:01:17.710Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose14": {
+      "specification": {
+        "poseId": "Pose14",
+        "action": "standing casually with weight on one leg",
+        "bodyOrientation": "side profile, facing right",
+        "headDirection": "slightly turned left",
+        "gazeDirection": "forward",
+        "torso": "upright, relaxed",
+        "pelvis": "neutral",
+        "leftArm": "relaxed, hand in pocket",
+        "rightArm": "relaxed, close to body",
+        "leftHand": "in left pocket",
+        "rightHand": "resting near thigh",
+        "leftLeg": "slightly bent, weight bearing",
+        "rightLeg": "slightly forward, relaxed",
+        "leftFoot": "flat on ground",
+        "rightFoot": "heel slightly lifted",
+        "weightDistribution": "on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "head turned slightly",
+          "left hand in pocket",
+          "right heel lifted",
+          "weight on left leg"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose14",
+        "sourceFilename": "Pose14.png",
+        "analyzedAt": "2026-08-21T09:01:19.090Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose16": {
+      "specification": {
+        "poseId": "Pose16",
+        "action": "walking forward",
+        "bodyOrientation": "frontal",
+        "headDirection": "forward",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "forward",
+        "leftArm": "swinging naturally",
+        "rightArm": "hanging down",
+        "leftHand": "relaxed",
+        "rightHand": "holding jacket",
+        "leftLeg": "stepping forward",
+        "rightLeg": "trailing",
+        "leftFoot": "flat, mid-step",
+        "rightFoot": "starting step",
+        "weightDistribution": "balanced on left",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "frontal orientation",
+          "walking step",
+          "head forward",
+          "left leg leading"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose16",
+        "sourceFilename": "Pose16.png",
+        "analyzedAt": "2026-08-21T09:01:22.881Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose15": {
+      "specification": {
+        "poseId": "Pose15",
+        "action": "Standing with weight on one leg",
+        "bodyOrientation": "Right side facing forward",
+        "headDirection": "Turned over left shoulder",
+        "gazeDirection": "Looking back",
+        "torso": "Slightly twisted to the right",
+        "pelvis": "Tilted forward",
+        "leftArm": "Relaxed, bent at elbow",
+        "rightArm": "Relaxed, bent at elbow",
+        "leftHand": "Resting on hip",
+        "rightHand": "Near left elbow",
+        "leftLeg": "Straight, weight-bearing",
+        "rightLeg": "Slightly bent at knee",
+        "leftFoot": "Flat on ground",
+        "rightFoot": "Heel slightly lifted",
+        "weightDistribution": "Primarily on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "Right side body twist",
+          "Weight on left leg",
+          "Head turned over shoulder",
+          "Hands resting near hips"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose15",
+        "sourceFilename": "Pose15.png",
+        "analyzedAt": "2026-08-21T09:01:23.355Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose17": {
+      "specification": {
+        "poseId": "Pose17",
+        "action": "walking with a slight turn",
+        "bodyOrientation": "back facing viewer",
+        "headDirection": "turned over right shoulder",
+        "gazeDirection": "toward viewer",
+        "torso": "slightly twisted",
+        "pelvis": "tilted",
+        "leftArm": "relaxed along side",
+        "rightArm": "relaxed back",
+        "leftHand": "near thigh",
+        "rightHand": "near side",
+        "leftLeg": "stepping forward",
+        "rightLeg": "bent slightly, lifting heel",
+        "leftFoot": "on toes",
+        "rightFoot": "lifting heel",
+        "weightDistribution": "on left foot",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "torso twisted",
+          "head turned back",
+          "right heel lifted",
+          "gaze toward viewer"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose17",
+        "sourceFilename": "Pose17.png",
+        "analyzedAt": "2026-08-21T09:01:24.476Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose18": {
+      "specification": {
+        "poseId": "Pose18",
+        "action": "walking forward",
+        "bodyOrientation": "slight turn to the left",
+        "headDirection": "facing forward",
+        "gazeDirection": "forward",
+        "torso": "upright and slightly turned",
+        "pelvis": "aligned with torso",
+        "leftArm": "swinging backward",
+        "rightArm": "swinging forward",
+        "leftHand": "relaxed, facing inward",
+        "rightHand": "relaxed, facing inward",
+        "leftLeg": "extended forward",
+        "rightLeg": "bent backward",
+        "leftFoot": "flat on ground",
+        "rightFoot": "lifted",
+        "weightDistribution": "balanced on left foot",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left leg extended",
+          "right leg bent",
+          "arms swinging",
+          "head facing forward"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose18",
+        "sourceFilename": "Pose18.png",
+        "analyzedAt": "2026-08-21T09:01:27.789Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose19": {
+      "specification": {
+        "poseId": "Pose19",
+        "action": "walking briskly",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly right",
+        "gazeDirection": "forward",
+        "torso": "upright with slight forward lean",
+        "pelvis": "neutral position",
+        "leftArm": "swinging forward",
+        "rightArm": "swinging back",
+        "leftHand": "relaxed with fingers extended",
+        "rightHand": "relaxed with fingers extended",
+        "leftLeg": "extended forward",
+        "rightLeg": "stepping back",
+        "leftFoot": "heel touching ground",
+        "rightFoot": "lifted off ground",
+        "weightDistribution": "weight on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left leg forward, right leg back",
+          "right arm back, left arm forward",
+          "torso slight forward lean",
+          "upright posture"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose19",
+        "sourceFilename": "Pose19.png",
+        "analyzedAt": "2026-08-21T09:01:28.715Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose20": {
+      "specification": {
+        "poseId": "Pose20",
+        "action": "walking",
+        "bodyOrientation": "slightly turned right",
+        "headDirection": "left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "centered",
+        "leftArm": "bent at elbow",
+        "rightArm": "straight, swinging back",
+        "leftHand": "relaxed",
+        "rightHand": "relaxed",
+        "leftLeg": "extended forward",
+        "rightLeg": "bent, trailing back",
+        "leftFoot": "touching ground",
+        "rightFoot": "lifted",
+        "weightDistribution": "on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left leg forward",
+          "right arm back",
+          "gaze forward",
+          "upright torso"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose20",
+        "sourceFilename": "Pose20.png",
+        "analyzedAt": "2026-08-21T09:01:29.167Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose21": {
+      "specification": {
+        "poseId": "Pose21",
+        "action": "striding forward confidently",
+        "bodyOrientation": "frontal facing",
+        "headDirection": "slightly turned to left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "aligned with torso",
+        "leftArm": "swinging naturally back",
+        "rightArm": "hanging relaxed by side",
+        "leftHand": "relaxed, palm facing back",
+        "rightHand": "relaxed, near thigh",
+        "leftLeg": "forward, knee slightly bent",
+        "rightLeg": "stretching back, straight",
+        "leftFoot": "toes pointing forward, heel up",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "mainly on right leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "torso upright",
+          "left leg forward",
+          "head slightly left",
+          "weight on right leg"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose21",
+        "sourceFilename": "Pose21.png",
+        "analyzedAt": "2026-08-21T09:01:33.225Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose23": {
+      "specification": {
+        "poseId": "Pose23",
+        "action": "walking forward",
+        "bodyOrientation": "facing forward",
+        "headDirection": "slightly left",
+        "gazeDirection": "looking forward",
+        "torso": "upright",
+        "pelvis": "aligned with torso",
+        "leftArm": "relaxed by side",
+        "rightArm": "slightly bent, hand in pocket",
+        "leftHand": "relaxed at side",
+        "rightHand": "in pocket",
+        "leftLeg": "stepping forward",
+        "rightLeg": "extended back",
+        "leftFoot": "heel lifted",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "balanced on right leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "head slightly left",
+          "right arm bent",
+          "right foot flat",
+          "left leg stepping"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose23",
+        "sourceFilename": "Pose23.png",
+        "analyzedAt": "2026-08-21T09:01:33.681Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose22": {
+      "specification": {
+        "poseId": "Pose22",
+        "action": "walking with dress held in right hand",
+        "bodyOrientation": "facing forward",
+        "headDirection": "slightly turned right",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "neutral",
+        "leftArm": "relaxed, down by side",
+        "rightArm": "slightly bent, holding dress",
+        "leftHand": "relaxed by side",
+        "rightHand": "holding dress fabric",
+        "leftLeg": "stepping forward",
+        "rightLeg": "slightly behind",
+        "leftFoot": "facing forward, heel raised",
+        "rightFoot": "almost flat on ground",
+        "weightDistribution": "primarily on right foot",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "right hand holds dress",
+          "left leg leading",
+          "torso upright",
+          "head slightly right"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose22",
+        "sourceFilename": "Pose22.png",
+        "analyzedAt": "2026-08-21T09:01:33.761Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [
+          "possible_appearance_or_clothing_leakage"
+        ],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose26": {
+      "specification": {
+        "poseId": "Pose26",
+        "action": "sitting",
+        "bodyOrientation": "forward",
+        "headDirection": "forward",
+        "gazeDirection": "forward",
+        "torso": "upright, slightly relaxed",
+        "pelvis": "sitting on stool",
+        "leftArm": "resting on lap",
+        "rightArm": "resting on lap",
+        "leftHand": "draped over right hand",
+        "rightHand": "draped under left hand",
+        "leftLeg": "bent, foot pointing down",
+        "rightLeg": "bent, foot flat",
+        "leftFoot": "pointing down",
+        "rightFoot": "flat on stool support",
+        "weightDistribution": "evenly on stool",
+        "supportObject": {
+          "required": true,
+          "type": "stool",
+          "bodySupportRelationship": "seated with both feet on support ring"
+        },
+        "criticalPoseGeometry": [
+          "upright torso",
+          "hands folded on lap",
+          "feet on stool ring",
+          "forward gaze"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose26",
+        "sourceFilename": "Pose26.png",
+        "analyzedAt": "2026-08-21T09:01:38.239Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose24": {
+      "specification": {
+        "poseId": "Pose24",
+        "action": "walking with confident stride",
+        "bodyOrientation": "frontal",
+        "headDirection": "facing slightly right",
+        "gazeDirection": "forward",
+        "torso": "upright and straight",
+        "pelvis": "aligned with torso",
+        "leftArm": "relaxed along body",
+        "rightArm": "bent holding bag",
+        "leftHand": "relaxed",
+        "rightHand": "gripping bag handle",
+        "leftLeg": "extended forward",
+        "rightLeg": "trailing behind",
+        "leftFoot": "flat on ground",
+        "rightFoot": "elevated on toe",
+        "weightDistribution": "balanced on left foot",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "torso straight",
+          "right arm bent",
+          "left leg forward",
+          "right foot elevated"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose24",
+        "sourceFilename": "Pose24.png",
+        "analyzedAt": "2026-08-21T09:01:38.555Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose25": {
+      "specification": {
+        "poseId": "Pose25",
+        "action": "walking forward",
+        "bodyOrientation": "facing forward",
+        "headDirection": "facing slightly left",
+        "gazeDirection": "looking slightly left",
+        "torso": "upright and aligned",
+        "pelvis": "slightly forward",
+        "leftArm": "relaxed by side",
+        "rightArm": "bent, hand in pocket",
+        "leftHand": "relaxed, open",
+        "rightHand": "in pocket",
+        "leftLeg": "stepping forward",
+        "rightLeg": "stepping back",
+        "leftFoot": "pointed forward",
+        "rightFoot": "pointed slightly outward",
+        "weightDistribution": "balanced on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "right hand in pocket",
+          "left leg leading",
+          "upright torso"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose25",
+        "sourceFilename": "Pose25.png",
+        "analyzedAt": "2026-08-21T09:01:38.980Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose27": {
+      "specification": {
+        "poseId": "Pose27",
+        "action": "sitting on stool",
+        "bodyOrientation": "forward",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "perched on stool edge",
+        "leftArm": "resting on thigh",
+        "rightArm": "hanging by side",
+        "leftHand": "resting on thigh",
+        "rightHand": "near stool leg",
+        "leftLeg": "bent, knee higher",
+        "rightLeg": "bent, knee lower",
+        "leftFoot": "slightly lifted",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "balanced, mostly pelvis",
+        "supportObject": {
+          "required": true,
+          "type": "stool",
+          "bodySupportRelationship": "perched on front edge"
+        },
+        "criticalPoseGeometry": [
+          "perched on stool",
+          "legs bent at knees",
+          "left arm on thigh",
+          "right hand by side"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose27",
+        "sourceFilename": "Pose27.png",
+        "analyzedAt": "2026-08-21T09:01:43.184Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose28": {
+      "specification": {
+        "poseId": "Pose28",
+        "action": "seated, relaxed",
+        "bodyOrientation": "facing right",
+        "headDirection": "right",
+        "gazeDirection": "upward",
+        "torso": "upright, slightly leaning back",
+        "pelvis": "seated forwards",
+        "leftArm": "elbow on knee, hand on chin",
+        "rightArm": "resting on lap",
+        "leftHand": "supporting chin",
+        "rightHand": "resting on leg",
+        "leftLeg": "crossed over right knee",
+        "rightLeg": "bent, foot on ground",
+        "leftFoot": "off ground, relaxed",
+        "rightFoot": "touching ground",
+        "weightDistribution": "on stool",
+        "supportObject": {
+          "required": true,
+          "type": "stool",
+          "bodySupportRelationship": "seated on stool"
+        },
+        "criticalPoseGeometry": [
+          "left leg crossed",
+          "right foot grounded",
+          "hand on chin"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose28",
+        "sourceFilename": "Pose28.png",
+        "analyzedAt": "2026-08-21T09:01:43.450Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose29": {
+      "specification": {
+        "poseId": "Pose29",
+        "action": "seated on high stool",
+        "bodyOrientation": "forward",
+        "headDirection": "slightly right",
+        "gazeDirection": "forward",
+        "torso": "upright, leaning slightly back",
+        "pelvis": "perched on stool edge",
+        "leftArm": "resting on left thigh",
+        "rightArm": "relaxed along torso",
+        "leftHand": "draping over left knee",
+        "rightHand": "loose at side",
+        "leftLeg": "bent, foot flat on floor",
+        "rightLeg": "crossed at ankle",
+        "leftFoot": "flat on floor",
+        "rightFoot": "draped over left ankle",
+        "weightDistribution": "balanced on stool and left foot",
+        "supportObject": {
+          "required": true,
+          "type": "stool",
+          "bodySupportRelationship": "seated, pelvis edge contact"
+        },
+        "criticalPoseGeometry": [
+          "seated edge of stool",
+          "left leg bent, foot on floor",
+          "right leg crossed",
+          "torso slightly leaning back"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose29",
+        "sourceFilename": "Pose29.png",
+        "analyzedAt": "2026-08-21T09:01:43.656Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose30": {
+      "specification": {
+        "poseId": "Pose30",
+        "action": "seated, relaxed, legs crossed",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly left",
+        "gazeDirection": "slightly left",
+        "torso": "leaning slightly back",
+        "pelvis": "resting back on chair",
+        "leftArm": "resting on chair arm",
+        "rightArm": "resting on lap",
+        "leftHand": "draped over chair arm",
+        "rightHand": "on left knee",
+        "leftLeg": "crossed over right leg",
+        "rightLeg": "supporting body",
+        "leftFoot": "off ground",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "centered on chair",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "sitting back on seat"
+        },
+        "criticalPoseGeometry": [
+          "legs crossed",
+          "left hand draped",
+          "relaxed posture",
+          "head turned left"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose30",
+        "sourceFilename": "Pose30.png",
+        "analyzedAt": "2026-08-21T09:01:49.197Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose32": {
+      "specification": {
+        "poseId": "Pose32",
+        "action": "sitting thoughtfully",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly left",
+        "gazeDirection": "downward",
+        "torso": "upright",
+        "pelvis": "seated",
+        "leftArm": "bent, hand under chin",
+        "rightArm": "leaning on armrest",
+        "leftHand": "supporting chin",
+        "rightHand": "resting on armrest",
+        "leftLeg": "crossed over right knee",
+        "rightLeg": "vertical, foot on floor",
+        "leftFoot": "in air",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "evenly seated",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "seated fully on chair cushion"
+        },
+        "criticalPoseGeometry": [
+          "hand under chin",
+          "leg crossed over knee"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose32",
+        "sourceFilename": "Pose32.png",
+        "analyzedAt": "2026-08-21T09:01:50.044Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose31": {
+      "specification": {
+        "poseId": "Pose31",
+        "action": "sitting casually",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "seated on chair",
+        "leftArm": "resting on left thigh",
+        "rightArm": "resting on right thigh",
+        "leftHand": "hanging relaxed",
+        "rightHand": "hanging relaxed",
+        "leftLeg": "bent forward at knee",
+        "rightLeg": "bent slightly outward",
+        "leftFoot": "flat on floor",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "even on both legs",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "seated fully on chair"
+        },
+        "criticalPoseGeometry": [
+          "right knee slightly outward",
+          "hands relaxed over knees",
+          "torso upright",
+          "head slightly turned left"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose31",
+        "sourceFilename": "Pose31.png",
+        "analyzedAt": "2026-08-21T09:01:50.130Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose34": {
+      "specification": {
+        "poseId": "Pose34",
+        "action": "relaxed sitting pose",
+        "bodyOrientation": "forward facing",
+        "headDirection": "slightly tilted right",
+        "gazeDirection": "forward",
+        "torso": "upright, slightly leaning back",
+        "pelvis": "centered on chair",
+        "leftArm": "resting on chair arm",
+        "rightArm": "elbow on armrest, hand supporting head",
+        "leftHand": "relaxed on chair",
+        "rightHand": "under chin",
+        "leftLeg": "crossed over right knee",
+        "rightLeg": "slightly raised, foot on floor",
+        "leftFoot": "dangling above floor",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "primarily on right side, supported by chair",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "sitting back on chair"
+        },
+        "criticalPoseGeometry": [
+          "right arm supports head",
+          "left leg crossed over right",
+          "torso leaning slightly back"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose34",
+        "sourceFilename": "Pose34.png",
+        "analyzedAt": "2026-08-21T09:01:55.038Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose33": {
+      "specification": {
+        "poseId": "Pose33",
+        "action": "seated, leaning forward",
+        "bodyOrientation": "facing forward",
+        "headDirection": "turned left",
+        "gazeDirection": "leftward",
+        "torso": "slightly hunched forward",
+        "pelvis": "seated back in chair",
+        "leftArm": "resting on left thigh",
+        "rightArm": "crossed over left arm",
+        "leftHand": "loosely clasped",
+        "rightHand": "loosely clasped",
+        "leftLeg": "bent, foot flat",
+        "rightLeg": "bent, foot slightly forward",
+        "leftFoot": "flat on floor",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "evenly distributed",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "seated back in chair"
+        },
+        "criticalPoseGeometry": [
+          "arms loosely clasped",
+          "head turned left",
+          "leaning slightly forward",
+          "feet flat on floor"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose33",
+        "sourceFilename": "Pose33.png",
+        "analyzedAt": "2026-08-21T09:01:59.430Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose35": {
+      "specification": {
+        "poseId": "Pose35",
+        "action": "sitting casually",
+        "bodyOrientation": "forward, slight lean to left",
+        "headDirection": "straight ahead",
+        "gazeDirection": "left",
+        "torso": "upright, slight twist to left",
+        "pelvis": "seated",
+        "leftArm": "bent, elbow on knee",
+        "rightArm": "bent, hand on chin",
+        "leftHand": "supports chin",
+        "rightHand": "rests on chair",
+        "leftLeg": "crossed over right knee",
+        "rightLeg": "bent, foot on floor",
+        "leftFoot": "hovering, relaxed",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "even on seat",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "seated normally"
+        },
+        "criticalPoseGeometry": [
+          "left elbow on left knee",
+          "right hand on chin",
+          "legs crossed"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose35",
+        "sourceFilename": "Pose35.png",
+        "analyzedAt": "2026-08-21T09:02:00.165Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose36": {
+      "specification": {
+        "poseId": "Pose36",
+        "action": "seated comfortably on ground",
+        "bodyOrientation": "forward facing",
+        "headDirection": "slightly tilted right",
+        "gazeDirection": "forward",
+        "torso": "upright, slightly leaning back",
+        "pelvis": "ground contact",
+        "leftArm": "elbow resting on knee",
+        "rightArm": "resting on lap",
+        "leftHand": "supporting head",
+        "rightHand": "resting on thigh",
+        "leftLeg": "crossed over right leg",
+        "rightLeg": "bent, sole on ground",
+        "leftFoot": "flat on ground",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "evenly on pelvis",
+        "supportObject": null,
+        "criticalPoseGeometry": [
+          "crossed legs",
+          "hand supporting head",
+          "elbow on knee"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose36",
+        "sourceFilename": "Pose36.png",
+        "analyzedAt": "2026-08-21T09:02:06.331Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose38": {
+      "specification": {
+        "poseId": "Pose38",
+        "action": "kneeling on floor",
+        "bodyOrientation": "facing forward",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "resting on heels",
+        "leftArm": "straight, hand on floor",
+        "rightArm": "rests on left thigh",
+        "leftHand": "on floor, fingers relaxed",
+        "rightHand": "rests on thigh",
+        "leftLeg": "bent, shin on floor",
+        "rightLeg": "bent, thigh slightly forward",
+        "leftFoot": "toes pointed back",
+        "rightFoot": "toes pointed back",
+        "weightDistribution": "evenly on legs and arm",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "kneeling",
+          "hands at thigh and floor",
+          "head slightly left"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose38",
+        "sourceFilename": "Pose38.png",
+        "analyzedAt": "2026-08-21T09:02:09.235Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose37": {
+      "specification": {
+        "poseId": "Pose37",
+        "action": "sitting on floor",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly left tilt",
+        "gazeDirection": "forward",
+        "torso": "upright, slightly leaning left",
+        "pelvis": "grounded on floor",
+        "leftArm": "bent, hand supporting head",
+        "rightArm": "resting on right knee",
+        "leftHand": "supporting head",
+        "rightHand": "fingers touching floor",
+        "leftLeg": "bent, knee up",
+        "rightLeg": "crossed over left ankle",
+        "leftFoot": "flat on floor",
+        "rightFoot": "resting on floor",
+        "weightDistribution": "balanced between pelvis and left foot",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "sitting on floor",
+          "left knee up",
+          "right leg crossed",
+          "left hand supports head"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose37",
+        "sourceFilename": "Pose37.png",
+        "analyzedAt": "2026-08-21T09:02:09.822Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose41": {
+      "specification": {
+        "poseId": "Pose41",
+        "action": "relaxed sitting on floor",
+        "bodyOrientation": "facing forward",
+        "headDirection": "slightly tilted right",
+        "gazeDirection": "forward and slightly right",
+        "torso": "leaning back slightly on left arm",
+        "pelvis": "tilted back, supported by floor",
+        "leftArm": "extended back, supporting body",
+        "rightArm": "resting on right knee",
+        "leftHand": "flat on floor",
+        "rightHand": "draped over right knee",
+        "leftLeg": "extended forward",
+        "rightLeg": "bent with knee up",
+        "leftFoot": "flat on floor",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "mainly on left arm and pelvis",
+        "supportObject": {
+          "required": true,
+          "type": "floor",
+          "bodySupportRelationship": "body supported on floor; left arm and pelvis"
+        },
+        "criticalPoseGeometry": [
+          "left arm extended back",
+          "right knee bent upward",
+          "torso slightly leaning back",
+          "left leg extended"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose41",
+        "sourceFilename": "Pose41.png",
+        "analyzedAt": "2026-08-21T09:02:19.098Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose40": {
+      "specification": {
+        "poseId": "Pose40",
+        "action": "seated on one knee",
+        "bodyOrientation": "facing forward",
+        "headDirection": "slightly right",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "right knee bent, left knee up",
+        "leftArm": "elbow on knee, hand on chin",
+        "rightArm": "hanging down relaxed",
+        "leftHand": "supporting chin",
+        "rightHand": "touching floor/back",
+        "leftLeg": "bent, knee upward",
+        "rightLeg": "on ground, knee bent",
+        "leftFoot": "flat on ground",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "balanced on knees",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left elbow on knee",
+          "right knee on ground",
+          "hand supporting chin",
+          "knees bent"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose40",
+        "sourceFilename": "Pose40.png",
+        "analyzedAt": "2026-08-21T09:02:19.610Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose39": {
+      "specification": {
+        "poseId": "Pose39",
+        "action": "kneeling on ground",
+        "bodyOrientation": "slightly turned left",
+        "headDirection": "forward",
+        "gazeDirection": "forward",
+        "torso": "upright, slight tilt left",
+        "pelvis": "resting on heels",
+        "leftArm": "relaxed, hand on knee",
+        "rightArm": "relaxed, hand on knee",
+        "leftHand": "resting on left knee",
+        "rightHand": "resting on right knee",
+        "leftLeg": "bent under pelvis",
+        "rightLeg": "bent under pelvis",
+        "leftFoot": "tucked under, toes pointing back",
+        "rightFoot": "tucked under, toes pointing back",
+        "weightDistribution": "centered over knees",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "knees on ground",
+          "torso slightly left",
+          "hands on knees",
+          "feet tucked under"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose39",
+        "sourceFilename": "Pose39.png",
+        "analyzedAt": "2026-08-21T09:02:19.667Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose42": {
+      "specification": {
+        "poseId": "Pose42",
+        "action": "relaxed seated pose",
+        "bodyOrientation": "facing forward",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "leaning slightly back",
+        "pelvis": "on floor",
+        "leftArm": "stretched back, hand on floor",
+        "rightArm": "bent, resting on knee",
+        "leftHand": "flat on floor",
+        "rightHand": "draped on knee",
+        "leftLeg": "extended forward",
+        "rightLeg": "bent upward, foot on floor",
+        "leftFoot": "resting on heel",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "mostly on pelvis and left arm",
+        "supportObject": {
+          "required": true,
+          "type": "floor",
+          "bodySupportRelationship": "pelvis and left hand on floor"
+        },
+        "criticalPoseGeometry": [
+          "left arm back",
+          "right knee bent",
+          "pelvis on floor",
+          "gaze forward"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose42",
+        "sourceFilename": "Pose42.png",
+        "analyzedAt": "2026-08-21T09:02:28.643Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose44": {
+      "specification": {
+        "poseId": "Pose44",
+        "action": "walking with dynamic stride",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly right",
+        "gazeDirection": "forward",
+        "torso": "upright, slight twist",
+        "pelvis": "centered",
+        "leftArm": "relaxed, slightly back",
+        "rightArm": "relaxed, hand in pocket",
+        "leftHand": "relaxed",
+        "rightHand": "in right pocket",
+        "leftLeg": "extended forward",
+        "rightLeg": "supporting body",
+        "leftFoot": "pointed",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "right leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left leg forward",
+          "right hand in pocket",
+          "head slightly right",
+          "dynamic coat movement"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose44",
+        "sourceFilename": "pose44.png",
+        "analyzedAt": "2026-08-21T09:02:32.164Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose43": {
+      "specification": {
+        "poseId": "Pose43",
+        "action": "sitting cross-legged",
+        "bodyOrientation": "frontal slant",
+        "headDirection": "slightly right and down",
+        "gazeDirection": "forward",
+        "torso": "slightly leaning forward",
+        "pelvis": "grounded, leaning back",
+        "leftArm": "hand supports chin",
+        "rightArm": "bent, hand on left knee",
+        "leftHand": "touching chin",
+        "rightHand": "resting on left knee",
+        "leftLeg": "crossed over right",
+        "rightLeg": "bent, sole on ground",
+        "leftFoot": "on right thigh",
+        "rightFoot": "toes pointed forward",
+        "weightDistribution": "balanced on pelvis and legs",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "head supported by left hand",
+          "right arm resting on left knee",
+          "legs crossed",
+          "torso slightly leaning"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose43",
+        "sourceFilename": "Pose43.png",
+        "analyzedAt": "2026-08-21T09:02:32.425Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose45": {
+      "specification": {
+        "poseId": "Pose45",
+        "action": "holding dress with both hands",
+        "bodyOrientation": "frontal facing",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "neutral",
+        "leftArm": "bent, hand grasping dress",
+        "rightArm": "bent, hand grasping dress",
+        "leftHand": "holding dress fabric",
+        "rightHand": "holding dress fabric",
+        "leftLeg": "slightly extended forward",
+        "rightLeg": "crossing left leg",
+        "leftFoot": "flat on ground",
+        "rightFoot": "toe touching ground",
+        "weightDistribution": "balanced on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left leg forward",
+          "right leg crosses left",
+          "hands holding dress",
+          "torso upright"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose45",
+        "sourceFilename": "Pose45.png",
+        "analyzedAt": "2026-08-21T09:02:33.659Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [
+          "possible_appearance_or_clothing_leakage"
+        ],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose46": {
+      "specification": {
+        "poseId": "Pose46",
+        "action": "standing confidently",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright, slightly tilted left",
+        "pelvis": "neutral",
+        "leftArm": "bent, hand in pocket",
+        "rightArm": "bent, hand in pocket",
+        "leftHand": "in pocket",
+        "rightHand": "in pocket",
+        "leftLeg": "straight",
+        "rightLeg": "slightly bent",
+        "leftFoot": "flat on ground",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "balanced on both feet",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "hands in pockets",
+          "frontal torso",
+          "left leg straight",
+          "balanced stance"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose46",
+        "sourceFilename": "Pose46.png",
+        "analyzedAt": "2026-08-21T09:02:36.667Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose47": {
+      "specification": {
+        "poseId": "Pose47",
+        "action": "walking away, looking over shoulder",
+        "bodyOrientation": "back facing viewer",
+        "headDirection": "turned left",
+        "gazeDirection": "left, towards viewer",
+        "torso": "upright, slight twist to left",
+        "pelvis": "aligned with torso",
+        "leftArm": "hanging down",
+        "rightArm": "bent, hand in pocket",
+        "leftHand": "relaxed by side",
+        "rightHand": "in pant pocket",
+        "leftLeg": "straight, behind",
+        "rightLeg": "bent, stepping forward",
+        "leftFoot": "flat on ground",
+        "rightFoot": "mid-step, toes on ground",
+        "weightDistribution": "right leg bearing weight",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "looking over left shoulder",
+          "right hand in pocket",
+          "left foot flat",
+          "right foot mid-step"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose47",
+        "sourceFilename": "Pose47.png",
+        "analyzedAt": "2026-08-21T09:02:45.235Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose51": {
+      "specification": {
+        "poseId": "Pose51",
+        "action": "casual standing with hip shift",
+        "bodyOrientation": "slightly angled forward",
+        "headDirection": "turned slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright and slightly twisted",
+        "pelvis": "tilted left",
+        "leftArm": "hanging down",
+        "rightArm": "hand in pocket",
+        "leftHand": "relaxed downward",
+        "rightHand": "inside pocket",
+        "leftLeg": "straight and supporting weight",
+        "rightLeg": "bent slightly forward",
+        "leftFoot": "flat on ground",
+        "rightFoot": "tiptoed lightly",
+        "weightDistribution": "major on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "hip shifted left",
+          "right leg bent",
+          "left arm down",
+          "right hand pocket"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose51",
+        "sourceFilename": "Pose51.png",
+        "analyzedAt": "2026-08-21T09:02:48.896Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose52": {
+      "specification": {
+        "poseId": "Pose52",
+        "action": "confident stance",
+        "bodyOrientation": "slightly turned to the right",
+        "headDirection": "right",
+        "gazeDirection": "forward",
+        "torso": "upright, relaxed",
+        "pelvis": "tilted slightly forward",
+        "leftArm": "hand on left hip",
+        "rightArm": "bent, hand near hair",
+        "leftHand": "resting on hip",
+        "rightHand": "gently touching hair",
+        "leftLeg": "straight, weight bearing",
+        "rightLeg": "crossed in front",
+        "leftFoot": "flat on ground",
+        "rightFoot": "touching ground lightly",
+        "weightDistribution": "left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "right leg crossed",
+          "left hand on waist",
+          "torso upright",
+          "head turned right"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose52",
+        "sourceFilename": "Pose52.png",
+        "analyzedAt": "2026-08-21T09:02:49.991Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [
+          "possible_appearance_or_clothing_leakage"
+        ],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose55": {
+      "specification": {
+        "poseId": "Pose55",
+        "action": "standing, adjusting shirt collar",
+        "bodyOrientation": "facing slightly left",
+        "headDirection": "tilted slightly downward",
+        "gazeDirection": "downward",
+        "torso": "slightly leaned forward",
+        "pelvis": "neutral",
+        "leftArm": "bent, hand to collar",
+        "rightArm": "bent, hand to collar",
+        "leftHand": "holding collar edge",
+        "rightHand": "holding collar edge",
+        "leftLeg": "straight, slight knee bend",
+        "rightLeg": "slightly bent, foot forward",
+        "leftFoot": "flat on ground",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "balanced, slightly on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "arms bent to collar",
+          "torso inclined forward",
+          "legs slightly bent",
+          "feet flat on ground"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose55",
+        "sourceFilename": "Pose55.png",
+        "analyzedAt": "2026-08-21T09:02:57.773Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose53": {
+      "specification": {
+        "poseId": "Pose53",
+        "action": "standing casually",
+        "bodyOrientation": "slightly turned to left",
+        "headDirection": "slightly tilted to left",
+        "gazeDirection": "forward",
+        "torso": "upright, slight left lean",
+        "pelvis": "neutral position",
+        "leftArm": "bent, hand on hip",
+        "rightArm": "slightly bent, hand holding shirt",
+        "leftHand": "in pocket",
+        "rightHand": "holding shirt collar",
+        "leftLeg": "weight bearing",
+        "rightLeg": "relaxed",
+        "leftFoot": "flat on ground",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "mainly on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left hand in pocket",
+          "right hand at collar"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose53",
+        "sourceFilename": "Pose53.png",
+        "analyzedAt": "2026-08-21T09:02:58.846Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose57": {
+      "specification": {
+        "poseId": "Pose57",
+        "action": "standing in place",
+        "bodyOrientation": "frontal, slight left turn",
+        "headDirection": "turned to left",
+        "gazeDirection": "looking off to left",
+        "torso": "upright",
+        "pelvis": "neutral",
+        "leftArm": "relaxed at side",
+        "rightArm": "relaxed at side",
+        "leftHand": "neutral position",
+        "rightHand": "neutral position",
+        "leftLeg": "neutral stance",
+        "rightLeg": "neutral stance",
+        "leftFoot": "neutral",
+        "rightFoot": "neutral",
+        "weightDistribution": "evenly distributed",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "head turned to left",
+          "gaze off to left",
+          "frontal with slight left turn",
+          "arms relaxed at sides"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose57",
+        "sourceFilename": "Pose57.png",
+        "analyzedAt": "2026-08-21T09:03:05.040Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose58": {
+      "specification": {
+        "poseId": "Pose58",
+        "action": "standing confidently",
+        "bodyOrientation": "facing forward",
+        "headDirection": "turned right",
+        "gazeDirection": "right",
+        "torso": "upright with slight twist",
+        "pelvis": "neutral position",
+        "leftArm": "bent, hand near collar",
+        "rightArm": "bent, hand in pocket",
+        "leftHand": "holding jacket collar",
+        "rightHand": "in pocket",
+        "leftLeg": "straight",
+        "rightLeg": "relaxed",
+        "leftFoot": "flat on ground",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "evenly distributed",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "head turned right",
+          "left hand on collar",
+          "right hand in pocket",
+          "even weight distribution"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose58",
+        "sourceFilename": "Pose58.png",
+        "analyzedAt": "2026-08-21T09:03:05.089Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose61": {
+      "specification": {
+        "poseId": "Pose61",
+        "action": "walking forward",
+        "bodyOrientation": "forward",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "facing forward",
+        "leftArm": "slightly bent, down",
+        "rightArm": "bent, hand in pocket",
+        "leftHand": "relaxed",
+        "rightHand": "in pocket",
+        "leftLeg": "straight",
+        "rightLeg": "stepping forward",
+        "leftFoot": "flat on ground",
+        "rightFoot": "raised, toe on ground",
+        "weightDistribution": "on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "upright torso",
+          "right hand in pocket",
+          "right leg forward"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose61",
+        "sourceFilename": "Pose61.png",
+        "analyzedAt": "2026-08-21T09:03:10.731Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose62": {
+      "specification": {
+        "poseId": "Pose62",
+        "action": "standing casually with jacket over shoulder",
+        "bodyOrientation": "facing right",
+        "headDirection": "slightly right and upward",
+        "gazeDirection": "upward",
+        "torso": "upright",
+        "pelvis": "neutral",
+        "leftArm": "bent, holding jacket over shoulder",
+        "rightArm": "straight down alongside body",
+        "leftHand": "holding jacket",
+        "rightHand": "relaxed",
+        "leftLeg": "crossed in front of right leg",
+        "rightLeg": "straight, supporting weight",
+        "leftFoot": "on toes, slightly forward",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "mainly on right leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left arm holding jacket",
+          "legs crossed at ankle",
+          "weight on right leg",
+          "head tilted slightly upward"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose62",
+        "sourceFilename": "Pose62.png",
+        "analyzedAt": "2026-08-21T09:03:16.238Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose59": {
+      "specification": {
+        "poseId": "Pose59",
+        "action": "standing casually",
+        "bodyOrientation": "facing slightly left",
+        "headDirection": "turned right",
+        "gazeDirection": "looking upward right",
+        "torso": "upright, slight left twist",
+        "pelvis": "aligned with torso",
+        "leftArm": "elbow bent, hand in pocket",
+        "rightArm": "relaxed down by side",
+        "leftHand": "in pocket",
+        "rightHand": "relaxed, slightly bent",
+        "leftLeg": "weight on left leg",
+        "rightLeg": "slightly forward",
+        "leftFoot": "grounded",
+        "rightFoot": "lightly touching ground",
+        "weightDistribution": "primarily on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "head turned right",
+          "left hand in pocket",
+          "weight on left leg",
+          "right arm relaxed"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose59",
+        "sourceFilename": "Pose59.png",
+        "analyzedAt": "2026-08-21T09:03:16.278Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose60": {
+      "specification": {
+        "poseId": "Pose60",
+        "action": "posing over shoulder",
+        "bodyOrientation": "right side",
+        "headDirection": "left",
+        "gazeDirection": "forward",
+        "torso": "twisted slightly to the left",
+        "pelvis": null,
+        "leftArm": "hanging naturally beside",
+        "rightArm": "bent, hand near shoulder",
+        "leftHand": "relaxed, near hip",
+        "rightHand": "holding garment off shoulder",
+        "leftLeg": null,
+        "rightLeg": null,
+        "leftFoot": null,
+        "rightFoot": null,
+        "weightDistribution": "neutral weight distribution",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "head turned left",
+          "right shoulder exposed"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose60",
+        "sourceFilename": "Pose60.png",
+        "analyzedAt": "2026-08-21T09:03:21.223Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "pelvis",
+          "leftLeg",
+          "rightLeg",
+          "leftFoot",
+          "rightFoot",
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose63": {
+      "specification": {
+        "poseId": "Pose63",
+        "action": "casual walking with swagger",
+        "bodyOrientation": "slightly turned right",
+        "headDirection": "left",
+        "gazeDirection": "forward",
+        "torso": "upright, slightly tilted right",
+        "pelvis": "neutral",
+        "leftArm": "bent, hand near collar",
+        "rightArm": "bent, across stomach",
+        "leftHand": "gripping jacket collar",
+        "rightHand": "resting on stomach",
+        "leftLeg": "weight-bearing, straight",
+        "rightLeg": "crossed in front, slightly bent",
+        "leftFoot": "flat on ground",
+        "rightFoot": "touching ground lightly",
+        "weightDistribution": "on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left leg straight",
+          "right leg crossing",
+          "left hand on collar",
+          "right hand resting on stomach"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose63",
+        "sourceFilename": "Pose63.png",
+        "analyzedAt": "2026-08-21T09:03:25.311Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose65": {
+      "specification": {
+        "poseId": "Pose65",
+        "action": "striding forward",
+        "bodyOrientation": "facing front",
+        "headDirection": "turned right",
+        "gazeDirection": "looking right",
+        "torso": "upright, slightly relaxed",
+        "pelvis": "neutral, aligned with torso",
+        "leftArm": "bent at elbow, wrist down",
+        "rightArm": "bent at elbow, wrist relaxed",
+        "leftHand": "open palm, relaxed",
+        "rightHand": "resting on left forearm",
+        "leftLeg": "straight, full weight",
+        "rightLeg": "bending forward",
+        "leftFoot": "flat on ground",
+        "rightFoot": "toes pointing forward",
+        "weightDistribution": "mostly on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left leg straight",
+          "right foot stepping",
+          "head turned right",
+          "arms relaxed across body"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose65",
+        "sourceFilename": "Pose65.png",
+        "analyzedAt": "2026-08-21T09:03:29.133Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose64": {
+      "specification": {
+        "poseId": "Pose64",
+        "action": "standing casually",
+        "bodyOrientation": "slightly turned left",
+        "headDirection": "turned left",
+        "gazeDirection": "forward and left",
+        "torso": "upright, relaxed",
+        "pelvis": "neutral position",
+        "leftArm": "bent, hand in pocket",
+        "rightArm": "bent, hand in pocket",
+        "leftHand": "in pants pocket",
+        "rightHand": "in pants pocket",
+        "leftLeg": "straight, bearing weight",
+        "rightLeg": "bent, foot forward",
+        "leftFoot": "flat on ground",
+        "rightFoot": "lightly resting on toes",
+        "weightDistribution": "on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "hand in pocket",
+          "turned left",
+          "weight on left leg",
+          "right toes resting"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose64",
+        "sourceFilename": "Pose64.png",
+        "analyzedAt": "2026-08-21T09:03:29.898Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose66": {
+      "specification": {
+        "poseId": "Pose66",
+        "action": "standing casually",
+        "bodyOrientation": "forward",
+        "headDirection": "left",
+        "gazeDirection": "left",
+        "torso": "straight",
+        "pelvis": "aligned with torso",
+        "leftArm": "relaxed by side",
+        "rightArm": "bent, hand in pocket",
+        "leftHand": "relaxed",
+        "rightHand": "pocketed",
+        "leftLeg": "slightly bent",
+        "rightLeg": "straight",
+        "leftFoot": "slightly forward",
+        "rightFoot": "weight-bearing",
+        "weightDistribution": "on right leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "head turned left",
+          "right hand in pocket",
+          "weight on right leg",
+          "left leg slightly forward"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose66",
+        "sourceFilename": "Pose66.png",
+        "analyzedAt": "2026-08-21T09:03:37.526Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose67": {
+      "specification": {
+        "poseId": "Pose67",
+        "action": "walking away",
+        "bodyOrientation": "back view",
+        "headDirection": "left",
+        "gazeDirection": "left",
+        "torso": "upright",
+        "pelvis": "neutral",
+        "leftArm": "relaxed at side",
+        "rightArm": "slightly bent at side",
+        "leftHand": "near pocket",
+        "rightHand": "near pocket",
+        "leftLeg": "forward",
+        "rightLeg": "backward",
+        "leftFoot": "flat on ground",
+        "rightFoot": "heel lifted",
+        "weightDistribution": "on left foot",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "torso upright",
+          "head turned left",
+          "left leg forward",
+          "right heel lifted"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose67",
+        "sourceFilename": "Pose67.png",
+        "analyzedAt": "2026-08-21T09:03:40.507Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose69": {
+      "specification": {
+        "poseId": "Pose69",
+        "action": "walking forward",
+        "bodyOrientation": "frontal",
+        "headDirection": "forward",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "neutral",
+        "leftArm": "bent, hand pocketed",
+        "rightArm": "straight down",
+        "leftHand": "in pocket",
+        "rightHand": "loose, near thigh",
+        "leftLeg": "stepping forward",
+        "rightLeg": "extended back",
+        "leftFoot": "flat, midstep",
+        "rightFoot": "toes pointed down",
+        "weightDistribution": "balanced on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left arm bent, hand in pocket",
+          "right arm straight",
+          "left leg leading",
+          "right foot toes down"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose69",
+        "sourceFilename": "Pose69.png",
+        "analyzedAt": "2026-08-21T09:03:41.740Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose71": {
+      "specification": {
+        "poseId": "Pose71",
+        "action": "walking forward",
+        "bodyOrientation": "facing forward",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright, slightly relaxed",
+        "pelvis": "aligned with torso",
+        "leftArm": "bent, swinging forward",
+        "rightArm": "straight, hanging back",
+        "leftHand": "relaxed, semi-open",
+        "rightHand": "relaxed, semi-open",
+        "leftLeg": "straight, stepping forward",
+        "rightLeg": "bent, stepping back",
+        "leftFoot": "flat on ground",
+        "rightFoot": "heel lifted",
+        "weightDistribution": "mostly on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left foot forward",
+          "right heel raised",
+          "head tilted left",
+          "arms in swing motion"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose71",
+        "sourceFilename": "Pose71.png",
+        "analyzedAt": "2026-08-21T09:03:45.320Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose70": {
+      "specification": {
+        "poseId": "Pose70",
+        "action": "standing with casual lean",
+        "bodyOrientation": "slightly angled left",
+        "headDirection": "forward",
+        "gazeDirection": "forward",
+        "torso": "upright, slight lean left",
+        "pelvis": "neutral, slight tilt",
+        "leftArm": "extended downward, holding chair",
+        "rightArm": "relaxed along torso",
+        "leftHand": "resting on chair back",
+        "rightHand": "near right pocket",
+        "leftLeg": "straight, bearing weight",
+        "rightLeg": "crossed in front",
+        "leftFoot": "flat on floor",
+        "rightFoot": "toes touching floor",
+        "weightDistribution": "mainly on left leg",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "left hand resting on chair back"
+        },
+        "criticalPoseGeometry": [
+          "head forward",
+          "lean onto chair",
+          "right leg crossed",
+          "left hand on chair"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose70",
+        "sourceFilename": "Pose70.png",
+        "analyzedAt": "2026-08-21T09:03:50.747Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose73": {
+      "specification": {
+        "poseId": "Pose73",
+        "action": "sitting with crossed legs",
+        "bodyOrientation": "front facing",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "tilted slightly back",
+        "leftArm": "resting on knee",
+        "rightArm": "propped on chin",
+        "leftHand": "resting on knee",
+        "rightHand": "supporting chin",
+        "leftLeg": "crossed over right",
+        "rightLeg": "bent at knee",
+        "leftFoot": "pointed downward",
+        "rightFoot": "touching floor",
+        "weightDistribution": "centered on stool",
+        "supportObject": {
+          "required": true,
+          "type": "stool",
+          "bodySupportRelationship": "sitting fully on stool"
+        },
+        "criticalPoseGeometry": [
+          "right hand under chin",
+          "crossed legs",
+          "left foot pointed",
+          "upright torso"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose73",
+        "sourceFilename": "Pose73.png",
+        "analyzedAt": "2026-08-21T09:03:51.667Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose74": {
+      "specification": {
+        "poseId": "Pose74",
+        "action": "sitting with legs apart",
+        "bodyOrientation": "forward-facing",
+        "headDirection": "slightly right",
+        "gazeDirection": "forward",
+        "torso": "upright, slight lean forward",
+        "pelvis": "seated",
+        "leftArm": "resting on left knee",
+        "rightArm": "resting on right knee",
+        "leftHand": "draped between legs",
+        "rightHand": "draped between legs",
+        "leftLeg": "bent, foot flat",
+        "rightLeg": "bent, foot flat",
+        "leftFoot": "on ground",
+        "rightFoot": "on ground",
+        "weightDistribution": "even on both legs",
+        "supportObject": {
+          "required": true,
+          "type": "box",
+          "bodySupportRelationship": "seated on top"
+        },
+        "criticalPoseGeometry": [
+          "legs apart",
+          "arms on knees",
+          "torso lean forward",
+          "feet flat"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose74",
+        "sourceFilename": "Pose74.png",
+        "analyzedAt": "2026-08-21T09:03:59.587Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose75": {
+      "specification": {
+        "poseId": "Pose75",
+        "action": "sitting on ground, relaxed",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright, relaxed",
+        "pelvis": "on ground, legs crossed",
+        "leftArm": "bent, elbow on knee",
+        "rightArm": "resting on leg",
+        "leftHand": "supporting chin",
+        "rightHand": "resting on leg",
+        "leftLeg": "bent, knee up",
+        "rightLeg": "bent, crossed over left",
+        "leftFoot": "flat on ground",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "even on pelvis",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left knee up",
+          "right leg crossed",
+          "left elbow on knee",
+          "chin resting on left hand"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose75",
+        "sourceFilename": "Pose75.png",
+        "analyzedAt": "2026-08-21T09:03:59.588Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose48": {
+      "specification": {
+        "poseId": "Pose48",
+        "action": "Standing with relaxed posture",
+        "bodyOrientation": "Frontal",
+        "headDirection": "Slightly left",
+        "gazeDirection": "Forward",
+        "torso": "Straight",
+        "pelvis": "Aligned with torso",
+        "leftArm": "Straight down",
+        "rightArm": "Bent, hand in pocket",
+        "leftHand": "Relaxed by side",
+        "rightHand": "In pocket",
+        "leftLeg": "Straight",
+        "rightLeg": "Slightly crossed in front",
+        "leftFoot": "Flat on ground",
+        "rightFoot": "Flat on ground",
+        "weightDistribution": "Balanced on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "right leg crossed",
+          "right hand in pocket",
+          "balanced on left leg"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose48",
+        "sourceFilename": "pose48.png",
+        "analyzedAt": "2026-08-21T09:04:29.327Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose50": {
+      "specification": {
+        "poseId": "Pose50",
+        "action": "mid-air leap",
+        "bodyOrientation": "front facing",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "straight",
+        "pelvis": "tilted left",
+        "leftArm": "bent, hand on head",
+        "rightArm": "extended backward",
+        "leftHand": "touching back of head",
+        "rightHand": "relaxed",
+        "leftLeg": "raised with knee bent",
+        "rightLeg": "extended downwards",
+        "leftFoot": "pointed back",
+        "rightFoot": "pointed down",
+        "weightDistribution": "mid-leap",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "left arm over head",
+          "right leg extended",
+          "torso straight",
+          "pelvis tilted"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose50",
+        "sourceFilename": "Pose50.png",
+        "analyzedAt": "2026-08-21T09:04:34.268Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose54": {
+      "specification": {
+        "poseId": "Pose54",
+        "action": "walking forward",
+        "bodyOrientation": "frontal",
+        "headDirection": "forward",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "facing forward",
+        "leftArm": "relaxed, hand in pocket",
+        "rightArm": "relaxed, hand in pocket",
+        "leftHand": "in pocket",
+        "rightHand": "in pocket",
+        "leftLeg": "forward step",
+        "rightLeg": "slightly behind",
+        "leftFoot": "flat on ground",
+        "rightFoot": "heel raised",
+        "weightDistribution": "mid-step",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "walking posture",
+          "hands in pockets",
+          "left foot forward"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose54",
+        "sourceFilename": "Pose54.png",
+        "analyzedAt": "2026-08-21T09:04:39.798Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose56": {
+      "specification": {
+        "poseId": "Pose56",
+        "action": "walking forward with slight turn",
+        "bodyOrientation": "3/4 view from back",
+        "headDirection": "slightly turned left",
+        "gazeDirection": "downwards",
+        "torso": "twisted slightly left",
+        "pelvis": "aligned with torso",
+        "leftArm": "hanging naturally, holding purse",
+        "rightArm": "bent, holding dress",
+        "leftHand": "clutching purse",
+        "rightHand": "gripping fabric",
+        "leftLeg": "stepping forward",
+        "rightLeg": "extended back, slightly bent",
+        "leftFoot": "flat on ground",
+        "rightFoot": "heel raised",
+        "weightDistribution": "primarily on left leg",
+        "supportObject": {
+          "required": false,
+          "type": null,
+          "bodySupportRelationship": null
+        },
+        "criticalPoseGeometry": [
+          "pelvis and torso twist left",
+          "right hand gripping dress",
+          "left leg forward",
+          "right heel raised"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose56",
+        "sourceFilename": "Pose56.png",
+        "analyzedAt": "2026-08-21T09:04:44.915Z",
+        "model": "gpt-4o",
+        "nullFields": [
+          "supportObject.type",
+          "supportObject.bodySupportRelationship"
+        ],
+        "reviewFlags": [
+          "possible_appearance_or_clothing_leakage"
+        ],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose68": {
+      "specification": {
+        "poseId": "Pose68",
+        "action": "leaning casually against chair",
+        "bodyOrientation": "side profile to the left",
+        "headDirection": "facing forward",
+        "gazeDirection": "forward",
+        "torso": "upright, slightly tilted back",
+        "pelvis": "supports against chair",
+        "leftArm": "bent, hand in pocket",
+        "rightArm": "bent, elbow resting on chair",
+        "leftHand": "inside pocket",
+        "rightHand": "visible, relaxed",
+        "leftLeg": "slightly bent, foot crossed over right",
+        "rightLeg": "straight, supporting",
+        "leftFoot": "hanging relaxed",
+        "rightFoot": "firmly on ground",
+        "weightDistribution": "shared between pelvis and right leg",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "leaning against chair back"
+        },
+        "criticalPoseGeometry": [
+          "side profile lean",
+          "crossed legs",
+          "arm on chair",
+          "hand in pocket"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose68",
+        "sourceFilename": "Pose68.png",
+        "analyzedAt": "2026-08-21T09:04:49.989Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    },
+    "Pose72": {
+      "specification": {
+        "poseId": "Pose72",
+        "action": "adjusting shoe strap",
+        "bodyOrientation": "sitting sideways",
+        "headDirection": "tilted slightly down",
+        "gazeDirection": "looking at shoe",
+        "torso": "upright, slightly leaning forward",
+        "pelvis": "seated on edge",
+        "leftArm": "extended downwards",
+        "rightArm": "bent, reaching towards foot",
+        "leftHand": "holding shoe strap",
+        "rightHand": "resting on knee",
+        "leftLeg": "crossed over right leg",
+        "rightLeg": "bent, foot touching ground",
+        "leftFoot": "raised, heel on ground",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "centered on right side",
+        "supportObject": {
+          "required": true,
+          "type": "block",
+          "bodySupportRelationship": "sitting on edge"
+        },
+        "criticalPoseGeometry": [
+          "left leg crossed",
+          "right arm reaching",
+          "head tilted down",
+          "torso leaning forward"
+        ]
+      },
+      "meta": {
+        "poseId": "Pose72",
+        "sourceFilename": "Pose72.png",
+        "analyzedAt": "2026-08-21T09:04:55.499Z",
+        "model": "gpt-4o",
+        "nullFields": [],
+        "reviewFlags": [],
+        "validationOk": true,
+        "validationErrors": []
+      }
+    }
+  }
+}

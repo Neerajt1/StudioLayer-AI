@@ -78,6 +78,8 @@ export type RenderLocationEnvironment = typeof RenderLocationEnvironment[keyof t
 
 export const RenderLocationEnvironment = {
   photo_studio: 'photo_studio',
+  white_studio: 'white_studio',
+  grey_gradient_studio: 'grey_gradient_studio',
   urban_street: 'urban_street',
   luxury_interior: 'luxury_interior',
   nature: 'nature',
@@ -250,6 +252,8 @@ export type RenderInputLocationEnvironment = typeof RenderInputLocationEnvironme
 
 export const RenderInputLocationEnvironment = {
   photo_studio: 'photo_studio',
+  white_studio: 'white_studio',
+  grey_gradient_studio: 'grey_gradient_studio',
   urban_street: 'urban_street',
   luxury_interior: 'luxury_interior',
   nature: 'nature',
@@ -364,7 +368,20 @@ export const RenderInputRefinementType = {
 } as const;
 
 export interface RenderInput {
+  /**
+   * URL or path of the uploaded front garment image (required primary reference).
+   */
   sourceImageUrl: string;
+  /**
+   * Optional URL or path of a back-view garment image.
+   * Supplementary visual reference only; front (sourceImageUrl) remains authoritative.
+   */
+  backImageUrl?: string;
+  /**
+   * Optional URL or path of a detail/close-up garment image.
+   * Supplementary visual reference only; front (sourceImageUrl) remains authoritative.
+   */
+  detailImageUrl?: string;
   modelPersona: RenderInputModelPersona;
   locationEnvironment: RenderInputLocationEnvironment;
   modelDemographics?: RenderInputModelDemographics;

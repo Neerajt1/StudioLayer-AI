@@ -20,6 +20,10 @@ import type { RenderInputRefinementType } from './renderInputRefinementType';
 
 export interface RenderInput {
   sourceImageUrl: string;
+  /** Optional back-view garment image. Supplementary; front remains primary. */
+  backImageUrl?: string;
+  /** Optional detail/close-up garment image. Supplementary; front remains primary. */
+  detailImageUrl?: string;
   modelPersona: RenderInputModelPersona;
   locationEnvironment: RenderInputLocationEnvironment;
   modelDemographics?: RenderInputModelDemographics;

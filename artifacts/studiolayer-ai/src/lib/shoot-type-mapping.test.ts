@@ -6,10 +6,17 @@ import {
   CUSTOM_CAMPAIGN_SUBTITLE,
   PRESET_SHOOT_TYPE_LABEL,
   PRESET_SHOOT_TYPE_OPTIONS,
+  V1_CREATE_SHOOT_TYPE_OPTION,
 } from './shoot-type-mapping.js';
 
 describe('Workspace shoot-type mapping', () => {
-  it('shows Hero / Editorial / Campaign with 1 / 2 / 4 images', () => {
+  it('V1 exposes Create as the single user-facing option', () => {
+    assert.equal(V1_CREATE_SHOOT_TYPE_OPTION.label, 'Create');
+    assert.equal(V1_CREATE_SHOOT_TYPE_OPTION.sub, '1 image');
+    assert.equal(V1_CREATE_SHOOT_TYPE_OPTION.value, 1);
+  });
+
+  it('shows Hero / Editorial / Campaign with 1 / 2 / 4 images (V3 recovery)', () => {
     assert.deepEqual(
       PRESET_SHOOT_TYPE_OPTIONS.map((option) => ({
         value: option.value,

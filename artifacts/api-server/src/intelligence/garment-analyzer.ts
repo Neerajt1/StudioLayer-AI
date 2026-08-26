@@ -9,7 +9,14 @@
 import OpenAI from "openai";
 import type { GarmentProfile, GarmentCategory } from "./types";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
+let openaiClient: OpenAI | null = null;
+
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
+  }
+  return openaiClient;
+}
 
 // ---------------------------------------------------------------------------
 // Fallback: derive a minimal profile from garmentPlacement alone
@@ -84,16 +91,29 @@ RULES:
 // Main export
 // ---------------------------------------------------------------------------
 
+type VisionContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string; detail: "low" } };
+
 /**
- * Analyses a garment image URL and returns a structured GarmentProfile.
- * Falls back gracefully to a minimal profile if GPT-4o vision fails.
+ * Builds GPT-4o vision user content for garment analysis.
+ * Front-only requests keep the historical single-image shape.
+ * Optional back/detail are appended as supplementary visual inputs.
  */
-export async function analyzeGarment(params: {
-  imageUrl: string;
+export function buildGarmentAnalysisVisionContent(params: {
+  frontImageUrl: string;
+  backImageUrl?: string;
+  detailImageUrl?: string;
   garmentPlacement?: string | null;
   garmentLengthSelection?: string | null;
-}): Promise<GarmentProfile> {
-  const { imageUrl, garmentPlacement, garmentLengthSelection } = params;
+}): VisionContentPart[] {
+  const {
+    frontImageUrl,
+    backImageUrl,
+    detailImageUrl,
+    garmentPlacement,
+    garmentLengthSelection,
+  } = params;
 
   const placementHint = garmentPlacement
     ? `User indicated garment category placement: ${garmentPlacement.replace("_", " ")}. Use as context but verify from the image.`
@@ -103,17 +123,83 @@ export async function analyzeGarment(params: {
       ? ` User selected garment length: ${garmentLengthSelection.replace(/_/g, " ")} — confirm or refine from the image.`
       : "";
 
+  const content: VisionContentPart[] = [
+    { type: "text", text: placementHint + lengthHint },
+  ];
+
+  const hasSupplementary = Boolean(backImageUrl || detailImageUrl);
+
+  if (!hasSupplementary) {
+    // Preserve exact front-only message shape used before multi-reference support.
+    content.push({
+      type: "image_url",
+      image_url: { url: frontImageUrl, detail: "low" },
+    });
+    return content;
+  }
+
+  content.push({ type: "text", text: "Front (primary garment reference):" });
+  content.push({
+    type: "image_url",
+    image_url: { url: frontImageUrl, detail: "low" },
+  });
+
+  if (backImageUrl) {
+    content.push({ type: "text", text: "Back (supplementary visual reference):" });
+    content.push({
+      type: "image_url",
+      image_url: { url: backImageUrl, detail: "low" },
+    });
+  }
+
+  if (detailImageUrl) {
+    content.push({ type: "text", text: "Detail (supplementary visual reference):" });
+    content.push({
+      type: "image_url",
+      image_url: { url: detailImageUrl, detail: "low" },
+    });
+  }
+
+  return content;
+}
+
+/**
+ * Analyses a garment image URL and returns a structured GarmentProfile.
+ * Optional back/detail images provide supplementary visual context only.
+ * Falls back gracefully to a minimal profile if GPT-4o vision fails.
+ */
+export async function analyzeGarment(params: {
+  /** Front garment image — required primary visual reference. */
+  frontImageUrl: string;
+  /** Optional back-view garment image. */
+  backImageUrl?: string;
+  /** Optional detail/close-up garment image. */
+  detailImageUrl?: string;
+  garmentPlacement?: string | null;
+  garmentLengthSelection?: string | null;
+}): Promise<GarmentProfile> {
+  const {
+    frontImageUrl,
+    backImageUrl,
+    detailImageUrl,
+    garmentPlacement,
+    garmentLengthSelection,
+  } = params;
+
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: "gpt-4o",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         {
           role: "user",
-          content: [
-            { type: "text", text: placementHint + lengthHint },
-            { type: "image_url", image_url: { url: imageUrl, detail: "low" } },
-          ],
+          content: buildGarmentAnalysisVisionContent({
+            frontImageUrl,
+            backImageUrl,
+            detailImageUrl,
+            garmentPlacement,
+            garmentLengthSelection,
+          }),
         },
       ],
       max_tokens: 400,

@@ -1,0 +1,796 @@
+{
+  "generatedAt": "2026-08-21T13:45:10.877Z",
+  "sources": {
+    "poseMasterPngs": "artifacts/studiolayer-ai/public/pose-references/Pose{1-75}.png",
+    "structuredDefinitions": "artifacts/api-server/src/intelligence/pose-canonical-registry.json",
+    "runtimeCatalog": "artifacts/api-server/src/intelligence/pose-library-catalog.ts",
+    "excelSourceMirror": "artifacts/studiolayer-ai/src/data/pose-master-v3-source.json",
+    "precomputedPoseSpecsUnused": "artifacts/api-server/src/intelligence/pose-specifications.precomputed.json",
+    "generationNormalizer": "artifacts/api-server/src/intelligence/pose-definition-normalizer.ts"
+  },
+  "totals": {
+    "total": 75,
+    "green": 1,
+    "yellow": 20,
+    "red": 54,
+    "modifiedAtGenerationTime": 74,
+    "unchanged": 1
+  },
+  "unchangedIds": [
+    "Pose58"
+  ],
+  "modified": [
+    {
+      "poseId": "Pose1",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Casual fitted top + wide-leg jeans; pocket interaction is essential\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Casual fitted top + wide-leg jeans; pocket interaction is essential",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf this pose uses a pocket hand and the uploaded garment has usable pockets, preserve that pocket interaction; otherwise keep the demonstrated hand placement without inventing pockets."
+    },
+    {
+      "poseId": "Pose2",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Simple fitted top + wide trousers\"",
+        "Rich bodyGeometry but weak asymmetry/differentiation language"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Simple fitted top + wide trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose3",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Top + trousers/jeans; hand-pocket interaction\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Top + trousers/jeans; hand-pocket interaction",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf this pose uses a pocket hand and the uploaded garment has usable pockets, preserve that pocket interaction; otherwise keep the demonstrated hand placement without inventing pockets."
+    },
+    {
+      "poseId": "Pose4",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Dress/garment silhouette must remain visible\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Dress/garment silhouette must remain visible",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose5",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Top + wide trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Top + wide trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose6",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"T-shirt + jeans\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "T-shirt + jeans",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose7",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Trouser outfit; seated contact important\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Appended Pose 7 geometric reinforcement only — does not redesign half-seated geometry.",
+      "oldGarmentInteraction": "Trouser outfit; seated contact important",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose8",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"T-shirt + loose jeans\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "T-shirt + loose jeans",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose9",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Simple top + jeans\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Simple top + jeans",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose10",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Open jacket; lapel hold is defining\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Open jacket; lapel hold is defining",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf this pose demonstrates a lapel/jacket hand hold and the uploaded garment supports it, preserve that hand interaction; do not invent a jacket or lapel."
+    },
+    {
+      "poseId": "Pose11",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer/jacket + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Blazer/jacket + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf the uploaded garment supports the demonstrated jacket/outerwear hand interaction, preserve that interaction; do not invent a jacket."
+    },
+    {
+      "poseId": "Pose12",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Trousers/waistline is emphasized\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Trousers/waistline is emphasized",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose13",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"T-shirt + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "T-shirt + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose14",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Wide-leg trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Wide-leg trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose15",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Back/seat of trousers visible\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Back/seat of trousers visible",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose16",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Blazer + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose17",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Dress/garment silhouette\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Dress/garment silhouette",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose18",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + wide trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Blazer + wide trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose19",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Wide-leg trousers + blazer\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Wide-leg trousers + blazer",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose20",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Blazer + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose21",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Long coat movement is essential\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Long coat movement is essential",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf the uploaded garment is outerwear/coat, preserve the demonstrated coat movement; otherwise preserve body geometry without inventing a coat."
+    },
+    {
+      "poseId": "Pose22",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Flowing skirt sweep is defining\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Flowing skirt sweep is defining",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose23",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Suit + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Suit + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose24",
+      "grade": "YELLOW",
+      "problems": [
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Handbag is a required prop",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf the Pose Master requires a bag as an intrinsic held object, preserve that hand-object relationship with an independent photographic bag; do not invent bags when not required."
+    },
+    {
+      "poseId": "Pose25",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Suit + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Suit + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose26",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Wide-leg trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Wide-leg trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose27",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Blazer + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose28",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Suit + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Suit + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose29",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Dress/skirt or wide-leg outfit\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Dress/skirt or wide-leg outfit",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose30",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Jacket + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Jacket + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose31",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Blazer + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose32",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Jacket + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Jacket + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose33",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Jacket + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Jacket + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose34",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + wide trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Blazer + wide trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose35",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Trousers + top\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Trousers + top",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose36",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Casual jacket + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Casual jacket + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose37",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Casual top + jeans\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Casual top + jeans",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose38",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Top + jeans\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Top + jeans",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose39",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Top + jeans\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Top + jeans",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose40",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Top + jeans\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Top + jeans",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose41",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"T-shirt + jeans\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "T-shirt + jeans",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose42",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"T-shirt + jeans\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "T-shirt + jeans",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose43",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Top + jeans\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Top + jeans",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose44",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Long coat movement is essential\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Long coat movement is essential",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf the uploaded garment is outerwear/coat, preserve the demonstrated coat movement; otherwise preserve body geometry without inventing a coat."
+    },
+    {
+      "poseId": "Pose45",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Dress hold is defining\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Dress hold is defining",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose46",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Wide-leg trousers + blazer\"",
+        "Rich bodyGeometry but weak asymmetry/differentiation language"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Wide-leg trousers + blazer",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose47",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Jacket + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Jacket + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose48",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + wide trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Blazer + wide trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose49",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Blazer + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose50",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Flowing dress/skirt\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Flowing dress/skirt",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose51",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Blazer + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose52",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Flowing blazer/coat + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Flowing blazer/coat + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose53",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Blazer/jacket detail\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Blazer/jacket detail",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf the uploaded garment supports the demonstrated jacket/outerwear hand interaction, preserve that interaction; do not invent a jacket."
+    },
+    {
+      "poseId": "Pose54",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Suit/jacket\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Suit/jacket",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf the uploaded garment supports the demonstrated jacket/outerwear hand interaction, preserve that interaction; do not invent a jacket."
+    },
+    {
+      "poseId": "Pose55",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Open jacket + shirt\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Open jacket + shirt",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf the uploaded garment supports the demonstrated jacket/outerwear hand interaction, preserve that interaction; do not invent a jacket."
+    },
+    {
+      "poseId": "Pose56",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Dress/back construction\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category",
+        "Rich bodyGeometry but weak asymmetry/differentiation language"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Dress/back construction",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose57",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Jacket collar/detail is defining\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Jacket collar/detail is defining",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf this pose demonstrates collar interaction and the uploaded garment has a collar, preserve that contact; do not invent collar details."
+    },
+    {
+      "poseId": "Pose59",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Blazer + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose60",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Off-shoulder/denim garment detail\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category",
+        "Rich bodyGeometry but weak asymmetry/differentiation language"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Off-shoulder/denim garment detail",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose61",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Blazer + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose62",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Jacket + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Jacket + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose63",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Jacket adjustment is defining\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Jacket adjustment is defining",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf the uploaded garment supports the demonstrated jacket/outerwear hand interaction, preserve that interaction; do not invent a jacket."
+    },
+    {
+      "poseId": "Pose64",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Shirt + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Shirt + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose65",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Jacket/sleeve interaction\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Jacket/sleeve interaction",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf this pose demonstrates sleeve interaction, preserve that contact on the uploaded garment's actual sleeves."
+    },
+    {
+      "poseId": "Pose66",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Shirt + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Shirt + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose67",
+      "grade": "YELLOW",
+      "problems": [
+        "Garment category assumption: \"Suit/jacket\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Suit/jacket",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf the uploaded garment supports the demonstrated jacket/outerwear hand interaction, preserve that interaction; do not invent a jacket."
+    },
+    {
+      "poseId": "Pose68",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Suit + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Suit + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose69",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Long coat + trousers\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Long coat + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit.\nIf the uploaded garment is outerwear/coat, preserve the demonstrated coat movement; otherwise preserve body geometry without inventing a coat."
+    },
+    {
+      "poseId": "Pose70",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"T-shirt + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "T-shirt + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose71",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"T-shirt + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "T-shirt + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose72",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Dress + sandal; sandal fix is defining\"",
+        "Pose-defining garment interaction must be neutralized without inventing a garment category"
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Dress + sandal; sandal fix is defining",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose73",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Blazer + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose74",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Blazer + trousers\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions. Reinforced body-to-support contact without changing limb/geometry field values.",
+      "oldGarmentInteraction": "Blazer + trousers",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    },
+    {
+      "poseId": "Pose75",
+      "grade": "RED",
+      "problems": [
+        "Garment outfit recipe / category leak: \"Loose T-shirt + ripped jeans\""
+      ],
+      "whySafe": "Neutralized garment-category / outfit-recipe language while preserving conditional pose-defining interactions.",
+      "oldGarmentInteraction": "Loose T-shirt + ripped jeans",
+      "newGarmentInteraction": "Preserve the uploaded garment exactly. Adapt the pose around the garment's actual silhouette, length, volume and drape. Do not invent or substitute a different garment category or outfit."
+    }
+  ],
+  "constraintsHonored": {
+    "excelCatalogModified": false,
+    "poseMasterPngsModified": false,
+    "referenceOrderingModified": false,
+    "geminiOpenRouterModelChanged": false,
+    "furnitureVocabularyModified": false,
+    "poseSpecJsonWiredToGeneration": false
+  }
+}

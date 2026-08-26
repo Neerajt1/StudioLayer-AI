@@ -1,6 +1,6 @@
 {
   "version": "5B",
-  "generatedAt": "2026-08-12T11:42:59.152Z",
+  "generatedAt": "2026-08-22T16:59:51.652Z",
   "totalPoses": 75,
   "poses": [
     {
@@ -10,14 +10,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "walking_three_quarter"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Casual fitted top + wide-leg jeans; pocket interaction is essential",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -42,7 +44,7 @@
       "campaignEligible": true,
       "editorialEligible": true,
       "visualCluster": null,
-      "requiresPockets": false,
+      "requiresPockets": true,
       "suitabilityScore": 8,
       "poseReferenceImage": "/pose-references/Pose1.png"
     },
@@ -53,14 +55,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "sculptural_straight_stand"
+        "standing",
+        "front",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Simple fitted top + wide trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -96,14 +100,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "hand_in_pocket_confidence"
+        "standing",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Top + trousers/jeans; hand-pocket interaction",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -139,100 +145,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "playful_leg_kick_lookback"
+        "standing",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "female",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "high_fashion_elevated_editorial",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose4.png"
-    },
-    {
-      "poseId": "Pose5",
-      "active": true,
-      "name": "Cross-Ankle Stand",
-      "category": "Core Full-Body Fashion",
-      "bodyState": "standing",
-      "bodyGeometry": [
-        "cross_ankle_stand"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "full_body",
-      "energy": "elegant",
-      "expression": "neutral",
-      "movement": "static",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "female",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "catalog_front_presentation",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose5.png"
-    },
-    {
-      "poseId": "Pose6",
-      "active": true,
-      "name": "Shoulder-Turn Pose",
-      "category": "Core Full-Body Fashion",
-      "bodyState": "standing",
-      "bodyGeometry": [
-        "shoulder_turn_three_quarter"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "full_body",
-      "energy": "elegant",
-      "expression": "neutral",
-      "movement": "static",
-      "interaction": "none",
+      "interaction": "Dress/garment silhouette must remain visible",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -259,6 +181,96 @@
       "visualCluster": null,
       "requiresPockets": false,
       "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose4.png"
+    },
+    {
+      "poseId": "Pose5",
+      "active": true,
+      "name": "Cross-Ankle Stand",
+      "category": "Core Full-Body Fashion",
+      "bodyState": "standing",
+      "bodyGeometry": [
+        "standing",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "full-body editorial framing",
+      "preferredFraming": "full_body",
+      "energy": "elegant",
+      "expression": "neutral",
+      "movement": "static",
+      "interaction": "Top + wide trousers",
+      "prop": "none",
+      "editorialIntensity": 2,
+      "coveragePurpose": [
+        "front",
+        "three_quarter"
+      ],
+      "genderPool": "female",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "three_quarter_s_twist",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": false,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose5.png"
+    },
+    {
+      "poseId": "Pose6",
+      "active": true,
+      "name": "Shoulder-Turn Pose",
+      "category": "Core Full-Body Fashion",
+      "bodyState": "standing",
+      "bodyGeometry": [
+        "standing",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "full-body editorial framing",
+      "preferredFraming": "full_body",
+      "energy": "elegant",
+      "expression": "neutral",
+      "movement": "static",
+      "interaction": "T-shirt + jeans",
+      "prop": "none",
+      "editorialIntensity": 2,
+      "coveragePurpose": [
+        "front",
+        "three_quarter"
+      ],
+      "genderPool": "female",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "three_quarter_s_twist",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": true,
+      "suitabilityScore": 8,
       "poseReferenceImage": "/pose-references/Pose6.png"
     },
     {
@@ -266,9 +278,11 @@
       "active": true,
       "name": "Chair Half Seated",
       "category": "Seated",
-      "bodyState": "seated",
+      "bodyState": "perched",
       "bodyGeometry": [
-        "perched_on_chair_back"
+        "perched",
+        "three_quarter",
+        "chair"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -294,7 +308,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -311,14 +325,16 @@
       "category": "Seated",
       "bodyState": "floor_seated",
       "bodyGeometry": [
-        "seated_floor_hand_on_chin"
+        "floor_seated",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "T-shirt + loose jeans",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -354,14 +370,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "arms_folded_minimal"
+        "standing",
+        "front",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Simple top + jeans",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -397,14 +415,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "jacket_lapel_hold"
+        "standing",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Open jacket; lapel hold is defining",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -423,7 +443,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
+      "poseFamily": "three_quarter_s_twist",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -440,14 +460,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "sleeve_adjustment"
+        "standing",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Blazer/jacket + trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -466,7 +488,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
+      "poseFamily": "three_quarter_s_twist",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -483,14 +505,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "trouser_waist_hold"
+        "standing",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Trousers/waistline is emphasized",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -509,7 +533,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
+      "poseFamily": "three_quarter_s_twist",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -523,18 +547,20 @@
       "poseId": "Pose13",
       "active": true,
       "name": "Relaxed Side Lean",
-      "category": "Editorial",
-      "bodyState": "leaning",
+      "category": "Core Full-Body Fashion",
+      "bodyState": "standing",
       "bodyGeometry": [
-        "relaxed_side_lean"
+        "standing",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "wall",
-      "prop": "wall",
+      "interaction": "T-shirt + trousers",
+      "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
         "front",
@@ -552,7 +578,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "leaning_environmental",
+      "poseFamily": "three_quarter_s_twist",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -569,14 +595,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "long_line_profile"
+        "standing",
+        "profile",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Wide-leg trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -601,7 +629,7 @@
       "campaignEligible": true,
       "editorialEligible": true,
       "visualCluster": null,
-      "requiresPockets": false,
+      "requiresPockets": true,
       "suitabilityScore": 8,
       "poseReferenceImage": "/pose-references/Pose14.png"
     },
@@ -612,14 +640,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "back_three_quarter_turn"
+        "standing",
+        "rear",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Back/seat of trousers visible",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -655,15 +685,17 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "walking_toward_camera"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "step",
-      "prop": "step",
+      "interaction": "Blazer + trousers",
+      "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
         "front",
@@ -698,14 +730,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "walking_away_lookback"
+        "walking",
+        "rear",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Dress/garment silhouette",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -724,7 +758,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "turning_over_shoulder",
+      "poseFamily": "walking_motion",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -741,14 +775,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "mid_step_side_walk"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Blazer + wide trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -784,14 +820,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "wide_striding_editorial_walk"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Wide-leg trousers + blazer",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -827,14 +865,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "turning_while_walking"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Blazer + trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -853,7 +893,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "turning_over_shoulder",
+      "poseFamily": "walking_motion",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -870,14 +910,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "coat_in_motion_walk"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Long coat movement is essential",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -896,7 +938,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
+      "poseFamily": "walking_motion",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -913,14 +955,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "skirt_sweep_walk"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Flowing skirt sweep is defining",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -939,7 +983,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
+      "poseFamily": "walking_motion",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -956,15 +1000,17 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "cross_step_runway_walk"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "step",
-      "prop": "step",
+      "interaction": "Suit + trousers",
+      "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
         "front",
@@ -982,7 +1028,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "catalog_front_presentation",
+      "poseFamily": "walking_motion",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -999,14 +1045,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "walking_with_bag"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Handbag is a required prop",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1040,16 +1088,18 @@
       "active": true,
       "name": "Pause Mid-Walk",
       "category": "Movement",
-      "bodyState": "walking",
+      "bodyState": "transitional",
       "bodyGeometry": [
-        "pause_mid_walk"
+        "transitional",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
-      "energy": "dynamic",
+      "energy": "elegant",
       "expression": "neutral",
-      "movement": "dynamic",
-      "interaction": "none",
+      "movement": "static",
+      "interaction": "Suit + trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1068,13 +1118,13 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "walking_motion",
+      "poseFamily": "three_quarter_s_twist",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
       "editorialEligible": true,
       "visualCluster": null,
-      "requiresPockets": false,
+      "requiresPockets": true,
       "suitabilityScore": 8,
       "poseReferenceImage": "/pose-references/Pose25.png"
     },
@@ -1085,7 +1135,9 @@
       "category": "Seated",
       "bodyState": "seated",
       "bodyGeometry": [
-        "classic_stool_sit"
+        "seated",
+        "front",
+        "stool"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -1111,7 +1163,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1125,10 +1177,12 @@
       "poseId": "Pose27",
       "active": true,
       "name": "Stool Forward Lean",
-      "category": "Seated",
-      "bodyState": "seated",
+      "category": "Editorial",
+      "bodyState": "leaning",
       "bodyGeometry": [
-        "stool_forward_lean"
+        "leaning",
+        "three_quarter",
+        "stool"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -1154,7 +1208,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "leaning_environmental",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1171,7 +1225,9 @@
       "category": "Seated",
       "bodyState": "seated",
       "bodyGeometry": [
-        "cross_leg_stool_pose"
+        "seated",
+        "three_quarter",
+        "stool"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -1197,7 +1253,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1214,7 +1270,9 @@
       "category": "Seated",
       "bodyState": "seated",
       "bodyGeometry": [
-        "sideways_stool_sit"
+        "seated",
+        "three_quarter",
+        "stool"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -1240,7 +1298,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1257,7 +1315,9 @@
       "category": "Seated",
       "bodyState": "seated",
       "bodyGeometry": [
-        "chair_relaxed_sit"
+        "seated",
+        "three_quarter",
+        "chair"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -1283,7 +1343,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1300,7 +1360,9 @@
       "category": "Seated",
       "bodyState": "seated",
       "bodyGeometry": [
-        "chair_forward_lean"
+        "seated",
+        "three_quarter",
+        "chair"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -1326,7 +1388,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1343,7 +1405,9 @@
       "category": "Seated",
       "bodyState": "seated",
       "bodyGeometry": [
-        "cross_leg_chair_pose"
+        "seated",
+        "three_quarter",
+        "chair"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -1369,7 +1433,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1386,7 +1450,9 @@
       "category": "Seated",
       "bodyState": "seated",
       "bodyGeometry": [
-        "edge_of_chair_pose"
+        "seated",
+        "three_quarter",
+        "chair"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -1412,7 +1478,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1426,10 +1492,12 @@
       "poseId": "Pose34",
       "active": true,
       "name": "Reclined Chair Pose",
-      "category": "Seated",
-      "bodyState": "seated",
+      "category": "Editorial",
+      "bodyState": "reclining",
       "bodyGeometry": [
-        "reclined_chair_pose"
+        "reclining",
+        "three_quarter",
+        "chair"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -1455,7 +1523,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "body_level_variation",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1472,7 +1540,9 @@
       "category": "Seated",
       "bodyState": "seated",
       "bodyGeometry": [
-        "seated_side_profile"
+        "seated",
+        "profile",
+        "chair"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -1498,7 +1568,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1515,14 +1585,16 @@
       "category": "Seated",
       "bodyState": "floor_seated",
       "bodyGeometry": [
-        "floor_cross_leg_sit"
+        "floor_seated",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Casual jacket + trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1558,14 +1630,16 @@
       "category": "Seated",
       "bodyState": "floor_seated",
       "bodyGeometry": [
-        "one_knee_floor_pose"
+        "floor_seated",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Casual top + jeans",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1601,14 +1675,16 @@
       "category": "Seated",
       "bodyState": "floor_seated",
       "bodyGeometry": [
-        "side_sit_floor_pose"
+        "floor_seated",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Top + jeans",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1641,17 +1717,19 @@
       "poseId": "Pose39",
       "active": true,
       "name": "Kneeling Editorial Pose",
-      "category": "Core Full-Body Fashion",
+      "category": "Editorial",
       "bodyState": "kneeling",
       "bodyGeometry": [
-        "kneeling_editorial_pose"
+        "kneeling",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Top + jeans",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1684,17 +1762,19 @@
       "poseId": "Pose40",
       "active": true,
       "name": "One-Knee Fashion Pose",
-      "category": "Seated",
-      "bodyState": "floor_seated",
+      "category": "Editorial",
+      "bodyState": "kneeling",
       "bodyGeometry": [
-        "one_knee_fashion_pose"
+        "kneeling",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Top + jeans",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1727,17 +1807,19 @@
       "poseId": "Pose41",
       "active": true,
       "name": "Reclining Floor Pose",
-      "category": "Seated",
-      "bodyState": "floor_seated",
+      "category": "Editorial",
+      "bodyState": "reclining",
       "bodyGeometry": [
-        "reclining_floor_pose"
+        "reclining",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "T-shirt + jeans",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1756,7 +1838,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "body_level_variation",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1773,14 +1855,16 @@
       "category": "Seated",
       "bodyState": "floor_seated",
       "bodyGeometry": [
-        "floor_long_leg_pose"
+        "floor_seated",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "T-shirt + jeans",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1816,14 +1900,16 @@
       "category": "Seated",
       "bodyState": "floor_seated",
       "bodyGeometry": [
-        "folded_leg_relaxed_pose"
+        "floor_seated",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Top + jeans",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1859,14 +1945,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "dramatic_coat_sweep"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Long coat movement is essential",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1885,7 +1973,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
+      "poseFamily": "walking_motion",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -1902,57 +1990,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "garment_hold_editorial"
+        "standing",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "female",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose45.png"
-    },
-    {
-      "poseId": "Pose46",
-      "active": true,
-      "name": "Shoulder-Back Power Pose",
-      "category": "Core Full-Body Fashion",
-      "bodyState": "standing",
-      "bodyGeometry": [
-        "shoulder_back_power_pose"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "full_body",
-      "energy": "elegant",
-      "expression": "neutral",
-      "movement": "static",
-      "interaction": "none",
+      "interaction": "Dress hold is defining",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -1979,66 +2026,25 @@
       "visualCluster": null,
       "requiresPockets": false,
       "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose46.png"
+      "poseReferenceImage": "/pose-references/Pose45.png"
     },
     {
-      "poseId": "Pose47",
+      "poseId": "Pose46",
       "active": true,
-      "name": "Looking Over Shoulder",
-      "category": "Movement",
-      "bodyState": "walking",
-      "bodyGeometry": [
-        "looking_over_shoulder"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "full_body",
-      "energy": "dynamic",
-      "expression": "neutral",
-      "movement": "dynamic",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "male",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "rear_back_presentation",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose47.png"
-    },
-    {
-      "poseId": "Pose48",
-      "active": true,
-      "name": "Head-Tilt Editorial",
+      "name": "Shoulder-Back Power Pose",
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "head_tilt_editorial"
+        "standing",
+        "front",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Wide-leg trousers + blazer",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -2063,25 +2069,72 @@
       "campaignEligible": true,
       "editorialEligible": true,
       "visualCluster": null,
-      "requiresPockets": false,
+      "requiresPockets": true,
       "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/pose48.png"
+      "poseReferenceImage": "/pose-references/Pose46.png"
     },
     {
-      "poseId": "Pose49",
+      "poseId": "Pose47",
       "active": true,
-      "name": "Arm-Extended Silhouette",
+      "name": "Looking Over Shoulder",
+      "category": "Movement",
+      "bodyState": "walking",
+      "bodyGeometry": [
+        "walking",
+        "rear",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "full-body editorial framing",
+      "preferredFraming": "full_body",
+      "energy": "dynamic",
+      "expression": "neutral",
+      "movement": "dynamic",
+      "interaction": "Jacket + trousers",
+      "prop": "none",
+      "editorialIntensity": 2,
+      "coveragePurpose": [
+        "front",
+        "three_quarter"
+      ],
+      "genderPool": "male",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "walking_motion",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": true,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose47.png"
+    },
+    {
+      "poseId": "Pose48",
+      "active": true,
+      "name": "Head-Tilt Editorial",
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "arm_extended_silhouette"
+        "standing",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Blazer + wide trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -2100,7 +2153,52 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
+      "poseFamily": "three_quarter_s_twist",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": true,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/pose48.png"
+    },
+    {
+      "poseId": "Pose49",
+      "active": true,
+      "name": "Arm-Extended Silhouette",
+      "category": "Core Full-Body Fashion",
+      "bodyState": "standing",
+      "bodyGeometry": [
+        "standing",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "full-body editorial framing",
+      "preferredFraming": "full_body",
+      "energy": "elegant",
+      "expression": "neutral",
+      "movement": "static",
+      "interaction": "Blazer + trousers",
+      "prop": "none",
+      "editorialIntensity": 2,
+      "coveragePurpose": [
+        "front",
+        "three_quarter"
+      ],
+      "genderPool": "female",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "three_quarter_s_twist",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -2114,18 +2212,20 @@
       "poseId": "Pose50",
       "active": true,
       "name": "The Floating Suspended",
-      "category": "Core Full-Body Fashion",
-      "bodyState": "standing",
+      "category": "Movement",
+      "bodyState": "transitional",
       "bodyGeometry": [
-        "floating_suspended_leap"
+        "transitional",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
-      "energy": "elegant",
+      "energy": "dynamic",
       "expression": "neutral",
-      "movement": "static",
-      "interaction": "step",
-      "prop": "step",
+      "movement": "dynamic",
+      "interaction": "Flowing dress/skirt",
+      "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
         "front",
@@ -2160,14 +2260,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "contrapposto_power_pose"
+        "standing",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Blazer + trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -2192,7 +2294,7 @@
       "campaignEligible": true,
       "editorialEligible": true,
       "visualCluster": null,
-      "requiresPockets": false,
+      "requiresPockets": true,
       "suitabilityScore": 8,
       "poseReferenceImage": "/pose-references/Pose51.png"
     },
@@ -2203,14 +2305,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "garment_in_wind_pose"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Flowing blazer/coat + trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -2229,7 +2333,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
+      "poseFamily": "walking_motion",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -2246,14 +2350,16 @@
       "category": "Portrait",
       "bodyState": "standing",
       "bodyGeometry": [
-        "three_quarter_portrait"
+        "standing",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "portrait editorial framing",
       "preferredFraming": "portrait",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Collar hand + pocket hand",
       "prop": "none",
       "editorialIntensity": 3,
       "coveragePurpose": [
@@ -2271,7 +2377,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "portrait_presentation",
+      "poseFamily": "three_quarter_s_twist",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -2288,14 +2394,416 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "walking_front_hands_in_pockets"
+        "walking",
+        "front",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Suit/jacket; both hands in pockets",
+      "prop": "none",
+      "editorialIntensity": 3,
+      "coveragePurpose": [
+        "front"
+      ],
+      "genderPool": "male",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "walking_motion",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": true,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose54.png"
+    },
+    {
+      "poseId": "Pose55",
+      "active": true,
+      "name": "Crossed-Leg Collar Grip",
+      "category": "Core Full-Body Fashion",
+      "bodyState": "transitional",
+      "bodyGeometry": [
+        "transitional",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "full-body editorial framing",
+      "preferredFraming": "full_body",
+      "energy": "dynamic",
+      "expression": "neutral",
+      "movement": "dynamic",
+      "interaction": "Bilateral active collar/lapel grip during dynamic cross-step",
+      "prop": "none",
+      "editorialIntensity": 3,
+      "coveragePurpose": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "genderPool": "male",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "high_fashion_elevated_editorial",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": false,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose55.png"
+    },
+    {
+      "poseId": "Pose56",
+      "active": true,
+      "name": "Back-of-Head / Shoulder View",
+      "category": "Movement",
+      "bodyState": "walking",
+      "bodyGeometry": [
+        "walking",
+        "rear",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "full-body editorial framing",
+      "preferredFraming": "full_body",
+      "energy": "dynamic",
+      "expression": "neutral",
+      "movement": "dynamic",
+      "interaction": "Dress/skirt hold as demonstrated",
+      "prop": "none",
+      "editorialIntensity": 2,
+      "coveragePurpose": [
+        "rear"
+      ],
+      "genderPool": "female",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "walking_motion",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": false,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose56.png"
+    },
+    {
+      "poseId": "Pose57",
+      "active": true,
+      "name": "Jacket Detail Portrait",
+      "category": "Portrait",
+      "bodyState": "standing",
+      "bodyGeometry": [
+        "standing",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "portrait editorial framing",
+      "preferredFraming": "chest_up",
+      "energy": "elegant",
+      "expression": "neutral",
+      "movement": "static",
+      "interaction": "Elevated collar; no hand action",
+      "prop": "none",
+      "editorialIntensity": 3,
+      "coveragePurpose": [
+        "portrait"
+      ],
+      "genderPool": "male",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "three_quarter_s_twist",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": false,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose57.png"
+    },
+    {
+      "poseId": "Pose58",
+      "active": true,
+      "name": "Hands-and-Garment Detail",
+      "category": "Portrait",
+      "bodyState": "standing",
+      "bodyGeometry": [
+        "standing",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "portrait editorial framing",
+      "preferredFraming": "portrait",
+      "energy": "elegant",
+      "expression": "neutral",
+      "movement": "static",
+      "interaction": "Lapel hand + pocket hand",
+      "prop": "none",
+      "editorialIntensity": 3,
+      "coveragePurpose": [
+        "portrait"
+      ],
+      "genderPool": "female",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "three_quarter_s_twist",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": false,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose58.png"
+    },
+    {
+      "poseId": "Pose59",
+      "active": true,
+      "name": "Waist-Up Editorial",
+      "category": "Portrait",
+      "bodyState": "standing",
+      "bodyGeometry": [
+        "standing",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "portrait editorial framing",
+      "preferredFraming": "waist_up",
+      "energy": "elegant",
+      "expression": "neutral",
+      "movement": "static",
+      "interaction": "One pocket hand",
+      "prop": "none",
+      "editorialIntensity": 3,
+      "coveragePurpose": [
+        "portrait"
+      ],
+      "genderPool": "female",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "three_quarter_s_twist",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": true,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose59.png"
+    },
+    {
+      "poseId": "Pose60",
+      "active": true,
+      "name": "Face-and-Shoulder Fashion Crop",
+      "category": "Portrait",
+      "bodyState": "standing",
+      "bodyGeometry": [
+        "standing",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "portrait editorial framing",
+      "preferredFraming": "portrait",
+      "energy": "elegant",
+      "expression": "neutral",
+      "movement": "static",
+      "interaction": "Over-shoulder look-back; draped jacket",
+      "prop": "none",
+      "editorialIntensity": 2,
+      "coveragePurpose": [
+        "portrait"
+      ],
+      "genderPool": "female",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "three_quarter_s_twist",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": false,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose60.png"
+    },
+    {
+      "poseId": "Pose61",
+      "active": true,
+      "name": "Male Classic Three-Quarter",
+      "category": "Movement",
+      "bodyState": "walking",
+      "bodyGeometry": [
+        "walking",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "full-body editorial framing",
+      "preferredFraming": "full_body",
+      "energy": "dynamic",
+      "expression": "neutral",
+      "movement": "dynamic",
+      "interaction": "Blazer + trousers",
+      "prop": "none",
+      "editorialIntensity": 2,
+      "coveragePurpose": [
+        "front",
+        "three_quarter"
+      ],
+      "genderPool": "male",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "walking_motion",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": true,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose61.png"
+    },
+    {
+      "poseId": "Pose62",
+      "active": true,
+      "name": "Male Strong Contrapposto",
+      "category": "Core Full-Body Fashion",
+      "bodyState": "standing",
+      "bodyGeometry": [
+        "standing",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "full-body editorial framing",
+      "preferredFraming": "full_body",
+      "energy": "elegant",
+      "expression": "neutral",
+      "movement": "static",
+      "interaction": "Jacket + trousers",
+      "prop": "none",
+      "editorialIntensity": 2,
+      "coveragePurpose": [
+        "front",
+        "three_quarter"
+      ],
+      "genderPool": "male",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "three_quarter_s_twist",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": true,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose62.png"
+    },
+    {
+      "poseId": "Pose63",
+      "active": true,
+      "name": "Male Jacket Adjustment",
+      "category": "Movement",
+      "bodyState": "walking",
+      "bodyGeometry": [
+        "walking",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "full-body editorial framing",
+      "preferredFraming": "full_body",
+      "energy": "dynamic",
+      "expression": "neutral",
+      "movement": "dynamic",
+      "interaction": "Jacket adjustment is defining",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -2322,390 +2830,6 @@
       "visualCluster": null,
       "requiresPockets": false,
       "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose54.png"
-    },
-    {
-      "poseId": "Pose55",
-      "active": true,
-      "name": "The Collarbone Frame",
-      "category": "Core Full-Body Fashion",
-      "bodyState": "standing",
-      "bodyGeometry": [
-        "collarbone_frame_lapel_hold"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "full_body",
-      "energy": "elegant",
-      "expression": "neutral",
-      "movement": "static",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "male",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "catalog_front_presentation",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose55.png"
-    },
-    {
-      "poseId": "Pose56",
-      "active": true,
-      "name": "Back-of-Head / Shoulder View",
-      "category": "Movement",
-      "bodyState": "walking",
-      "bodyGeometry": [
-        "back_of_head_shoulder_view"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "full_body",
-      "energy": "dynamic",
-      "expression": "neutral",
-      "movement": "dynamic",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "female",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "rear_back_presentation",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose56.png"
-    },
-    {
-      "poseId": "Pose57",
-      "active": true,
-      "name": "Jacket Detail Portrait",
-      "category": "Portrait",
-      "bodyState": "standing",
-      "bodyGeometry": [
-        "jacket_detail_portrait"
-      ],
-      "cameraRelationship": "portrait editorial framing",
-      "preferredFraming": "portrait",
-      "energy": "elegant",
-      "expression": "neutral",
-      "movement": "static",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 3,
-      "coveragePurpose": [
-        "portrait"
-      ],
-      "genderPool": "male",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "portrait_presentation",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose57.png"
-    },
-    {
-      "poseId": "Pose58",
-      "active": true,
-      "name": "Hands-and-Garment Detail",
-      "category": "Core Full-Body Fashion",
-      "bodyState": "standing",
-      "bodyGeometry": [
-        "hands_and_garment_detail"
-      ],
-      "cameraRelationship": "portrait editorial framing",
-      "preferredFraming": "portrait",
-      "energy": "elegant",
-      "expression": "neutral",
-      "movement": "static",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 3,
-      "coveragePurpose": [
-        "portrait"
-      ],
-      "genderPool": "female",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose58.png"
-    },
-    {
-      "poseId": "Pose59",
-      "active": true,
-      "name": "Waist-Up Editorial",
-      "category": "Portrait",
-      "bodyState": "standing",
-      "bodyGeometry": [
-        "waist_up_editorial"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "three_quarter_body",
-      "energy": "elegant",
-      "expression": "neutral",
-      "movement": "static",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "female",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "portrait_presentation",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose59.png"
-    },
-    {
-      "poseId": "Pose60",
-      "active": true,
-      "name": "Face-and-Shoulder Fashion Crop",
-      "category": "Portrait",
-      "bodyState": "standing",
-      "bodyGeometry": [
-        "face_and_shoulder_crop"
-      ],
-      "cameraRelationship": "portrait editorial framing",
-      "preferredFraming": "portrait",
-      "energy": "elegant",
-      "expression": "neutral",
-      "movement": "static",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 3,
-      "coveragePurpose": [
-        "portrait"
-      ],
-      "genderPool": "female",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "portrait_presentation",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose60.png"
-    },
-    {
-      "poseId": "Pose61",
-      "active": true,
-      "name": "Male Classic Three-Quarter",
-      "category": "Movement",
-      "bodyState": "walking",
-      "bodyGeometry": [
-        "male_classic_three_quarter"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "full_body",
-      "energy": "dynamic",
-      "expression": "neutral",
-      "movement": "dynamic",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "male",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "catalog_front_presentation",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": true,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose61.png"
-    },
-    {
-      "poseId": "Pose62",
-      "active": true,
-      "name": "Male Strong Contrapposto",
-      "category": "Core Full-Body Fashion",
-      "bodyState": "standing",
-      "bodyGeometry": [
-        "male_strong_contrapposto"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "full_body",
-      "energy": "elegant",
-      "expression": "neutral",
-      "movement": "static",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "male",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "catalog_front_presentation",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose62.png"
-    },
-    {
-      "poseId": "Pose63",
-      "active": true,
-      "name": "Male Jacket Adjustment",
-      "category": "Movement",
-      "bodyState": "walking",
-      "bodyGeometry": [
-        "male_jacket_adjustment"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "full_body",
-      "energy": "dynamic",
-      "expression": "neutral",
-      "movement": "dynamic",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "male",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
       "poseReferenceImage": "/pose-references/Pose63.png"
     },
     {
@@ -2715,100 +2839,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "male_double_pocket_pose"
+        "standing",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "male",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "catalog_front_presentation",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": true,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose64.png"
-    },
-    {
-      "poseId": "Pose65",
-      "active": true,
-      "name": "Male Sleeve Adjustment",
-      "category": "Movement",
-      "bodyState": "walking",
-      "bodyGeometry": [
-        "male_sleeve_adjustment"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "full_body",
-      "energy": "dynamic",
-      "expression": "neutral",
-      "movement": "dynamic",
-      "interaction": "none",
-      "prop": "none",
-      "editorialIntensity": 2,
-      "coveragePurpose": [
-        "front",
-        "three_quarter"
-      ],
-      "genderPool": "male",
-      "collections": [
-        "hero",
-        "campaign",
-        "editorial"
-      ],
-      "garmentCategories": "all",
-      "garmentTags": [
-        "editorial",
-        "commercial"
-      ],
-      "avoidForTags": [],
-      "poseFamily": "garment_interaction_dress_skirt",
-      "selectionClass": "contextual",
-      "heroEligible": true,
-      "campaignEligible": true,
-      "editorialEligible": true,
-      "visualCluster": null,
-      "requiresPockets": false,
-      "suitabilityScore": 8,
-      "poseReferenceImage": "/pose-references/Pose65.png"
-    },
-    {
-      "poseId": "Pose66",
-      "active": true,
-      "name": "Male Shoulder Turn",
-      "category": "Core Full-Body Fashion",
-      "bodyState": "standing",
-      "bodyGeometry": [
-        "male_shoulder_turn"
-      ],
-      "cameraRelationship": "full-body editorial framing",
-      "preferredFraming": "full_body",
-      "energy": "elegant",
-      "expression": "neutral",
-      "movement": "static",
-      "interaction": "none",
+      "interaction": "Shirt + trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -2833,7 +2873,97 @@
       "campaignEligible": true,
       "editorialEligible": true,
       "visualCluster": null,
+      "requiresPockets": true,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose64.png"
+    },
+    {
+      "poseId": "Pose65",
+      "active": true,
+      "name": "Male Sleeve Adjustment",
+      "category": "Movement",
+      "bodyState": "walking",
+      "bodyGeometry": [
+        "walking",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "full-body editorial framing",
+      "preferredFraming": "full_body",
+      "energy": "dynamic",
+      "expression": "neutral",
+      "movement": "dynamic",
+      "interaction": "Jacket/sleeve interaction",
+      "prop": "none",
+      "editorialIntensity": 2,
+      "coveragePurpose": [
+        "front",
+        "three_quarter"
+      ],
+      "genderPool": "male",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "walking_motion",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
       "requiresPockets": false,
+      "suitabilityScore": 8,
+      "poseReferenceImage": "/pose-references/Pose65.png"
+    },
+    {
+      "poseId": "Pose66",
+      "active": true,
+      "name": "Male Shoulder Turn",
+      "category": "Core Full-Body Fashion",
+      "bodyState": "standing",
+      "bodyGeometry": [
+        "standing",
+        "three_quarter",
+        "no_support_prop"
+      ],
+      "cameraRelationship": "full-body editorial framing",
+      "preferredFraming": "full_body",
+      "energy": "elegant",
+      "expression": "neutral",
+      "movement": "static",
+      "interaction": "Shirt + trousers",
+      "prop": "none",
+      "editorialIntensity": 2,
+      "coveragePurpose": [
+        "front",
+        "three_quarter"
+      ],
+      "genderPool": "male",
+      "collections": [
+        "hero",
+        "campaign",
+        "editorial"
+      ],
+      "garmentCategories": "all",
+      "garmentTags": [
+        "editorial",
+        "commercial"
+      ],
+      "avoidForTags": [],
+      "poseFamily": "three_quarter_s_twist",
+      "selectionClass": "contextual",
+      "heroEligible": true,
+      "campaignEligible": true,
+      "editorialEligible": true,
+      "visualCluster": null,
+      "requiresPockets": true,
       "suitabilityScore": 8,
       "poseReferenceImage": "/pose-references/Pose66.png"
     },
@@ -2844,14 +2974,16 @@
       "category": "Core Full-Body Fashion",
       "bodyState": "standing",
       "bodyGeometry": [
-        "male_back_three_quarter"
+        "standing",
+        "rear",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Suit/jacket",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -2876,7 +3008,7 @@
       "campaignEligible": true,
       "editorialEligible": true,
       "visualCluster": null,
-      "requiresPockets": false,
+      "requiresPockets": true,
       "suitabilityScore": 8,
       "poseReferenceImage": "/pose-references/Pose67.png"
     },
@@ -2887,19 +3019,20 @@
       "category": "Editorial",
       "bodyState": "leaning",
       "bodyGeometry": [
-        "male_full_profile"
+        "leaning",
+        "profile",
+        "stool"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
-      "energy": "elegant",
+      "energy": "relaxed",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "stool",
+      "interaction": "Load-bearing lean against tall stool; hands in pockets",
       "prop": "stool",
       "editorialIntensity": 2,
       "coveragePurpose": [
-        "front",
-        "three_quarter"
+        "profile"
       ],
       "genderPool": "male",
       "collections": [
@@ -2913,13 +3046,13 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "profile_presentation",
+      "poseFamily": "leaning_environmental",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
       "editorialEligible": true,
       "visualCluster": null,
-      "requiresPockets": false,
+      "requiresPockets": true,
       "suitabilityScore": 8,
       "poseReferenceImage": "/pose-references/Pose68.png"
     },
@@ -2930,14 +3063,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "male_walking_toward_camera"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "Long coat + trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -2969,18 +3104,21 @@
     {
       "poseId": "Pose70",
       "active": true,
-      "name": "Male Side Walking Pose",
-      "category": "Editorial",
-      "bodyState": "leaning",
+      "name": "Male Standing Beside Chair",
+      "category": "Standing",
+      "bodyState": "standing",
       "bodyGeometry": [
-        "lean_on_chair"
+        "standing",
+        "front",
+        "chair",
+        "leaning"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
-      "energy": "elegant",
+      "energy": "relaxed",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "chair",
+      "interaction": "Hand on chair backrest; standing beside chair",
       "prop": "chair",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -3016,14 +3154,16 @@
       "category": "Movement",
       "bodyState": "walking",
       "bodyGeometry": [
-        "male_side_walking_pose"
+        "walking",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "dynamic",
       "expression": "neutral",
       "movement": "dynamic",
-      "interaction": "none",
+      "interaction": "T-shirt + trousers",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [
@@ -3059,15 +3199,17 @@
       "category": "Seated",
       "bodyState": "seated",
       "bodyGeometry": [
-        "sandal_fix_on_block"
+        "seated",
+        "three_quarter",
+        "step"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "stool",
-      "prop": "stool",
+      "interaction": "step",
+      "prop": "step",
       "editorialIntensity": 2,
       "coveragePurpose": [
         "front",
@@ -3085,7 +3227,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -3102,7 +3244,9 @@
       "category": "Seated",
       "bodyState": "seated",
       "bodyGeometry": [
-        "female_stool_editorial"
+        "seated",
+        "three_quarter",
+        "stool"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -3128,7 +3272,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -3145,7 +3289,9 @@
       "category": "Seated",
       "bodyState": "seated",
       "bodyGeometry": [
-        "female_forward_lean_sit"
+        "seated",
+        "three_quarter",
+        "stool"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
@@ -3171,7 +3317,7 @@
         "commercial"
       ],
       "avoidForTags": [],
-      "poseFamily": "seated",
+      "poseFamily": "prop_interaction",
       "selectionClass": "contextual",
       "heroEligible": true,
       "campaignEligible": true,
@@ -3188,14 +3334,16 @@
       "category": "Seated",
       "bodyState": "floor_seated",
       "bodyGeometry": [
-        "relaxed_floor_sitting"
+        "floor_seated",
+        "three_quarter",
+        "no_support_prop"
       ],
       "cameraRelationship": "full-body editorial framing",
       "preferredFraming": "full_body",
       "energy": "elegant",
       "expression": "neutral",
       "movement": "static",
-      "interaction": "none",
+      "interaction": "Loose T-shirt + ripped jeans",
       "prop": "none",
       "editorialIntensity": 2,
       "coveragePurpose": [

@@ -8,7 +8,7 @@
 //   3. WardrobeCompletion  → which slots to fill
 //   4. Rule Engine         → FashionKnowledgeBase match (deterministic, first)
 //   5. GPT Fallback        → only when confidence < 0.45 or no rule matched
-//   6. Hard Fallback       → DEFAULT_FALLBACK_OUTFITS (if GPT also fails)
+//   6. Hard Fallback       → direction-aware buildHardFallbackOutfit (if GPT also fails)
 //   7. PromptComposer      → natural language render prompt
 //   8. Part 7/8 logging
 //
@@ -27,13 +27,27 @@ import { applyGarmentIntelligence } from "./garment-intelligence";
 import type { GarmentLengthSelection } from "./garment-intelligence";
 import { FashionKnowledgeBase } from "./fashion-knowledge-base";
 import { selectStyleMode, describeStyleMode } from "./style-engine";
-import { getCompletionPlan, filterRecommendationsToSlots } from "./wardrobe-completion";
+import {
+  filterRecommendationsToSlots,
+  resolveWardrobeCompletionPlan,
+} from "./wardrobe-completion";
 import { composeRenderPrompt } from "./prompt-composer";
 import { resolveOutfitOverride } from "./outfit-style-override";
 import {
   applyContextAwareAccessories,
   accessoryPromptGuidance,
 } from "./accessory-intelligence";
+import {
+  buildHardFallbackOutfit,
+  knowledgeBaseForLookDirection,
+  applyPlacementOutfitGuards,
+  defaultBottomForLookDirection,
+  defaultFootwearForLookDirection,
+  describeLookDirection,
+  resolveLookDirection,
+  selectFootwearForLookDirection,
+  type LookDirection,
+} from "./look-direction";
 import type {
   GarmentCategory,
   GarmentProfile,
@@ -50,42 +64,6 @@ const openai = new OpenAI({ apiKey: process.env.OPENAPI_API_KEY });
 const RULE_ENGINE_CONFIDENCE_THRESHOLD = 0.45;
 
 // ---------------------------------------------------------------------------
-// Hard fallback outfit — used when both rule engine and GPT fail.
-// Category-specific defaults ensure rendering never stalls on styling.
-// ---------------------------------------------------------------------------
-const DEFAULT_FALLBACK_OUTFITS: Record<GarmentCategory, RecommendedOutfit> = {
-  tops: {
-    bottom:      "Dark Blue Slim Jeans",
-    footwear:    "White Leather Sneakers",
-    accessories: ["Leather Belt"],
-  },
-  bottoms: {
-    top:         "White Crew Neck T-Shirt",
-    footwear:    "White Leather Sneakers",
-    accessories: ["Simple Watch"],
-  },
-  "one-pieces": {
-    footwear:    "White Leather Sneakers",
-    accessories: ["Minimal Gold Jewellery"],
-  },
-  outerwear: {
-    innerLayer:  "White Crew Neck T-Shirt",
-    bottom:      "Dark Slim Jeans",
-    footwear:    "Chelsea Boots",
-  },
-  footwear: {
-    top:         "White Crew Neck T-Shirt",
-    bottom:      "Dark Blue Slim Jeans",
-    accessories: ["Simple Watch"],
-  },
-  accessories: {
-    top:         "White Crew Neck T-Shirt",
-    bottom:      "Dark Blue Slim Jeans",
-    footwear:    "White Leather Sneakers",
-  },
-};
-
-// ---------------------------------------------------------------------------
 // IntelligenceResult — returned to the rendering pipeline
 // ---------------------------------------------------------------------------
 
@@ -98,7 +76,7 @@ export interface IntelligenceResult {
   prompt: string;
   /** Wall-clock time for the full intelligence pipeline in milliseconds. */
   durationMs: number;
-  /** True if the hard fallback (DEFAULT_FALLBACK_OUTFITS) was used. */
+  /** True if the hard fallback (direction-aware outfit defaults) was used. */
   usedHardFallback: boolean;
 }
 
@@ -109,8 +87,17 @@ export interface IntelligenceResult {
 async function gptFallbackOutfit(
   profile: GarmentProfile,
   styleMode: StyleMode,
+  lookDirection: LookDirection,
+  garmentPlacement?: string | null,
 ): Promise<{ outfit: RecommendedOutfit; confidence: number }> {
   try {
+    const directionLabel = describeLookDirection(lookDirection);
+    const placementNote =
+      garmentPlacement === "upper_body"
+        ? "User selected Top Wear — recommend a complementary bottom."
+        : garmentPlacement === "full_body"
+          ? "User selected Full Outfit — do NOT invent an additional bottom or top."
+          : "";
     const prompt = `You are a professional fashion stylist for an e-commerce catalog.
 
 A customer has uploaded this garment:
@@ -125,6 +112,8 @@ A customer has uploaded this garment:
 - Season: ${profile.season.join(", ")}
 
 Style mode: ${styleMode}
+Look direction (overall fashion direction of the completed look): ${directionLabel}
+${placementNote ? `Placement: ${placementNote}` : ""}
 
 Return a JSON object with ONLY these keys (all optional, use null if not needed):
 {
@@ -141,6 +130,10 @@ Rules:
 - The uploaded garment is the hero product — all recommendations must be neutral and secondary.
 - Avoid highly patterned or brightly coloured complementary items.
 - Accessories MUST match model gender (${profile.gender}) and age (${profile.ageGroup}). Never recommend feminine jewellery for male models or mature luxury accessories for child models.
+- FOOTWEAR must fit the look direction (${directionLabel}). Sneakers remain a legitimate option when they genuinely fit this look (especially contemporary casual, streetwear, and western). Prefer ethnic footwear for traditional / ethnic looks when appropriate, and formal footwear for formal / evening — but do not ban sneakers categorically.
+- Do NOT use talent/model footwear as a styling reference — you have no access to talent shoes; choose from look direction only.
+- When the user selected Top Wear (upper garment only), you MUST recommend an appropriate complementary bottom (trousers, jeans, palazzo, churidar, skirt, etc.) fitting the look direction — never leave the lower half incomplete.
+- When the user selected Full Outfit, do NOT invent an extra bottom or top beyond the uploaded complete product.
 - Use specific, product-style descriptions (e.g. "White Slim Chinos" not "pants").
 - Respond with ONLY valid JSON.`;
 
@@ -165,6 +158,22 @@ Rules:
     if (typeof parsed.footwear   === "string")  outfit.footwear   = parsed.footwear;
     if (Array.isArray(parsed.accessories))      outfit.accessories = parsed.accessories;
 
+    // If GPT omitted footwear, fill with direction-aware default (not universal sneakers).
+    if (!outfit.footwear && profile.category !== "footwear") {
+      outfit.footwear = defaultFootwearForLookDirection(lookDirection, profile.gender);
+    }
+    // Top Wear must always receive a complementary bottom.
+    if (garmentPlacement === "upper_body" && !outfit.bottom) {
+      outfit.bottom = defaultBottomForLookDirection(lookDirection, profile.gender);
+    }
+    // Full Outfit must not invent bottoms.
+    if (garmentPlacement === "full_body") {
+      delete outfit.bottom;
+      delete outfit.top;
+      delete outfit.innerLayer;
+      delete outfit.outerwear;
+    }
+
     return { outfit, confidence: 0.72 };
   } catch {
     // Return empty — caller will apply hard fallback
@@ -180,22 +189,52 @@ function ruleEngineOutfit(
   profile: GarmentProfile,
   styleMode: StyleMode,
   kb: FashionKnowledgeBase,
+  lookDirection: LookDirection,
+  completionPlan: ReturnType<typeof resolveWardrobeCompletionPlan>,
+  matchingProfile: GarmentProfile,
 ): { outfit: RecommendedOutfit; confidence: number; ruleId: string } | null {
-  const best = kb.bestMatch(profile, styleMode);
+  const best = kb.bestMatch(matchingProfile, styleMode);
   if (!best || best.score < RULE_ENGINE_CONFIDENCE_THRESHOLD) return null;
 
-  const plan    = getCompletionPlan(profile.category);
-  const slotted = filterRecommendationsToSlots(best.rule.recommendations, plan);
+  const slotted = filterRecommendationsToSlots(
+    best.rule.recommendations,
+    completionPlan,
+  );
 
   const outfit: RecommendedOutfit = {};
   if (slotted.top?.length)         outfit.top        = slotted.top[0];
   if (slotted.bottom?.length)      outfit.bottom     = slotted.bottom[0];
   if (slotted.innerLayer?.length)  outfit.innerLayer = slotted.innerLayer[0];
   if (slotted.outerwear?.length)   outfit.outerwear  = slotted.outerwear[0];
-  if (slotted.footwear?.length)    outfit.footwear   = slotted.footwear[0];
+  if (slotted.footwear?.length) {
+    outfit.footwear = selectFootwearForLookDirection(
+      slotted.footwear,
+      lookDirection,
+    );
+  }
   if (slotted.accessories?.length) outfit.accessories = slotted.accessories;
 
   return { outfit, confidence: best.score, ruleId: best.rule.id };
+}
+
+/**
+ * When Top Wear is selected but vision classified the garment as one-pieces,
+ * match KB rules as tops so complementary bottoms can be found.
+ */
+function profileForOutfitMatching(
+  profile: GarmentProfile,
+  garmentPlacement?: string | null,
+): GarmentProfile {
+  if (
+    garmentPlacement === "upper_body" &&
+    (profile.category === "one-pieces" || profile.category === "accessories")
+  ) {
+    return { ...profile, category: "tops" };
+  }
+  if (garmentPlacement === "lower_body" && profile.category === "one-pieces") {
+    return { ...profile, category: "bottoms" };
+  }
+  return profile;
 }
 
 function accessoryContextShots(
@@ -216,6 +255,10 @@ function accessoryContextShots(
 export interface IntelligenceParams {
   renderId: number;
   garmentImageUrl: string;
+  /** Optional back-view garment image — analyzer supplementary input only. */
+  backImageUrl?: string;
+  /** Optional detail/close-up garment image — analyzer supplementary input only. */
+  detailImageUrl?: string;
   garmentPlacement?: string | null;
   /** Full Outfit length selection — "auto" uses vision detection; manual values override. */
   garmentLengthSelection?: GarmentLengthSelection | null;
@@ -244,7 +287,7 @@ export interface IntelligenceParams {
  *   - prompt           → logged in Part 8 (not sent to fal.ai)
  *   - recommendation   → logged and available for future features
  *
- * Never throws — all errors fall back to DEFAULT_FALLBACK_OUTFITS.
+ * Never throws — all errors fall back to direction-aware hard-fallback outfits.
  */
 export async function runIntelligenceAnalysis(
   params: IntelligenceParams,
@@ -252,6 +295,8 @@ export async function runIntelligenceAnalysis(
   const {
     renderId,
     garmentImageUrl,
+    backImageUrl,
+    detailImageUrl,
     garmentPlacement,
     garmentLengthSelection,
     modelGender,
@@ -259,7 +304,7 @@ export async function runIntelligenceAnalysis(
     outfitStyle,
     shots = 1,
     generationType,
-    region = "default",
+    region: _region = "default",
   } = params;
 
   const accessoryShots = accessoryContextShots(shots, generationType);
@@ -269,7 +314,9 @@ export async function runIntelligenceAnalysis(
 
   // 1. Analyse garment ───────────────────────────────────────────────────────
   const rawProfile: GarmentProfile = await analyzeGarment({
-    imageUrl: garmentImageUrl,
+    frontImageUrl: garmentImageUrl,
+    backImageUrl,
+    detailImageUrl,
     garmentPlacement,
     garmentLengthSelection,
   });
@@ -283,12 +330,28 @@ export async function runIntelligenceAnalysis(
   // 2. Select style mode ─────────────────────────────────────────────────────
   const styleMode: StyleMode = selectStyleMode(profile);
 
-  // 3. Wardrobe completion plan ──────────────────────────────────────────────
-  const completionPlan = getCompletionPlan(profile.category);
+  // 2b. Look direction — footwear / styling context for the completed look
+  const lookDirection = resolveLookDirection(profile, outfitStyle);
+
+  // 3. Wardrobe completion — honour Top Wear / Full Outfit placement semantics
+  const completionPlan = resolveWardrobeCompletionPlan(
+    profile.category,
+    garmentPlacement,
+  );
+  const matchingProfile = profileForOutfitMatching(profile, garmentPlacement);
 
   // 4. Rule engine (deterministic, first) ───────────────────────────────────
-  const kb         = new FashionKnowledgeBase(region);
-  const ruleResult = ruleEngineOutfit(profile, styleMode, kb);
+  // traditional_ethnic includes India regional rules in the candidate set
+  // (not a user geo region — look-direction activation only).
+  const kb         = knowledgeBaseForLookDirection(lookDirection);
+  const ruleResult = ruleEngineOutfit(
+    profile,
+    styleMode,
+    kb,
+    lookDirection,
+    completionPlan,
+    matchingProfile,
+  );
 
   let outfit: RecommendedOutfit;
   let confidence: number;
@@ -302,20 +365,38 @@ export async function runIntelligenceAnalysis(
     ruleId         = ruleResult.ruleId;
   } else {
     // 5. GPT fallback ─────────────────────────────────────────────────────
-    const gptResult = await gptFallbackOutfit(profile, styleMode);
+    const gptResult = await gptFallbackOutfit(
+      matchingProfile,
+      styleMode,
+      lookDirection,
+      garmentPlacement,
+    );
 
     if (gptResult.confidence > 0) {
       outfit         = gptResult.outfit;
       confidence     = gptResult.confidence;
       decisionSource = "gpt";
     } else {
-      // 6. Hard fallback — DEFAULT_FALLBACK_OUTFITS ─────────────────────
-      outfit            = DEFAULT_FALLBACK_OUTFITS[profile.category] ?? DEFAULT_FALLBACK_OUTFITS["tops"];
+      // 6. Hard fallback — direction-aware footwear + placement bottoms ─
+      outfit            = buildHardFallbackOutfit(
+        matchingProfile.category,
+        lookDirection,
+        profile.gender,
+        garmentPlacement,
+      );
       confidence        = 0.30;
-      decisionSource    = "rule_engine";   // default outfit is deterministic
+      decisionSource    = "rule_engine";
       usedHardFallback  = true;
     }
   }
+
+  outfit = applyPlacementOutfitGuards(
+    outfit,
+    lookDirection,
+    profile.gender,
+    garmentPlacement,
+    completionPlan.requiredSlots,
+  );
 
   const recommendation: OutfitRecommendation = {
     styleMode,
@@ -337,7 +418,7 @@ export async function runIntelligenceAnalysis(
   // user's chosen outfit items).
   let outfitOverrideApplied = false;
   const outfitOverride = resolveOutfitOverride(
-    profile.category,
+    matchingProfile.category,
     modelGender,
     outfitStyle,
   );
@@ -359,6 +440,13 @@ export async function runIntelligenceAnalysis(
 
   // 7b. Context-aware accessories (Batch 3.2) ───────────────────────────────
   outfit = applyContextAwareAccessories(outfit, profile, modelGender, accessoryShots);
+  outfit = applyPlacementOutfitGuards(
+    outfit,
+    lookDirection,
+    profile.gender,
+    garmentPlacement,
+    completionPlan.requiredSlots,
+  );
   recommendation.recommendedOutfit = outfit;
 
   // 8. Compose render prompt ─────────────────────────────────────────────────
@@ -368,6 +456,9 @@ export async function runIntelligenceAnalysis(
     modelGender,
     modelAgeGroup: modelAgeRange,
     accessoryGuidance: accessoryPromptGuidance(profile, modelGender, accessoryShots),
+    outfitStyle,
+    lookDirection,
+    garmentPlacement,
   });
 
   const durationMs = Date.now() - startMs;
@@ -395,6 +486,7 @@ export async function runIntelligenceAnalysis(
         },
         detectedStyle:      describeStyleMode(styleMode),
         selectedStyleMode:  styleMode,
+        lookDirection,
         completionPlan:     completionPlan.rationale,
         recommendedOutfit:  outfit,
         generatedPrompt:    prompt,

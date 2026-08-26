@@ -72,7 +72,7 @@
     "Pose67": "Male Back Three-Quarter",
     "Pose68": "Male Full Profile",
     "Pose69": "Male Walking Toward Camera",
-    "Pose70": "Male Side Walking Pose",
+    "Pose70": "Male Standing Beside Chair",
     "Pose71": "Male Turning Walk",
     "Pose72": "Female Sandle fix Pose",
     "Pose73": "Female Stool Editorial",
@@ -148,12 +148,12 @@
     "Male Back Three-Quarter": "Pose67",
     "Male Full Profile": "Pose68",
     "Male Walking Toward Camera": "Pose69",
-    "Male Side Walking Pose": "Pose70",
     "Male Turning Walk": "Pose71",
     "Female Sandle fix Pose": "Pose72",
     "Female Stool Editorial": "Pose73",
     "Female Forward Lean Sit": "Pose74",
-    "Female Relaxed sitting Pose": "Pose75"
+    "Female Relaxed sitting Pose": "Pose75",
+    "Male Standing Beside Chair": "Pose70"
   },
   "catalogNameToFilename": {
     "Classic Three-Quarter Stand": "Pose1.png",
@@ -224,11 +224,11 @@
     "Male Back Three-Quarter": "Pose67.png",
     "Male Full Profile": "Pose68.png",
     "Male Walking Toward Camera": "Pose69.png",
-    "Male Side Walking Pose": "Pose70.png",
     "Male Turning Walk": "Pose71.png",
     "Female Sandle fix Pose": "Pose72.png",
     "Female Stool Editorial": "Pose73.png",
     "Female Forward Lean Sit": "Pose74.png",
-    "Female Relaxed sitting Pose": "Pose75.png"
+    "Female Relaxed sitting Pose": "Pose75.png",
+    "Male Standing Beside Chair": "Pose70.png"
   }
 }

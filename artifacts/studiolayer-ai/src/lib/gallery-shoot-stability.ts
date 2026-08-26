@@ -61,12 +61,21 @@ export function stabilizeGalleryShoots(
   }
 
   const unmatched = next.filter((_, index) => !matchedNextIndices.has(index));
-  if (unmatched.length === 0) return stabilized;
+  const merged =
+    unmatched.length === 0
+      ? stabilized
+      : [
+          ...stabilized,
+          ...unmatched.sort(
+            (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+          ),
+        ];
 
-  return [
-    ...stabilized,
-    ...unmatched.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
-  ];
+  // Re-sort by shoot date so new sessions surface in chronological order.
+  // mergeShootIdentity preserves createdAt for matched shoots (delete UX).
+  return merged.sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
 }
 
 export function delay(ms: number): Promise<void> {

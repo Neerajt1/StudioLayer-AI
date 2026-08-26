@@ -139,10 +139,11 @@ button.sl-welcome-enter:focus-visible {
   }
 
   button.sl-welcome-enter {
-    top: 76%;
-    min-width: 9.5rem;
+    /* Lower on mobile so the artwork arrow clears the button with visible gap. */
+    top: 79.5%;
+    min-width: 8rem;
     min-height: 2.4rem;
-    padding: 0.6rem 1.3rem;
+    padding: 0.62rem 1rem;
     font-size: 1rem;
   }
 }

@@ -11,6 +11,8 @@ export type RenderInputLocationEnvironment = typeof RenderInputLocationEnvironme
 
 export const RenderInputLocationEnvironment = {
   photo_studio: 'photo_studio',
+  white_studio: 'white_studio',
+  grey_gradient_studio: 'grey_gradient_studio',
   urban_street: 'urban_street',
   luxury_interior: 'luxury_interior',
   nature: 'nature',

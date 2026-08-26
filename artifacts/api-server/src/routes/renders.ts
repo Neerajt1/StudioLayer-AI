@@ -6,6 +6,7 @@ import { db, rendersTable, usersTable, renderDeletionEventsTable } from "@worksp
 import { CreateRenderBody, GetRenderParams } from "@workspace/api-zod";
 import { runAIPipeline } from "../services/ai-pipeline";
 import { saveRenderPoseSelection } from "../services/pose-history-service";
+import { recordFurnitureUsage } from "../services/furniture-usage-service";
 import {
   resolveRenderLedgerMetadata,
   type GenerationType,
@@ -224,6 +225,8 @@ router.post("/renders", async (req, res): Promise<void> => {
   const tier = user.subscriptionTier;
   const {
     sourceImageUrl,
+    backImageUrl,
+    detailImageUrl,
     modelPersona,
     locationEnvironment,
     modelDemographics,
@@ -583,6 +586,8 @@ router.post("/renders", async (req, res): Promise<void> => {
       renderId: insertedRows[0]!.id,
       userId,
       sourceImageUrl,
+      backImageUrl,
+      detailImageUrl,
       modelPersona,
       locationEnvironment,
       modelDemographics,
@@ -606,7 +611,7 @@ router.post("/renders", async (req, res): Promise<void> => {
       usedCameraAngles: usedCameraAngles ?? undefined,
       usedPoses: usedPoses ?? undefined,
       pipelineTrace,
-      onComplete: async (outputImageUrl, imageIndex, poseSelection) => {
+      onComplete: async (outputImageUrl, imageIndex, poseSelection, furnitureSelection) => {
         const row = insertedRows[imageIndex];
         if (!row) return;
         const updated = await db
@@ -651,6 +656,30 @@ router.post("/renders", async (req, res): Promise<void> => {
                 err: poseError instanceof Error ? poseError.message : String(poseError),
               },
               "pose metadata save failed — render completed",
+            );
+          }
+        }
+
+        if (furnitureSelection?.assetId) {
+          try {
+            await recordFurnitureUsage({
+              userId,
+              furnitureAssetId: furnitureSelection.assetId,
+              furnitureFamily: furnitureSelection.family,
+              renderId: row.id,
+              generationSessionId: pipelineTrace.generationSessionId,
+            });
+          } catch (furnitureError) {
+            logger.warn(
+              {
+                renderId: row.id,
+                imageIndex,
+                err:
+                  furnitureError instanceof Error
+                    ? furnitureError.message
+                    : String(furnitureError),
+              },
+              "furniture usage record failed — render completed",
             );
           }
         }

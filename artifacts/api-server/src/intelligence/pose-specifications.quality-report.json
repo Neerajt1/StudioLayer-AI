@@ -1,0 +1,513 @@
+{
+  "generatedAt": "2026-08-21T09:04:55.499Z",
+  "model": "gpt-4o",
+  "targetsRequested": [
+    "Pose48",
+    "Pose50",
+    "Pose54",
+    "Pose56",
+    "Pose68",
+    "Pose72"
+  ],
+  "summary": {
+    "successfullyAnalyzedInCache": 75,
+    "analyzedThisRun": 6,
+    "skippedExisting": 0,
+    "validationFailuresThisRun": 0,
+    "withAnyNullFields": 57,
+    "withReviewFlags": 4
+  },
+  "validationFailures": [],
+  "nullFieldCounts": {
+    "Pose1": 2,
+    "Pose2": 2,
+    "Pose3": 2,
+    "Pose4": 2,
+    "Pose5": 2,
+    "Pose6": 2,
+    "Pose7": 0,
+    "Pose8": 2,
+    "Pose9": 2,
+    "Pose10": 2,
+    "Pose11": 2,
+    "Pose12": 2,
+    "Pose13": 2,
+    "Pose14": 2,
+    "Pose15": 2,
+    "Pose16": 2,
+    "Pose17": 2,
+    "Pose18": 2,
+    "Pose19": 2,
+    "Pose20": 2,
+    "Pose21": 2,
+    "Pose22": 2,
+    "Pose23": 2,
+    "Pose24": 2,
+    "Pose25": 2,
+    "Pose26": 0,
+    "Pose27": 0,
+    "Pose28": 0,
+    "Pose29": 0,
+    "Pose30": 0,
+    "Pose31": 0,
+    "Pose32": 0,
+    "Pose33": 0,
+    "Pose34": 0,
+    "Pose35": 0,
+    "Pose36": 1,
+    "Pose37": 2,
+    "Pose38": 2,
+    "Pose39": 2,
+    "Pose40": 2,
+    "Pose41": 0,
+    "Pose42": 0,
+    "Pose43": 2,
+    "Pose44": 2,
+    "Pose45": 2,
+    "Pose46": 2,
+    "Pose47": 2,
+    "Pose48": 2,
+    "Pose49": 2,
+    "Pose50": 2,
+    "Pose51": 2,
+    "Pose52": 2,
+    "Pose53": 2,
+    "Pose54": 2,
+    "Pose55": 2,
+    "Pose56": 2,
+    "Pose57": 2,
+    "Pose58": 2,
+    "Pose59": 2,
+    "Pose60": 7,
+    "Pose61": 2,
+    "Pose62": 2,
+    "Pose63": 2,
+    "Pose64": 2,
+    "Pose65": 2,
+    "Pose66": 2,
+    "Pose67": 2,
+    "Pose68": 0,
+    "Pose69": 2,
+    "Pose70": 0,
+    "Pose71": 2,
+    "Pose72": 0,
+    "Pose73": 0,
+    "Pose74": 0,
+    "Pose75": 2
+  },
+  "reviewFlagsByPose": {
+    "Pose22": [
+      "possible_appearance_or_clothing_leakage"
+    ],
+    "Pose45": [
+      "possible_appearance_or_clothing_leakage"
+    ],
+    "Pose52": [
+      "possible_appearance_or_clothing_leakage"
+    ],
+    "Pose56": [
+      "possible_appearance_or_clothing_leakage"
+    ]
+  },
+  "pose7": {
+    "poseId": "Pose7",
+    "action": "casually sitting",
+    "bodyOrientation": "slightly angled to the right",
+    "headDirection": "forward",
+    "gazeDirection": "forward",
+    "torso": "upright",
+    "pelvis": "on chair edge",
+    "leftArm": "bent, hand on chair",
+    "rightArm": "resting on chair back",
+    "leftHand": "holding chair edge",
+    "rightHand": "on chair back",
+    "leftLeg": "bent, foot flat on floor",
+    "rightLeg": "crossed over left",
+    "leftFoot": "flat on floor",
+    "rightFoot": "toes touching floor",
+    "weightDistribution": "supported by chair and legs",
+    "supportObject": {
+      "required": true,
+      "type": "chair",
+      "bodySupportRelationship": "sitting on edge"
+    },
+    "criticalPoseGeometry": [
+      "torso upright",
+      "legs crossed",
+      "arm on chair",
+      "sitting on edge"
+    ]
+  },
+  "pose49": {
+    "poseId": "Pose49",
+    "action": "walking with stride",
+    "bodyOrientation": "forward",
+    "headDirection": "slightly turned to left",
+    "gazeDirection": "forward",
+    "torso": "upright, slight twist to left",
+    "pelvis": "aligned with torso",
+    "leftArm": "bent, hand in pocket",
+    "rightArm": "extended downward",
+    "leftHand": "in pocket",
+    "rightHand": "relaxed",
+    "leftLeg": "extended forward",
+    "rightLeg": "bent, behind left",
+    "leftFoot": "flat on ground",
+    "rightFoot": "lifted, toes pointed",
+    "weightDistribution": "on left leg",
+    "supportObject": {
+      "required": false,
+      "type": null,
+      "bodySupportRelationship": null
+    },
+    "criticalPoseGeometry": [
+      "left arm bent",
+      "right leg back",
+      "weight on left leg",
+      "head slightly left"
+    ]
+  },
+  "top10StructurallyComplex": [
+    {
+      "poseId": "Pose7",
+      "name": "Chair Half Seated",
+      "complexityScore": 33,
+      "specification": {
+        "poseId": "Pose7",
+        "action": "casually sitting",
+        "bodyOrientation": "slightly angled to the right",
+        "headDirection": "forward",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "on chair edge",
+        "leftArm": "bent, hand on chair",
+        "rightArm": "resting on chair back",
+        "leftHand": "holding chair edge",
+        "rightHand": "on chair back",
+        "leftLeg": "bent, foot flat on floor",
+        "rightLeg": "crossed over left",
+        "leftFoot": "flat on floor",
+        "rightFoot": "toes touching floor",
+        "weightDistribution": "supported by chair and legs",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "sitting on edge"
+        },
+        "criticalPoseGeometry": [
+          "torso upright",
+          "legs crossed",
+          "arm on chair",
+          "sitting on edge"
+        ]
+      }
+    },
+    {
+      "poseId": "Pose27",
+      "name": "Stool Forward Lean",
+      "complexityScore": 33,
+      "specification": {
+        "poseId": "Pose27",
+        "action": "sitting on stool",
+        "bodyOrientation": "forward",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "perched on stool edge",
+        "leftArm": "resting on thigh",
+        "rightArm": "hanging by side",
+        "leftHand": "resting on thigh",
+        "rightHand": "near stool leg",
+        "leftLeg": "bent, knee higher",
+        "rightLeg": "bent, knee lower",
+        "leftFoot": "slightly lifted",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "balanced, mostly pelvis",
+        "supportObject": {
+          "required": true,
+          "type": "stool",
+          "bodySupportRelationship": "perched on front edge"
+        },
+        "criticalPoseGeometry": [
+          "perched on stool",
+          "legs bent at knees",
+          "left arm on thigh",
+          "right hand by side"
+        ]
+      }
+    },
+    {
+      "poseId": "Pose26",
+      "name": "Classic Stool Sit",
+      "complexityScore": 30,
+      "specification": {
+        "poseId": "Pose26",
+        "action": "sitting",
+        "bodyOrientation": "forward",
+        "headDirection": "forward",
+        "gazeDirection": "forward",
+        "torso": "upright, slightly relaxed",
+        "pelvis": "sitting on stool",
+        "leftArm": "resting on lap",
+        "rightArm": "resting on lap",
+        "leftHand": "draped over right hand",
+        "rightHand": "draped under left hand",
+        "leftLeg": "bent, foot pointing down",
+        "rightLeg": "bent, foot flat",
+        "leftFoot": "pointing down",
+        "rightFoot": "flat on stool support",
+        "weightDistribution": "evenly on stool",
+        "supportObject": {
+          "required": true,
+          "type": "stool",
+          "bodySupportRelationship": "seated with both feet on support ring"
+        },
+        "criticalPoseGeometry": [
+          "upright torso",
+          "hands folded on lap",
+          "feet on stool ring",
+          "forward gaze"
+        ]
+      }
+    },
+    {
+      "poseId": "Pose29",
+      "name": "Sideways Stool Sit",
+      "complexityScore": 30,
+      "specification": {
+        "poseId": "Pose29",
+        "action": "seated on high stool",
+        "bodyOrientation": "forward",
+        "headDirection": "slightly right",
+        "gazeDirection": "forward",
+        "torso": "upright, leaning slightly back",
+        "pelvis": "perched on stool edge",
+        "leftArm": "resting on left thigh",
+        "rightArm": "relaxed along torso",
+        "leftHand": "draping over left knee",
+        "rightHand": "loose at side",
+        "leftLeg": "bent, foot flat on floor",
+        "rightLeg": "crossed at ankle",
+        "leftFoot": "flat on floor",
+        "rightFoot": "draped over left ankle",
+        "weightDistribution": "balanced on stool and left foot",
+        "supportObject": {
+          "required": true,
+          "type": "stool",
+          "bodySupportRelationship": "seated, pelvis edge contact"
+        },
+        "criticalPoseGeometry": [
+          "seated edge of stool",
+          "left leg bent, foot on floor",
+          "right leg crossed",
+          "torso slightly leaning back"
+        ]
+      }
+    },
+    {
+      "poseId": "Pose30",
+      "name": "Chair Relaxed Sit",
+      "complexityScore": 30,
+      "specification": {
+        "poseId": "Pose30",
+        "action": "seated, relaxed, legs crossed",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly left",
+        "gazeDirection": "slightly left",
+        "torso": "leaning slightly back",
+        "pelvis": "resting back on chair",
+        "leftArm": "resting on chair arm",
+        "rightArm": "resting on lap",
+        "leftHand": "draped over chair arm",
+        "rightHand": "on left knee",
+        "leftLeg": "crossed over right leg",
+        "rightLeg": "supporting body",
+        "leftFoot": "off ground",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "centered on chair",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "sitting back on seat"
+        },
+        "criticalPoseGeometry": [
+          "legs crossed",
+          "left hand draped",
+          "relaxed posture",
+          "head turned left"
+        ]
+      }
+    },
+    {
+      "poseId": "Pose31",
+      "name": "Chair Forward Lean",
+      "complexityScore": 30,
+      "specification": {
+        "poseId": "Pose31",
+        "action": "sitting casually",
+        "bodyOrientation": "frontal",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "seated on chair",
+        "leftArm": "resting on left thigh",
+        "rightArm": "resting on right thigh",
+        "leftHand": "hanging relaxed",
+        "rightHand": "hanging relaxed",
+        "leftLeg": "bent forward at knee",
+        "rightLeg": "bent slightly outward",
+        "leftFoot": "flat on floor",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "even on both legs",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "seated fully on chair"
+        },
+        "criticalPoseGeometry": [
+          "right knee slightly outward",
+          "hands relaxed over knees",
+          "torso upright",
+          "head slightly turned left"
+        ]
+      }
+    },
+    {
+      "poseId": "Pose33",
+      "name": "Edge-of-Chair Pose",
+      "complexityScore": 30,
+      "specification": {
+        "poseId": "Pose33",
+        "action": "seated, leaning forward",
+        "bodyOrientation": "facing forward",
+        "headDirection": "turned left",
+        "gazeDirection": "leftward",
+        "torso": "slightly hunched forward",
+        "pelvis": "seated back in chair",
+        "leftArm": "resting on left thigh",
+        "rightArm": "crossed over left arm",
+        "leftHand": "loosely clasped",
+        "rightHand": "loosely clasped",
+        "leftLeg": "bent, foot flat",
+        "rightLeg": "bent, foot slightly forward",
+        "leftFoot": "flat on floor",
+        "rightFoot": "flat on floor",
+        "weightDistribution": "evenly distributed",
+        "supportObject": {
+          "required": true,
+          "type": "chair",
+          "bodySupportRelationship": "seated back in chair"
+        },
+        "criticalPoseGeometry": [
+          "arms loosely clasped",
+          "head turned left",
+          "leaning slightly forward",
+          "feet flat on floor"
+        ]
+      }
+    },
+    {
+      "poseId": "Pose72",
+      "name": "Female Sandle fix Pose",
+      "complexityScore": 30,
+      "specification": {
+        "poseId": "Pose72",
+        "action": "adjusting shoe strap",
+        "bodyOrientation": "sitting sideways",
+        "headDirection": "tilted slightly down",
+        "gazeDirection": "looking at shoe",
+        "torso": "upright, slightly leaning forward",
+        "pelvis": "seated on edge",
+        "leftArm": "extended downwards",
+        "rightArm": "bent, reaching towards foot",
+        "leftHand": "holding shoe strap",
+        "rightHand": "resting on knee",
+        "leftLeg": "crossed over right leg",
+        "rightLeg": "bent, foot touching ground",
+        "leftFoot": "raised, heel on ground",
+        "rightFoot": "flat on ground",
+        "weightDistribution": "centered on right side",
+        "supportObject": {
+          "required": true,
+          "type": "block",
+          "bodySupportRelationship": "sitting on edge"
+        },
+        "criticalPoseGeometry": [
+          "left leg crossed",
+          "right arm reaching",
+          "head tilted down",
+          "torso leaning forward"
+        ]
+      }
+    },
+    {
+      "poseId": "Pose73",
+      "name": "Female Stool Editorial",
+      "complexityScore": 30,
+      "specification": {
+        "poseId": "Pose73",
+        "action": "sitting with crossed legs",
+        "bodyOrientation": "front facing",
+        "headDirection": "slightly left",
+        "gazeDirection": "forward",
+        "torso": "upright",
+        "pelvis": "tilted slightly back",
+        "leftArm": "resting on knee",
+        "rightArm": "propped on chin",
+        "leftHand": "resting on knee",
+        "rightHand": "supporting chin",
+        "leftLeg": "crossed over right",
+        "rightLeg": "bent at knee",
+        "leftFoot": "pointed downward",
+        "rightFoot": "touching floor",
+        "weightDistribution": "centered on stool",
+        "supportObject": {
+          "required": true,
+          "type": "stool",
+          "bodySupportRelationship": "sitting fully on stool"
+        },
+        "criticalPoseGeometry": [
+          "right hand under chin",
+          "crossed legs",
+          "left foot pointed",
+          "upright torso"
+        ]
+      }
+    },
+    {
+      "poseId": "Pose74",
+      "name": "Female Forward Lean Sit",
+      "complexityScore": 30,
+      "specification": {
+        "poseId": "Pose74",
+        "action": "sitting with legs apart",
+        "bodyOrientation": "forward-facing",
+        "headDirection": "slightly right",
+        "gazeDirection": "forward",
+        "torso": "upright, slight lean forward",
+        "pelvis": "seated",
+        "leftArm": "resting on left knee",
+        "rightArm": "resting on right knee",
+        "leftHand": "draped between legs",
+        "rightHand": "draped between legs",
+        "leftLeg": "bent, foot flat",
+        "rightLeg": "bent, foot flat",
+        "leftFoot": "on ground",
+        "rightFoot": "on ground",
+        "weightDistribution": "even on both legs",
+        "supportObject": {
+          "required": true,
+          "type": "box",
+          "bodySupportRelationship": "seated on top"
+        },
+        "criticalPoseGeometry": [
+          "legs apart",
+          "arms on knees",
+          "torso lean forward",
+          "feet flat"
+        ]
+      }
+    }
+  ],
+  "outputFile": "/Users/neerajtripathi/Desktop/StudioLayerAI/StudioLayer-AI/artifacts/api-server/src/intelligence/pose-specifications.precomputed.json"
+}

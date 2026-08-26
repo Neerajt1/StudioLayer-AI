@@ -25,48 +25,6 @@ export const GENERATION_HEARTBEAT_INTERVAL_MS = 60_000;
  */
 export const STALE_GENERATION_TTL_MS = 20 * 60 * 1000;
 
-/**
- * Local OpenRouter HTTP wait budget — not a Gemini/OpenRouter cancellation.
- * Non-streaming chat/completions continues upstream after we abort.
- * Must stay strictly below STALE_GENERATION_TTL_MS.
- */
-export const DEFAULT_OPENROUTER_WAIT_BUDGET_MS = 18 * 60 * 1000;
-
-export const OPENROUTER_WAIT_BUDGET_EXPIRED_MESSAGE =
-  "local OpenRouter wait budget expired";
-
-export function resolveOpenRouterWaitBudgetMs(
-  raw: string | undefined = process.env["OR_RENDER_TIMEOUT_MS"],
-): number {
-  if (raw == null || raw.trim() === "") {
-    return DEFAULT_OPENROUTER_WAIT_BUDGET_MS;
-  }
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_OPENROUTER_WAIT_BUDGET_MS;
-  }
-  if (!isOpenRouterWaitBudgetBelowStaleTtl(parsed)) {
-    throw new Error(
-      `OR_RENDER_TIMEOUT_MS (${parsed}) must be strictly below STALE_GENERATION_TTL_MS (${STALE_GENERATION_TTL_MS}). ` +
-        "This is a local wait budget, not a Gemini/OpenRouter cancellation.",
-    );
-  }
-  return parsed;
-}
-
-export function isOpenRouterWaitBudgetBelowStaleTtl(
-  waitBudgetMs: number,
-  staleTtlMs: number = STALE_GENERATION_TTL_MS,
-): boolean {
-  return waitBudgetMs < staleTtlMs;
-}
-
-if (!isOpenRouterWaitBudgetBelowStaleTtl(DEFAULT_OPENROUTER_WAIT_BUDGET_MS)) {
-  throw new Error(
-    "DEFAULT_OPENROUTER_WAIT_BUDGET_MS must be strictly below STALE_GENERATION_TTL_MS",
-  );
-}
-
 export function isActiveGenerationStatus(
   status: string | null | undefined,
 ): status is ActiveGenerationStatus {
@@ -105,15 +63,12 @@ export function isOpenRouterAbortError(error: unknown): boolean {
 }
 
 export function describeOpenRouterAttemptFailure(error: unknown): string {
-  if (isOpenRouterAbortError(error)) {
-    return OPENROUTER_WAIT_BUDGET_EXPIRED_MESSAGE;
-  }
   return error instanceof Error ? error.message : String(error);
 }
 
 /**
- * Retrying after we abort our HTTP wait can start a second paid OpenRouter
- * request while Gemini may still be completing the first. Do not retry aborts.
+ * Do not retry aborted fetches — aborting our wait can still leave the
+ * upstream request running, and a retry would start a second paid call.
  */
 export function shouldRetryOpenRouterAttempt(
   error: unknown,

@@ -68,6 +68,17 @@ import {
 } from "./pose-planner";
 import { planCampaignComposition } from "./campaign-composition-planner";
 import type { PoseSelectionContext, RecentPoseSelection } from "./pose-selection-types";
+import { prepareNormalizedPoseMasterDefinition } from "./pose-definition-normalizer";
+import type { FurnitureAsset } from "./furniture-catalog";
+import {
+  buildFurniturePromptLayer,
+  buildGarmentFidelityCloser,
+  furnitureDiversitySeed,
+  poseRequiresFurnitureSelection,
+  selectFurnitureAsset,
+} from "./furniture-selector";
+import type { FurnitureUsageRecord } from "./furniture-selector";
+import { deriveSupportContactClass, deriveSupportSpatialRelation } from "./furniture-support";
 
 export type { PoseSelectionContext, RecentPoseSelection };
 
@@ -603,16 +614,10 @@ export function imageCountToShootType(shots: number): ShootType {
 // ---------------------------------------------------------------------------
 
 export const POSE_CONSISTENCY_RULES = `
-POSE CONSISTENCY — ABSOLUTE RULES:
-Changing pose must NEVER change garment construction, garment colour, garment texture, garment proportions, garment dimensions, model identity, body proportions, hairstyle, facial features, footwear, or accessories.
-Only pose, camera angle, and lighting may change — never the uploaded garment's dimensions, proportions, or footwear styling.
-The uploaded garment must remain the primary visual focal point.
-Never invent garment pockets that do not exist on the uploaded product.
-Never use a pose that requires inserting a hand into a pocket unless the uploaded garment clearly shows usable pockets.
-A pose must NEVER cause footwear to disappear — walking, standing, cross-leg, and editorial movement poses must preserve the established footwear styling from the shoot brief.
-Never render bare feet for a commercial fashion garment when the shoot brief establishes footwear.
-BATCH COLOUR LOCK — every image in this generation batch must show identical garment colour, hue, saturation, brightness, print registration, and fabric appearance as Reference Image 1. Pose and camera may vary; garment colour must not.
-FOOTWEAR BATCH LOCK — every image in this generation batch must show identical footwear styling. Never switch between barefoot, heels, sandals, sneakers, or boots between shots.`;
+SHOT BATCH:
+Across shots in this generation, keep model identity, garment, and footwear unchanged. Only pose, camera, and lighting may change.
+Do not invent or repeat a carry bag across shots unless that shot's Pose Master requires a bag.
+Do not invent pockets the uploaded garment lacks.`;
 
 export function neutralizeBasePromptPose(basePrompt: string): string {
   return basePrompt.replace(
@@ -621,14 +626,48 @@ export function neutralizeBasePromptPose(basePrompt: string): string {
   );
 }
 
-/** Strip standing-biased defaults from the shared base prompt when a manual Pose ID is authoritative. */
-export function neutralizeBasePromptForManualPose(basePrompt: string): string {
+/**
+ * Strip standing-biased defaults from the shared base prompt when a manual Pose ID
+ * is authoritative. Preserve explicit preferredFraming when present:
+ * - full_body → keep head-to-feet
+ * - portrait/crop → keep crop requirement (do not force full-body)
+ * - unset → defer to the authoritative body pose
+ */
+export function neutralizeBasePromptForManualPose(
+  basePrompt: string,
+  preferredFraming?: string | null,
+): string {
   let result = neutralizeBasePromptPose(basePrompt);
 
-  result = result.replace(
-    "Full body visible head to foot.",
-    "Frame the body as required by the authoritative body pose below.",
-  );
+  const framing = (preferredFraming ?? "").toLowerCase().trim();
+  const hasExplicitFullBody =
+    framing === "full_body" || framing.includes("full_body");
+  const hasExplicitCrop =
+    framing.includes("portrait") ||
+    framing.includes("close") ||
+    framing.includes("chest") ||
+    framing.includes("waist") ||
+    framing.includes("knee") ||
+    framing.includes("detail");
+
+  if (hasExplicitFullBody) {
+    // Keep compose's explicit full-body line — do not soften it.
+  } else if (hasExplicitCrop) {
+    result = result.replace(
+      "Full body visible head to foot.",
+      "Preserve the directed pose's requested framing — do not expand a portrait/crop pose into full-body head-to-feet.",
+    );
+    result = result.replace(
+      /^A full-body studio fashion photograph/m,
+      "A studio fashion photograph",
+    );
+  } else {
+    result = result.replace(
+      "Full body visible head to foot.",
+      "Frame the body as required by the authoritative body pose below.",
+    );
+  }
+
   result = result.replace(
     "Subtle realistic grounding shadow beneath the feet.",
     "Use natural studio floor contact appropriate to the authoritative body pose.",
@@ -695,6 +734,69 @@ function toPhotographyOnlyDirection(direction: ShotDirection): ShotDirection {
   return { ...direction, camera, energy };
 }
 
+/**
+ * Pass G1 — shared framing policy (minimal):
+ * When a pose's preferredFraming / CAMERA·FRAMING is intentionally portrait/crop,
+ * neutralize Hero/Campaign/Editorial "full-body" camera language so it cannot
+ * contradict the Pose Master. Does not change the Pass B POSE contract.
+ */
+export function posePrefersCropFraming(
+  preferredFraming?: string | null,
+  description?: string | null,
+): boolean {
+  const framing = (preferredFraming ?? "").toLowerCase();
+  const cameraField =
+    description?.match(/CAMERA\s*\/\s*FRAMING:\s*([^\n]+)/i)?.[1]?.toLowerCase() ??
+    "";
+  if (
+    framing === "full_body" ||
+    framing.includes("full_body") ||
+    framing.includes("three_quarter_body")
+  ) {
+    // Explicit full-body preferredFraming wins even if description text mentions crop language elsewhere.
+    return false;
+  }
+  return (
+    framing.includes("portrait") ||
+    framing.includes("close") ||
+    framing.includes("chest") ||
+    framing.includes("waist") ||
+    framing.includes("knee") ||
+    framing.includes("detail") ||
+    cameraField.includes("portrait") ||
+    cameraField.includes("chest") ||
+    cameraField.includes("waist") ||
+    cameraField.includes("mid-thigh") ||
+    cameraField.includes("mid-torso") ||
+    cameraField.includes("face") ||
+    cameraField.includes("crop") ||
+    cameraField.includes("close")
+  );
+}
+
+/** Strip full-body forcing from shot camera copy when the pose requires a crop. */
+export function adaptShotDirectionForPoseFraming(
+  direction: ShotDirection,
+  preferredFraming?: string | null,
+  description?: string | null,
+): ShotDirection {
+  if (!posePrefersCropFraming(preferredFraming, description)) {
+    return direction;
+  }
+
+  const camera = direction.camera
+    .replace(/\s*Full-body framing from head to feet\.?/gi, "")
+    .replace(/\s*Full-body framing with slightly asymmetric composition\.?/gi, "")
+    .replace(/\s*Full-body or three-quarter body visible\.?/gi, "")
+    .replace(/\s*or full-body with strong editorial composition\.?/gi, "")
+    .replace(/\s*Full-body framing\.?/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\.\s*\./g, ".")
+    .trim();
+
+  return { ...direction, camera };
+}
+
 // ---------------------------------------------------------------------------
 // Photography refinements (Pose Master geometry untouched)
 // Framing lock + fashion performance + premium intrinsic furniture —
@@ -719,7 +821,7 @@ function poseIdNumericSeed(poseIdOrName: string): number {
   return hash;
 }
 
-/** Photography-only: human fashion-model performance — does not alter canonical pose geometry. */
+/** Photography-only: human fashion performance — does not alter canonical pose geometry or identity. */
 export function buildFashionPerformanceLayer(poseIdOrName: string): string {
   const variant =
     FASHION_PERFORMANCE_VARIANTS[
@@ -727,11 +829,10 @@ export function buildFashionPerformanceLayer(poseIdOrName: string): string {
     ]!;
 
   return `FASHION PERFORMANCE — PHOTOGRAPHY ONLY (does NOT change the authoritative body pose):
-The model is a professional fashion model naturally performing this exact pose — not a mannequin placed into position.
-Preferred expression energy for this shot: ${variant}
-Expression may vary naturally between generations. Do NOT force a smile on every image. Serious, confident, relaxed, warm, or subtly playful are all valid when they suit the pose and garment.
-Keep natural hand/finger relaxation, believable muscle tension, subtle eye engagement, authentic garment contact already specified by the pose, and convincing weight/balance — without moving limbs, torso, head, gaze, or support points away from the authoritative pose.
-Where the authoritative pose already specifies interaction with face, hair, collar, jacket, sleeve, pocket, or an intrinsic object, render that contact naturally and convincingly. Do not invent extra garment interactions.`;
+The Studio Talent performs this pose with professional fashion energy — not a mannequin.
+Preferred expression energy: ${variant}
+Expression may vary. Do NOT force a smile on every image.
+Do not move limbs, torso, head, gaze, or support points away from the authoritative pose.`;
 }
 
 function requiresPremiumStudioFurniture(
@@ -749,31 +850,74 @@ function requiresPremiumStudioFurniture(
   );
 }
 
-/** Photography-only: premium fashion-editorial furniture when Pose Master requires chair/stool/block. */
+/**
+ * Resolve furniture for a prop-bearing pose via the global furniture selector.
+ * Selection is application-level and pose-geometry-aware (support contact class).
+ */
+export function resolveFurnitureForPose(input: {
+  prop: string | null | undefined;
+  poseIdOrName: string;
+  /** Full pose definition when available — enables seat-profile compatibility. */
+  pose?: ReturnType<typeof getPoseDefinition>;
+  userHistory?: FurnitureUsageRecord[];
+  excludeAssetIdsInBatch?: string[];
+  excludeFamiliesInBatch?: string[];
+  seed?: number;
+}): FurnitureAsset | null {
+  if (!poseRequiresFurnitureSelection(input.prop)) return null;
+  const pose =
+    input.pose ??
+    getPoseDefinition(input.poseIdOrName) ??
+    null;
+  const selected = selectFurnitureAsset({
+    prop: input.prop ?? pose?.prop,
+    pose,
+    userHistory: input.userHistory,
+    excludeAssetIdsInBatch: input.excludeAssetIdsInBatch,
+    excludeFamiliesInBatch: input.excludeFamiliesInBatch,
+    seed:
+      input.seed ??
+      furnitureDiversitySeed({
+        poseIdOrName: input.poseIdOrName,
+        historyLength: input.userHistory?.length ?? 0,
+      }),
+  });
+  return selected?.asset ?? null;
+}
+
+/**
+ * Pass C — furniture prompt entry point.
+ * prop none / no required support → emit nothing (pose definition already forbids inventing furniture).
+ * Required support → single FURNITURE contract via buildFurniturePromptLayer.
+ */
 export function buildIntrinsicPropQualityLayer(
   prop: string | null | undefined,
   description: string,
+  poseIdOrName?: string,
+  furnitureAsset?: FurnitureAsset | null,
 ): string {
   if (!requiresPremiumStudioFurniture(prop, description)) {
-    return `INTRINSIC PROP RULE — PHOTOGRAPHY ONLY:
-Do not invent chairs, stools, blocks, tables, bags, plants, books, cups, lamps, decorative objects, or lifestyle furniture. Include a support object only when the authoritative pose explicitly requires it.`;
+    return "";
   }
 
-  const objectLabel =
-    prop === "stool"
-      ? "stool"
-      : prop === "step"
-        ? "block / elevated studio seat"
-        : prop === "chair"
-          ? "chair"
-          : "chair, stool, or block";
+  const pose = poseIdOrName ? getPoseDefinition(poseIdOrName) : null;
+  const asset =
+    furnitureAsset ??
+    resolveFurnitureForPose({
+      prop,
+      poseIdOrName: poseIdOrName ?? description,
+      pose,
+    });
 
-  return `INTRINSIC PROP QUALITY — PHOTOGRAPHY ONLY (does NOT change pose geometry or add extra props):
-This pose requires an intrinsic ${objectLabel} as a professional fashion-photography studio prop — not ordinary household or commercial furniture.
-Prefer: solid natural wood, premium hardwood, refined dark or warm wood, elegant contemporary or carefully chosen vintage/antique wood when aesthetically appropriate, sculptural but believable studio furniture, refined proportions, high-quality craftsmanship.
-Strictly avoid: plastic, molded plastic, cafeteria furniture, office chairs, gaming chairs, cheap folding chairs, mass-market or childish furniture, visibly low-quality or CGI-looking furniture, and ornate pieces that distract from the garment.
-Furniture is a supporting element only — the garment and model remain the visual priority.
-Do NOT add tables, bags, plants, books, cups, lamps, decorative objects, random furniture, or environmental props beyond this single intrinsic support object.`;
+  if (asset) {
+    const supportClass = deriveSupportContactClass(pose);
+    const spatialRelation = deriveSupportSpatialRelation(pose);
+    const poseId = pose?.poseId ?? poseIdOrName;
+    return buildFurniturePromptLayer(asset, supportClass, spatialRelation, poseId);
+  }
+
+  return `FURNITURE:
+This pose requires a visible support. Include the required furniture type and preserve the pose's body-to-support relationship.`;
 }
 
 /** Photography-only: lock requested shot framing — never invent close-ups or crop pose-defining anatomy. */
@@ -797,15 +941,13 @@ export function buildShotFramingLockLayer(
     return `SHOT FRAMING LOCK — PHOTOGRAPHY ONLY (does NOT change the authoritative body pose):
 Preserve the requested shot framing exactly as specified in this brief.
 Do not spontaneously convert this shot into a different crop than requested.
-Photography may improve lighting, expression, camera quality, and fashion presence, but must never override the requested shot framing.
 This framing lock does not alter body-pose geometry, limb positions, weight distribution, or support points.`;
   }
 
   return `SHOT FRAMING LOCK — PHOTOGRAPHY ONLY (does NOT change the authoritative body pose):
 Preserve the requested shot framing exactly. Do not spontaneously convert a full-body or fashion full-figure shot into a close-up, medium shot, portrait crop, or tighter framing.
-When the requested shot is full-body, preserve the complete model from head through feet. Do not crop feet, hands, lower legs, or other pose-defining body parts merely to create a more editorial or dramatic composition.
+When the requested shot is full-body, preserve the complete model from head through feet.
 If the requested shot does not specify close-up framing, do not invent close-up framing.
-Photography may improve lighting, expression, camera quality, and fashion presence, but must never override the requested shot framing.
 This framing lock does not alter body-pose geometry, limb positions, weight distribution, or support points.`;
 }
 
@@ -815,69 +957,98 @@ function buildPhotographyRefinementLayers(
   description: string,
   preferredFraming?: string | null,
   directionCamera?: string,
+  furnitureAsset?: FurnitureAsset | null,
 ): string {
   return `${buildShotFramingLockLayer(preferredFraming, directionCamera)}
 
 ${buildFashionPerformanceLayer(poseIdOrName)}
 
-${buildIntrinsicPropQualityLayer(prop, description)}`;
+${buildIntrinsicPropQualityLayer(prop, description, poseIdOrName, furnitureAsset)}`;
 }
 
-/** Pose Master text + Reference Image 3 — creative pose/action direction, not exact geometry lock. */
+/**
+ * Prepare Pose Master structured definition for generation.
+ * Applies garment-neutral GI repairs when needed, plus validated Pose 7/38/39
+ * geometric anchors. Does not mutate Excel / catalog / PNG source files.
+ * Does not inject a generic catalog-era support-contact reinterpretation layer.
+ */
+export function preparePoseMasterStructuredDefinition(
+  poseId: string,
+  structuredDefinition: string,
+): string {
+  return prepareNormalizedPoseMasterDefinition(poseId, structuredDefinition);
+}
+
+/**
+ * Pass B — pose closer removed; single POSE contract lives in
+ * buildPoseMasterReferenceAuthorityLayer. Kept as empty for call-site stability.
+ */
+export function buildPoseAuthorityClosingConstraint(
+  _hasVisualReference: boolean,
+): string {
+  return "";
+}
+
+/**
+ * Pass B — single POSE contract:
+ * Pose Master PNG = visual geometry; structured definition = semantic meaning.
+ * Does not restate identity or garment authority.
+ */
 export function buildPoseMasterReferenceAuthorityLayer(
   poseId: string,
   displayName: string,
   structuredDefinition: string,
   hasVisualReference: boolean,
 ): string {
+  const preparedDefinition = preparePoseMasterStructuredDefinition(
+    poseId,
+    structuredDefinition,
+  );
   const visualClause = hasVisualReference
-    ? `Reference Image 3 is the Pose Master visual reference — a strong creative direction for the fashion photograph, not an instruction to mechanically reproduce exact body geometry or to copy the reference image.
-Use Reference Image 3 together with the Pose Master structured definition below to understand the overall pose character, body attitude, action, movement, gesture, weight distribution, body orientation, head direction, interaction with any visible intrinsic prop, and overall editorial energy.
-Recreate the same TYPE and FEEL of pose naturally on the target model (Reference Image 2) wearing the uploaded garment (Reference Image 1).
-Do NOT copy the reference person's identity, face, hair, clothing, styling, proportions, or visual appearance.
-Do NOT turn the output into a traced or reconstructed version of the reference. The result must look like a professionally directed fashion photograph of the TARGET MODEL.`
-    : `The Pose Master structured definition below is the creative pose/action direction for this shot.
-No Pose Master visual reference image is attached — follow the structured definition as a strong creative clue for pose type, action and editorial energy, executed naturally on the target model.`;
+    ? `POSE:
+Reference Image 3 is the Pose Master visual geometry for BODY POSE AND ACTION only (pose, body position, movement, limb placement, gesture, weight distribution, torso orientation, pose-related framing).
+Use it together with the structured definition below.
+The figure depicted in the Pose Master is NOT the identity reference — do not derive face, facial structure, hair, skin tone, identity, or physical appearance from it.
+Do not copy garment, furniture design, or illustration style from the Pose Master.
+Preserve the camera/viewpoint and subject-to-camera side relationship demonstrated in Reference Image 3 unless the structured definition requires otherwise.
+Do not replace this pose with a generic standing, walking, sitting, or freestanding fashion pose.`
+    : `POSE:
+The structured definition below is the body-pose authority for this shot (no Pose Master image attached).`;
 
   return `POSE & ACTION DIRECTION (Pose ID: ${poseId} — ${displayName}):
 ${visualClause}
 
 POSE MASTER STRUCTURED DEFINITION:
-${structuredDefinition}
-
-IMPORTANT:
-- Preserve the target model's identity, facial features, hair and natural appearance (Reference Image 2).
-- Preserve the uploaded garment faithfully, including silhouette, construction, material, colour, texture, seams, pockets, buttons, closures and visible design details (Reference Image 1).
-- Do not invent, relocate, enlarge, expose or paste garment labels, neck tags, brand tags or logos. Never place a garment label or tag on the model's neck or skin unless it is genuinely part of the visible exterior garment design.
-- Preserve the selected pose's ACTION and EDITORIAL ENERGY even when naturally adapting exact body positioning.
-- If the reference/definition shows walking, stepping, turning, leaning, sitting, floor interaction, chair/stool interaction, garment movement or another physical action, preserve that action concept rather than converting it into a static standing pose.
-- Prefer natural asymmetry, weight shift, gesture, movement and body attitude over rigid symmetrical catalog posing.
-- Do not default to a front-facing standing pose when the selected reference communicates a different action or attitude.
-- When multiple images are generated for the same shot, maintain meaningful pose/action diversity rather than producing near-identical standing variations.
-
-The goal is NOT exact pose duplication.
-The goal is to use the Pose Master as a strong creative clue that guides WHAT KIND OF FASHION PHOTOGRAPH TO PRODUCE, while allowing the model to naturally execute the pose, action and fashion energy on the target model and garment.
-Pose Master direction does not override garment fidelity, model identity, photography direction, or requested framing.`;
+${preparedDefinition}`;
 }
 
 function buildManualDirectedShotPrompt(
   basePrompt: string,
   poseIdOrName: PoseName,
   direction: ShotDirection,
+  furnitureAsset?: FurnitureAsset | null,
 ): string {
   const definition = getPoseDefinition(poseIdOrName);
   const description =
     definition?.description ?? getPoseDescription(poseIdOrName);
   const poseId = definition?.poseId ?? poseIdOrName;
   const displayName = definition?.name ?? poseIdOrName;
-  const neutralBase = neutralizeBasePromptForManualPose(basePrompt);
-  const photoDirection = toPhotographyOnlyDirection(direction);
+  const neutralBase = neutralizeBasePromptForManualPose(
+    basePrompt,
+    definition?.preferredFraming,
+  );
+  const photoDirection = adaptShotDirectionForPoseFraming(
+    toPhotographyOnlyDirection(direction),
+    definition?.preferredFraming,
+    description,
+  );
   const photographyRefinements = buildPhotographyRefinementLayers(
     poseId,
     definition?.prop,
     description,
     definition?.preferredFraming,
     photoDirection.camera,
+    furnitureAsset,
   );
   const hasVisualReference = Boolean(definition?.poseReferenceImage);
   const poseAuthority = buildPoseMasterReferenceAuthorityLayer(
@@ -889,9 +1060,6 @@ function buildManualDirectedShotPrompt(
 
   return `${poseAuthority}
 
-MODEL REFERENCE — IDENTITY ONLY:
-Reference Image 2 provides model identity and appearance only. Do NOT copy its body pose, stance, or limb placement.
-
 ${neutralBase}
 
 SHOT DIRECTION — ${photoDirection.label} (photography and styling only — not body pose):
@@ -902,25 +1070,32 @@ ${photographyRefinements}
 
 ${POSE_CONSISTENCY_RULES}
 
-Produce a natural premium fashion photograph of the target model in the uploaded garment, guided by the Pose Master type/feel/action${hasVisualReference ? " (structured definition + Reference Image 3)" : ""}. Do not mechanically trace the reference or invent an unrelated pose.`;
+${buildGarmentFidelityCloser()}`;
 }
 
 function buildDiverseShotPrompt(
   basePrompt: string,
   poseIdOrName: PoseName,
   direction: ShotDirection,
+  furnitureAsset?: FurnitureAsset | null,
 ): string {
   const definition = getPoseDefinition(poseIdOrName);
   const description =
     definition?.description ?? getPoseDescription(poseIdOrName);
   const poseId = definition?.poseId ?? poseIdOrName;
   const displayName = definition?.name ?? poseIdOrName;
+  const framedDirection = adaptShotDirectionForPoseFraming(
+    direction,
+    definition?.preferredFraming,
+    description,
+  );
   const photographyRefinements = buildPhotographyRefinementLayers(
     poseId,
     definition?.prop,
     description,
     definition?.preferredFraming,
-    direction.camera,
+    framedDirection.camera,
+    furnitureAsset,
   );
   const hasVisualReference = Boolean(definition?.poseReferenceImage);
   const poseAuthority = buildPoseMasterReferenceAuthorityLayer(
@@ -932,20 +1107,17 @@ function buildDiverseShotPrompt(
 
   return `${basePrompt}
 
-SHOT DIRECTION — ${direction.label}:
-${direction.camera}
-Energy: ${direction.energy}
+SHOT DIRECTION — ${framedDirection.label}:
+${framedDirection.camera}
+Energy: ${framedDirection.energy}
 
 ${poseAuthority}
-
-MODEL REFERENCE — IDENTITY ONLY:
-Reference Image 2 provides model identity and appearance only. Do NOT copy its body pose, stance, or limb placement.
 
 ${photographyRefinements}
 
 ${POSE_CONSISTENCY_RULES}
 
-Produce a natural premium fashion photograph of the target model in the uploaded garment, guided by the Pose Master type/feel/action${hasVisualReference ? " (structured definition + Reference Image 3)" : ""}. Do not mechanically trace the reference or invent an unrelated pose.`;
+${buildGarmentFidelityCloser()}`;
 }
 
 const HERO_DIRECTION: ShotDirection = {
@@ -1027,6 +1199,10 @@ function resolveShotDirection(
 export interface BuildShotPromptAtSlotOptions {
   /** When true, the supplied Pose ID is authoritative — photography-only shot direction. */
   manualDirected?: boolean;
+  /** Pre-selected furniture asset from the global furniture selector. */
+  furnitureAsset?: FurnitureAsset | null;
+  /** Per-user furniture history for selector fallback when asset not pre-selected. */
+  furnitureUserHistory?: FurnitureUsageRecord[];
 }
 
 /** Build one shot prompt using the global slot index for campaign/editorial directions. */
@@ -1039,13 +1215,38 @@ export function buildShotPromptAtSlot(
   options?: BuildShotPromptAtSlotOptions,
 ): string {
   const direction = resolveShotDirection(profile, shootType, slotIndex);
+  const definition = getPoseDefinition(poseName);
+  const furnitureAsset =
+    options?.furnitureAsset !== undefined
+      ? options.furnitureAsset
+      : resolveFurnitureForPose({
+          prop: definition?.prop,
+          poseIdOrName: definition?.poseId ?? poseName,
+          pose: definition,
+          userHistory: options?.furnitureUserHistory,
+          seed: furnitureDiversitySeed({
+            poseIdOrName: definition?.poseId ?? poseName,
+            slotIndex,
+            historyLength: options?.furnitureUserHistory?.length ?? 0,
+          }),
+        });
 
   if (options?.manualDirected) {
-    return buildManualDirectedShotPrompt(basePrompt, poseName, direction);
+    return buildManualDirectedShotPrompt(
+      basePrompt,
+      poseName,
+      direction,
+      furnitureAsset,
+    );
   }
 
   const neutralBase = neutralizeBasePromptPose(basePrompt);
-  return buildDiverseShotPrompt(neutralBase, poseName, direction);
+  return buildDiverseShotPrompt(
+    neutralBase,
+    poseName,
+    direction,
+    furnitureAsset,
+  );
 }
 
 export function buildShotPromptsWithPlan(
@@ -1061,9 +1262,28 @@ export function buildShotPromptsWithPlan(
     count?: number;
     /** Custom Campaign — bucket recipe composition (Phase 5). */
     useCampaignComposition?: boolean;
+    furnitureUserHistory?: FurnitureUsageRecord[];
+    furnitureExcludeAssetIdsInBatch?: string[];
+    furnitureExcludeFamiliesInBatch?: string[];
   },
-): { prompts: string[]; plannedPoses: PlannedPose[]; planNotes: string[] } {
-  const { shootType, modelGender, usedPoses, recentPoseSelections, seed, count, useCampaignComposition } = options;
+): {
+  prompts: string[];
+  plannedPoses: PlannedPose[];
+  planNotes: string[];
+  furnitureSelections: Array<FurnitureAsset | null>;
+} {
+  const {
+    shootType,
+    modelGender,
+    usedPoses,
+    recentPoseSelections,
+    seed,
+    count,
+    useCampaignComposition,
+    furnitureUserHistory,
+    furnitureExcludeAssetIdsInBatch = [],
+    furnitureExcludeFamiliesInBatch = [],
+  } = options;
   const shotCount = count ?? defaultShotCountForShootType(shootType);
   const plan = selectPosesWithPlan({
     profile,
@@ -1077,36 +1297,63 @@ export function buildShotPromptsWithPlan(
   });
   const poses = plan.poses.map((p) => p.name);
   const neutralBase = neutralizeBasePromptPose(basePrompt);
+  const batchAssetIds = [...furnitureExcludeAssetIdsInBatch];
+  const batchFamilies = [...furnitureExcludeFamiliesInBatch];
+  const furnitureSelections: Array<FurnitureAsset | null> = [];
 
-  if (shootType === "hero") {
-    return {
-      prompts: [buildDiverseShotPrompt(neutralBase, poses[0] ?? POSE_ID_LIST[0]!, HERO_DIRECTION)],
-      plannedPoses: plan.poses,
-      planNotes: plan.planNotes,
-    };
-  }
+  const prompts = poses.map((pose, index) => {
+    const definition = getPoseDefinition(pose);
+    const poseId = definition?.poseId ?? pose;
+    const furnitureAsset = resolveFurnitureForPose({
+      prop: definition?.prop,
+      poseIdOrName: poseId,
+      pose: definition,
+      userHistory: furnitureUserHistory,
+      excludeAssetIdsInBatch: batchAssetIds,
+      excludeFamiliesInBatch: batchFamilies,
+      seed: furnitureDiversitySeed({
+        poseIdOrName: poseId,
+        slotIndex: index,
+        historyLength: furnitureUserHistory?.length ?? 0,
+        extraSalt: seed ?? 0,
+      }),
+    });
+    if (furnitureAsset) {
+      batchAssetIds.push(furnitureAsset.id);
+      batchFamilies.push(furnitureAsset.family);
+    }
+    furnitureSelections.push(furnitureAsset);
 
-  if (shootType === "campaign") {
-    return {
-      prompts: poses.map((pose, index) =>
-        buildDiverseShotPrompt(
-          neutralBase,
-          pose,
-          CAMPAIGN_DIRECTIONS[index] ?? CAMPAIGN_DIRECTIONS[CAMPAIGN_DIRECTIONS.length - 1]!,
-        ),
-      ),
-      plannedPoses: plan.poses,
-      planNotes: plan.planNotes,
-    };
-  }
+    if (shootType === "hero") {
+      return buildDiverseShotPrompt(
+        neutralBase,
+        pose,
+        HERO_DIRECTION,
+        furnitureAsset,
+      );
+    }
+    if (shootType === "campaign") {
+      return buildDiverseShotPrompt(
+        neutralBase,
+        pose,
+        CAMPAIGN_DIRECTIONS[index] ?? CAMPAIGN_DIRECTIONS[CAMPAIGN_DIRECTIONS.length - 1]!,
+        furnitureAsset,
+      );
+    }
+    const directions = buildEditorialDirections(profile);
+    return buildDiverseShotPrompt(
+      neutralBase,
+      pose,
+      directions[index] ?? directions[directions.length - 1]!,
+      furnitureAsset,
+    );
+  });
 
-  const directions = buildEditorialDirections(profile);
   return {
-    prompts: poses.map((pose, index) =>
-      buildDiverseShotPrompt(neutralBase, pose, directions[index] ?? directions[directions.length - 1]!),
-    ),
+    prompts,
     plannedPoses: plan.poses,
     planNotes: plan.planNotes,
+    furnitureSelections,
   };
 }
 

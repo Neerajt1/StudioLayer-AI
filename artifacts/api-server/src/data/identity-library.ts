@@ -58,6 +58,12 @@ export interface Identity {
    * Loaded on the API server as base64 for OpenRouter — never exposed as a URL.
    */
   imageUrl: string;
+  /**
+   * Optional additional identity references for the SAME talent (face / 3-4 / profile).
+   * Auto-selected by the pipeline when present — never shown as separate user uploads.
+   * Empty/omitted = single primary image (current production default).
+   */
+  additionalIdentityImageUrls?: readonly string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -359,4 +365,16 @@ export const IDENTITIES: Identity[] = [
  */
 export function findIdentityById(id: string): Identity | null {
   return IDENTITIES.find((identity) => identity.id === id) ?? null;
+}
+
+/**
+ * Ordered Talent identity asset paths for the same person.
+ * Primary imageUrl first, then any additionalIdentityImageUrls.
+ * Used by Nano Pro for multi-reference identity consistency without UI packs.
+ */
+export function resolveTalentIdentityAssetPaths(identity: Identity): string[] {
+  const extras = (identity.additionalIdentityImageUrls ?? []).filter(
+    (url) => typeof url === "string" && url.trim().length > 0 && url !== identity.imageUrl,
+  );
+  return [identity.imageUrl, ...extras];
 }

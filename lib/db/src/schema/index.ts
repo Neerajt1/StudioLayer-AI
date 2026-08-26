@@ -7,3 +7,4 @@ export * from "./studio-credit-allocation-consumptions";
 export * from "./studio-razorpay-subscriptions";
 export * from "./render-deletion-events";
 export * from "./promotions";
+export * from "./furniture-usage-events";

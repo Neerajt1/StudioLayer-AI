@@ -56,8 +56,15 @@ import type { PoseFamily, PoseName } from "../intelligence/pose-library";
 import { getAllPoseDefinitions, getPoseDefinition } from "../intelligence/pose-library";
 import type { PlannedPose } from "../intelligence/pose-planner";
 import type { RecentPoseSelection } from "../intelligence/pose-selection-engine";
+import { resolveFurnitureForPose } from "../intelligence/pose-selection-engine";
+import type { FurnitureAsset } from "../intelligence/furniture-catalog";
+import {
+  furnitureDiversitySeed,
+  type FurnitureUsageRecord,
+} from "../intelligence/furniture-selector";
 import type { GarmentProfile } from "../intelligence/types";
 import { loadRecentPoseSelections } from "./pose-history-service";
+import { loadRecentFurnitureUsage } from "./furniture-usage-service";
 import {
   buildRefinementBrief,
   resolveRefinementType,
@@ -65,17 +72,29 @@ import {
 } from "./refinement/refinement-engine.js";
 import { runRemoveBackgroundRefine } from "./refinement/run-remove-background-refine.js";
 import {
-  prepareGarmentImage,
   resolveModelImage,
   mapStyleModeToTemplate,
   isLocalIdentityImageUrl,
   loadStudioTalentImageAsDataUri,
 }                                    from "../rendering/preprocessing";
 import { loadStage1PoseReferenceImageAsDataUri } from "../rendering/pose-face-neutral-backend.js";
+import {
+  buildGarmentReferenceCorrespondenceInstruction,
+  prepareGarmentReferenceForGeneration,
+} from "./image-processing/garment-reference-sheet.js";
+import {
+  buildGarmentEvidenceSetLayout,
+  remapCreativePromptReferenceNumbers,
+  resolveGarmentEvidenceMode,
+} from "./image-processing/garment-evidence-set.js";
 import { mapToFashnCategory }        from "../rendering/types";
 import { uploadBase64Image }         from "../rendering/image-storage";
 import { getRenderingEngine }        from "./rendering/RenderingEngine";
+import { resolveV1CreateLocationEnvironment } from "./rendering/nano-pro-authority-layers.js";
+import { resolveIdentityGenerationMode } from "./rendering/identity-forensics";
+import { findIdentityById } from "../data/identity-library.js";
 import { classifyTask, routeTask }   from "../router/ai-router";
+import { startGenerationHeartbeat }  from "./generation-heartbeat.js";
 
 function generationTypeToPoseShootType(generationType: GenerationType): PoseShootType {
   if (generationType === "editorial") return "editorial";
@@ -104,14 +123,34 @@ function resolveDirectedPoseAtSlot(
     shootType: PoseShootType;
     poseName: string;
     slotIndex: number;
+    furnitureAsset?: FurnitureAsset | null;
+    furnitureUserHistory?: FurnitureUsageRecord[];
   },
-): { prompt: string; plannedPose: PlannedPose; planNote?: string } | null {
+): {
+  prompt: string;
+  plannedPose: PlannedPose;
+  furnitureAsset: FurnitureAsset | null;
+  planNote?: string;
+} | null {
   const { shootType, poseName, slotIndex } = options;
 
   const definition = resolveDirectedPoseDefinition(poseName);
   if (definition) {
-    // Prompt lookup is Pose-ID keyed — never pass Excel display name here.
     const poseId = definition.poseId ?? poseName;
+    const furnitureAsset =
+      options.furnitureAsset !== undefined
+        ? options.furnitureAsset
+        : resolveFurnitureForPose({
+            prop: definition.prop,
+            poseIdOrName: poseId,
+            pose: definition,
+            userHistory: options.furnitureUserHistory,
+            seed: furnitureDiversitySeed({
+              poseIdOrName: poseId,
+              slotIndex,
+              historyLength: options.furnitureUserHistory?.length ?? 0,
+            }),
+          });
     return {
       prompt: buildShotPromptAtSlot(
         basePrompt,
@@ -119,7 +158,7 @@ function resolveDirectedPoseAtSlot(
         shootType,
         poseId,
         slotIndex,
-        { manualDirected: true },
+        { manualDirected: true, furnitureAsset },
       ),
       plannedPose: {
         name: definition.name,
@@ -127,6 +166,7 @@ function resolveDirectedPoseAtSlot(
         selectionClass: definition.selectionClass,
         poseId: definition.poseId ?? poseId,
       },
+      furnitureAsset: furnitureAsset ?? null,
     };
   }
 
@@ -143,8 +183,14 @@ function buildShotPlanWithDirectedPoses(
     shots: number;
     useCampaignComposition: boolean;
     directedPoses?: string[];
+    furnitureUserHistory?: FurnitureUsageRecord[];
   },
-) {
+): {
+  prompts: string[];
+  plannedPoses: PlannedPose[];
+  planNotes: string[];
+  furnitureSelections: Array<FurnitureAsset | null>;
+} {
   const {
     shootType,
     modelGender,
@@ -152,6 +198,7 @@ function buildShotPlanWithDirectedPoses(
     shots,
     useCampaignComposition,
     directedPoses,
+    furnitureUserHistory,
   } = options;
 
   const directed = directedPoses
@@ -159,29 +206,60 @@ function buildShotPlanWithDirectedPoses(
     .slice(0, shots) ?? [];
 
   if (directed.length === 0) {
-    return buildShotPromptsWithPlan(basePrompt, profile, {
+    const autoPlan = buildShotPromptsWithPlan(basePrompt, profile, {
       shootType,
       modelGender,
       recentPoseSelections,
       count: shots,
       useCampaignComposition,
+      furnitureUserHistory,
     });
+    return {
+      ...autoPlan,
+      furnitureSelections: autoPlan.furnitureSelections ?? [],
+    };
   }
 
   const prompts: string[] = [];
   const plannedPoses: PlannedPose[] = [];
   const planNotes: string[] = [];
+  const furnitureSelections: Array<FurnitureAsset | null> = [];
+  const batchAssetIds: string[] = [];
+  const batchFamilies: string[] = [];
 
   for (let slotIndex = 0; slotIndex < directed.length; slotIndex++) {
     const directedName = directed[slotIndex]!;
+    const definition = resolveDirectedPoseDefinition(directedName);
+    const poseId = definition?.poseId ?? directedName;
+    const furnitureAsset = resolveFurnitureForPose({
+      prop: definition?.prop,
+      poseIdOrName: poseId,
+      pose: definition,
+      userHistory: furnitureUserHistory,
+      excludeAssetIdsInBatch: batchAssetIds,
+      excludeFamiliesInBatch: batchFamilies,
+      seed: furnitureDiversitySeed({
+        poseIdOrName: poseId,
+        slotIndex,
+        historyLength: furnitureUserHistory?.length ?? 0,
+      }),
+    });
+    if (furnitureAsset) {
+      batchAssetIds.push(furnitureAsset.id);
+      batchFamilies.push(furnitureAsset.family);
+    }
+
     const resolved = resolveDirectedPoseAtSlot(basePrompt, profile, {
       shootType,
       poseName: directedName,
       slotIndex,
+      furnitureAsset,
+      furnitureUserHistory,
     });
     if (!resolved) continue;
     prompts.push(resolved.prompt);
     plannedPoses.push(resolved.plannedPose);
+    furnitureSelections.push(resolved.furnitureAsset);
     if (resolved.planNote) {
       planNotes.push(resolved.planNote);
       logger.warn(
@@ -200,24 +278,20 @@ function buildShotPlanWithDirectedPoses(
       count: autoCount,
       usedPoses: directed,
       useCampaignComposition,
+      furnitureUserHistory,
+      furnitureExcludeAssetIdsInBatch: batchAssetIds,
+      furnitureExcludeFamiliesInBatch: batchFamilies,
     });
 
     for (let autoIndex = 0; autoIndex < autoPlan.prompts.length; autoIndex++) {
-      const plannedPose = autoPlan.plannedPoses[autoIndex];
-      if (!plannedPose) continue;
-      const slotIndex = directed.length + autoIndex;
-      const autoFillPoseId =
-        getPoseDefinition(plannedPose.name)?.poseId ?? plannedPose.name;
-      prompts.push(
-        buildShotPromptAtSlot(basePrompt, profile, shootType, autoFillPoseId, slotIndex),
-      );
-      plannedPoses.push(plannedPose);
+      prompts.push(autoPlan.prompts[autoIndex]!);
+      plannedPoses.push(autoPlan.plannedPoses[autoIndex]!);
+      furnitureSelections.push(autoPlan.furnitureSelections?.[autoIndex] ?? null);
     }
-
     planNotes.push(...autoPlan.planNotes);
   }
 
-  return { prompts, plannedPoses, planNotes };
+  return { prompts, plannedPoses, planNotes, furnitureSelections };
 }
 
 // ---------------------------------------------------------------------------
@@ -229,6 +303,10 @@ export async function runAIPipeline(params: {
   /** Required for same-garment pose history (Phase 2). */
   userId?:             number;
   sourceImageUrl:      string;
+  /** Optional back-view garment image — forwarded to garment analysis only. */
+  backImageUrl?:       string;
+  /** Optional detail/close-up garment image — forwarded to garment analysis only. */
+  detailImageUrl?:     string;
   modelPersona:        string;
   locationEnvironment: string;
   modelDemographics?:  string | null;
@@ -297,6 +375,7 @@ export async function runAIPipeline(params: {
     outputImageUrl: string,
     imageIndex: number,
     poseSelection?: { poseName: PoseName; poseFamily: PoseFamily },
+    furnitureSelection?: { assetId: string; family: string } | null,
   ) => Promise<void>;
   /**
    * Called for each individual shot that failed to generate (partial failure).
@@ -311,6 +390,8 @@ export async function runAIPipeline(params: {
     renderId,
     userId,
     sourceImageUrl,
+    backImageUrl,
+    detailImageUrl,
     modelGender,
     modelAgeRange,
     modelPose,
@@ -338,6 +419,9 @@ export async function runAIPipeline(params: {
     shots,
   });
   const routeDecision = routeTask(taskType, renderId);
+  const heartbeatRenderIds =
+    pipelineTrace.renderIds.length > 0 ? pipelineTrace.renderIds : [renderId];
+  const stopHeartbeat = startGenerationHeartbeat(heartbeatRenderIds);
 
   try {
     logPipelineStage(pipelineTrace, PipelineStage.AI_PIPELINE_STARTED, { shots, taskType });
@@ -372,17 +456,30 @@ export async function runAIPipeline(params: {
       engine: PipelineExternalProvider.INTELLIGENCE_ENGINE,
     });
 
-    const [garmentImageUrl, intelligenceResult] = await Promise.all([
-      prepareGarmentImage(sourceImageUrl, renderId).then((url) => {
+    const [garmentReference, intelligenceResult] = await Promise.all([
+      prepareGarmentReferenceForGeneration({
+        frontImageUrl: sourceImageUrl,
+        backImageUrl,
+        detailImageUrl,
+        renderId,
+        // Refinement keeps the historical sheet packaging — do not send
+        // separate Back/Detail into the refine OpenRouter request.
+        evidenceMode: resolvedRefinementType ? "sheet" : resolveGarmentEvidenceMode(),
+      }).then((resolved) => {
         logPipelineStage(pipelineTrace, PipelineStage.GARMENT_PREPROCESSING_COMPLETED, {
           durationMs: Date.now() - garmentStartedAt,
           externalProvider: PipelineExternalProvider.GARMENT_PREPROCESSING,
+          usedReferenceSheet: resolved.usedReferenceSheet,
+          garmentReferenceMode: resolved.mode,
+          garmentEvidencePackaging: resolved.packaging,
         });
-        return url;
+        return resolved;
       }),
       runIntelligenceAnalysis({
         renderId,
         garmentImageUrl: sourceImageUrl,
+        backImageUrl,
+        detailImageUrl,
         garmentPlacement,
         garmentLengthSelection: garmentLengthSelection as never,
         modelGender,
@@ -401,6 +498,31 @@ export async function runAIPipeline(params: {
       }),
     ]);
 
+    const garmentImageUrl = garmentReference.garmentImageUrl;
+    const useSeparateEvidence =
+      garmentReference.packaging === "separate"
+      && Boolean(
+        garmentReference.garmentBackImageUrl || garmentReference.garmentDetailImageUrl,
+      );
+    const useSupplementalSheet =
+      garmentReference.packaging === "sheet"
+      && Boolean(garmentReference.garmentReferenceSheetImageUrl);
+
+    // Sheet correspondence only when a composite sheet was composed.
+    // Separate evidence uses a dynamic evidence-set mapping instead.
+    const garmentReferenceCorrespondenceInstruction =
+      !resolvedRefinementType && garmentReference.usedReferenceSheet
+        ? buildGarmentReferenceCorrespondenceInstruction(garmentReference.mode)
+        : undefined;
+
+    // Separate-mode layout is finalized after pose refs are known (for Pose index).
+    // Placeholder talent-only layout used if no poses; rebuilt below with hasPose.
+    let garmentEvidenceSetMappingInstruction: string | undefined;
+    let garmentEvidenceTalentReferenceImageNumber: number | undefined;
+    let evidenceLayout:
+      | ReturnType<typeof buildGarmentEvidenceSetLayout>
+      | undefined;
+
     // ── Step 2: Derive category + style template; resolve model image ──────────
     const category      = mapToFashnCategory(intelligenceResult.profile.category);
     const styleTemplate = mapStyleModeToTemplate(intelligenceResult.recommendation.styleMode);
@@ -415,6 +537,31 @@ export async function runAIPipeline(params: {
     const providerModelImageUrl = isLocalIdentityImageUrl(modelImageUrl)
       ? loadStudioTalentImageAsDataUri(modelImageUrl, renderId)
       : modelImageUrl;
+
+    const additionalTalentImageUrls: string[] = [];
+    if (modelIdentityId) {
+      const identity = findIdentityById(modelIdentityId);
+      for (const path of identity?.additionalIdentityImageUrls ?? []) {
+        if (!path || path === modelImageUrl) continue;
+        try {
+          additionalTalentImageUrls.push(
+            isLocalIdentityImageUrl(path)
+              ? loadStudioTalentImageAsDataUri(path, renderId)
+              : path,
+          );
+        } catch (err) {
+          logger.warn(
+            {
+              renderId,
+              modelIdentityId,
+              path,
+              error: err instanceof Error ? err.message : String(err),
+            },
+            "AI pipeline: optional Talent identity reference skipped",
+          );
+        }
+      }
+    }
 
     // ── Step 3: Batch 21/21A/22 — Refine brief + Identity Lock + Contract ────
     const refinementBrief = resolvedRefinementType
@@ -473,6 +620,20 @@ export async function runAIPipeline(params: {
           })
         : [];
 
+    const furnitureUserHistory =
+      userId != null
+        ? await loadRecentFurnitureUsage({ userId }).catch((error) => {
+            logger.warn(
+              {
+                userId,
+                err: error instanceof Error ? error.message : String(error),
+              },
+              "furniture history load failed — continuing without cooldown history",
+            );
+            return [] as FurnitureUsageRecord[];
+          })
+        : [];
+
     const shotPlan =
       routeDecision.supportsPerShotPrompts && !resolvedRefinementType
         ? buildShotPlanWithDirectedPoses(basePrompt, intelligenceResult.profile, {
@@ -482,6 +643,7 @@ export async function runAIPipeline(params: {
             shots,
             useCampaignComposition: params.customCampaign === true,
             directedPoses: usedPoses,
+            furnitureUserHistory,
           })
         : undefined;
 
@@ -526,6 +688,32 @@ export async function runAIPipeline(params: {
           })
         : undefined;
 
+    const identityForensics =
+      !resolvedRefinementType
+        ? {
+            generationMode: resolveIdentityGenerationMode({
+              generationType,
+              shots,
+              customCampaign: params.customCampaign === true,
+            }),
+            modelIdentityId: modelIdentityId ?? null,
+            talentAssetPath: isLocalIdentityImageUrl(modelImageUrl)
+              ? modelImageUrl
+              : null,
+            perShotPoseIds: shotPlan
+              ? shotPlan.plannedPoses.map(
+                  (planned) => planned.poseId ?? planned.name ?? null,
+                )
+              : undefined,
+            perShotPoseAssetPaths: shotPlan
+              ? shotPlan.plannedPoses.map((planned) => {
+                  const lookupKey = planned.poseId ?? planned.name;
+                  return getPoseDefinition(lookupKey)?.poseReferenceImage ?? null;
+                })
+              : undefined,
+          }
+        : undefined;
+
     if (perShotPrompts) {
       logger.info(
         {
@@ -540,23 +728,83 @@ export async function runAIPipeline(params: {
       );
     }
 
+    if ((useSeparateEvidence || useSupplementalSheet) && !resolvedRefinementType) {
+      const hasPose = Boolean(
+        perShotPoseReferenceUrls?.some((url) => Boolean(url)),
+      );
+      evidenceLayout = buildGarmentEvidenceSetLayout({
+        hasBack: Boolean(garmentReference.garmentBackImageUrl),
+        hasDetail: Boolean(garmentReference.garmentDetailImageUrl),
+        hasPose,
+        hasSupplementalSheet: useSupplementalSheet,
+      });
+      garmentEvidenceSetMappingInstruction = evidenceLayout.mappingInstruction;
+      garmentEvidenceTalentReferenceImageNumber = evidenceLayout.talentRef;
+    }
+
+    const remappedPerShotPrompts =
+      evidenceLayout && perShotPrompts
+        ? perShotPrompts.map((p) =>
+            remapCreativePromptReferenceNumbers(p, evidenceLayout!),
+          )
+        : perShotPrompts;
+
+    const remappedBasePrompt =
+      evidenceLayout && !resolvedRefinementType
+        ? remapCreativePromptReferenceNumbers(basePrompt, evidenceLayout)
+        : basePrompt;
+
     logPipelineStage(pipelineTrace, PipelineStage.PROMPT_GENERATION_COMPLETED, {
       shots,
-      perShotPromptCount: perShotPrompts?.length ?? 1,
+      perShotPromptCount: remappedPerShotPrompts?.length ?? 1,
       provider: routeDecision.provider,
     });
 
     const photoshootResult = await getRenderingEngine().generatePhotoshoot({
       garmentImageUrl,
       modelImageUrl: providerModelImageUrl,
-      prompt: resolvedRefinementType ? "" : basePrompt,
+      prompt: resolvedRefinementType ? "" : remappedBasePrompt,
       shots,
-      perShotPrompts,
+      perShotPrompts: remappedPerShotPrompts,
       perShotPoseReferenceUrls,
       previousOutputUrl: previousOutputUrl ?? undefined,
       refinementInstruction,
+      garmentReferenceCorrespondenceInstruction:
+        resolvedRefinementType ? undefined : garmentReferenceCorrespondenceInstruction,
+      garmentEvidencePackaging: useSeparateEvidence
+        ? "separate"
+        : "sheet",
+      garmentReferenceSheetImageUrl: useSupplementalSheet
+        ? garmentReference.garmentReferenceSheetImageUrl
+        : undefined,
+      garmentBackImageUrl: useSeparateEvidence
+        ? garmentReference.garmentBackImageUrl
+        : undefined,
+      garmentDetailImageUrl: useSeparateEvidence
+        ? garmentReference.garmentDetailImageUrl
+        : undefined,
+      garmentEvidenceSetMappingInstruction: resolvedRefinementType
+        ? undefined
+        : garmentEvidenceSetMappingInstruction,
+      garmentEvidenceTalentReferenceImageNumber: resolvedRefinementType
+        ? undefined
+        : garmentEvidenceTalentReferenceImageNumber,
       pipelineTrace,
       outputResolution: params.outputResolution ?? "2K",
+      identityForensics,
+      // V1 Create — always white studio; ignore user/stale locationEnvironment.
+      locationEnvironment: resolvedRefinementType
+        ? undefined
+        : resolveV1CreateLocationEnvironment(params.locationEnvironment),
+      additionalTalentImageUrls:
+        additionalTalentImageUrls.length > 0 ? additionalTalentImageUrls : undefined,
+      // Observability only — sheet path does not forward Back/Detail URLs.
+      garmentEvidenceHasBack: Boolean(backImageUrl),
+      garmentEvidenceHasDetail: Boolean(detailImageUrl),
+      garmentReferenceMode: garmentReference.mode,
+      perShotFurnitureRequired: shotPlan?.furnitureSelections?.map(
+        (asset) => asset != null,
+      ),
     });
 
     if (photoshootResult.images.length === 0) {
@@ -584,48 +832,68 @@ export async function runAIPipeline(params: {
       "AI pipeline: generation complete",
     );
 
-    const successfulIndices = new Set(photoshootResult.images.map((img) => img.index));
+    const settledShotIndices = new Set<number>();
 
     for (const image of photoshootResult.images) {
       logPipelineStage(pipelineTrace, PipelineStage.R2_UPLOAD_STARTED, {
         imageIndex: image.index,
       });
 
-      const outputImageUrl = await uploadBase64Image(image.url, renderId, {
-        pipelineTrace,
-        imageIndex: image.index,
-      });
-
-      logger.info(
-        {
-          renderId,
-          generationSessionId: pipelineTrace.generationSessionId,
+      try {
+        const outputImageUrl = await uploadBase64Image(image.url, renderId, {
+          pipelineTrace,
           imageIndex: image.index,
-        },
-        "AI pipeline: image uploaded",
-      );
+        });
 
-      await params.onComplete(outputImageUrl, image.index, shotPlan?.plannedPoses[image.index]
-        ? {
-            poseName: shotPlan.plannedPoses[image.index]!.name,
-            poseFamily: shotPlan.plannedPoses[image.index]!.family,
-          }
-        : undefined);
+        logger.info(
+          {
+            renderId,
+            generationSessionId: pipelineTrace.generationSessionId,
+            imageIndex: image.index,
+          },
+          "AI pipeline: image uploaded",
+        );
+
+        const furniture = shotPlan?.furnitureSelections?.[image.index] ?? null;
+        await params.onComplete(
+          outputImageUrl,
+          image.index,
+          shotPlan?.plannedPoses[image.index]
+            ? {
+                poseName: shotPlan.plannedPoses[image.index]!.name,
+                poseFamily: shotPlan.plannedPoses[image.index]!.family,
+              }
+            : undefined,
+          furniture
+            ? { assetId: furniture.id, family: furniture.family }
+            : null,
+        );
+        settledShotIndices.add(image.index);
+      } catch (uploadError) {
+        const err =
+          uploadError instanceof Error
+            ? uploadError
+            : new Error(String(uploadError));
+        logger.warn(
+          { renderId, shotIndex: image.index, err: err.message },
+          "AI pipeline: shot upload failed — marking row as failed",
+        );
+        if (params.onShotError) {
+          await params.onShotError(err, image.index);
+          settledShotIndices.add(image.index);
+        }
+      }
     }
 
-    // ── Step 7: Mark individually failed shots (partial failure) ──────────────
-    if (photoshootResult.images.length < shots && params.onShotError) {
+    // ── Step 7: Mark individually failed shots (generation partial failure) ─
+    if (params.onShotError) {
       for (let i = 0; i < shots; i++) {
-        if (!successfulIndices.has(i)) {
-          logger.warn(
-            { renderId, shotIndex: i },
-            "AI pipeline: shot failed — marking row as failed",
-          );
-          await params.onShotError(
-            new Error(`Shot ${i} failed to generate`),
-            i,
-          );
-        }
+        if (settledShotIndices.has(i)) continue;
+        logger.warn(
+          { renderId, shotIndex: i },
+          "AI pipeline: shot failed — marking row as failed",
+        );
+        await params.onShotError(new Error(`Shot ${i} failed to generate`), i);
       }
     }
 
@@ -649,5 +917,7 @@ export async function runAIPipeline(params: {
       "AI pipeline: pipeline failed",
     );
     await params.onError(err);
+  } finally {
+    stopHeartbeat();
   }
 }

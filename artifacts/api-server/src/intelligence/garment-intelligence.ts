@@ -269,59 +269,44 @@ function buildFabricBehaviourRules(profile: GarmentProfile): string {
   ].join(" ");
 }
 
-/** Structural preservation block injected into every generation prompt. */
+/** Structural preservation — profile-specific locks only (Pass E).
+ * Generic garment fidelity is owned by GARMENT_AUTHORITY_SOT. */
 export function buildGarmentPreservationPrompt(profile: GarmentProfile): string {
   const lengthLabel = formatGarmentLengthLabel(profile.garmentLength);
-  const structural: string[] = [
-    "GARMENT INTELLIGENCE — preserve the uploaded garment exactly:",
-    "The garment must retain identical proportions and dimensions across every generated image.",
-    "Do not shorten the garment. Do not lengthen the garment. Do not change garment proportions.",
-    "Never reinterpret the garment's dimensions — reproduce the exact scale, fit, and relative measurements from the upload.",
-    "Respect natural fabric behaviour. Preserve original garment structure.",
-    "Only pose, camera angle, lighting, and complementary styling may change — never the garment itself.",
-  ];
+  const locks: string[] = [];
 
   if (lengthLabel) {
-    structural.push(`Maintain exact garment length: ${lengthLabel} — identical across every image in this batch.`);
+    locks.push(`Maintain exact garment length: ${lengthLabel}.`);
   }
   if (profile.silhouette) {
-    structural.push(`Preserve silhouette: ${profile.silhouette}.`);
+    locks.push(`Preserve silhouette: ${profile.silhouette}.`);
   }
   if (profile.neckline) {
-    structural.push(`Preserve exact neckline: ${profile.neckline}.`);
+    locks.push(`Preserve exact neckline: ${profile.neckline}.`);
   }
   if (profile.sleeveLength || profile.sleeveType) {
-    structural.push(
+    locks.push(
       `Preserve sleeve construction: ${[profile.sleeveLength, profile.sleeveType].filter(Boolean).join(" ")}.`,
     );
   }
   if (profile.garmentStructure) {
-    structural.push(`Garment structure: ${profile.garmentStructure}.`);
+    locks.push(`Garment structure: ${profile.garmentStructure}.`);
   }
   if (profile.fit) {
-    structural.push(`Preserve fit: ${profile.fit} — same waist position and overall proportions.`);
+    locks.push(`Preserve fit: ${profile.fit}.`);
   }
 
-  structural.push(
-    "Natural fabric drape must follow the original garment — never invent a different length, silhouette, or hemline.",
-  );
+  if (locks.length === 0) return "";
 
-  return structural.join(" ");
+  return ["GARMENT INTELLIGENCE — profile locks:", ...locks].join(" ");
 }
 
-/** Batch consistency — same garment across all shots in one generation. */
+/**
+ * Pass E — batch garment consistency is owned by primary garmentInstruction
+ * BATCH CONSISTENCY + GARMENT_AUTHORITY_SOT. Kept as empty for call-site stability.
+ */
 export function buildGarmentConsistencyRules(): string {
-  return [
-    "GARMENT CONSISTENCY — mandatory across this entire generation batch:",
-    "Every image must show the SAME garment length, SAME silhouette, SAME neckline,",
-    "SAME sleeve length, SAME waist position, SAME hemline, SAME proportions, SAME fit, and SAME dimensions.",
-    "Every image must show the SAME garment colour, SAME hue, SAME saturation, SAME brightness, SAME print, SAME pattern, and SAME fabric appearance as Reference Image 1.",
-    "Garment proportions must be pixel-faithful to the upload — identical in every shot of this batch.",
-    "Never generate one knee-length, one midi, and one maxi version of the same uploaded garment.",
-    "Never reinterpret, recolour, or rescale the garment between images.",
-    "The AI may change only pose, camera angle, and lighting — never garment dimensions, construction, colour, or footwear styling.",
-    "The uploaded garment is the hero — every image is the same garment in a different professional pose.",
-  ].join(" ");
+  return "";
 }
 
 function formatDetectedGarmentColours(profile: GarmentProfile): string {
@@ -331,18 +316,12 @@ function formatDetectedGarmentColours(profile: GarmentProfile): string {
 }
 
 /**
- * Profile-specific colour identity lock — uses garment intelligence output.
- * Prevents the model from reinterpreting detected colours into adjacent families.
+ * Profile-specific colour identity — detected colour name only (Pass E).
+ * General colour fidelity is owned by GARMENT_AUTHORITY_SOT.
  */
 export function buildGarmentColourIdentityPrompt(profile: GarmentProfile): string {
   const detected = formatDetectedGarmentColours(profile);
-  return [
-    "GARMENT COLOUR IDENTITY — hard lock (non-negotiable):",
-    `The uploaded garment's colour identity is ${detected}. Treat this as a fixed product attribute — not a stylistic suggestion.`,
-    "Reproduce this exact colour in every image. Natural lighting shadows and highlights may vary; perceptible hue, value, or saturation shifts that change how the colour reads are forbidden.",
-    "Do NOT reinterpret named colours into adjacent palette families — e.g. ivory must stay ivory (not white, cream, beige, or grey); navy must stay navy (not black or royal blue); burgundy must stay burgundy (not red or brown).",
-    "Preserve material finish, texture, print/pattern registration, and construction alongside colour — only pose, camera, and neutral studio lighting may change.",
-  ].join(" ");
+  return `GARMENT COLOUR IDENTITY: detected product colour is ${detected}. Keep this colour identity across the batch; do not reinterpret into adjacent palette families.`;
 }
 
 /** Combined garment intelligence prompt block for Prompt Composer. */
@@ -351,6 +330,7 @@ export function buildGarmentIntelligencePrompt(profile: GarmentProfile): string 
     buildGarmentPreservationPrompt(profile),
     buildGarmentColourIdentityPrompt(profile),
     buildFabricBehaviourRules(profile),
-    buildGarmentConsistencyRules(),
-  ].join(" ");
+  ]
+    .filter((block) => block.trim().length > 0)
+    .join(" ");
 }

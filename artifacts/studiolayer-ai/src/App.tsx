@@ -11,6 +11,7 @@ import PrivacyPage from '@/pages/privacy';
 import CookiePolicyPage from '@/pages/cookies';
 import LegalIndexPage from '@/pages/legal';
 import StudioPage from '@/pages/studio';
+import RedirectToStudioPage from '@/pages/redirect-to-studio';
 import CastingPage from '@/pages/casting';
 import GalleryPage from '@/pages/gallery';
 import BillingPage from '@/pages/billing';
@@ -42,6 +43,12 @@ function Router() {
       <Route path="/cookies" component={CookiePolicyPage} />
       <Route path="/legal" component={LegalIndexPage} />
       {/* Public exploration — member-only mutations gate in-page, not via AuthGuard. */}
+      <Route path="/studio/editorial" component={RedirectToStudioPage} />
+      <Route path="/studio/campaign" component={RedirectToStudioPage} />
+      <Route path="/editorial" component={RedirectToStudioPage} />
+      <Route path="/campaign" component={RedirectToStudioPage} />
+      <Route path="/create/editorial" component={RedirectToStudioPage} />
+      <Route path="/create/campaign" component={RedirectToStudioPage} />
       <Route path="/studio" component={StudioPage} />
       <Route path="/casting" component={CastingPage} />
       <Route path="/gallery" component={GalleryPage} />

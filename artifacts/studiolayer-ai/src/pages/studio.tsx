@@ -10,7 +10,7 @@
 // ---------------------------------------------------------------------------
 
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import JSZip from 'jszip';
 import {
   useCreateRender,
@@ -27,17 +27,18 @@ import { useActiveRenders } from '@/hooks/use-active-renders';
 import { withErrorContactHelper } from '@/lib/studio-contact';
 import { formatDownloadPreparingLabel } from '@/lib/download-preparing-label';
 import {
-  generationCreditCostForCustomCampaign,
-  generationCreditCostForShootType,
   hasSufficientStudioCreditsForCost,
   resolveAvailableStudioCreditsForGate,
 } from '@/lib/studio-credit-availability';
 import { workspaceShootGenerationBusyToast, workspaceShootGenerationRejectedToast } from '@/lib/generation-failure-copy';
 import { isGenerationCoordinationBusyError, selectActiveRootGenerationBatch } from '@/lib/recover-active-generation';
 import {
-  PRESET_SHOOT_TYPE_LABEL,
-  PRESET_SHOOT_TYPE_OPTIONS,
-} from '@/lib/shoot-type-mapping';
+  applyV1CreateWorkflowConstraints,
+  buildV1StudioPathFromLocation,
+  V1_CREATE_BUTTON_LABEL,
+  V1_CREATE_IMAGE_COUNT,
+  V1_CREATE_LOCATION_ENVIRONMENT,
+} from '@/lib/v1-create-product';
 import { useDownloadInFlight } from '@/hooks/use-download-in-flight';
 import { AppShell } from '@/components/layout/app-shell';
 import { FileUpload } from '@/components/ui/file-upload';
@@ -64,7 +65,6 @@ import {
   StudioImageInspector,
   type StudioImageInspectionTarget,
 } from '@/components/studio/studio-image-inspector';
-import { ShootTypeSelector } from '@/components/studio/shoot-type-selector';
 import { ResolutionSelector } from '@/components/studio/resolution-selector';
 import { GarmentCategorySelector } from '@/components/studio/garment-category-selector';
 import { DirectShootDialog } from '@/components/studio/direct-shoot-dialog';
@@ -88,8 +88,6 @@ import { fetchEditorialImageBlob } from '@/lib/download-image';
 import {
   creditCostForRefine,
   formatStudioCredits,
-  isComplimentaryMembershipTier,
-  isPremiumShootTypeLocked,
   isStudioCreditLimitBlocked,
   resolveGenerationCreditCost,
   resolveStudioAdminFlag,
@@ -100,8 +98,6 @@ import {
   buildRemoveBackgroundRequest,
   canGenerateStudioWorkflow,
   GARMENT_LENGTH_OPTIONS,
-  resolveWorkflowImageCount,
-  trimUsedPosesToShotCount,
   validateStudioWorkflow,
 } from '@/lib/studio-workflow';
 import { StudioPostProductionPanel } from '@/components/studio/studio-refine-panel';
@@ -164,12 +160,12 @@ const FAQ_ITEMS = [
     a: "StudioLayer AI is crafted to faithfully preserve your garment's colour, texture, silhouette, and key construction details while placing it naturally on your selected Studio Talent. Each editorial image is produced with the care and precision expected of premium fashion imagery.",
   },
   {
-    q: 'How long does it take to create editorial images?',
-    a: 'Most editorial images are ready within a few minutes. Timing may vary depending on image complexity and current studio demand.',
+    q: 'How long does it take to create an image?',
+    a: 'Most images are ready within a few minutes. Timing may vary depending on image complexity and current studio demand.',
   },
   {
     q: 'What happens after my complimentary Studio Credit is used?',
-    a: 'Every new Studio receives one complimentary Studio Credit for a Hero Shot.\n\nOnce your complimentary Studio Credit has been used, continue creating with a Studio Membership.',
+    a: 'Every new Studio receives one complimentary Studio Credit for Create.\n\nOnce your complimentary Studio Credit has been used, continue creating with a Studio Membership.',
   },
   {
     q: 'Is my uploaded data secure?',
@@ -219,10 +215,13 @@ function extractRenderOutputUrl(render: unknown): string | null {
 // ---------------------------------------------------------------------------
 
 export default function StudioPage() {
+  const [location, setLocation] = useLocation();
   const {
     workflow,
     workspace,
     setSourceImageUrl,
+    setBackImageUrl,
+    setDetailImageUrl,
     setGarmentPlacement,
     setGarmentLengthSelection,
     setImageCount,
@@ -252,7 +251,6 @@ export default function StudioPage() {
   const [refineInFlight, setRefineInFlight] = useState(() => refinementPending != null);
   const [showValidation, setShowValidation]     = useState(false);
 
-  const [showProRequiredDialog, setShowProRequiredDialog] = useState(false);
   const [showAuthRequiredDialog, setShowAuthRequiredDialog] = useState(false);
   const [creditGateDialog, setCreditGateDialog] = useState<{
     requiredCredits: number;
@@ -379,14 +377,12 @@ export default function StudioPage() {
     refineInFlight ||
     refinementPending != null;
 
-  const isComplimentaryTier = isComplimentaryMembershipTier(usage);
   const isAdminUser = resolveStudioAdminFlag(user, usage);
   const availableStudioCredits = resolveAvailableStudioCreditsForGate(usage, user);
   const limitBlocked =
     isAuthenticated && isStudioCreditLimitBlocked(usage) && !isAdminUser;
   const generationCreditCost = resolveGenerationCreditCost({
-    imageCount: resolveWorkflowImageCount(workflow),
-    customCampaign: workflow.customCampaign,
+    imageCount: V1_CREATE_IMAGE_COUNT,
     outputResolution: workflow.outputResolution,
   });
   const cannotAffordSelectedShoot =
@@ -397,21 +393,18 @@ export default function StudioPage() {
     isProcessing: isGenerationBusy,
   });
 
-  const shootImageCount = resolveWorkflowImageCount(workflow);
+  const shootImageCount = V1_CREATE_IMAGE_COUNT;
 
   const closeCreditGateDialog = () => setCreditGateDialog(null);
-  const closeMembershipDialog = () => setShowProRequiredDialog(false);
   const closeAuthRequiredDialog = () => setShowAuthRequiredDialog(false);
 
   const openCreditGateDialog = (requiredCredits: number) => {
-    setShowProRequiredDialog(false);
     setShowAuthRequiredDialog(false);
     setCreditGateDialog({ requiredCredits });
   };
 
   const openAuthRequiredDialog = () => {
     setCreditGateDialog(null);
-    setShowProRequiredDialog(false);
     setShowAuthRequiredDialog(true);
   };
 
@@ -422,49 +415,15 @@ export default function StudioPage() {
     return false;
   };
 
-  const canAffordShootType = (imageCount: 1 | 2 | 4) =>
-    hasSufficientStudioCreditsForCost(
-      usage,
-      generationCreditCostForShootType({
-        imageCount,
-        outputResolution: workflow.outputResolution,
-      }),
-      user,
-    );
-
-  const canAffordCustomCampaign = () =>
-    hasSufficientStudioCreditsForCost(
-      usage,
-      generationCreditCostForCustomCampaign({
-        imageCount: workflow.customImageCount,
-        outputResolution: workflow.outputResolution,
-      }),
-      user,
-    );
-
   const canAffordResolution = (outputResolution: '2K' | '4K') =>
     hasSufficientStudioCreditsForCost(
       usage,
       resolveGenerationCreditCost({
-        imageCount: resolveWorkflowImageCount(workflow),
-        customCampaign: workflow.customCampaign,
+        imageCount: V1_CREATE_IMAGE_COUNT,
         outputResolution,
       }),
       user,
     );
-
-  const isShootTypeUnavailable = (value: 1 | 2 | 4) => {
-    if (!isAuthenticated) return false;
-    return isPremiumShootTypeLocked(usage, value) || !canAffordShootType(value);
-  };
-
-  const isCustomCampaignUnavailable =
-    isAuthenticated &&
-    (isPremiumShootTypeLocked(usage, 2) || !canAffordCustomCampaign());
-
-  const createButtonLabel = workflow.customCampaign
-    ? 'Custom Campaign'
-    : PRESET_SHOOT_TYPE_LABEL[workflow.imageCount];
 
   const beginGenerationFeedback = (preloadedUrls: string[] = []) => {
     setAwaitingResultDisplay(true);
@@ -569,19 +528,30 @@ export default function StudioPage() {
   };
 
   useEffect(() => {
-    if (isComplimentaryTier && (workflow.imageCount !== 1 || workflow.customCampaign)) {
-      patchWorkflow({ imageCount: 1, customCampaign: false });
+    const pathname = location.split('?')[0] ?? '/studio';
+    const search = typeof window !== 'undefined' ? window.location.search : '';
+    const target = buildV1StudioPathFromLocation(pathname, search);
+    if (target !== `${pathname}${search}`) {
+      setLocation(target);
     }
-  }, [isComplimentaryTier, workflow.imageCount, workflow.customCampaign, patchWorkflow]);
+  }, [location, setLocation]);
 
-  // Customer UI no longer exposes Custom Campaign — clear any persisted session so
-  // credit totals and shoot-type selection stay on the three preset formats.
   useEffect(() => {
-    if (!workflow.customCampaign) return;
-    const presetImageCount =
-      workflow.imageCount === 2 || workflow.imageCount === 4 ? workflow.imageCount : 1;
-    patchWorkflow({ customCampaign: false, imageCount: presetImageCount });
-  }, [workflow.customCampaign, workflow.imageCount, patchWorkflow]);
+    const needsClamp =
+      workflow.imageCount !== V1_CREATE_IMAGE_COUNT
+      || workflow.customCampaign
+      || workflow.locationEnvironment !== V1_CREATE_LOCATION_ENVIRONMENT
+      || (workflow.usedPoses?.length ?? 0) > V1_CREATE_IMAGE_COUNT;
+    if (!needsClamp) return;
+    patchWorkflow(applyV1CreateWorkflowConstraints(workflow));
+  }, [
+    workflow.imageCount,
+    workflow.customCampaign,
+    workflow.locationEnvironment,
+    workflow.usedPoses,
+    patchWorkflow,
+    workflow,
+  ]);
 
   useEffect(() => {
     if (!awaitingResultDisplay || generationStartedAt == null) return;
@@ -703,64 +673,6 @@ export default function StudioPage() {
     activeRenderIds,
   ]);
 
-  const handleShootTypeSelect = (value: 1 | 2 | 4) => {
-    if (isGenerationBusy) return;
-    if (!isAuthenticated) {
-      patchWorkflow({
-        imageCount: value,
-        customCampaign: false,
-        usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, value),
-      });
-      return;
-    }
-    if (isPremiumShootTypeLocked(usage, value)) {
-      setCreditGateDialog(null);
-      setShowProRequiredDialog(true);
-      return;
-    }
-    const required = generationCreditCostForShootType({
-      imageCount: value,
-      outputResolution: workflow.outputResolution,
-    });
-    if (!hasSufficientStudioCreditsForCost(usage, required, user)) {
-      openCreditGateDialog(required);
-      return;
-    }
-    patchWorkflow({
-      imageCount: value,
-      customCampaign: false,
-      usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, value),
-    });
-  };
-
-  const handleCustomCampaignSelect = () => {
-    if (isGenerationBusy) return;
-    if (!isAuthenticated) {
-      patchWorkflow({
-        customCampaign: true,
-        usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, workflow.customImageCount),
-      });
-      return;
-    }
-    if (isPremiumShootTypeLocked(usage, 2)) {
-      setCreditGateDialog(null);
-      setShowProRequiredDialog(true);
-      return;
-    }
-    const required = generationCreditCostForCustomCampaign({
-      imageCount: workflow.customImageCount,
-      outputResolution: workflow.outputResolution,
-    });
-    if (!hasSufficientStudioCreditsForCost(usage, required, user)) {
-      openCreditGateDialog(required);
-      return;
-    }
-    patchWorkflow({
-      customCampaign: true,
-      usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, workflow.customImageCount),
-    });
-  };
-
   const handleResolutionSelect = (outputResolution: '2K' | '4K') => {
     if (isGenerationBusy) return;
     if (!isAuthenticated) {
@@ -768,8 +680,7 @@ export default function StudioPage() {
       return;
     }
     const required = resolveGenerationCreditCost({
-      imageCount: resolveWorkflowImageCount(workflow),
-      customCampaign: workflow.customCampaign,
+      imageCount: V1_CREATE_IMAGE_COUNT,
       outputResolution,
     });
     if (!hasSufficientStudioCreditsForCost(usage, required, user)) {
@@ -779,39 +690,16 @@ export default function StudioPage() {
     patchWorkflow({ outputResolution });
   };
 
-  const handleCustomImageCountChange = (count: number) => {
-    if (isGenerationBusy) return;
-    if (!isAuthenticated) {
-      patchWorkflow({
-        customCampaign: true,
-        customImageCount: count,
-        usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, count),
-      });
-      return;
-    }
-    const required = generationCreditCostForCustomCampaign({
-      imageCount: count,
-      outputResolution: workflow.outputResolution,
-    });
-    if (!hasSufficientStudioCreditsForCost(usage, required, user)) {
-      openCreditGateDialog(required);
-      return;
-    }
-    patchWorkflow({
-      customCampaign: true,
-      customImageCount: count,
-      usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, count),
-    });
-  };
-
   const handleDirectShootConfirm = (selectedPoseIds: string[]) => {
     patchWorkflow({
       usedPoses: selectedPoseIds.length > 0 ? selectedPoseIds : undefined,
     });
   };
 
-  const handleDirectShootDismiss = () => {
-    patchWorkflow({ usedPoses: undefined });
+  const handleDirectShootSelectionChange = (selectedPoseIds: string[]) => {
+    patchWorkflow({
+      usedPoses: selectedPoseIds.length > 0 ? selectedPoseIds : undefined,
+    });
   };
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -819,6 +707,14 @@ export default function StudioPage() {
   const handleFileSelect = (url: string) => {
     setSourceImageUrl(url);
     setShowValidation(false);
+  };
+
+  const handleBackFileSelect = (url: string) => {
+    setBackImageUrl(url);
+  };
+
+  const handleDetailFileSelect = (url: string) => {
+    setDetailImageUrl(url);
   };
 
 
@@ -1247,7 +1143,7 @@ export default function StudioPage() {
       <AppShell footer>
           <EditorialPageHeader
             companion="Workspace"
-            supporting="Garment to Campaign"
+            supporting="Upload · Talent · Create"
             tagline="Professional fashion photography in minutes"
             className="sl-page-header--workspace"
             aside={isAuthenticated ? (
@@ -1266,10 +1162,10 @@ export default function StudioPage() {
 
             {/* ── LEFT PANEL — Controls ───────────────────────────────── */}
             <div className={cn('order-2 lg:order-1 space-y-8 transition-opacity duration-300', (showGenerationProgress || showRemoveBackgroundProgress) && 'opacity-[0.68]')}>
-              {/* Step 1: Upload Outfit */}
+              {/* Step 1: Garment References */}
               <section className="space-y-3">
                 <div className="sl-garment-references-heading">
-                  <StepLabel number={1} title="Upload Outfit" />
+                  <StepLabel number={1} title="Garment References" />
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <StudioWorkspaceButton
@@ -1289,16 +1185,70 @@ export default function StudioPage() {
                   </Tooltip>
                 </div>
 
-                <div className={cn(showValidation && !workflowValidation.hasGarment && 'rounded ring-2 ring-destructive ring-offset-1')}>
-                  <FileUpload
-                    previewUrl={workflow.sourceImageUrl || null}
-                    onFileSelect={handleFileSelect}
-                    disabled={isGenerationBusy}
-                  />
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-xs font-medium text-foreground">Front View</p>
+                      <p className="sl-garment-ref-badge sl-garment-ref-badge--required">
+                        Required
+                      </p>
+                    </div>
+                    <div className={cn(showValidation && !workflowValidation.hasGarment && 'rounded ring-2 ring-destructive ring-offset-1')}>
+                      <FileUpload
+                        previewUrl={workflow.sourceImageUrl || null}
+                        onFileSelect={handleFileSelect}
+                        disabled={isGenerationBusy}
+                        ariaLabel="Upload front view garment photo"
+                        uploadLabel="Upload Front View"
+                        previewAlt="Front view garment preview"
+                        testId="garment-front-upload"
+                      />
+                    </div>
+                    {showValidation && !workflowValidation.hasGarment && (
+                      <p className="text-xs text-destructive font-mono">Please upload a front garment photo.</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-xs font-medium text-foreground">Back View</p>
+                      <p className="sl-garment-ref-badge sl-garment-ref-badge--optional">
+                        Optional
+                      </p>
+                    </div>
+                    <FileUpload
+                      previewUrl={workflow.backImageUrl || null}
+                      onFileSelect={handleBackFileSelect}
+                      disabled={isGenerationBusy}
+                      ariaLabel="Upload optional back view garment photo"
+                      uploadLabel="Upload Back View"
+                      previewAlt="Back view garment preview"
+                      showIdealReference={false}
+                      compact
+                      testId="garment-back-upload"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="text-xs font-medium text-foreground">Design / Texture Detail</p>
+                      <p className="sl-garment-ref-badge sl-garment-ref-badge--optional">
+                        Optional
+                      </p>
+                    </div>
+                    <FileUpload
+                      previewUrl={workflow.detailImageUrl || null}
+                      onFileSelect={handleDetailFileSelect}
+                      disabled={isGenerationBusy}
+                      ariaLabel="Upload optional design or texture detail photo"
+                      uploadLabel="Upload Detail"
+                      previewAlt="Design detail garment preview"
+                      showIdealReference={false}
+                      compact
+                      testId="garment-detail-upload"
+                    />
+                  </div>
                 </div>
-                {showValidation && !workflowValidation.hasGarment && (
-                  <p className="text-xs text-destructive font-mono">Please upload a garment photo.</p>
-                )}
 
                 {/* Garment type selector */}
                 <div className="space-y-2">
@@ -1369,18 +1319,11 @@ export default function StudioPage() {
                 </div>
               </section>
 
-              {/* Step 3: Shoot Type */}
+              {/* Step 3: Create settings */}
               <section className="sl-shoot-type-section space-y-3 pt-1">
-                <StepLabel number={3} title="Shoot Type" />
+                <StepLabel number={3} title="Create" />
                 <div className="sl-shoot-type-panel">
                   <div className="sl-studio-filter-row">
-                    <ShootTypeSelector
-                      options={PRESET_SHOOT_TYPE_OPTIONS}
-                      imageCount={workflow.imageCount}
-                      isPremiumLocked={isShootTypeUnavailable}
-                      disabled={isGenerationBusy}
-                      onSelect={handleShootTypeSelect}
-                    />
                     <ResolutionSelector
                       value={workflow.outputResolution}
                       disabled={isGenerationBusy}
@@ -1408,14 +1351,15 @@ export default function StudioPage() {
               <div className="space-y-3 pt-1">
                 <StudioWorkspaceButton
                   fullWidth
+                  variant="primary"
                   loading={isGenerationBusy}
                   onClick={handleRender}
                   disabled={!canCreate}
-                  className="h-12 text-sm font-semibold"
+                  className="sl-studio-create-cta h-12 text-sm font-semibold"
                   data-testid="button-render"
                 >
                   <Camera className="w-4 h-4" />
-                  {isGenerationBusy ? 'Creating…' : `Create ${createButtonLabel}`}
+                  {isGenerationBusy ? 'Creating…' : V1_CREATE_BUTTON_LABEL}
                 </StudioWorkspaceButton>
 
                 <p className="mx-auto mt-[18px] mb-[15px] max-w-[390px] text-center text-[11px] font-normal leading-relaxed text-muted-foreground/80">
@@ -1578,7 +1522,7 @@ export default function StudioPage() {
             <DialogDescription asChild>
               <div className="space-y-3 pt-2 text-sm leading-relaxed text-muted-foreground">
                 <p>
-                  Create a Studio account or sign in to generate Editorial Images,
+                  Create a Studio account or sign in to Create images,
                   choose Studio Talent, and use post-production tools.
                 </p>
                 <p>
@@ -1669,64 +1613,13 @@ export default function StudioPage() {
         }}
       />
 
-      <Dialog
-        open={showProRequiredDialog}
-        onOpenChange={(open) => {
-          if (!open) closeMembershipDialog();
-          else setShowProRequiredDialog(true);
-        }}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Studio Membership Required</DialogTitle>
-            <DialogDescription asChild>
-              <div className="space-y-3 pt-2 text-sm leading-relaxed text-muted-foreground">
-                <p>Your complimentary Studio includes one Hero Shot.</p>
-                <p>
-                  Editorial Portraits and Campaign Collections are available with
-                  Studio Basic or Studio Pro.
-                </p>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
-            <StudioWorkspaceButton
-              type="button"
-              onClick={closeMembershipDialog}
-              data-testid="button-membership-gate-cancel"
-            >
-              Cancel
-            </StudioWorkspaceButton>
-            <StudioWorkspaceButton
-              type="button"
-              onClick={() => {
-                patchWorkflow({
-                  imageCount: 1,
-                  customCampaign: false,
-                  usedPoses: trimUsedPosesToShotCount(workflow.usedPoses, 1),
-                });
-                closeMembershipDialog();
-              }}
-            >
-              Continue with Hero Shot
-            </StudioWorkspaceButton>
-            <Link
-              href="/billing"
-              className="sl-studio-btn sl-studio-btn--primary no-underline"
-              onClick={closeMembershipDialog}
-            >
-              View Membership
-            </Link>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <DirectShootDialog
         open={directShootOpen}
         onOpenChange={setDirectShootOpen}
         shootImageCount={shootImageCount}
+        initialSelectedPoseIds={workflow.usedPoses ?? []}
         onConfirm={handleDirectShootConfirm}
-        onDismiss={handleDirectShootDismiss}
+        onSelectionChange={handleDirectShootSelectionChange}
       />
 
       <StudioCustomCropDialog

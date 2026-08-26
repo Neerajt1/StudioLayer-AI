@@ -10,6 +10,11 @@ import {
   type OutputResolution,
 } from '@workspace/studio-credit-engine';
 import { REMOVE_BACKGROUND_TYPE } from '@/lib/refinement-types';
+import {
+  applyV1CreateWorkflowConstraints,
+  V1_CREATE_IMAGE_COUNT,
+  V1_CREATE_LOCATION_ENVIRONMENT,
+} from '@/lib/v1-create-product';
 
 export type GarmentPlacement = 'upper_body' | 'lower_body' | 'full_body' | '';
 export type GarmentLengthSelection =
@@ -24,7 +29,12 @@ export type GarmentLengthSelection =
 export type ShootType = 1 | 2 | 4;
 
 export interface StudioWorkflow {
+  /** Front garment photograph — required before generation. */
   sourceImageUrl: string;
+  /** Optional back-view garment photograph. */
+  backImageUrl: string;
+  /** Optional design / texture detail photograph. */
+  detailImageUrl: string;
   garmentPlacement: GarmentPlacement;
   garmentLengthSelection: GarmentLengthSelection;
   talentId: string;
@@ -34,6 +44,17 @@ export interface StudioWorkflow {
   customImageCount: number;
   /** Native output resolution — 2K (default) or 4K. */
   outputResolution: OutputResolution;
+  /**
+   * Scene environment — V3 recovery field. V1 Create always uses white_studio.
+   */
+  locationEnvironment:
+    | 'white_studio'
+    | 'grey_gradient_studio'
+    | 'photo_studio'
+    | 'luxury_interior'
+    | 'urban_street'
+    | 'nature';
+
   /** Canonical Pose IDs selected in Direct Shoot (required before generation). */
   usedPoses?: string[];
 }
@@ -42,6 +63,8 @@ export const DEFAULT_GARMENT_LENGTH_SELECTION: Exclude<GarmentLengthSelection, '
 
 export const EMPTY_STUDIO_WORKFLOW: StudioWorkflow = {
   sourceImageUrl: '',
+  backImageUrl: '',
+  detailImageUrl: '',
   garmentPlacement: '',
   garmentLengthSelection: DEFAULT_GARMENT_LENGTH_SELECTION,
   talentId: '',
@@ -49,6 +72,7 @@ export const EMPTY_STUDIO_WORKFLOW: StudioWorkflow = {
   customCampaign: false,
   customImageCount: CUSTOM_CAMPAIGN_MIN,
   outputResolution: DEFAULT_OUTPUT_RESOLUTION,
+  locationEnvironment: V1_CREATE_LOCATION_ENVIRONMENT,
 };
 
 export const GARMENT_LENGTH_OPTIONS: ReadonlyArray<{
@@ -125,6 +149,10 @@ function isCustomImageCount(value: unknown): value is number {
     && value <= CUSTOM_CAMPAIGN_MAX;
 }
 
+function normalizeLocationEnvironment(_value: unknown): StudioWorkflow['locationEnvironment'] {
+  return V1_CREATE_LOCATION_ENVIRONMENT;
+}
+
 function normalizeUsedPoses(raw: unknown): string[] | undefined {
   if (!Array.isArray(raw)) return undefined;
   const poses = raw.filter((pose) => typeof pose === 'string' && pose.trim().length > 0);
@@ -144,6 +172,8 @@ export function trimUsedPosesToShotCount(
 export function normalizeStudioWorkflow(raw: Partial<StudioWorkflow> | null | undefined): StudioWorkflow {
   const workflow = {
     sourceImageUrl: typeof raw?.sourceImageUrl === 'string' ? raw.sourceImageUrl : '',
+    backImageUrl: typeof raw?.backImageUrl === 'string' ? raw.backImageUrl : '',
+    detailImageUrl: typeof raw?.detailImageUrl === 'string' ? raw.detailImageUrl : '',
     garmentPlacement: isGarmentPlacement(raw?.garmentPlacement) ? raw.garmentPlacement : '',
     garmentLengthSelection: isManualGarmentLengthSelection(raw?.garmentLengthSelection)
       ? raw.garmentLengthSelection
@@ -155,20 +185,21 @@ export function normalizeStudioWorkflow(raw: Partial<StudioWorkflow> | null | un
       ? raw.customImageCount
       : CUSTOM_CAMPAIGN_MIN,
     outputResolution: normalizeOutputResolution(raw?.outputResolution),
+    locationEnvironment: normalizeLocationEnvironment(raw?.locationEnvironment),
     usedPoses: normalizeUsedPoses(raw?.usedPoses),
   };
 
-  return {
+  return applyV1CreateWorkflowConstraints({
     ...workflow,
     usedPoses: trimUsedPosesToShotCount(
       workflow.usedPoses,
-      resolveWorkflowImageCount(workflow),
+      V1_CREATE_IMAGE_COUNT,
     ),
-  };
+  });
 }
 
-export function resolveWorkflowImageCount(workflow: StudioWorkflow): number {
-  return workflow.customCampaign ? workflow.customImageCount : workflow.imageCount;
+export function resolveWorkflowImageCount(_workflow: StudioWorkflow): number {
+  return V1_CREATE_IMAGE_COUNT;
 }
 
 export function validateStudioWorkflow(workflow: StudioWorkflow): StudioWorkflowValidation {
@@ -266,24 +297,26 @@ export function buildGenerationRequest(
   workflow: StudioWorkflow,
   identity: StudioIdentityPayload | undefined,
 ) {
+  const v1Workflow = applyV1CreateWorkflowConstraints(workflow);
   return {
-    sourceImageUrl: workflow.sourceImageUrl,
+    sourceImageUrl: v1Workflow.sourceImageUrl,
+    ...(v1Workflow.backImageUrl ? { backImageUrl: v1Workflow.backImageUrl } : {}),
+    ...(v1Workflow.detailImageUrl ? { detailImageUrl: v1Workflow.detailImageUrl } : {}),
     modelPersona: 'confident_commercial' as const,
-    locationEnvironment: 'photo_studio' as const,
-    garmentPlacement: workflow.garmentPlacement as never,
-    ...(workflow.garmentPlacement === 'full_body'
-      ? { garmentLengthSelection: workflow.garmentLengthSelection as never }
+    locationEnvironment: V1_CREATE_LOCATION_ENVIRONMENT,
+    garmentPlacement: v1Workflow.garmentPlacement as never,
+    ...(v1Workflow.garmentPlacement === 'full_body'
+      ? { garmentLengthSelection: v1Workflow.garmentLengthSelection as never }
       : {}),
-    modelIdentityId: workflow.talentId || undefined,
+    modelIdentityId: v1Workflow.talentId || undefined,
     modelGender: identity?.gender as never,
     modelAgeRange: identity?.ageGroup as never,
     smartLighting: true,
     imageDimensions: 'portrait_45' as const,
-    imageCount: resolveWorkflowImageCount(workflow),
-    outputResolution: workflow.outputResolution,
-    ...(workflow.customCampaign ? { customCampaign: true as const } : {}),
-    ...(workflow.usedPoses && workflow.usedPoses.length > 0
-      ? { usedPoses: workflow.usedPoses }
+    imageCount: V1_CREATE_IMAGE_COUNT,
+    outputResolution: v1Workflow.outputResolution,
+    ...(v1Workflow.usedPoses && v1Workflow.usedPoses.length > 0
+      ? { usedPoses: trimUsedPosesToShotCount(v1Workflow.usedPoses, V1_CREATE_IMAGE_COUNT) }
       : {}),
   };
 }

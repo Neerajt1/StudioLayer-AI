@@ -49,10 +49,29 @@ export function createR2S3Client(config: R2Config): S3Client {
 
 /** Startup check — logs ✓ R2 connected or ✗ Missing/failed R2 configuration. */
 export async function validateR2Storage(): Promise<void> {
+  const probe = await probeR2StorageHealth();
+  if (probe.status === "not_monitored") {
+    console.error(`✗ Missing R2 configuration`);
+    return;
+  }
+  if (probe.status === "healthy") {
+    console.log("✓ R2 connected");
+    return;
+  }
+  console.error(`✗ R2 configuration present but connection failed`);
+}
+
+/** Admin-safe R2 probe — no secrets in the response. */
+export async function probeR2StorageHealth(): Promise<{
+  status: "healthy" | "attention" | "down" | "not_monitored";
+  detail: string;
+}> {
   const missing = getMissingR2EnvKeys();
   if (missing.length > 0) {
-    console.error(`✗ Missing R2 configuration (${missing.join(", ")})`);
-    return;
+    return {
+      status: "not_monitored",
+      detail: "Object storage environment is not fully configured",
+    };
   }
 
   const config = getR2Config()!;
@@ -60,9 +79,11 @@ export async function validateR2Storage(): Promise<void> {
 
   try {
     await client.send(new HeadBucketCommand({ Bucket: config.bucket }));
-    console.log("✓ R2 connected");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`✗ R2 configuration present but connection failed: ${message}`);
+    return { status: "healthy", detail: "Object storage bucket reachable" };
+  } catch {
+    return {
+      status: "down",
+      detail: "Object storage bucket is not reachable",
+    };
   }
 }

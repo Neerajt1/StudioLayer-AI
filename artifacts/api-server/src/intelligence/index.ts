@@ -108,12 +108,34 @@ export {
   buildFootwearStylingPrompt,
   buildFootwearBatchConsistencyRules,
 } from "./footwear-intelligence";
-export type { FootwearStylingMode, FootwearStylingResolution } from "./footwear-intelligence";
+export type {
+  FootwearStylingMode,
+  FootwearStylingResolution,
+  FootwearRole,
+} from "./footwear-intelligence";
 
-export { analyzeGarment }           from "./garment-analyzer";
+export {
+  resolveLookDirection,
+  describeLookDirection,
+  selectFootwearForLookDirection,
+  defaultFootwearForLookDirection,
+  defaultBottomForLookDirection,
+  defaultInnerLayerForLookDirection,
+  sneakersAllowedForLookDirection,
+  isSneakerFootwearDescription,
+  isFootwearCompatibleWithLookDirection,
+  footwearPreferenceScore,
+  lookDirectionFromOutfitStyle,
+  applyPlacementOutfitGuards,
+  buildHardFallbackOutfit,
+  knowledgeBaseForLookDirection,
+} from "./look-direction";
+export type { LookDirection } from "./look-direction";
+
+export { analyzeGarment, buildGarmentAnalysisVisionContent } from "./garment-analyzer";
 export { FashionKnowledgeBase }     from "./fashion-knowledge-base";
 export { selectStyleMode, describeStyleMode } from "./style-engine";
-export { getCompletionPlan }        from "./wardrobe-completion";
+export { getCompletionPlan, resolveWardrobeCompletionPlan } from "./wardrobe-completion";
 
 export type {
   GarmentProfile,

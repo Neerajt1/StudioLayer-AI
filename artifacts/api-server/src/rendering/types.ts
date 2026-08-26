@@ -49,6 +49,10 @@ export function mapToFashnCategory(intelligenceCategory: string): FashnCategory 
 export interface RenderingRequest {
   renderId: number;
   sourceImageUrl: string;
+  /** Optional back-view garment image — analyzer supplementary input only. */
+  backImageUrl?: string;
+  /** Optional detail/close-up garment image — analyzer supplementary input only. */
+  detailImageUrl?: string;
   modelGender?: string | null;
   modelAgeRange?: string | null;
   modelPose?: string | null;

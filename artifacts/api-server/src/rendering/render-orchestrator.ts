@@ -33,7 +33,9 @@ import { StandardRenderingStrategy }       from "./strategies/standard-strategy"
 import { HybridRenderingStrategy }         from "./strategies/hybrid-strategy";
 import { RENDERING_CONFIG }                from "./rendering-config";
 import {
-  prepareGarmentImage,
+  prepareGarmentReferenceForGeneration,
+}                                           from "../services/image-processing/garment-reference-sheet.js";
+import {
   resolveModelImage,
   mapStyleModeToTemplate,
 }                                           from "./preprocessing";
@@ -231,10 +233,17 @@ export class RenderOrchestrator {
 
     // ── Parallel: BirefNet preprocessing + Intelligence Engine ───────────────
     const [garmentImageUrl, intelligenceResult] = await Promise.all([
-      prepareGarmentImage(request.sourceImageUrl, renderId),
+      prepareGarmentReferenceForGeneration({
+        frontImageUrl: request.sourceImageUrl,
+        backImageUrl: request.backImageUrl,
+        detailImageUrl: request.detailImageUrl,
+        renderId,
+      }).then((resolved) => resolved.garmentImageUrl),
       runIntelligenceAnalysis({
         renderId,
         garmentImageUrl:  request.sourceImageUrl,
+        backImageUrl:     request.backImageUrl,
+        detailImageUrl:   request.detailImageUrl,
         garmentPlacement: request.garmentPlacement,
         garmentLengthSelection: request.garmentLengthSelection as never,
         modelGender:      request.modelGender,

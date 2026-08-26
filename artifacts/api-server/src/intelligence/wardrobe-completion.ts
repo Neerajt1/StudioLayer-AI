@@ -72,11 +72,66 @@ const COMPLETION_PLANS: Record<GarmentCategory, WardrobeCompletionPlan> = {
 /**
  * Returns the wardrobe completion plan for a given garment category.
  * Always safe — defaults to tops plan if category is unrecognised.
+ *
+ * Prefer {@link resolveWardrobeCompletionPlan} when garmentPlacement is known
+ * so Top Wear / Full Outfit semantics are honoured.
  */
 export function getCompletionPlan(
   category: GarmentCategory,
 ): WardrobeCompletionPlan {
   return COMPLETION_PLANS[category] ?? COMPLETION_PLANS["tops"];
+}
+
+/**
+ * Resolves completion plan from detected category + user garment placement.
+ *
+ * Top Wear (upper_body):
+ *   Complete the missing lower half into a full commercial look.
+ *   Even if vision misclassifies a top as one-pieces, still require a bottom.
+ *
+ * Full Outfit (full_body):
+ *   Present the uploaded complete product — do not invent additional garments.
+ *
+ * Bottom Wear (lower_body):
+ *   Complete the missing upper half.
+ */
+export function resolveWardrobeCompletionPlan(
+  category: GarmentCategory,
+  garmentPlacement?: string | null,
+): WardrobeCompletionPlan {
+  if (garmentPlacement === "upper_body") {
+    if (category === "outerwear") {
+      return {
+        ...COMPLETION_PLANS.outerwear,
+        rationale:
+          "Top Wear (outerwear) — complete with inner layer, bottom, and footwear into a full commercial look",
+      };
+    }
+    return {
+      ...COMPLETION_PLANS.tops,
+      rationale:
+        "Top Wear — complete the missing lower half into a full commercial look (bottom + footwear)",
+    };
+  }
+
+  if (garmentPlacement === "lower_body") {
+    return {
+      ...COMPLETION_PLANS.bottoms,
+      rationale:
+        "Bottom Wear — complete the missing upper half into a full commercial look (top + footwear)",
+    };
+  }
+
+  if (garmentPlacement === "full_body") {
+    return {
+      uploadedCategory: category,
+      requiredSlots: ["footwear", "accessories"],
+      rationale:
+        "Full Outfit — present the uploaded complete product; do not invent additional garments",
+    };
+  }
+
+  return getCompletionPlan(category);
 }
 
 /**

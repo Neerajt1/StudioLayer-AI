@@ -45,10 +45,59 @@ export interface PhotoshootInput {
    * Tells the model exactly what the user wants changed, while preserving everything else.
    */
   refinementInstruction?: string;
+  /**
+   * Optional multi-view Ref 1 correspondence (Front/Back/Detail panel mapping).
+   * Present only when a composed garment reference sheet is used.
+   * Appended to the primary garment instruction for fresh generation only.
+   */
+  garmentReferenceCorrespondenceInstruction?: string;
+  /**
+   * Separate garment evidence packaging (A/B: GARMENT_EVIDENCE_MODE=separate).
+   * When set with Back and/or Detail, images are sent as independent refs.
+   */
+  garmentEvidencePackaging?: "sheet" | "separate";
+  /**
+   * Supplemental multi-view sheet URL when Front remains primary Ref 1
+   * (sheet packaging with Back/Detail). Must not replace Front construction authority.
+   */
+  garmentReferenceSheetImageUrl?: string;
+  /** Optional Back garment evidence URL — separate packaging only. */
+  garmentBackImageUrl?: string;
+  /** Optional Detail garment evidence URL — separate packaging only. */
+  garmentDetailImageUrl?: string;
+  /**
+   * Separate-mode evidence-set mapping with dynamic Reference Image numbers.
+   * Mutually exclusive with sheet correspondence in practice.
+   */
+  garmentEvidenceSetMappingInstruction?: string;
+  /** Talent Reference Image index for separate-mode prompt retargeting (default 2). */
+  garmentEvidenceTalentReferenceImageNumber?: number;
   /** Pipeline observability context — diagnostics only, no behavior change. */
   pipelineTrace?: import("../../lib/render-pipeline-observability.js").PipelineTraceContext;
   /** Native output resolution tier — 2K (default) or 4K. Refinements ignore this. */
   outputResolution?: import("./rendering.config.js").NativeOutputResolution;
+  /**
+   * Identity forensics context — diagnostics only.
+   * Does not affect generation, prompts, or image packaging.
+   */
+  identityForensics?: import("./identity-forensics.js").IdentityForensicsContext;
+  /** StudioLayer environment selection — authoritative for scene (Nano Pro). */
+  locationEnvironment?: string | null;
+  /** Extra Talent identity images (same person). Primary remains modelImageUrl. */
+  additionalTalentImageUrls?: string[];
+  /**
+   * Observability only — Back/Detail supplied to garment preparation.
+   * Sheet packaging does not forward those URLs to the provider.
+   */
+  garmentEvidenceHasBack?: boolean;
+  garmentEvidenceHasDetail?: boolean;
+  /** Observability only — prepareGarmentReference mode. */
+  garmentReferenceMode?: string;
+  /**
+   * Per-shot: pose requires support furniture (chair/stool/step).
+   * Used by Nano Pro Stage-1 furniture authority conflict resolution.
+   */
+  perShotFurnitureRequired?: boolean[];
 }
 
 /** A single generated image returned by the engine. */
@@ -96,10 +145,45 @@ export interface ProviderInput {
   previousOutputUrl?: string;
   /** Pre-built refinement instruction appended to the garment instruction. */
   refinementInstruction?: string;
+  /**
+   * Optional multi-view Ref 1 correspondence (Front/Back/Detail panel mapping).
+   * Present only when a composed garment reference sheet is used.
+   */
+  garmentReferenceCorrespondenceInstruction?: string;
+  /** Separate garment evidence packaging (A/B experiment). */
+  garmentEvidencePackaging?: "sheet" | "separate";
+  /** Supplemental multi-view sheet when Front remains primary Ref 1. */
+  garmentReferenceSheetImageUrl?: string;
+  garmentBackImageUrl?: string;
+  garmentDetailImageUrl?: string;
+  garmentEvidenceSetMappingInstruction?: string;
+  garmentEvidenceTalentReferenceImageNumber?: number;
   /** Pipeline observability context — diagnostics only, no behavior change. */
   pipelineTrace?: import("../../lib/render-pipeline-observability.js").PipelineTraceContext;
   /** Native output resolution tier — 2K (default) or 4K. Refinements ignore this. */
   outputResolution?: import("./rendering.config.js").NativeOutputResolution;
+  /**
+   * Identity forensics context — diagnostics only.
+   * Does not affect generation, prompts, or image packaging.
+   */
+  identityForensics?: import("./identity-forensics.js").IdentityForensicsContext;
+  /** StudioLayer environment selection — authoritative for scene (Nano Pro). */
+  locationEnvironment?: string | null;
+  /** Extra Talent identity images (same person). Primary remains modelImageUrl. */
+  additionalTalentImageUrls?: string[];
+  /**
+   * Observability only — Back/Detail supplied to garment preparation.
+   * Sheet packaging does not forward those URLs to the provider.
+   */
+  garmentEvidenceHasBack?: boolean;
+  garmentEvidenceHasDetail?: boolean;
+  /** Observability only — prepareGarmentReference mode. */
+  garmentReferenceMode?: string;
+  /**
+   * Per-shot: pose requires support furniture (chair/stool/step).
+   * Used by Nano Pro Stage-1 furniture authority conflict resolution.
+   */
+  perShotFurnitureRequired?: boolean[];
 }
 
 /** Contract every rendering provider must satisfy. */

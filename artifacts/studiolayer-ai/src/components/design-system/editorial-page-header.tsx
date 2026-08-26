@@ -15,7 +15,8 @@ export type EditorialPageCompanion =
   | 'Talent'
   | 'Gallery'
   | 'Profile'
-  | 'Membership';
+  | 'Membership'
+  | 'Admin';
 
 export interface EditorialPageHeaderProps {
   /** Companion chapter word — baseline-aligned with fixed "Studio" hero */

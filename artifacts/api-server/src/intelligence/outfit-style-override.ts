@@ -122,7 +122,7 @@ const OVERRIDE_RULES: Record<string, RecommendedOutfit> = {
   full_womens_ai_recommended:  { footwear: "Nude Strappy Heels",       accessories: ["Minimal Gold Jewellery"]  },
   full_womens_formal:          { footwear: "Black Pointed-Toe Heels",  accessories: ["Clutch Bag"]              },
   full_womens_business_casual: { footwear: "Nude Block-Heel Pumps",    accessories: ["Structured Tote Bag"]     },
-  full_womens_casual:          { footwear: "White Sneakers",           accessories: ["Crossbody Bag"]           },
+  full_womens_casual:          { footwear: "White Sneakers",           accessories: ["Small Hoop Earrings"]     },
   full_womens_denim:           { footwear: "White Canvas Sneakers",    accessories: ["Denim Tote"]              },
   full_womens_streetwear:      { footwear: "Chunky Platform Sneakers", accessories: ["Mini Backpack"]           },
   full_womens_ethnic:          { footwear: "Embellished Juttis",       accessories: ["Statement Earrings"]      },

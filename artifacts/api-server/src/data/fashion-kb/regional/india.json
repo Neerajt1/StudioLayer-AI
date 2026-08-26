@@ -12,7 +12,7 @@
           "name": "Women's Kurti / Ethnic Top",
           "match": {
             "category": "tops",
-            "subcategory": ["kurti", "ethnic top", "embroidered top", "anarkali top", "cotton kurti"],
+            "subcategory": ["kurti", "kurta", "ethnic top", "embroidered top", "anarkali top", "cotton kurti"],
             "gender": ["womens"]
           },
           "recommendations": {

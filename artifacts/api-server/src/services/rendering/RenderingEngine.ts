@@ -110,8 +110,24 @@ export class RenderingEngine {
       perShotPoseReferenceUrls: input.perShotPoseReferenceUrls,
       previousOutputUrl: input.previousOutputUrl,
       refinementInstruction: input.refinementInstruction,
+      garmentReferenceCorrespondenceInstruction:
+        input.garmentReferenceCorrespondenceInstruction,
+      garmentEvidencePackaging: input.garmentEvidencePackaging,
+      garmentReferenceSheetImageUrl: input.garmentReferenceSheetImageUrl,
+      garmentBackImageUrl: input.garmentBackImageUrl,
+      garmentDetailImageUrl: input.garmentDetailImageUrl,
+      garmentEvidenceSetMappingInstruction: input.garmentEvidenceSetMappingInstruction,
+      garmentEvidenceTalentReferenceImageNumber:
+        input.garmentEvidenceTalentReferenceImageNumber,
       pipelineTrace: input.pipelineTrace,
       outputResolution: input.outputResolution,
+      identityForensics: input.identityForensics,
+      locationEnvironment: input.locationEnvironment,
+      additionalTalentImageUrls: input.additionalTalentImageUrls,
+      garmentEvidenceHasBack: input.garmentEvidenceHasBack,
+      garmentEvidenceHasDetail: input.garmentEvidenceHasDetail,
+      garmentReferenceMode: input.garmentReferenceMode,
+      perShotFurnitureRequired: input.perShotFurnitureRequired,
     });
 
     const durationMs = Date.now() - t0;

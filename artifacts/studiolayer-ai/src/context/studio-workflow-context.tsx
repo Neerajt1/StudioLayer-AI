@@ -43,6 +43,8 @@ interface StudioWorkflowContextValue {
   workspace: StudioWorkspaceState;
   patchWorkflow: (patch: Partial<StudioWorkflow>) => void;
   setSourceImageUrl: (url: string) => void;
+  setBackImageUrl: (url: string) => void;
+  setDetailImageUrl: (url: string) => void;
   setGarmentPlacement: (placement: GarmentPlacement) => void;
   setGarmentLengthSelection: (selection: GarmentLengthSelection) => void;
   setTalentId: (id: string) => void;
@@ -63,6 +65,8 @@ function hasWorkspaceContent(session: { workflow: StudioWorkflow; workspace: Stu
   const { workflow, workspace } = session;
   return Boolean(
     workflow.sourceImageUrl
+    || workflow.backImageUrl
+    || workflow.detailImageUrl
     || workflow.talentId
     || workflow.garmentPlacement
     || workspace.activeRenderIds.length > 0,
@@ -142,6 +146,14 @@ export function StudioWorkflowProvider({ children }: { children: ReactNode }) {
     patchWorkflow({ sourceImageUrl: url });
   }, [patchWorkflow]);
 
+  const setBackImageUrl = useCallback((url: string) => {
+    patchWorkflow({ backImageUrl: url });
+  }, [patchWorkflow]);
+
+  const setDetailImageUrl = useCallback((url: string) => {
+    patchWorkflow({ detailImageUrl: url });
+  }, [patchWorkflow]);
+
   const setGarmentPlacement = useCallback((placement: GarmentPlacement) => {
     patchWorkflow({
       garmentPlacement: placement,
@@ -191,6 +203,8 @@ export function StudioWorkflowProvider({ children }: { children: ReactNode }) {
       workspace,
       patchWorkflow,
       setSourceImageUrl,
+      setBackImageUrl,
+      setDetailImageUrl,
       setGarmentPlacement,
       setGarmentLengthSelection,
       setTalentId,
@@ -209,6 +223,8 @@ export function StudioWorkflowProvider({ children }: { children: ReactNode }) {
       workspace,
       patchWorkflow,
       setSourceImageUrl,
+      setBackImageUrl,
+      setDetailImageUrl,
       setGarmentPlacement,
       setGarmentLengthSelection,
       setTalentId,

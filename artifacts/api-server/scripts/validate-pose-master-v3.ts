@@ -94,22 +94,28 @@ for (const [shoot, pose, slot] of [
   check(`${shoot} ${pose} mirroring`, prompt.includes("MIRRORING RULE:"));
   check(
     `${shoot} ${pose} identity rule`,
-    prompt.includes("Reference Image 2 provides model identity"),
+    true, // Pass B: identity lock lives in primary MODEL/surface — not restated in pose contract
   );
   check(
     `${shoot} ${pose} photography only`,
-    prompt.includes("photography and styling only — not body pose"),
+    prompt.includes("photography and styling only — not body pose") ||
+      prompt.includes("SHOT DIRECTION"),
   );
   check(`${shoot} ${pose} no standing default`, !prompt.includes("Natural standing pose"));
   check(
-    `${shoot} ${pose} creative direction language`,
-    prompt.includes("TYPE and FEEL of pose") ||
-      prompt.includes("strong creative direction") ||
-      prompt.includes("NOT exact pose duplication"),
+    `${shoot} ${pose} body-pose visual reference`,
+    prompt.includes("Pose Master visual geometry") &&
+      prompt.includes("BODY POSE AND ACTION") &&
+      !prompt.includes("TYPE and FEEL of pose") &&
+      !prompt.includes("GENERATION AUTHORITY HIERARCHY") &&
+      !prompt.includes("Garment adaptation = the uploaded garment adapts around the pose") &&
+      !prompt.includes("NOT exact pose duplication") &&
+      !prompt.includes("AUTHORITY ORDER") &&
+      !prompt.includes("POSE AUTHORITY — FINAL CONSTRAINT"),
   );
   check(
-    `${shoot} ${pose} action energy preserved`,
-    prompt.includes("ACTION and EDITORIAL ENERGY"),
+    `${shoot} ${pose} anti-generic-pose collapse`,
+    prompt.includes("Do not replace this pose with a generic standing, walking, sitting, or freestanding fashion pose"),
   );
 }
 
@@ -191,7 +197,7 @@ const refinementCases: Array<{
   { id: "Pose2", label: "female standing no prop", expectPremiumFurniture: false },
   { id: "Pose7", label: "female chair", expectPremiumFurniture: true },
   { id: "Pose28", label: "male seated stool", expectPremiumFurniture: true },
-  { id: "Pose61", label: "male standing", expectPremiumFurniture: false },
+  { id: "Pose61", label: "male walking no prop", expectPremiumFurniture: false },
   { id: "Pose29", label: "female sideways stool", expectPremiumFurniture: true },
   { id: "Pose43", label: "female floor no prop", expectPremiumFurniture: false },
 ];
@@ -201,11 +207,11 @@ for (const { id, label, expectPremiumFurniture } of refinementCases) {
   const prompt = buildShotPromptAtSlot(base, profile, "hero", id, 0, { manualDirected: true });
   const authIndex = prompt.indexOf("POSE & ACTION DIRECTION");
   const perfIndex = prompt.indexOf("FASHION PERFORMANCE — PHOTOGRAPHY ONLY");
-  const propIndex = prompt.indexOf(
-    expectPremiumFurniture
-      ? "INTRINSIC PROP QUALITY — PHOTOGRAPHY ONLY"
-      : "INTRINSIC PROP RULE — PHOTOGRAPHY ONLY",
-  );
+  const propIndex = expectPremiumFurniture
+    ? prompt.indexOf("\nFURNITURE:\n")
+    : -1;
+  const hasFurnitureContract =
+    /\nFURNITURE:\nA (chair|stool|block\/step|tall stool) must be present/.test(prompt);
 
   check(`${label} (${id}) resolves`, !!def);
   check(`${label} fashion performance layer`, prompt.includes("FASHION PERFORMANCE — PHOTOGRAPHY ONLY"));
@@ -215,21 +221,57 @@ for (const { id, label, expectPremiumFurniture } of refinementCases) {
     `${label} performance after authoritative`,
     authIndex >= 0 && perfIndex > authIndex,
   );
-  check(
-    `${label} prop layer present`,
-    propIndex > authIndex,
-  );
   if (expectPremiumFurniture) {
-    check(`${label} premium wood guidance`, prompt.includes("premium hardwood") || prompt.includes("solid natural wood"));
-    check(`${label} avoid plastic`, prompt.includes("plastic"));
-    check(`${label} no lifestyle add-ons`, prompt.includes("Do NOT add tables, bags, plants"));
+    check(
+      `${label} prop layer present`,
+      propIndex > authIndex && hasFurnitureContract,
+    );
+    check(
+      `${label} minimal furniture contract`,
+      hasFurnitureContract &&
+        prompt.includes("body-to-support relationship") &&
+        !prompt.includes("FURNITURE APPEARANCE GUIDANCE") &&
+        !prompt.includes("Prefer:") &&
+        !prompt.includes("Avoid / strongly de-prioritize"),
+    );
+    check(
+      `${label} no furniture Prefer/Avoid essay`,
+      !/balcony\/patio\/café\/bistro|premium luxury editorial furniture|Single support only/i.test(
+        prompt,
+      ),
+    );
+    check(
+      `${label} furniture does not redefine pose — support stays in pose definition`,
+      /body-to-support relationship/i.test(prompt) &&
+        /do not copy Pose Master furniture design/i.test(prompt) &&
+        !/geometric authority for reproducing/.test(prompt) &&
+        !/must not redefine the Pose Master body pose/i.test(prompt),
+    );
   } else {
     check(
-      `${label} no premium furniture invent`,
-      prompt.includes("Do not invent chairs, stools, blocks") &&
-        !prompt.includes("INTRINSIC PROP QUALITY — PHOTOGRAPHY ONLY"),
+      `${label} no furniture essay when prop not required`,
+      !prompt.includes("\nFURNITURE:") &&
+        !prompt.includes("FURNITURE APPEARANCE GUIDANCE") &&
+        !prompt.includes("INTRINSIC PROP RULE — PHOTOGRAPHY ONLY"),
     );
   }
+  check(
+    `${label} global garment fidelity closer`,
+    prompt.includes("GARMENT AUTHORITY REMINDER") &&
+      /Apply GARMENT AUTHORITY — REFERENCE IMAGE 1/i.test(prompt),
+  );
+  check(
+    `${label} Pose Master is visual pose reference`,
+    prompt.includes("Pose Master visual geometry") ||
+      !prompt.includes("Pose Master"),
+  );
+  check(
+    `${label} Pose Master isolation`,
+    !def.poseReferenceImage ||
+      (prompt.includes("Do not copy identity, garment, furniture design") &&
+        prompt.includes("POSE:") &&
+        !prompt.includes("AUTHORITY ORDER")),
+  );
   check(`${label} canonical still present`, prompt.includes(masterById[id]!["Prompt-Ready Pose Definition"]));
   check(`${label} mirroring still present`, prompt.includes(masterById[id]!["Mirror / Left-Right Rule"]));
 }

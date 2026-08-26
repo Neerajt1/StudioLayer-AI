@@ -644,7 +644,7 @@ components:
           enum: [casual, high_fashion, athletic, minimalist]
         locationEnvironment:
           type: string
-          enum: [photo_studio, urban_street, luxury_interior, nature]
+          enum: [photo_studio, white_studio, grey_gradient_studio, urban_street, luxury_interior, nature]
         status:
           type: string
           enum: [pending, processing, completed, failed]
@@ -763,12 +763,24 @@ components:
       properties:
         sourceImageUrl:
           type: string
+          description: >
+            URL or path of the uploaded front garment image (required primary reference).
+        backImageUrl:
+          type: string
+          description: >
+            Optional URL or path of a back-view garment image.
+            Supplementary visual reference only; front (sourceImageUrl) remains authoritative.
+        detailImageUrl:
+          type: string
+          description: >
+            Optional URL or path of a detail/close-up garment image.
+            Supplementary visual reference only; front (sourceImageUrl) remains authoritative.
         modelPersona:
           type: string
           enum: [casual, high_fashion, athletic, minimalist, high_fashion_editorial, natural_smile, confident_commercial]
         locationEnvironment:
           type: string
-          enum: [photo_studio, urban_street, luxury_interior, nature]
+          enum: [photo_studio, white_studio, grey_gradient_studio, urban_street, luxury_interior, nature]
         modelDemographics:
           type: string
           enum: [caucasian, east_asian, south_asian, afro_american, hispanic]

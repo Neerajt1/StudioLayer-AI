@@ -1,34 +1,36 @@
 // ---------------------------------------------------------------------------
 // StudioLayer AI — Standard Image Architecture (Batch 23)
 //
-// Platform master asset standard: 3200 × 4000 px (4:5).
-// The first generated image is the immutable Master Asset — all derivatives
-// (crops, AI refinements, future exports) branch from it.
+// Platform master aspect: 4:5. Native pixel size is selected at generation time
+// as 2K or 4K via OpenRouter image_config (image_size) — not via prompt text.
+// PLATFORM_MASTER_WIDTH/HEIGHT remain the canonical post-generation master
+// dimensions used by crop / lineage metadata (not generation prompt control).
 // ---------------------------------------------------------------------------
 
-/** Permanent platform output standard for every generation. */
+/** Canonical post-generation master dimensions (crop / lineage metadata). */
 export const PLATFORM_MASTER_WIDTH = 3200;
 export const PLATFORM_MASTER_HEIGHT = 4000;
 export const PLATFORM_ASPECT_RATIO = 4 / 5;
 export const PLATFORM_ASPECT_LABEL = "4:5";
 
-/** Injected into OpenRouter generation and refinement prompts. */
+/**
+ * Single textual output-quality / framing statement for generation prompts.
+ * Pixel tier (2K vs 4K) is controlled exclusively by runtime image_config —
+ * do not hard-code fixed pixel dimensions here.
+ */
 export const PLATFORM_IMAGE_STANDARD_INSTRUCTION = `
-PLATFORM IMAGE STANDARD — MASTER ASSET (MANDATORY):
-
-Every output must be exactly ${PLATFORM_MASTER_WIDTH} × ${PLATFORM_MASTER_HEIGHT} pixels (${PLATFORM_ASPECT_LABEL} aspect ratio).
-This is the permanent StudioLayer AI platform standard for Hero, Campaign, and Editorial generations.
-Output at full resolution — suitable for e-commerce, editorial, catalogues, print, Instagram, and marketplaces.
+PLATFORM IMAGE STANDARD:
+Output a full-resolution ${PLATFORM_ASPECT_LABEL} fashion photograph at the native resolution requested by this generation (2K or 4K via the provider image configuration).
 Do not crop, letterbox, pad, stretch, or distort to a different aspect ratio.
-Preserve original composition and framing within the ${PLATFORM_ASPECT_LABEL} frame.
-The first generated image is the Master Asset — never resize below this standard.`;
+Preserve composition and framing within the ${PLATFORM_ASPECT_LABEL} frame.
+Suitable for e-commerce, editorial, catalogues, and marketplaces.`;
 
-/** Appended to every AI refinement — preserves master dimensions. */
+/** Appended to every AI refinement — preserves framing; resolution follows the request/source. */
 export const REFINEMENT_MASTER_ASSET_PRESERVATION = `
 MASTER ASSET PRESERVATION — REFINEMENT (MANDATORY):
 
-Preserve exact resolution (${PLATFORM_MASTER_WIDTH} × ${PLATFORM_MASTER_HEIGHT}), aspect ratio (${PLATFORM_ASPECT_LABEL}),
-and image framing from Reference Image 2 unless explicitly performing Remove Background.
+Preserve aspect ratio (${PLATFORM_ASPECT_LABEL}) and image framing from Reference Image 2 unless explicitly performing Remove Background.
+Preserve the native output resolution requested for this refinement — do not invent a different pixel size.
 Do not accidentally resize, distort, re-crop, or change composition.
 The refinement creates a child variant — the Master Asset remains immutable and is never overwritten.
 Preserve colours, garment, identity, background (except Remove Background), and metadata lineage.`;

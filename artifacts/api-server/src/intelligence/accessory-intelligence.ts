@@ -61,6 +61,25 @@ const OBSCURING_ACCESSORY_KEYWORDS = [
   "crossbody bag",
 ];
 
+/** Carry / hand-bag items — must not be batch-locked into every shot. */
+const CARRY_ACCESSORY_KEYWORDS = [
+  "bag",
+  "handbag",
+  "purse",
+  "tote",
+  "clutch",
+  "potli",
+  "backpack",
+  "crossbody",
+  "satchel",
+  "jute",
+  "woven bag",
+];
+
+export function isCarryAccessory(accessory: string): boolean {
+  return containsKeyword(accessory, CARRY_ACCESSORY_KEYWORDS);
+}
+
 const ACCESSORY_POOL: Record<
   "mens" | "womens" | "kids" | "unisex",
   Record<GenerationContext, string[]>
@@ -72,8 +91,8 @@ const ACCESSORY_POOL: Record<
   },
   womens: {
     hero: ["Minimal Stud Earrings"],
-    campaign: ["Small Hoop Earrings", "Crossbody Bag", "Classic Sunglasses"],
-    editorial: ["Delicate Earrings", "Fine Necklace", "Bracelet", "Structured Handbag", "Cat-Eye Sunglasses"],
+    campaign: ["Small Hoop Earrings", "Classic Sunglasses"],
+    editorial: ["Delicate Earrings", "Fine Necklace", "Bracelet", "Cat-Eye Sunglasses"],
   },
   kids: {
     hero: [],
@@ -164,6 +183,8 @@ function maxAccessoriesForContext(context: GenerationContext): number {
 
 /**
  * Replace or filter outfit accessories so they respect model demographics and shoot type.
+ * Carry bags are stripped from the shared shoot outfit — they must not become a persistent
+ * batch accessory unless a specific pose later requires a bag as pose geometry.
  */
 export function applyContextAwareAccessories(
   outfit: RecommendedOutfit,
@@ -177,12 +198,15 @@ export function applyContextAwareAccessories(
   const maxAccessories = maxAccessoriesForContext(context);
 
   const filtered = (outfit.accessories ?? []).filter(
-    (accessory) => isAccessoryAppropriate(accessory, profile, modelGender),
+    (accessory) =>
+      isAccessoryAppropriate(accessory, profile, modelGender)
+      && !isCarryAccessory(accessory),
   );
 
   const resolved = [...filtered];
   for (const candidate of pool) {
     if (resolved.length >= maxAccessories) break;
+    if (isCarryAccessory(candidate)) continue;
     if (resolved.some((item) => item.toLowerCase() === candidate.toLowerCase())) continue;
     if (!isAccessoryAppropriate(candidate, profile, modelGender)) continue;
     resolved.push(candidate);
@@ -190,6 +214,7 @@ export function applyContextAwareAccessories(
 
   const trimmed = resolved
     .filter((accessory) => !accessoryObscuresGarment(accessory, profile))
+    .filter((accessory) => !isCarryAccessory(accessory))
     .slice(0, maxAccessories);
 
   return {
@@ -206,21 +231,36 @@ export function accessoryPromptGuidance(
   const gender = resolveModelGender(modelGender, profile.gender);
   const context = imageCountToGenerationContext(shots);
 
+  const carryRule =
+    "CARRY ACCESSORIES: Do not invent handbags, totes, jute/woven bags, potli bags, clutches, or backpacks unless the selected pose for that shot explicitly requires a bag as part of the body pose. Never repeat the same carry bag across multiple shots of the same garment.";
+
   if (isKidsProfile(profile, modelGender)) {
-    return "Accessories must be age-appropriate for a child model only — never luxury jewellery, mature styling, or adult fashion accessories.";
+    return [
+      "Accessories must be age-appropriate for a child model only — never luxury jewellery, mature styling, or adult fashion accessories.",
+      carryRule,
+    ].join(" ");
   }
 
   if (gender === "mens") {
-    return context === "editorial"
-      ? "Accessories may include a luxury watch, bracelet, chain, ring, or sunglasses — never feminine jewellery or handbags."
-      : "Accessories must remain commercially wearable for a male model — watch or sunglasses only, never feminine jewellery.";
+    return [
+      context === "editorial"
+        ? "Accessories may include a luxury watch, bracelet, chain, ring, or sunglasses — never feminine jewellery or handbags."
+        : "Accessories must remain commercially wearable for a male model — watch or sunglasses only, never feminine jewellery.",
+      carryRule,
+    ].join(" ");
   }
 
   if (gender === "womens") {
-    return context === "editorial"
-      ? "Accessories may include earrings, necklace, bracelet, handbag, or sunglasses — expressive but brand-appropriate, never obscuring the hero garment."
-      : "Accessories should remain commercially wearable — subtle earrings, bag, or sunglasses that do not dominate the garment.";
+    return [
+      context === "editorial"
+        ? "Optional accessories may include earrings, necklace, bracelet, or sunglasses — expressive but brand-appropriate, never obscuring the hero garment."
+        : "Optional accessories should remain commercially wearable — subtle earrings or sunglasses that do not dominate the garment.",
+      carryRule,
+    ].join(" ");
   }
 
-  return "Accessories must enhance styling without obscuring the hero garment or conflicting with the selected model demographic.";
+  return [
+    "Accessories must enhance styling without obscuring the hero garment or conflicting with the selected model demographic.",
+    carryRule,
+  ].join(" ");
 }

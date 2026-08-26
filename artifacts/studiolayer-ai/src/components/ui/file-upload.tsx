@@ -9,12 +9,24 @@ import { X, ImageIcon, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FileUploadProps {
-  /** Controlled preview — must match workflow.sourceImageUrl */
+  /** Controlled preview — must match the corresponding workflow image URL */
   previewUrl?: string | null;
   onFileSelect: (url: string) => void;
   accept?: string;
   className?: string;
   disabled?: boolean;
+  /** Accessible name for the upload zone */
+  ariaLabel?: string;
+  /** Empty-state CTA label */
+  uploadLabel?: string;
+  /** Preview alt text */
+  previewAlt?: string;
+  /** Show the ideal-garment reference guidance (front upload only) */
+  showIdealReference?: boolean;
+  /** Compact empty/preview layout for optional secondary references */
+  compact?: boolean;
+  /** Optional data-testid prefix for zone + input */
+  testId?: string;
 }
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
@@ -27,6 +39,12 @@ export function FileUpload({
   accept = 'image/*',
   className,
   disabled,
+  ariaLabel = 'Upload garment image',
+  uploadLabel = 'Upload Garment Photo',
+  previewAlt = 'Garment preview',
+  showIdealReference = true,
+  compact = false,
+  testId = 'file-upload',
 }: FileUploadProps) {
   const inputRef   = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging]   = useState(false);
@@ -85,7 +103,7 @@ export function FileUpload({
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
-        aria-label="Upload garment image"
+        aria-label={ariaLabel}
         className={cn(
           'border border-dashed rounded bg-card transition-all duration-200 cursor-pointer overflow-hidden',
           'border-border',
@@ -101,7 +119,7 @@ export function FileUpload({
         onDrop={handleDrop}
         onClick={previewUrl ? undefined : triggerInput}
         onKeyDown={handleKeyDown}
-        data-testid="file-upload-zone"
+        data-testid={`${testId}-zone`}
       >
         <input
           ref={inputRef}
@@ -110,15 +128,18 @@ export function FileUpload({
           onChange={handleChange}
           className="hidden"
           disabled={disabled}
-          data-testid="file-upload-input"
+          data-testid={`${testId}-input`}
         />
 
         {previewUrl ? (
           <div className="relative group animate-in fade-in duration-300">
             <img
               src={previewUrl}
-              alt="Garment preview"
-              className="w-full h-52 object-contain bg-white"
+              alt={previewAlt}
+              className={cn(
+                'w-full object-contain bg-white',
+                compact ? 'h-36' : 'h-52',
+              )}
             />
             <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border bg-card">
               <div className="flex items-center gap-2 min-w-0">
@@ -151,7 +172,7 @@ export function FileUpload({
               </div>
             </div>
           </div>
-        ) : (
+        ) : showIdealReference ? (
           <div className="flex flex-col items-center px-4 py-7 gap-4">
             <div className="flex flex-col items-center gap-1.5">
               <p
@@ -192,12 +213,32 @@ export function FileUpload({
                 )}
               >
                 <Upload className="w-4 h-4 shrink-0" />
-                {isDragging ? 'Drop to upload' : 'Upload Garment Photo'}
+                {isDragging ? 'Drop to upload' : uploadLabel}
               </div>
               <p className="mt-1.5 text-xs text-muted-foreground font-mono">
                 or drag &amp; drop · JPG, PNG, WEBP · max 20 MB
               </p>
             </div>
+          </div>
+        ) : (
+          <div className={cn(
+            'flex flex-col items-center justify-center gap-2 text-center',
+            compact ? 'px-3 py-5' : 'px-4 py-7',
+          )}>
+            <div
+              className={cn(
+                'inline-flex items-center gap-2 rounded border border-border bg-background font-medium text-foreground transition-all duration-150',
+                compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm',
+                !disabled && 'hover:bg-muted hover:border-foreground/30',
+                isDragging && 'bg-muted border-foreground',
+              )}
+            >
+              <Upload className={cn('shrink-0', compact ? 'w-3.5 h-3.5' : 'w-4 h-4')} />
+              {isDragging ? 'Drop to upload' : uploadLabel}
+            </div>
+            <p className="text-[10px] text-muted-foreground font-mono">
+              JPG, PNG, WEBP · max 20 MB
+            </p>
           </div>
         )}
       </div>
