@@ -1,0 +1,158 @@
+/* StudioLayer AI — Welcome screen (entry overlay only) */
+
+.sl-welcome-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: #f7f7f7;
+  opacity: 1;
+  transition: opacity 320ms ease-out;
+}
+
+.sl-welcome-screen.is-exiting {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sl-welcome-screen.is-reduced-motion,
+.sl-welcome-screen.is-reduced-motion.is-exiting {
+  transition: none;
+}
+
+.sl-welcome-frame {
+  position: relative;
+  /* Preserve approved 16:10 artwork; letterbox within the viewport. */
+  width: min(100vw, calc(100dvh * 16 / 10));
+  max-width: 100vw;
+  max-height: 100dvh;
+  aspect-ratio: 16 / 10;
+  margin-inline: auto;
+}
+
+.sl-welcome-artwork {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+button.sl-welcome-enter {
+  position: absolute;
+  left: 50%;
+  /* Clearly below the curved olive arrow — invitation, not part of the arrow. */
+  top: 74%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  min-width: 10.5rem;
+  min-height: 2.5rem;
+  padding: 0.65rem 1.55rem;
+  /* Fully borderless — defeat browser / inherited button chrome */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: 0 !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  border-image: none !important;
+  border-radius: 5px;
+  background-color: #979265;
+  background-image: none;
+  color: #f7f7f7;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  outline: 0 !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-offset: 0;
+  /* Defeat Tailwind / utility ring leftovers */
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  font-family: var(--app-font-serif, 'EB Garamond', Georgia, serif);
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 160ms ease-out, background-color 160ms ease-out;
+}
+
+button.sl-welcome-enter::before,
+button.sl-welcome-enter::after {
+  content: none !important;
+  display: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
+
+button.sl-welcome-enter:hover,
+button.sl-welcome-enter:hover:focus {
+  background-color: #8a8560;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  opacity: 0.96;
+}
+
+button.sl-welcome-enter:active {
+  background-color: #7e7958;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+  opacity: 1;
+}
+
+button.sl-welcome-enter:focus {
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0 !important;
+}
+
+/* Keyboard focus only — ephemeral ring, never a permanent border */
+button.sl-welcome-enter:focus-visible {
+  outline: 2px solid #979265 !important;
+  outline-offset: 3px;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 767px) {
+  .sl-welcome-frame {
+    /* Safe fallback until approved 9:16 mobile artwork is supplied. */
+    width: min(100vw, calc(100dvh * 16 / 10));
+    max-width: calc(100vw - 1rem);
+    max-height: calc(100dvh - 1rem);
+  }
+
+  button.sl-welcome-enter {
+    top: 76%;
+    min-width: 9.5rem;
+    min-height: 2.4rem;
+    padding: 0.6rem 1.3rem;
+    font-size: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sl-welcome-screen {
+    transition: none;
+  }
+
+  button.sl-welcome-enter {
+    transition: none;
+  }
+}

@@ -18,6 +18,7 @@ import AccountPage from '@/pages/account';
 import AdminPage from '@/pages/admin';
 import NotFound from '@/pages/not-found';
 import { StudioWorkflowProvider } from '@/context/studio-workflow-context';
+import { WelcomeGate } from '@/components/welcome/welcome-gate';
 import { useEffect } from 'react';
 
 const queryClient = new QueryClient({
@@ -63,7 +64,9 @@ function App() {
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <StudioWorkflowProvider>
-            <Router />
+            <WelcomeGate>
+              <Router />
+            </WelcomeGate>
           </StudioWorkflowProvider>
         </WouterRouter>
         <Toaster />
