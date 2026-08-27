@@ -17,6 +17,8 @@ import GalleryPage from '@/pages/gallery';
 import BillingPage from '@/pages/billing';
 import AccountPage from '@/pages/account';
 import AdminPage from '@/pages/admin';
+import NanoProStandaloneTrialPage from '@/pages/experimental-nano-pro-standalone-trial';
+import NanoProIdentityFirstTrialPage from '@/pages/experimental-nano-pro-identity-first-trial';
 import NotFound from '@/pages/not-found';
 import { StudioWorkflowProvider } from '@/context/studio-workflow-context';
 import { WelcomeGate } from '@/components/welcome/welcome-gate';
@@ -55,6 +57,16 @@ function Router() {
       <Route path="/billing" component={BillingPage} />
       <Route path="/account" component={AccountPage} />
       <Route path="/admin" component={AdminPage} />
+      {/* EXPERIMENTAL ONLY — Nano Pro standalone trial (not production Create) */}
+      <Route
+        path="/experimental/nano-pro-standalone-trial"
+        component={NanoProStandaloneTrialPage}
+      />
+      {/* EXPERIMENTAL ONLY — Nano Pro identity-first / pose-second trial */}
+      <Route
+        path="/experimental/nano-pro-identity-first-trial"
+        component={NanoProIdentityFirstTrialPage}
+      />
       <Route component={NotFound} />
     </Switch>
   );

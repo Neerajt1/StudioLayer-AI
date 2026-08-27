@@ -100,6 +100,16 @@ import {
   GARMENT_LENGTH_OPTIONS,
   validateStudioWorkflow,
 } from '@/lib/studio-workflow';
+import {
+  isNanoProStandaloneQaModeEnabled,
+  runNanoProStandaloneQaCreate,
+  type NanoProStandaloneQaCreateResult,
+} from '@/lib/nano-pro-standalone-qa';
+import {
+  isNanoProIdentityFirstQaModeEnabled,
+  runNanoProIdentityFirstQaCreate,
+  type NanoProIdentityFirstQaCreateResult,
+} from '@/lib/nano-pro-identity-first-qa';
 import { StudioPostProductionPanel } from '@/components/studio/studio-refine-panel';
 import { REMOVE_BACKGROUND_TYPE } from '@/lib/refinement-types';
 import {
@@ -261,6 +271,16 @@ export default function StudioPage() {
   const [loadedResultUrls, setLoadedResultUrls] = useState<Set<string>>(() => new Set());
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
+  /** LOCAL QA ONLY — Nano Pro Create intercepts (never production renders). */
+  const nanoProIdentityFirstQaMode = isNanoProIdentityFirstQaModeEnabled();
+  const nanoProStandaloneQaMode =
+    !nanoProIdentityFirstQaMode && isNanoProStandaloneQaModeEnabled();
+  const nanoProQaActive = nanoProIdentityFirstQaMode || nanoProStandaloneQaMode;
+  const [nanoProQaPending, setNanoProQaPending] = useState(false);
+  const [nanoProQaResult, setNanoProQaResult] =
+    useState<NanoProStandaloneQaCreateResult | null>(null);
+  const [nanoProIdentityFirstQaResult, setNanoProIdentityFirstQaResult] =
+    useState<NanoProIdentityFirstQaCreateResult | null>(null);
   const completionHandledRef = useRef('');
   const creditSyncBatchRef = useRef('');
   const refinementHandledRef = useRef<number | null>(null);
@@ -329,10 +349,20 @@ export default function StudioPage() {
 
   const activeRefineSlot = refinePanelSlot ?? 0;
 
-  const resolvedOutputUrl: string | null = getSlotDisplayUrl(activeRefineSlot)
-    ?? getSlotDisplayUrl(0);
+  const resolvedOutputUrl: string | null =
+    nanoProIdentityFirstQaMode && nanoProIdentityFirstQaResult?.imageUrl
+      ? nanoProIdentityFirstQaResult.imageUrl
+      : nanoProStandaloneQaMode && nanoProQaResult?.imageUrl
+        ? nanoProQaResult.imageUrl
+        : (getSlotDisplayUrl(activeRefineSlot) ?? getSlotDisplayUrl(0));
 
-  const hasOutput    = allRenderData.some((r) => r?.status === 'completed') && !!resolvedOutputUrl;
+  const hasOutput = nanoProQaActive
+    ? Boolean(
+        nanoProIdentityFirstQaMode
+          ? nanoProIdentityFirstQaResult?.imageUrl
+          : nanoProQaResult?.imageUrl,
+      )
+    : (allRenderData.some((r) => r?.status === 'completed') && !!resolvedOutputUrl);
 
   const completedOutputSlots = activeRenderIds
     .map((id, index) => ({
@@ -360,7 +390,9 @@ export default function StudioPage() {
     completedOutputSlots.length > 0 &&
     completedOutputSlots.every((slot) => loadedResultUrls.has(slot.url!));
 
-  const showGenerationProgress = awaitingResultDisplay && !resultsReadyForDisplay;
+  const showGenerationProgress = nanoProQaActive
+    ? nanoProQaPending
+    : (awaitingResultDisplay && !resultsReadyForDisplay);
 
   const isRefinementProcessing =
     refinementPending != null &&
@@ -375,7 +407,8 @@ export default function StudioPage() {
     createRender.isPending ||
     isProcessing ||
     refineInFlight ||
-    refinementPending != null;
+    refinementPending != null ||
+    nanoProQaPending;
 
   const isAdminUser = resolveStudioAdminFlag(user, usage);
   const availableStudioCredits = resolveAvailableStudioCreditsForGate(usage, user);
@@ -387,9 +420,12 @@ export default function StudioPage() {
   });
   const cannotAffordSelectedShoot =
     isAuthenticated && !isAdminUser && availableStudioCredits < generationCreditCost;
+  // LOCAL QA: skip credit affordability so Create exercises Nano Pro without billing.
   const canCreate = canGenerateStudioWorkflow(workflow, {
-    limitBlocked: limitBlocked || cannotAffordSelectedShoot,
-    isPending: createRender.isPending,
+    limitBlocked: nanoProQaActive
+      ? false
+      : limitBlocked || cannotAffordSelectedShoot,
+    isPending: createRender.isPending || nanoProQaPending,
     isProcessing: isGenerationBusy,
   });
 
@@ -416,14 +452,16 @@ export default function StudioPage() {
   };
 
   const canAffordResolution = (outputResolution: '2K' | '4K') =>
-    hasSufficientStudioCreditsForCost(
-      usage,
-      resolveGenerationCreditCost({
-        imageCount: V1_CREATE_IMAGE_COUNT,
-        outputResolution,
-      }),
-      user,
-    );
+    nanoProQaActive
+      ? true
+      : hasSufficientStudioCreditsForCost(
+          usage,
+          resolveGenerationCreditCost({
+            imageCount: V1_CREATE_IMAGE_COUNT,
+            outputResolution,
+          }),
+          user,
+        );
 
   const beginGenerationFeedback = (preloadedUrls: string[] = []) => {
     setAwaitingResultDisplay(true);
@@ -675,7 +713,7 @@ export default function StudioPage() {
 
   const handleResolutionSelect = (outputResolution: '2K' | '4K') => {
     if (isGenerationBusy) return;
-    if (!isAuthenticated) {
+    if (nanoProQaActive || !isAuthenticated) {
       patchWorkflow({ outputResolution });
       return;
     }
@@ -726,6 +764,121 @@ export default function StudioPage() {
       toast({ title: 'Almost there', description: workflowValidation.message ?? undefined });
       return;
     }
+
+    // ── LOCAL QA: Nano Pro identity-first (takes precedence over single-shot) ──
+    if (nanoProIdentityFirstQaMode) {
+      const poseId = workflow.usedPoses?.[0]?.trim();
+      if (!poseId || !workflow.talentId || !workflow.sourceImageUrl) {
+        setShowValidation(true);
+        toast({
+          title: 'Almost there',
+          description:
+            'Talent, garment, and pose are required for Nano Pro Identity-First QA.',
+        });
+        return;
+      }
+
+      beginGenerationFeedback();
+      setNanoProQaPending(true);
+      setNanoProIdentityFirstQaResult(null);
+      setNanoProQaResult(null);
+      setActiveRenderIds([]);
+      setRootRenderIds([]);
+      setMasterOutputUrls({});
+      completionHandledRef.current = '';
+      creditSyncBatchRef.current = '';
+
+      void runNanoProIdentityFirstQaCreate({
+        modelIdentityId: workflow.talentId,
+        garmentImageUrl: workflow.sourceImageUrl,
+        poseId,
+        outputResolution: '2K',
+        garmentId: 'studio-workspace-garment',
+        persistToR2: false,
+      })
+        .then((result) => {
+          setNanoProIdentityFirstQaResult(result);
+          setNanoProQaPending(false);
+          setAwaitingResultDisplay(false);
+          setGenerationInFlight(false);
+          const urls = [result.imageUrl, result.stage1.imageUrl].filter(
+            (u): u is string => Boolean(u),
+          );
+          setLoadedResultUrls(new Set(urls));
+          if (result.error) {
+            toast({
+              title: 'Identity-First QA — Stage issue',
+              description: result.error,
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          setNanoProQaPending(false);
+          resetGenerationFeedback();
+          toast({
+            title: 'Nano Pro Identity-First QA failed',
+            description: withErrorContactHelper(renderApiErrorDescription(error)),
+          });
+        });
+      return;
+    }
+
+    // ── LOCAL QA: Nano Pro standalone intercept (no POST /renders, no credits) ──
+    if (nanoProStandaloneQaMode) {
+      const poseId = workflow.usedPoses?.[0]?.trim();
+      if (!poseId || !workflow.talentId || !workflow.sourceImageUrl) {
+        setShowValidation(true);
+        toast({
+          title: 'Almost there',
+          description: 'Talent, garment, and pose are required for Nano Pro Standalone QA.',
+        });
+        return;
+      }
+
+      beginGenerationFeedback();
+      setNanoProQaPending(true);
+      setNanoProQaResult(null);
+      setNanoProIdentityFirstQaResult(null);
+      setActiveRenderIds([]);
+      setRootRenderIds([]);
+      setMasterOutputUrls({});
+      completionHandledRef.current = '';
+      creditSyncBatchRef.current = '';
+
+      void runNanoProStandaloneQaCreate({
+        modelIdentityId: workflow.talentId,
+        garmentImageUrl: workflow.sourceImageUrl,
+        poseId,
+        outputResolution: workflow.outputResolution === '4K' ? '4K' : '2K',
+        garmentId: 'studio-workspace-garment',
+        persistToR2: false,
+      })
+        .then((result) => {
+          setNanoProQaResult(result);
+          setNanoProQaPending(false);
+          setAwaitingResultDisplay(false);
+          setGenerationInFlight(false);
+          setLoadedResultUrls(new Set([result.imageUrl]));
+          if (result.resolutionMismatch) {
+            toast({
+              title: 'Resolution mismatch',
+              description:
+                result.resolutionValidationError ??
+                'Nano Pro returned unexpected native dimensions — see QA metadata.',
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          setNanoProQaPending(false);
+          resetGenerationFeedback();
+          toast({
+            title: 'Nano Pro Standalone QA failed',
+            description: withErrorContactHelper(renderApiErrorDescription(error)),
+          });
+        });
+      return;
+    }
+
     if (isStudioCreditLimitBlocked(usage) && !isAdminUser) {
       openCreditGateDialog(generationCreditCost);
       return;
@@ -776,6 +929,9 @@ export default function StudioPage() {
     refinementHandledRef.current = null;
     setShowValidation(false);
     resetGenerationFeedback();
+    setNanoProQaPending(false);
+    setNanoProQaResult(null);
+    setNanoProIdentityFirstQaResult(null);
     completionHandledRef.current = '';
     createRender.reset();
   };
@@ -994,7 +1150,9 @@ export default function StudioPage() {
     });
   };
 
-  const showResultToolbar = hasOutput && resultsReadyForDisplay && !showGenerationProgress && !showRemoveBackgroundProgress;
+  const showResultToolbar = nanoProQaActive
+    ? hasOutput && !showGenerationProgress && !showRemoveBackgroundProgress
+    : hasOutput && resultsReadyForDisplay && !showGenerationProgress && !showRemoveBackgroundProgress;
 
   const refinePanelImageLabel =
     activeRenderIds.length > 1 && refinePanelSlot != null
@@ -1006,7 +1164,10 @@ export default function StudioPage() {
     && refinementPending.slot === slotIndex
     && isRefinementProcessing;
 
-  const showPostProductionPanel = refinePanelSlot != null && showResultToolbar;
+  const showPostProductionPanel =
+    !nanoProQaActive
+    && refinePanelSlot != null
+    && showResultToolbar;
 
   useEffect(() => {
     if (!showResultToolbar || rootRenderIds.length > 0 || activeRenderIds.length === 0) return;
@@ -1155,6 +1316,29 @@ export default function StudioPage() {
 
           <div className="relative">
             <StudioBrandWatermark />
+
+            {nanoProQaActive ? (
+              <div
+                className="mb-6 rounded border border-[#8a1c1c]/35 bg-[#8a1c1c]/08 px-4 py-3"
+                data-testid={
+                  nanoProIdentityFirstQaMode
+                    ? 'nano-pro-identity-first-qa-banner'
+                    : 'nano-pro-standalone-qa-banner'
+                }
+                role="status"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8a1c1c]">
+                  {nanoProIdentityFirstQaMode
+                    ? 'Nano Pro Identity-First Trial · Experimental — Not Production'
+                    : 'Nano Pro Standalone Trial · Experimental — Not Production'}
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-foreground/80">
+                  {nanoProIdentityFirstQaMode
+                    ? 'Local QA: Create runs Stage 1 (Talent identity anchor) then Stage 2 (garment + face-neutral pose). Nano Pro only — no Nano Regular, cascade, Studio Credits, Gallery, or production render rows.'
+                    : 'Local QA mode: Create uses Nano Pro only (no Nano Regular, no cascade). Pose Library is unchanged — face-neutral Pose Masters are applied backend-only. No Studio Credits, Gallery, or production render rows.'}
+                </p>
+              </div>
+            ) : null}
 
             <div className="relative z-[1]">
           {/* Workspace grid — hero result first on mobile */}
@@ -1334,7 +1518,9 @@ export default function StudioPage() {
                     />
                   </div>
                   <p className="sl-shoot-type-credit-total">
-                    {formatStudioCredits(generationCreditCost)}
+                    {nanoProQaActive
+                      ? 'QA · 0 Studio Credits'
+                      : formatStudioCredits(generationCreditCost)}
                   </p>
                   <button
                     type="button"
@@ -1400,17 +1586,247 @@ export default function StudioPage() {
                     ) : null}
                     {resolvedOutputUrl && showResultToolbar && (
                       <div className="absolute bottom-0 left-0 right-0 flex justify-end bg-gradient-to-t from-black/25 to-transparent p-3">
-                        <EditorialImageActions
-                          renderId={activeRenderIds[0]!}
-                          outputImageUrl={resolvedOutputUrl}
-                          editDisabled={isSlotRemovingBackground(0)}
-                          editActive={refinePanelSlot === 0}
-                          onEdit={() => handleOpenRefine(0)}
-                          onDownloadError={handleDownloadError}
-                        />
+                        {nanoProQaActive ? (
+                          <a
+                            href={resolvedOutputUrl}
+                            download={
+                              nanoProIdentityFirstQaMode
+                                ? `nano-pro-identity-first-stage2-${nanoProIdentityFirstQaResult?.trialRunId ?? 'output'}.png`
+                                : `nano-pro-qa-${nanoProQaResult?.trialRunId ?? 'output'}.png`
+                            }
+                            className="rounded bg-black/55 px-3 py-1.5 text-xs font-medium text-white"
+                          >
+                            Download QA output
+                          </a>
+                        ) : (
+                          <EditorialImageActions
+                            renderId={activeRenderIds[0]!}
+                            outputImageUrl={resolvedOutputUrl}
+                            editDisabled={isSlotRemovingBackground(0)}
+                            editActive={refinePanelSlot === 0}
+                            onEdit={() => handleOpenRefine(0)}
+                            onDownloadError={handleDownloadError}
+                          />
+                        )}
                       </div>
                     )}
                   </StudioEditorialCanvas>
+
+                  {nanoProIdentityFirstQaMode && nanoProIdentityFirstQaResult ? (
+                    <div className="mt-3 space-y-3" data-testid="nano-pro-identity-first-qa-results">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <figure className="m-0 border border-border/60 bg-muted/10 p-2">
+                          <figcaption className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                            STAGE 1 — IDENTITY ANCHOR
+                          </figcaption>
+                          {nanoProIdentityFirstQaResult.stage1.imageUrl ? (
+                            <img
+                              src={nanoProIdentityFirstQaResult.stage1.imageUrl}
+                              alt="Stage 1 identity anchor"
+                              className="w-full h-auto"
+                            />
+                          ) : (
+                            <p className="text-xs text-muted-foreground">No Stage 1 image</p>
+                          )}
+                          <p className="mt-2 font-mono text-[10px] leading-relaxed">
+                            hash: {nanoProIdentityFirstQaResult.stage1.imageSha256_16 ?? '—'}
+                            <br />
+                            provider:{' '}
+                            {nanoProIdentityFirstQaResult.stage1.openRouterProvider ?? '—'}
+                          </p>
+                        </figure>
+                        <figure className="m-0 border border-border/60 bg-muted/10 p-2">
+                          <figcaption className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                            STAGE 2 — FINAL POSE RESULT
+                          </figcaption>
+                          {nanoProIdentityFirstQaResult.stage2.imageUrl ||
+                          nanoProIdentityFirstQaResult.imageUrl ? (
+                            <img
+                              src={
+                                nanoProIdentityFirstQaResult.stage2.imageUrl ??
+                                nanoProIdentityFirstQaResult.imageUrl
+                              }
+                              alt="Stage 2 final pose result"
+                              className="w-full h-auto"
+                            />
+                          ) : (
+                            <p className="text-xs text-muted-foreground">No Stage 2 image</p>
+                          )}
+                          <p className="mt-2 font-mono text-[10px] leading-relaxed">
+                            request hash:{' '}
+                            {nanoProIdentityFirstQaResult.stage2.requestContentSha256_16 ??
+                              '—'}
+                            <br />
+                            provider:{' '}
+                            {nanoProIdentityFirstQaResult.stage2.openRouterProvider ?? '—'}
+                          </p>
+                        </figure>
+                      </div>
+                      <dl
+                        className="grid grid-cols-[160px_1fr] gap-x-3 gap-y-1 border border-border/60 bg-muted/20 px-3 py-3 font-mono text-[11px] leading-relaxed"
+                        data-testid="nano-pro-identity-first-qa-metadata"
+                      >
+                        <dt>trialRunId</dt>
+                        <dd>{nanoProIdentityFirstQaResult.trialRunId}</dd>
+                        <dt>stage1RunId / stage2RunId</dt>
+                        <dd>
+                          {nanoProIdentityFirstQaResult.stage1RunId ?? '—'} /{' '}
+                          {nanoProIdentityFirstQaResult.stage2RunId ?? '—'}
+                        </dd>
+                        <dt>talent / garment / pose</dt>
+                        <dd>
+                          {nanoProIdentityFirstQaResult.modelIdentityId ?? '—'} /{' '}
+                          {nanoProIdentityFirstQaResult.garmentId ?? '—'} /{' '}
+                          {nanoProIdentityFirstQaResult.poseId ?? '—'}
+                        </dd>
+                        <dt>pose master</dt>
+                        <dd>{nanoProIdentityFirstQaResult.poseMasterPath ?? '—'}</dd>
+                        <dt>model / packaging</dt>
+                        <dd>
+                          {nanoProIdentityFirstQaResult.model ?? '—'} /{' '}
+                          {nanoProIdentityFirstQaResult.packaging ?? '—'}
+                        </dd>
+                        <dt>resolution</dt>
+                        <dd>
+                          {nanoProIdentityFirstQaResult.resolutionRequested ?? '—'} →{' '}
+                          {nanoProIdentityFirstQaResult.resolutionApplied ?? '—'}
+                        </dd>
+                        <dt>Stage1 hash</dt>
+                        <dd>
+                          {nanoProIdentityFirstQaResult.stage1.imageSha256_16 ?? '—'}
+                        </dd>
+                        <dt>Stage2 request hash</dt>
+                        <dd>
+                          {nanoProIdentityFirstQaResult.stage2.requestContentSha256_16 ??
+                            '—'}
+                        </dd>
+                        <dt>credits / gallery / render row</dt>
+                        <dd>
+                          {nanoProIdentityFirstQaResult.creditsDeducted} /{' '}
+                          {String(nanoProIdentityFirstQaResult.gallery)} /{' '}
+                          {String(nanoProIdentityFirstQaResult.createsRenderRow)}
+                        </dd>
+                        <dt>cascade / nano regular</dt>
+                        <dd>
+                          {String(nanoProIdentityFirstQaResult.cascade)} /{' '}
+                          {String(nanoProIdentityFirstQaResult.nanoRegularInvoked)}
+                        </dd>
+                        {nanoProIdentityFirstQaResult.error ? (
+                          <>
+                            <dt>error</dt>
+                            <dd className="text-destructive">
+                              {nanoProIdentityFirstQaResult.error}
+                            </dd>
+                          </>
+                        ) : null}
+                      </dl>
+                    </div>
+                  ) : null}
+
+                  {nanoProStandaloneQaMode && nanoProQaResult ? (
+                    <dl
+                      className="mt-3 grid grid-cols-[140px_1fr] gap-x-3 gap-y-1 border border-border/60 bg-muted/20 px-3 py-3 font-mono text-[11px] leading-relaxed"
+                      data-testid="nano-pro-standalone-qa-metadata"
+                    >
+                      <dt>trialRunId</dt>
+                      <dd>{nanoProQaResult.trialRunId}</dd>
+                      <dt>talent</dt>
+                      <dd>{nanoProQaResult.modelIdentityId ?? '—'}</dd>
+                      <dt>garment</dt>
+                      <dd>{nanoProQaResult.garmentId ?? '—'}</dd>
+                      <dt>pose (UI)</dt>
+                      <dd>{nanoProQaResult.poseId ?? '—'}</dd>
+                      <dt>pose master</dt>
+                      <dd>{nanoProQaResult.poseMasterPath ?? '—'}</dd>
+                      <dt>model</dt>
+                      <dd>{nanoProQaResult.model ?? '—'}</dd>
+                      <dt>resolution</dt>
+                      <dd>
+                        {nanoProQaResult.resolutionRequested ?? '—'}
+                        {nanoProQaResult.resolutionMismatch ? ' · MISMATCH' : ''}
+                      </dd>
+                      <dt>dimensions</dt>
+                      <dd>
+                        {nanoProQaResult.outputDimensions
+                          ? `${nanoProQaResult.outputDimensions.width}×${nanoProQaResult.outputDimensions.height}`
+                          : '—'}
+                      </dd>
+                      <dt>openRouterRequestId</dt>
+                      <dd>{nanoProQaResult.openRouterRequestId ?? '—'}</dd>
+                      <dt>openRouterProvider</dt>
+                      <dd>
+                        {typeof (nanoProQaResult as { openRouterProvider?: string })
+                          .openRouterProvider === 'string'
+                          ? (nanoProQaResult as { openRouterProvider?: string })
+                              .openRouterProvider
+                          : '—'}
+                      </dd>
+                      <dt>packaging / request fingerprint</dt>
+                      <dd>
+                        {String(
+                          (nanoProQaResult as { packaging?: string }).packaging ??
+                            '—',
+                        )}{' '}
+                        /{' '}
+                        {String(
+                          (
+                            nanoProQaResult as {
+                              forensics?: { requestContentSha256_16?: string };
+                            }
+                          ).forensics?.requestContentSha256_16 ?? '—',
+                        )}
+                      </dd>
+                      <dt>prompt / talent / pose hashes</dt>
+                      <dd>
+                        {String(
+                          (
+                            nanoProQaResult as {
+                              forensics?: {
+                                promptSha256_16?: string;
+                                talent?: { sha256_16?: string };
+                                pose?: { sha256_16?: string };
+                              };
+                            }
+                          ).forensics?.promptSha256_16 ?? '—',
+                        )}{' '}
+                        /{' '}
+                        {String(
+                          (
+                            nanoProQaResult as {
+                              forensics?: { talent?: { sha256_16?: string } };
+                            }
+                          ).forensics?.talent?.sha256_16 ?? '—',
+                        )}{' '}
+                        /{' '}
+                        {String(
+                          (
+                            nanoProQaResult as {
+                              forensics?: { pose?: { sha256_16?: string } };
+                            }
+                          ).forensics?.pose?.sha256_16 ?? '—',
+                        )}
+                      </dd>
+                      <dt>credits / gallery / render row</dt>
+                      <dd>
+                        {nanoProQaResult.creditsDeducted} /{' '}
+                        {String(nanoProQaResult.gallery)} /{' '}
+                        {String(nanoProQaResult.createsRenderRow)}
+                      </dd>
+                      <dt>cascade / nano regular</dt>
+                      <dd>
+                        {String(nanoProQaResult.cascade)} /{' '}
+                        {String(nanoProQaResult.nanoRegularInvoked)}
+                      </dd>
+                      {nanoProQaResult.resolutionValidationError ? (
+                        <>
+                          <dt>resolution error</dt>
+                          <dd className="text-destructive">
+                            {nanoProQaResult.resolutionValidationError}
+                          </dd>
+                        </>
+                      ) : null}
+                    </dl>
+                  ) : null}
 
                   {showResultToolbar && showPostProductionPanel && refinePanelSlot != null && (
                     <div className="space-y-3">

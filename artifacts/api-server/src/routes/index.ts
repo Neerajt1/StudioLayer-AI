@@ -12,6 +12,8 @@ import testNanoBananaProRouter from "./test-nano-banana-pro";
 import testFlashImagesApiPackagingRouter from "./test-flash-images-api-packaging";
 import testNanoProTalentOnlyIdentityRouter from "./test-nano-pro-talent-only-identity";
 import testNanoProTalentOnlyIndexAlignedRouter from "./test-nano-pro-talent-only-index-aligned";
+import testNanoProStandaloneTrialRouter from "./test-nano-pro-standalone-trial";
+import testNanoProIdentityFirstTrialRouter from "./test-nano-pro-identity-first-trial";
 import paymentsRouter from "./payments";
 
 const router: IRouter = Router();
@@ -35,5 +37,9 @@ router.use(testFlashImagesApiPackagingRouter);
 router.use(testNanoProTalentOnlyIdentityRouter);
 // EXPERIMENTAL ONLY — Nano Pro Talent-only index-aligned (gated; no credits)
 router.use(testNanoProTalentOnlyIndexAlignedRouter);
+// EXPERIMENTAL ONLY — Nano Pro Standalone Trial (gated; face-neutral poses; no credits/Gallery)
+router.use(testNanoProStandaloneTrialRouter);
+// EXPERIMENTAL ONLY — Nano Pro Identity-First / Pose-Second Trial (gated; no credits/Gallery)
+router.use(testNanoProIdentityFirstTrialRouter);
 
 export default router;
