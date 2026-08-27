@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// Gallery Shoots — generation session grouping with legacy fallback
+// Gallery Shoots — generation session grouping with legacy one-root fallback
 //
 // Canonical model: one generationSessionId = one Gallery Shoot.
-// Legacy renders without generationSessionId use heuristic batch grouping.
+// Legacy renders without generationSessionId: one root = one Shoot (no heuristics).
 // ---------------------------------------------------------------------------
 
 import {
@@ -28,9 +28,6 @@ export const SHOOT_TYPE_LABEL: Record<GenerationType, string> = {
   campaign: 'Campaign',
   editorial: 'Editorial',
 };
-
-/** Roots created in the same API request fall within this window (legacy only). */
-const BATCH_WINDOW_MS = 120_000;
 
 export interface GalleryShoot {
   /** Stable id — generationSessionId (canonical) or `shoot-{rootBatchId}` (legacy). */
@@ -162,56 +159,18 @@ export function displayRenderForRoot<T extends CreativeLedgerCardRender>(
   return root;
 }
 
-/** Legacy: group root renders from the same generation batch into Shoot batches. */
+/**
+ * Legacy null-session roots have no authoritative project identity.
+ * Never heuristic-merge by garment / type / time / expected batch size —
+ * one root = one Gallery Shoot.
+ */
 export function groupRootRendersIntoBatches(
   roots: CreativeLedgerCardRender[],
 ): CreativeLedgerCardRender[][] {
   const sorted = [...roots].sort(
     (a, b) => parseTime(a.createdAt) - parseTime(b.createdAt) || a.id - b.id,
   );
-
-  const assigned = new Set<number>();
-  const batches: CreativeLedgerCardRender[][] = [];
-
-  for (const root of sorted) {
-    if (assigned.has(root.id)) continue;
-
-    const type = generationTypeOf(root);
-    const expectedSize = SHOOT_BATCH_SIZE[type];
-    const rootTime = parseTime(root.createdAt);
-    const source = root.sourceImageUrl ?? '';
-
-    const cluster = sorted.filter(
-      (candidate) =>
-        !assigned.has(candidate.id) &&
-        candidate.parentRenderId == null &&
-        generationTypeOf(candidate) === type &&
-        (candidate.sourceImageUrl ?? '') === source &&
-        Math.abs(parseTime(candidate.createdAt) - rootTime) < BATCH_WINDOW_MS,
-    );
-
-    cluster.sort((a, b) => a.id - b.id);
-
-    const batchStartIdx = cluster.findIndex((r) => r.id === root.id);
-    const slice = cluster.slice(batchStartIdx, batchStartIdx + expectedSize);
-
-    if (slice.length === expectedSize) {
-      slice.forEach((r) => assigned.add(r.id));
-      batches.push(slice);
-      continue;
-    }
-
-    if (type === 'hero') {
-      assigned.add(root.id);
-      batches.push([root]);
-      continue;
-    }
-
-    cluster.forEach((r) => assigned.add(r.id));
-    batches.push(cluster);
-  }
-
-  return batches;
+  return sorted.map((root) => [root]);
 }
 
 function studioCreditsForShootBatch(batch: CreativeLedgerCardRender[]): number {
@@ -340,7 +299,7 @@ function buildSessionGalleryShoots(
   return shoots;
 }
 
-/** Legacy heuristic grouping for renders without generationSessionId. */
+/** Legacy: one null-session root → one Shoot (no cross-project heuristics). */
 function buildLegacyGalleryShoots(
   allRenders: CreativeLedgerCardRender[],
 ): GalleryShoot[] {

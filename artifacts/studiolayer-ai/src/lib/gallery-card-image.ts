@@ -17,14 +17,24 @@ export function readPreviewImageUrlFromApiRender(render: object): string | null 
 export function resolveGalleryCardImageUrl(render: {
   previewImageUrl?: string | null;
   outputImageUrl?: string | null;
+  status?: string | null;
 }): string | null {
+  const original = render.outputImageUrl;
+  const hasOutput =
+    typeof original === 'string' && original.length > 0;
+
+  // Never trust orphan/stale R2 previews on failed or output-less rows.
   const preview = render.previewImageUrl;
-  if (typeof preview === 'string' && preview.length > 0) {
+  if (
+    render.status === 'completed' &&
+    hasOutput &&
+    typeof preview === 'string' &&
+    preview.length > 0
+  ) {
     return preview;
   }
 
-  const original = render.outputImageUrl;
-  if (typeof original === 'string' && original.length > 0) {
+  if (hasOutput) {
     return original;
   }
 

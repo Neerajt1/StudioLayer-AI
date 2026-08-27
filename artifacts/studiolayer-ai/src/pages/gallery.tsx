@@ -43,7 +43,6 @@ import {
 import {
   delay,
   GALLERY_EXIT_ANIMATION_MS,
-  stabilizeGalleryShoots,
 } from '@/lib/gallery-shoot-stability';
 import {
   Accordion,
@@ -151,7 +150,6 @@ export default function GalleryPage() {
   } | null>(null);
   const removeBackgroundHandledRef = useRef<number | null>(null);
   const [exitingShoots, setExitingShoots] = useState<GalleryShoot[]>([]);
-  const stableShootsRef = useRef<GalleryShoot[]>([]);
   const exitingShootIdsRef = useRef<Set<string>>(new Set());
 
   const pendingChildId = removeBackgroundPending?.childRenderId ?? 0;
@@ -162,18 +160,13 @@ export default function GalleryPage() {
     } as never,
   });
 
-  const rawShoots = useMemo(
+  // Authoritative ledger: fresh API → buildGalleryShoots (newest → oldest). No client stabilize.
+  const shoots = useMemo(
     () => buildGalleryShoots((renders ?? EMPTY_LEDGER_RENDERS) as CreativeLedgerCardRender[]),
     [renders],
   );
 
-  const shoots = useMemo(() => {
-    const stabilized = stabilizeGalleryShoots(stableShootsRef.current, rawShoots);
-    stableShootsRef.current = stabilized;
-    return stabilized;
-  }, [rawShoots]);
-
-  const hasCachedShoots = shoots.length > 0 || stableShootsRef.current.length > 0;
+  const hasCachedShoots = shoots.length > 0;
 
   /**
    * Initial load only — not errors, not background refetches on an empty ledger.

@@ -18,8 +18,8 @@ function shoot(
   };
 }
 
-describe('stabilizeGalleryShoots — date ordering', () => {
-  it('14. newest renders appear first after stabilization', () => {
+describe('stabilizeGalleryShoots — passthrough (no client order override)', () => {
+  it('returns next unchanged (Gallery uses fresh API-built shoots only)', () => {
     const older = shoot({
       id: 'session-old',
       createdAt: new Date('2026-08-20T10:00:00.000Z'),
@@ -37,13 +37,14 @@ describe('stabilizeGalleryShoots — date ordering', () => {
     const next = [newer, older];
 
     const stabilized = stabilizeGalleryShoots(previous, next);
+    assert.equal(stabilized, next);
     assert.deepEqual(
       stabilized.map((item) => item.id),
       ['session-new', 'session-old'],
     );
   });
 
-  it('18. partial editorial retry session does not reorder unrelated shoots by stale grid order', () => {
+  it('new sessions from next are not reordered by previous grid', () => {
     const projectA = shoot({
       id: 'session-a',
       createdAt: new Date('2026-08-25T12:00:00.000Z'),
@@ -67,6 +68,7 @@ describe('stabilizeGalleryShoots — date ordering', () => {
     const next = [retryB, projectA, projectB];
 
     const stabilized = stabilizeGalleryShoots(previous, next);
+    assert.equal(stabilized, next);
     assert.deepEqual(
       stabilized.map((item) => item.id),
       ['session-b-retry', 'session-a', 'session-b'],

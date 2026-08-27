@@ -56,9 +56,9 @@ import type { RefinementType } from "../services/refinement/refinement-types.js"
 import {
   getPreviewImageUrl,
   hydratePreviewCache,
-  clearPreviewAvailability,
+  canAdvertiseGalleryPreview,
 } from "../services/image-processing/preview-registry.js";
-import { deleteRenderPreviewFromR2 } from "../services/image-processing/preview-storage.js";
+import { discardRenderGalleryPreview } from "../services/image-processing/preview-storage.js";
 import { scheduleRenderPreviewGeneration } from "../services/image-processing/schedule-render-preview.js";
 import { isFalBackgroundRemovalConfigured } from "../services/image-processing/index.js";
 
@@ -98,7 +98,9 @@ function validateGenerationImageCount(input: {
 }
 
 function serializeRender(render: typeof rendersTable.$inferSelect) {
-  const previewImageUrl = getPreviewImageUrl(render.id);
+  const previewImageUrl = canAdvertiseGalleryPreview(render)
+    ? getPreviewImageUrl(render.id)
+    : null;
   return {
     ...render,
     workspaceId: render.userId,
@@ -176,7 +178,14 @@ router.get("/renders", async (req, res): Promise<void> => {
     .where(eq(rendersTable.userId, userId))
     .orderBy(desc(rendersTable.createdAt));
 
-  await hydratePreviewCache(renders.map((render) => render.id));
+  await hydratePreviewCache(
+    renders.filter(canAdvertiseGalleryPreview).map((render) => ({
+      id: render.id,
+      status: render.status,
+      outputImageUrl: render.outputImageUrl,
+      updatedAt: render.updatedAt,
+    })),
+  );
 
   res.json(renders.map(serializeRender));
 });
@@ -708,6 +717,8 @@ router.post("/renders", async (req, res): Promise<void> => {
           return;
         }
 
+        await discardRenderGalleryPreview(row.id);
+
         logPipelineStage(pipelineTrace, PipelineStage.DATABASE_UPDATE_COMPLETED, {
           renderId: row.id,
           imageIndex,
@@ -722,8 +733,8 @@ router.post("/renders", async (req, res): Promise<void> => {
           renderIds: insertedRows.map((r) => r.id),
         });
         await Promise.all(
-          insertedRows.map((row) =>
-            db
+          insertedRows.map(async (row) => {
+            const updated = await db
               .update(rendersTable)
               .set({ status: "failed" })
               .where(
@@ -731,8 +742,12 @@ router.post("/renders", async (req, res): Promise<void> => {
                   eq(rendersTable.id, row.id),
                   ne(rendersTable.status, "completed"),
                 ),
-              ),
-          ),
+              )
+              .returning({ id: rendersTable.id });
+            if (updated.length > 0) {
+              await discardRenderGalleryPreview(row.id);
+            }
+          }),
         );
 
         batchTracker.failed = shots - batchTracker.completed;
@@ -753,8 +768,8 @@ router.post("/renders", async (req, res): Promise<void> => {
 
       try {
         await Promise.all(
-          insertedRows.map((row) =>
-            db
+          insertedRows.map(async (row) => {
+            const updated = await db
               .update(rendersTable)
               .set({ status: "failed" })
               .where(
@@ -762,8 +777,12 @@ router.post("/renders", async (req, res): Promise<void> => {
                   eq(rendersTable.id, row.id),
                   ne(rendersTable.status, "completed"),
                 ),
-              ),
-          ),
+              )
+              .returning({ id: rendersTable.id });
+            if (updated.length > 0) {
+              await discardRenderGalleryPreview(row.id);
+            }
+          }),
         );
         batchTracker.failed = shots - batchTracker.completed;
         await finalizeCreditTransaction();
@@ -892,8 +911,7 @@ router.delete("/renders/:id", async (req, res): Promise<void> => {
     deletedBy: user?.isAdmin ? "admin" : "user",
   });
 
-  await deleteRenderPreviewFromR2(render.id);
-  clearPreviewAvailability(render.id);
+  await discardRenderGalleryPreview(render.id);
 
   await db
     .delete(rendersTable)
@@ -933,7 +951,16 @@ router.get("/renders/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  await hydratePreviewCache([render.id]);
+  if (canAdvertiseGalleryPreview(render)) {
+    await hydratePreviewCache([
+      {
+        id: render.id,
+        status: render.status,
+        outputImageUrl: render.outputImageUrl,
+        updatedAt: render.updatedAt,
+      },
+    ]);
+  }
 
   res.json(serializeRender(render));
 });

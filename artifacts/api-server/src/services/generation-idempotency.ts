@@ -32,6 +32,7 @@ import {
   ACTIVE_GENERATION_STATUSES,
   STALE_GENERATION_TTL_MS,
 } from "./generation-lifecycle.js";
+import { discardRenderGalleryPreview } from "./image-processing/preview-storage.js";
 
 const ACTIVE_RENDER_STATUSES = ACTIVE_GENERATION_STATUSES;
 
@@ -382,6 +383,10 @@ export async function failStaleActiveGenerations(
         inArray(rendersTable.status, [...ACTIVE_RENDER_STATUSES]),
       ),
     );
+
+  await Promise.all(
+    staleIds.map((renderId) => discardRenderGalleryPreview(renderId)),
+  );
 
   logger.warn(
     { userId, staleRenderIds: staleIds, count: staleIds.length },

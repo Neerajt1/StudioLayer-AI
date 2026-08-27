@@ -9,7 +9,10 @@ import {
   type PreviewFormat,
   previewObjectKey,
 } from "./generate-preview.js";
-import { buildPreviewPublicUrl } from "./preview-registry.js";
+import {
+  buildPreviewPublicUrl,
+  clearPreviewAvailability,
+} from "./preview-registry.js";
 
 const PREVIEW_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
@@ -79,6 +82,28 @@ export async function deleteRenderPreviewFromR2(renderId: number): Promise<void>
       }
     }),
   );
+}
+
+/**
+ * Failure / delete hygiene: drop in-memory advertisement and best-effort
+ * remove R2 preview objects for this render ID only.
+ * Always idempotent and non-fatal — never throws to callers.
+ */
+export async function discardRenderGalleryPreview(
+  renderId: number,
+): Promise<void> {
+  clearPreviewAvailability(renderId);
+  try {
+    await deleteRenderPreviewFromR2(renderId);
+  } catch (error) {
+    logger.warn(
+      {
+        renderId,
+        err: error instanceof Error ? error.message : String(error),
+      },
+      "preview-storage: discard gallery preview failed (non-fatal)",
+    );
+  }
 }
 
 export async function previewObjectExists(
