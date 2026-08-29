@@ -18,7 +18,9 @@ export const studioCreditAllocationsTable = pgTable(
       .notNull()
       .references(() => usersTable.id, { onDelete: "cascade" }),
     reasonCode: text("reason_code").notNull(),
+    /** Studio Credit MINOR UNITS (100 = 1 credit). */
     originalAmount: integer("original_amount").notNull(),
+    /** Studio Credit MINOR UNITS (100 = 1 credit). */
     remainingAmount: integer("remaining_amount").notNull(),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }),

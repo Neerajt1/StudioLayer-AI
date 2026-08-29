@@ -146,17 +146,17 @@ describe("V1 white-background-only Create", () => {
     assert.doesNotMatch(text, /luxury/i);
   });
 
-  it("12. 2K remains 1 Studio Credit", () => {
+  it("12. 2K costs 1.5 Studio Credits", () => {
     assert.equal(
       resolveGenerationCreditCost({ imageCount: 1, outputResolution: "2K" }),
-      1,
+      1.5,
     );
   });
 
-  it("13. 4K remains 2 Studio Credits", () => {
+  it("13. 4K costs 3 Studio Credits", () => {
     assert.equal(
       resolveGenerationCreditCost({ imageCount: 1, outputResolution: "4K" }),
-      2,
+      3,
     );
   });
 

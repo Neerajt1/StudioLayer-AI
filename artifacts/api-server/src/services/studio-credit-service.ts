@@ -11,6 +11,8 @@ import {
   computeBillingCycleLedgerStats,
   computeLegacyMembershipBridgeCredits,
   creditCostForTransparentDownload,
+  fromCreditMinorUnits,
+  toCreditMinorUnits,
   expectedCreditsForAllocation,
   hasActiveMembershipLotCoveringNow,
   isLegacyMembershipBridgeEnabled,
@@ -23,6 +25,7 @@ import {
   reasonCodeForImageRequest,
   reasonCodeForTransparentDownload,
   reasonCodeForGenerationType,
+  canGenerateWithStudioCredits,
   resolveGenerationCreditCost,
   studioPassExpiresAt,
   sumSpendableAllocationCredits,
@@ -38,6 +41,16 @@ import {
   studioCreditTransactionsTable,
   usersTable,
 } from "@workspace/db";
+
+// ---------------------------------------------------------------------------
+// UNITS CONTRACT
+//
+// Every Studio Credit column in the database stores integer MINOR UNITS
+// (100 = 1 credit) so a 1.5-credit charge persists exactly. Every function
+// exported from this module speaks CREDITS. Conversion happens only at the SQL
+// boundary, immediately before a write and immediately after a read, so no
+// caller, route, or test has to know the storage unit.
+// ---------------------------------------------------------------------------
 
 /** UTC billing-cycle start — re-exported for account statement and API consumers. */
 export function billingCycleStart(now = new Date()): Date {
@@ -95,7 +108,7 @@ export async function beginStudioCreditTransaction(input: {
     transactionId,
     userId: input.userId,
     workspaceId: input.userId,
-    amount: -Math.abs(input.amount),
+    amount: -Math.abs(toCreditMinorUnits(input.amount)),
     reasonCode: input.reasonCode,
     status: StudioCreditTransactionStatus.PENDING,
     renderId: input.renderId ?? null,
@@ -128,7 +141,7 @@ export async function completeStudioCreditTransaction(
   const row = updated[0];
   if (!row) return;
 
-  const charge = Math.abs(row.amount);
+  const charge = fromCreditMinorUnits(Math.abs(row.amount));
   if (
     charge > 0 &&
     (STUDIO_CREDIT_USAGE_REASON_CODES as readonly string[]).includes(
@@ -181,7 +194,7 @@ export async function finalizeGenerationCreditTransaction(input: {
 
   await db
     .update(studioCreditTransactionsTable)
-    .set({ amount: -Math.abs(charged) })
+    .set({ amount: -Math.abs(toCreditMinorUnits(charged)) })
     .where(
       and(
         eq(studioCreditTransactionsTable.transactionId, input.transactionId),
@@ -251,7 +264,7 @@ export async function sumStudioCreditsUsed(
     .from(studioCreditTransactionsTable)
     .where(and(...conditions));
 
-  return Number(row?.total ?? 0);
+  return fromCreditMinorUnits(Number(row?.total ?? 0));
 }
 
 /** Absolute credits currently held by pending usage transactions. */
@@ -277,14 +290,27 @@ export async function sumPendingStudioCreditsHeld(
       ),
     );
 
-  return Number(row?.total ?? 0);
+  return fromCreditMinorUnits(Number(row?.total ?? 0));
 }
 
+/**
+ * Allocation lots with amounts converted to credits.
+ *
+ * The engine's FIFO planner is unit-agnostic, but every caller here compares
+ * lot balances against credit-denominated charges, so lots are normalised on
+ * the way out and converted back on the way in.
+ */
 async function loadUserAllocationLots(userId: number) {
-  return db
+  const rows = await db
     .select()
     .from(studioCreditAllocationsTable)
     .where(eq(studioCreditAllocationsTable.userId, userId));
+
+  return rows.map((row) => ({
+    ...row,
+    originalAmount: fromCreditMinorUnits(row.originalAmount),
+    remainingAmount: fromCreditMinorUnits(row.remainingAmount),
+  }));
 }
 
 async function lazyExpireAllocationLots(
@@ -363,8 +389,8 @@ export async function ensureLegacyMembershipAllocation(input: {
     await db.insert(studioCreditAllocationsTable).values({
       userId: input.userId,
       reasonCode: StudioCreditReasonCode.MEMBERSHIP_ALLOCATION,
-      originalAmount: allowance,
-      remainingAmount: remaining,
+      originalAmount: toCreditMinorUnits(allowance),
+      remainingAmount: toCreditMinorUnits(remaining),
       startsAt: bounds.startsAt,
       expiresAt: bounds.expiresAt,
       periodKey: bounds.periodKey,
@@ -510,7 +536,7 @@ export async function grantCreditAllocation(input: {
         transactionId: ledgerTransactionId,
         userId: input.userId,
         workspaceId: input.userId,
-        amount: Math.abs(input.credits),
+        amount: Math.abs(toCreditMinorUnits(input.credits)),
         reasonCode: input.reasonCode,
         status: StudioCreditTransactionStatus.COMPLETED,
         renderId: null,
@@ -521,8 +547,8 @@ export async function grantCreditAllocation(input: {
         .values({
           userId: input.userId,
           reasonCode: input.reasonCode,
-          originalAmount: input.credits,
-          remainingAmount: input.credits,
+          originalAmount: toCreditMinorUnits(input.credits),
+          remainingAmount: toCreditMinorUnits(input.credits),
           startsAt: input.startsAt,
           expiresAt: input.expiresAt,
           periodKey: input.periodKey ?? null,
@@ -637,7 +663,7 @@ export async function consumeAllocationsForUsageTransaction(input: {
       const [updated] = await tx
         .update(studioCreditAllocationsTable)
         .set({
-          remainingAmount: item.remainingAfter,
+          remainingAmount: toCreditMinorUnits(item.remainingAfter),
           status: allocationStatusAfterRemaining(
             item.remainingAfter,
             lots.find((l) => l.id === item.allocationId)?.expiresAt ?? null,
@@ -648,7 +674,7 @@ export async function consumeAllocationsForUsageTransaction(input: {
           and(
             eq(studioCreditAllocationsTable.id, item.allocationId),
             eq(studioCreditAllocationsTable.userId, input.userId),
-            sql`${studioCreditAllocationsTable.remainingAmount} >= ${item.amount}`,
+            sql`${studioCreditAllocationsTable.remainingAmount} >= ${toCreditMinorUnits(item.amount)}`,
           ),
         )
         .returning({ id: studioCreditAllocationsTable.id });
@@ -663,7 +689,7 @@ export async function consumeAllocationsForUsageTransaction(input: {
         usageTransactionId: input.usageTransactionId,
         allocationId: item.allocationId,
         userId: input.userId,
-        amount: item.amount,
+        amount: toCreditMinorUnits(item.amount),
       });
     }
   });
@@ -736,7 +762,7 @@ export async function getStudioCreditBalance(input: {
       used,
       limit: allowance,
       remaining,
-      canRender: remaining >= 1,
+      canRender: canGenerateWithStudioCredits(remaining),
     };
   }
 
@@ -785,7 +811,7 @@ export async function getStudioCreditBalance(input: {
     used: completedUsageInLegacyWindow,
     limit: allowance,
     remaining,
-    canRender: remaining >= 1,
+    canRender: canGenerateWithStudioCredits(remaining),
   };
 }
 

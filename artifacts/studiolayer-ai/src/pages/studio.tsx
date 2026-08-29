@@ -174,8 +174,8 @@ const FAQ_ITEMS = [
     a: 'Most images are ready within a few minutes. Timing may vary depending on image complexity and current studio demand.',
   },
   {
-    q: 'What happens after my complimentary Studio Credit is used?',
-    a: 'Every new Studio receives one complimentary Studio Credit for Create.\n\nOnce your complimentary Studio Credit has been used, continue creating with a Studio Membership.',
+    q: 'What happens after my complimentary Studio Credits are used?',
+    a: 'Every new Studio receives 1.5 complimentary Studio Credits — enough to create one 2K image.\n\nOnce they have been used, continue creating with a Studio Membership.',
   },
   {
     q: 'Is my uploaded data secure?',
@@ -958,11 +958,10 @@ export default function StudioPage() {
     if (!requireAuthentication()) return;
 
     if (!isAdminUser) {
+      // Remove Background is a flat 1-credit tool, not a generation, so it is
+      // gated by its own price rather than the generation availability flag.
       const refineCost = creditCostForRefine();
-      if (
-        isStudioCreditLimitBlocked(usage) ||
-        !hasSufficientStudioCreditsForCost(usage, refineCost, user)
-      ) {
+      if (!hasSufficientStudioCreditsForCost(usage, refineCost, user)) {
         openCreditGateDialog(refineCost);
         return;
       }

@@ -4,6 +4,7 @@ import { eq, ilike, or, desc } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { db, studioCreditAllocationsTable, studioCreditTransactionsTable, usersTable } from "@workspace/db";
 import { requireAdmin } from "../lib/require-admin.js";
+import { toCreditDenominatedAmount } from "../services/credit-normalization.js";
 import {
   grantCreditAllocation,
   getStudioCreditBalance,
@@ -213,6 +214,12 @@ export async function getAdminCustomerDetails(
     .orderBy(desc(studioCreditTransactionsTable.createdAt))
     .limit(50);
 
+  // Ledger amounts are stored in minor units — convert before they leave the API.
+  const history = historyRows.map((row) => ({
+    ...row,
+    amount: toCreditDenominatedAmount(row.amount),
+  }));
+
   res.json({
     account: {
       id: user.id,
@@ -225,7 +232,7 @@ export async function getAdminCustomerDetails(
     studioCredits: {
       current: balance.remaining,
     },
-    history: historyRows,
+    history,
   });
 }
 

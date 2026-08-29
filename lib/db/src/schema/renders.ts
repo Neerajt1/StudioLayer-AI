@@ -48,7 +48,16 @@ export const rendersTable = pgTable("renders", {
   /** Native output resolution tier — 2K (default) or 4K. */
   outputResolution: text("output_resolution").notNull().default("2K"),
   /** Studio Credits consumed along the lineage to produce this render. */
-  studioCreditsUsed: integer("studio_credits_used").notNull().default(1),
+  /**
+   * Studio Credit MINOR UNITS (100 = 1 credit).
+   *
+   * BATCH-LEVEL, not per-image: every render row in a generation batch carries
+   * the whole batch charge, so a 4-image batch stores the full batch total on
+   * all four rows. Never divide this by anything or read it as a per-image
+   * price — the Account Statement derives per-image amounts from the credit
+   * ledger instead. Default is a single 2K image (1.5 credits).
+   */
+  studioCreditsUsed: integer("studio_credits_used").notNull().default(150),
   /** Refinement steps in the lineage (excludes the original generation). */
   refinementCount: integer("refinement_count").notNull().default(0),
   /**

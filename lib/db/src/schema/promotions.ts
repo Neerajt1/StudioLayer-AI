@@ -16,6 +16,7 @@ export const studioPromotionsTable = pgTable("studio_promotions", {
   startAt: timestamp("start_at", { withTimezone: true }).notNull(),
   endAt: timestamp("end_at", { withTimezone: true }).notNull(),
   badgeLabel: text("badge_label").notNull(),
+  /** Studio Credit MINOR UNITS (100 = 1 credit). */
   bonusCredits: integer("bonus_credits"),
   bonusCreditsExpiresAt: timestamp("bonus_credits_expires_at", {
     withTimezone: true,

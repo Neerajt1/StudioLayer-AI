@@ -32,9 +32,10 @@ import { readPreviewImageUrlFromApiRender } from '@/lib/gallery-card-image';
 import { galleryQueryOptions, galleryUsageQueryOptions } from '@/lib/gallery-queries';
 import { revokeCropObjectUrl } from '@/lib/studio-crop';
 import {
-  isStudioCreditLimitBlocked,
+  creditCostForRemoveBackground,
   resolveStudioAdminFlag,
 } from '@workspace/studio-credit-engine';
+import { hasSufficientStudioCreditsForCost } from '@/lib/studio-credit-availability';
 import { zeroStudioCreditBlockToast } from '@/lib/studio-credit-block-copy';
 import {
   galleryDeleteFailedToast,
@@ -314,7 +315,12 @@ export default function GalleryPage() {
   const handleGalleryRemoveBackground = (render: CreativeLedgerCardRender) => {
     if (removeBackgroundInFlight || createRender.isPending) return;
 
-    if (isStudioCreditLimitBlocked(usage) && !resolveStudioAdminFlag(user, usage)) {
+    // Remove Background is a flat 1-credit tool, not a generation: gate it on
+    // its own price so a customer who can still afford it is not turned away.
+    if (
+      !resolveStudioAdminFlag(user, usage) &&
+      !hasSufficientStudioCreditsForCost(usage, creditCostForRemoveBackground(), user)
+    ) {
       const copy = zeroStudioCreditBlockToast();
       toast({
         title: copy.title,

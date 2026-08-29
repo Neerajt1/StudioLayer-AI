@@ -11,7 +11,8 @@
   "scripts": {
     "push": "drizzle-kit push --config ./drizzle.config.ts",
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
-    "migrate": "node ./scripts/apply-migrations.mjs"
+    "migrate": "node ./scripts/apply-migrations.mjs",
+    "test": "node --import tsx --test src/migration-schema-validation.test.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
@@ -22,6 +23,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "^8.20.0",
-    "drizzle-kit": "^0.31.10"
+    "drizzle-kit": "^0.31.10",
+    "tsx": "catalog:"
   }
 }

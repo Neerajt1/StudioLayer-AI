@@ -7,6 +7,7 @@ import {
 } from './rules';
 import {
   DEFAULT_OUTPUT_RESOLUTION,
+  OUTPUT_RESOLUTIONS,
   resolutionCreditMultiplier,
   type OutputResolution,
 } from './resolution';
@@ -14,6 +15,7 @@ import {
   StudioCreditReasonCode,
   type StudioCreditReasonCodeValue,
 } from './reason-codes';
+import { toCreditMinorUnits } from './credit-units';
 
 export function imageCountToGenerationType(imageCount: ImageCount): GenerationType {
   if (imageCount === 2) return 'editorial';
@@ -106,6 +108,52 @@ export function creditCostForRegenerate(): number {
   return StudioCreditRules.regenerate;
 }
 
+/** Studio Tools — Remove Background is a flat per-operation charge. */
+export function creditCostForRemoveBackground(): number {
+  return StudioCreditRules.removeBackground;
+}
+
+/** Per-image generation price at a resolution — 2K = 1.5, 4K = 3. */
+export function creditCostPerImageAtResolution(
+  resolution: OutputResolution = DEFAULT_OUTPUT_RESOLUTION,
+): number {
+  return (
+    StudioCreditRules.hero * resolutionCreditMultiplier(resolution)
+  );
+}
+
+/**
+ * Cheapest generation a customer can currently buy — one image at the least
+ * expensive resolution.
+ *
+ * This is the entitlement floor for "can this account generate at all". It is
+ * derived from the price table rather than written down, so it follows the
+ * canonical economics automatically and cannot drift into a second threshold.
+ * Refine, Regenerate and Remove Background are act-on-existing-image tools, not
+ * generation, and are deliberately excluded — they are gated by their own cost.
+ */
+export function minimumGenerationCreditCost(): number {
+  return Math.min(
+    ...OUTPUT_RESOLUTIONS.map((resolution) =>
+      creditCostPerImageAtResolution(resolution),
+    ),
+  );
+}
+
+/**
+ * Whether a balance can fund any generation at all.
+ *
+ * The per-request check in the credit service remains authoritative for a
+ * specific shoot; this answers the global availability question the Workspace,
+ * Gallery and Account surfaces ask before a shoot is chosen.
+ */
+export function canGenerateWithStudioCredits(remainingCredits: number): boolean {
+  if (!Number.isFinite(remainingCredits)) {
+    return remainingCredits === Number.POSITIVE_INFINITY;
+  }
+  return remainingCredits >= minimumGenerationCreditCost();
+}
+
 /** Studio Tools — transparent PNG download is free (Batch 21). */
 export function creditCostForTransparentDownload(): number {
   return 0;
@@ -152,4 +200,43 @@ export function reasonCodeForImageRequest(
   if (isRegenerate) return reasonCodeForRegenerate();
   if (isRefinement) return reasonCodeForRefine();
   return reasonCodeForGenerationType(imageCountToGenerationType(imageCount));
+}
+
+// ---------------------------------------------------------------------------
+// Minor-unit accounting API
+//
+// Every value that will be persisted or compared against a stored balance must
+// go through these. Credit-denominated functions above are for display and for
+// callers that immediately convert at the database boundary.
+// ---------------------------------------------------------------------------
+
+/** Total request cost in stored minor units. */
+export function resolveGenerationCreditCostMinorUnits(input: {
+  imageCount: number;
+  customCampaign?: boolean;
+  isRefinement?: boolean;
+  isRegenerate?: boolean;
+  outputResolution?: OutputResolution;
+}): number {
+  return toCreditMinorUnits(resolveGenerationCreditCost(input));
+}
+
+/**
+ * Per-completed-image charge in stored minor units.
+ *
+ * Derived from the batch total so that the sum of per-image charges can never
+ * exceed the amount held: 1.5 credits is 150 units, and four of them are
+ * exactly 600, with no rounding residue.
+ */
+export function creditCostPerCompletedImageInBatchMinorUnits(input: {
+  imageCount: number;
+  customCampaign?: boolean;
+  isRefinement?: boolean;
+  outputResolution?: OutputResolution;
+}): number {
+  return toCreditMinorUnits(creditCostPerCompletedImageInBatch(input));
+}
+
+export function creditCostForRemoveBackgroundMinorUnits(): number {
+  return toCreditMinorUnits(creditCostForRemoveBackground());
 }

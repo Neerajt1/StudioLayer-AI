@@ -1,3 +1,4 @@
+import { formatCreditAmount } from '@workspace/studio-credit-engine';
 import { cn } from '@/lib/utils';
 import type { BillingCycleStats } from '@/lib/creative-ledger';
 import { EMPTY_BILLING_CYCLE_STATS } from '@/lib/creative-ledger';
@@ -56,7 +57,7 @@ export function BillingCycleSummary({
               className="sl-billing-cycle-stat-icon sl-billing-cycle-stat-icon--studio-credit"
             />
             <dt>Studio Credits Used</dt>
-            <dd className="sl-billing-cycle-stat-value">{studioCreditsUsed}</dd>
+            <dd className="sl-billing-cycle-stat-value">{formatCreditAmount(studioCreditsUsed)}</dd>
           </div>
           <div className="sl-billing-cycle-stat">
             <ImageIcon
@@ -99,7 +100,7 @@ export function BillingCycleSummary({
       <dl className="sl-billing-cycle-stats">
         <div className="sl-billing-cycle-stat">
           <dt>Studio Credits Used</dt>
-          <dd className="sl-billing-cycle-stat-value">{studioCreditsUsed}</dd>
+          <dd className="sl-billing-cycle-stat-value">{formatCreditAmount(studioCreditsUsed)}</dd>
         </div>
         <div className="sl-billing-cycle-stat">
           <dt>Images Created</dt>

@@ -16,6 +16,11 @@ import {
   filterMasterRowsForCycle,
   type CreativeActivityContext,
 } from "./creative-activity-master.js";
+import {
+  toCreditDenominatedDeletionEvents,
+  toCreditDenominatedRenders,
+  toCreditDenominatedTransactions,
+} from "../credit-normalization.js";
 
 async function loadCreativeActivityContext(
   userId: number,
@@ -53,9 +58,9 @@ async function loadCreativeActivityContext(
   return {
     user: { subscriptionTier: tier },
     cycleStart: billingCycleStart(),
-    transactions,
-    renders,
-    deletionEvents,
+    transactions: toCreditDenominatedTransactions(transactions),
+    renders: toCreditDenominatedRenders(renders),
+    deletionEvents: toCreditDenominatedDeletionEvents(deletionEvents),
   };
 }
 

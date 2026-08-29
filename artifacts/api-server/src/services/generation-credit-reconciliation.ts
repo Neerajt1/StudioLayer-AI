@@ -56,6 +56,12 @@ export interface PendingGenerationFinalization {
 /**
  * Derives partial-generation finalization inputs from a pending hold and
  * terminal session renders. Uses root generation renders only.
+ *
+ * `holdAmount` is CREDIT-denominated, matching the returned
+ * `creditPerCompletedImage` and the input that
+ * `finalizeGenerationCreditTransaction` expects. Callers reading the hold
+ * straight from `studio_credit_transactions.amount` must convert from minor
+ * units first — that column stores 150 for a 1.5-credit hold.
  */
 export function resolvePendingGenerationFinalization(input: {
   holdAmount: number;

@@ -7,7 +7,7 @@
  */
 
 /**
- * Native output resolution selected before generation. 2K (default) costs 1 Studio Credit per successful image. 4K costs 2 Studio Credits per successful image. Refinements ignore this field and continue to cost 1 credit.
+ * Native output resolution selected before generation. 2K (default) costs 1.5 Studio Credits per successful image. 4K costs 3 Studio Credits per successful image. Refinements ignore this field and continue to cost 1 credit.
  */
 export type RenderInputOutputResolution = typeof RenderInputOutputResolution[keyof typeof RenderInputOutputResolution];
 

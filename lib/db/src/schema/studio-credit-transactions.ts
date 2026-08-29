@@ -17,6 +17,7 @@ export const studioCreditTransactionsTable = pgTable(
       .notNull()
       .references(() => usersTable.id, { onDelete: "cascade" }),
     workspaceId: integer("workspace_id").notNull(),
+    /** Studio Credit MINOR UNITS (100 = 1 credit). Negative for usage. */
     amount: integer("amount").notNull(),
     reasonCode: text("reason_code").notNull(),
     status: text("status").notNull().default("pending"),

@@ -1,5 +1,14 @@
 export {
+  CREDIT_MINOR_UNITS_PER_CREDIT,
+  toCreditMinorUnits,
+  fromCreditMinorUnits,
+  isRepresentableCreditAmount,
+  formatCreditAmount,
+} from './credit-units';
+
+export {
   StudioCreditRules,
+  IMAGE_GENERATION_CREDITS_PER_IMAGE,
   CUSTOM_CAMPAIGN_MIN,
   CUSTOM_CAMPAIGN_MAX,
   type GenerationType,
@@ -32,6 +41,13 @@ export {
   creditCostPerCompletedImageInBatch,
   creditCostForRefine,
   creditCostForRegenerate,
+  creditCostForRemoveBackground,
+  creditCostPerImageAtResolution,
+  minimumGenerationCreditCost,
+  canGenerateWithStudioCredits,
+  resolveGenerationCreditCostMinorUnits,
+  creditCostPerCompletedImageInBatchMinorUnits,
+  creditCostForRemoveBackgroundMinorUnits,
   creditCostForTransparentDownload,
   creditCostPerCompletedImage,
   reasonCodeForGenerationType,
@@ -57,6 +73,8 @@ export {
   membershipCreditsRemaining,
   membershipAllowanceLabel,
   estimateFinishedImagesFromAllowance,
+  estimateImagesAtResolution,
+  imagesAtResolutionOutcomeLabel,
   finishedImagesOutcomeLabel,
   compactFinishedImagesLabel,
   MembershipDisplayPricing,

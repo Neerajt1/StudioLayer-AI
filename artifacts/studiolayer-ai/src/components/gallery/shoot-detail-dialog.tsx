@@ -1,3 +1,4 @@
+import { formatCreditAmount } from '@workspace/studio-credit-engine';
 import { useEffect, useMemo, useState } from 'react';
 import JSZip from 'jszip';
 import { useLocation } from 'wouter';
@@ -331,7 +332,7 @@ export function ShootDetailDialog({
             <dl className="sl-shoot-detail-stats">
               <div>
                 <dt>Credits Used</dt>
-                <dd>{shoot.studioCreditsUsed}</dd>
+                <dd>{formatCreditAmount(shoot.studioCreditsUsed)}</dd>
               </div>
               <div>
                 <dt>Edits Made</dt>

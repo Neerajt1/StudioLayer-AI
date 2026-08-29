@@ -1,8 +1,63 @@
 import type { BillingCycleLedgerStats } from "@workspace/studio-credit-engine";
 import {
+  creditCostPerImageAtResolution,
+  fromCreditMinorUnits,
   normalizeOutputResolution,
-  resolutionCreditMultiplier,
+  toCreditMinorUnits,
 } from "@workspace/studio-credit-engine";
+
+/**
+ * The per-image prices in force before the 1.5 / 3 economics. Used only for
+ * rows that have no ledger charge to read, so an unreconciled render is never
+ * presented at today's price. Historical data, not current pricing.
+ */
+const LEGACY_PER_IMAGE_CREDIT_PRICES = {
+  "2K": 1,
+  "4K": 2,
+} as const;
+
+/**
+ * Every per-image generation price StudioLayer has charged, by resolution.
+ * 1 and 2 were the original 2K and 4K prices; 1.5 and 3 are current. Extend
+ * these lists if per-image pricing changes again — historical statements
+ * depend on old prices remaining recognisable.
+ */
+const PER_IMAGE_CREDIT_PRICES_BY_RESOLUTION = {
+  "2K": [1, 1.5],
+  "4K": [2, 3],
+} as const;
+
+const ALL_PER_IMAGE_CREDIT_PRICES_MINOR_UNITS = new Set(
+  [
+    ...PER_IMAGE_CREDIT_PRICES_BY_RESOLUTION["2K"],
+    ...PER_IMAGE_CREDIT_PRICES_BY_RESOLUTION["4K"],
+  ].map(toCreditMinorUnits),
+);
+
+/**
+ * Prices the session could plausibly have been charged per image.
+ *
+ * Narrowed by the recorded output resolution when any surviving render has
+ * one, which removes most inference ambiguity. Sessions with no surviving
+ * render, or rows predating resolution tracking, allow every historical price.
+ */
+function allowedPerImagePricesMinorUnits(
+  roots: readonly SessionRootSlot[],
+): ReadonlySet<number> {
+  for (const slot of roots) {
+    if (slot.render?.outputResolution) {
+      const resolution = normalizeOutputResolution(
+        slot.render.outputResolution,
+      );
+      return new Set(
+        PER_IMAGE_CREDIT_PRICES_BY_RESOLUTION[resolution].map(
+          toCreditMinorUnits,
+        ),
+      );
+    }
+  }
+  return ALL_PER_IMAGE_CREDIT_PRICES_MINOR_UNITS;
+}
 import type {
   Render,
   RenderDeletionEvent,
@@ -248,29 +303,67 @@ function isKnownFailedResult(result: ActivityResult): boolean {
 
 /**
  * Credits per completed generation image in this session.
- * Derived from surviving render.outputResolution when available;
- * otherwise inferred from ledger charge ÷ known completed count.
- * Defaults to 1 (legacy 2K / pre-resolution rows).
+ *
+ * THE LEDGER IS THE SOURCE OF TRUTH. The batch charge is the only record of
+ * what the customer actually paid, so the per-image price is recovered from it
+ * rather than from today's prices — a batch charged 1 credit per image must
+ * keep reporting 1 credit forever, even though a 2K image now costs 1.5.
+ *
+ * `renders.studio_credits_used` is deliberately NOT consulted. That column
+ * holds the BATCH total repeated on every row in the batch, so reading it as a
+ * per-image price would overstate every multi-image generation by the batch
+ * size. See the column comment in migration 019.
+ *
+ * Recovering the price means choosing a divisor, and the divisor is the number
+ * of images the charge covered. That is not simply the surviving completed
+ * count: a completed image may since have been deleted, and the charge still
+ * covers it. So the primary divisor is every root that could have completed —
+ * survivors plus deleted slots — and the surviving count is tried only as a
+ * fallback.
+ *
+ * The candidate prices are constrained to those StudioLayer has actually
+ * charged at the recorded resolution. This is what makes the inference
+ * defensible rather than a guess: a 2-credit charge on a 4K session resolves to
+ * one image at 2, not two images at 1, because 1 has never been a 4K price.
+ *
+ * Arithmetic is in minor units so fractional prices stay exact: 600 units over
+ * four images is exactly 150, where 6 / 4 in credits would not survive an
+ * integer divisibility test.
  */
 function resolveCreditsPerCompletedImage(
   roots: readonly SessionRootSlot[],
   txCredits: number,
   knownCompleted: number,
 ): number {
-  for (const slot of roots) {
-    if (slot.render?.outputResolution) {
-      return resolutionCreditMultiplier(
-        normalizeOutputResolution(slot.render.outputResolution),
-      );
+  const txMinorUnits = toCreditMinorUnits(txCredits);
+
+  if (txMinorUnits > 0) {
+    const allowed = allowedPerImagePricesMinorUnits(roots);
+    const deletedCount = roots.filter((slot) => slot.render == null).length;
+
+    for (const divisor of [knownCompleted + deletedCount, knownCompleted]) {
+      if (divisor <= 0) continue;
+      if (txMinorUnits % divisor !== 0) continue;
+      const perImage = txMinorUnits / divisor;
+      if (allowed.has(perImage)) {
+        return fromCreditMinorUnits(perImage);
+      }
     }
   }
 
-  if (knownCompleted > 0 && txCredits > 0 && txCredits % knownCompleted === 0) {
-    const inferred = txCredits / knownCompleted;
-    if (inferred === 1 || inferred === 2) return inferred;
+  // No charge to read. This row cannot be reconciled against the ledger, and
+  // the statement must not assert TODAY's price as though it had been charged:
+  // that would silently reprice every unreconciled historical render whenever
+  // generation pricing changes. Fall back to the legacy schedule instead and
+  // let the reconciliation mismatch surface the row.
+  for (const slot of roots) {
+    if (slot.render?.outputResolution) {
+      const resolution = normalizeOutputResolution(slot.render.outputResolution);
+      return LEGACY_PER_IMAGE_CREDIT_PRICES[resolution];
+    }
   }
 
-  return 1;
+  return LEGACY_PER_IMAGE_CREDIT_PRICES["2K"];
 }
 
 /**

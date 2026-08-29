@@ -31,7 +31,10 @@ export function classifyExpirationProjectionStatus(
 export function projectCreditExpirationEvent(
   row: CreditExpirationProjectionRow,
 ): CreditExpirationEvent | null {
-  if (row.remainingAmount < 1 || !row.expiresAt) return null;
+  // Any positive remainder is unused credit worth reporting. This was `< 1`
+  // when balances were whole credits; under fractional credits that silently
+  // dropped lots with, say, 0.5 left.
+  if (row.remainingAmount <= 0 || !row.expiresAt) return null;
   const expirationStatus = classifyExpirationProjectionStatus(row.status);
   if (!expirationStatus) return null;
 

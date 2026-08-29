@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { StudioCreditReasonCode } from "@workspace/studio-credit-engine";
+import {
+  StudioCreditReasonCode,
+  fromCreditMinorUnits,
+  toCreditMinorUnits,
+} from "@workspace/studio-credit-engine";
 import type { Render } from "@workspace/db";
 import {
   isGenerationCreditReasonCode,
@@ -229,5 +233,83 @@ describe("finalizeGenerationCreditTransaction idempotency contract", () => {
       completedCount: 1,
       creditPerCompletedImage: 1,
     });
+  });
+});
+
+describe("pending-hold recovery preserves the stored ledger amount", () => {
+  /**
+   * Mirrors the recovery path: read the stored minor-unit hold, convert once
+   * at the boundary, split it per completed image, and let the finalizer
+   * re-apply minor units on the ledger write. The settled amount must land
+   * back on the amount that was held.
+   */
+  function settleFromStoredHold(
+    storedMinorUnits: number,
+    sessionRenders: readonly Render[],
+  ): number {
+    const finalization = resolvePendingGenerationFinalization({
+      holdAmount: fromCreditMinorUnits(storedMinorUnits),
+      sessionRenders,
+    });
+    assert.ok(finalization);
+    const chargedCredits =
+      finalization!.completedCount * finalization!.creditPerCompletedImage;
+    return toCreditMinorUnits(chargedCredits);
+  }
+
+  it("settles a fractional 2K hold back to exactly what was held", () => {
+    const sessionRenders = [render({ id: 1, status: "completed" })];
+
+    const finalization = resolvePendingGenerationFinalization({
+      holdAmount: fromCreditMinorUnits(-150),
+      sessionRenders,
+    });
+    assert.equal(finalization!.creditPerCompletedImage, 1.5);
+    assert.equal(settleFromStoredHold(-150, sessionRenders), 150);
+  });
+
+  it("settles 4K and multi-image fractional holds without drift", () => {
+    const one = [render({ id: 1, status: "completed" })];
+    assert.equal(settleFromStoredHold(-300, one), 300);
+
+    // 450 units over three completed 2K images: 1.5 credits each.
+    const three = [
+      render({ id: 1, status: "completed" }),
+      render({ id: 2, status: "completed" }),
+      render({ id: 3, status: "completed" }),
+    ];
+    const finalization = resolvePendingGenerationFinalization({
+      holdAmount: fromCreditMinorUnits(-450),
+      sessionRenders: three,
+    });
+    assert.equal(finalization!.creditPerCompletedImage, 1.5);
+    assert.equal(settleFromStoredHold(-450, three), 450);
+  });
+
+  it("never inflates a stored hold by a factor of one hundred", () => {
+    const sessionRenders = [render({ id: 1, status: "completed" })];
+    for (const storedMinorUnits of [-150, -300, -450, -600, -1200]) {
+      const settled = settleFromStoredHold(storedMinorUnits, sessionRenders);
+      assert.equal(settled, Math.abs(storedMinorUnits));
+      assert.notEqual(settled, Math.abs(storedMinorUnits) * 100);
+    }
+  });
+
+  it("charges only completed images, still in the correct unit", () => {
+    // 600 units held for four 2K images; two completed, so 300 settles and
+    // the rest is released.
+    const sessionRenders = [
+      render({ id: 1, status: "completed" }),
+      render({ id: 2, status: "completed" }),
+      render({ id: 3, status: "failed" }),
+      render({ id: 4, status: "failed" }),
+    ];
+    const finalization = resolvePendingGenerationFinalization({
+      holdAmount: fromCreditMinorUnits(-600),
+      sessionRenders,
+    });
+    assert.equal(finalization!.completedCount, 2);
+    assert.equal(finalization!.creditPerCompletedImage, 1.5);
+    assert.equal(settleFromStoredHold(-600, sessionRenders), 300);
   });
 });

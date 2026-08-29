@@ -1,8 +1,21 @@
-import { StudioCreditRules } from './rules';
+import { IMAGE_GENERATION_CREDITS_PER_IMAGE, StudioCreditRules } from './rules';
+import { formatCreditAmount } from './credit-units';
+import {
+  DEFAULT_OUTPUT_RESOLUTION,
+  resolutionCreditMultiplier,
+  type OutputResolution,
+} from './resolution';
 
-/** Monthly / product allowances — commercial configuration (not per-action costs). */
+/**
+ * Monthly / product allowances — commercial configuration (not per-action costs).
+ *
+ * The complimentary grant is deliberately equal to one 2K image so a new Studio
+ * can create exactly once before choosing a membership. It is not stored as an
+ * allocation lot: the free-tier balance is the lifetime residual of this
+ * allowance minus lifetime usage.
+ */
 export const MembershipCreditAllowances = {
-  complimentary: 1,
+  complimentary: IMAGE_GENERATION_CREDITS_PER_IMAGE,
   basic: 120,
   pro: 240,
   studioPass: 40,
@@ -39,7 +52,7 @@ export function membershipAllowanceLabel(tier: string): string {
   if (tier === 'enterprise') {
     return `${MembershipCreditAllowances.pro} Studio Credits`;
   }
-  return `${MembershipCreditAllowances.complimentary} Studio Credit`;
+  return `${formatCreditAmount(MembershipCreditAllowances.complimentary)} Studio Credits`;
 }
 
 /** Estimated finished images from allowance — derived from official credit rules. */
@@ -49,6 +62,32 @@ export function estimateFinishedImagesFromAllowance(
 ): number {
   if (creditsPerFinishedImage <= 0) return 0;
   return Math.floor(allowanceCredits / creditsPerFinishedImage);
+}
+
+/**
+ * Images an allowance buys at a given resolution — the membership/marketing
+ * quantity.
+ *
+ * Rounds to the nearest whole image rather than truncating: 40 credits buys
+ * 26.67 images at 2K and the product presents that as 27. This is a
+ * presentation figure only; nothing bills against it.
+ */
+export function estimateImagesAtResolution(
+  allowanceCredits: number,
+  resolution: OutputResolution = DEFAULT_OUTPUT_RESOLUTION,
+): number {
+  const perImage =
+    IMAGE_GENERATION_CREDITS_PER_IMAGE * resolutionCreditMultiplier(resolution);
+  if (perImage <= 0) return 0;
+  return Math.round(allowanceCredits / perImage);
+}
+
+/** Membership copy — e.g. "Create up to 80 images at 2K". */
+export function imagesAtResolutionOutcomeLabel(
+  allowanceCredits: number,
+  resolution: OutputResolution = DEFAULT_OUTPUT_RESOLUTION,
+): string {
+  return `Create up to ${estimateImagesAtResolution(allowanceCredits, resolution)} images at ${resolution}`;
 }
 
 export function finishedImagesOutcomeLabel(allowanceCredits: number): string {

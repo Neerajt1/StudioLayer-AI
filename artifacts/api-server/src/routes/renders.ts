@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
 import { eq, and, desc, ne, inArray } from "drizzle-orm";
-import { creditCostForGenerationType, creditCostPerCompletedImageInBatch, isValidCustomCampaignImageCount, normalizeOutputResolution, type OutputResolution } from "@workspace/studio-credit-engine";
+import { creditCostForGenerationType, creditCostPerCompletedImageInBatch, fromCreditMinorUnits, isValidCustomCampaignImageCount, normalizeOutputResolution, toCreditMinorUnits, type OutputResolution } from "@workspace/studio-credit-engine";
 import { db, rendersTable, usersTable, renderDeletionEventsTable } from "@workspace/db";
 import { CreateRenderBody, GetRenderParams } from "@workspace/api-zod";
 import { runAIPipeline } from "../services/ai-pipeline";
@@ -97,14 +97,26 @@ function validateGenerationImageCount(input: {
   return { ok: true, shots: count, customCampaign: false };
 }
 
+/**
+ * Render row → API shape.
+ *
+ * `studioCreditsUsed` is stored in minor units and must be converted here:
+ * this response feeds the Gallery accounting strip, so a raw value would
+ * display 150 where the customer was charged 1.5. The value remains
+ * batch-level, exactly as stored.
+ */
 function serializeRender(render: typeof rendersTable.$inferSelect) {
   const previewImageUrl = canAdvertiseGalleryPreview(render)
     ? getPreviewImageUrl(render.id)
     : null;
-  return {
+  const creditDenominated = {
     ...render,
+    studioCreditsUsed: fromCreditMinorUnits(render.studioCreditsUsed),
+  };
+  return {
+    ...creditDenominated,
     workspaceId: render.userId,
-    assetLineage: buildAssetLineageRecord(render),
+    assetLineage: buildAssetLineageRecord(creditDenominated),
     previewImageUrl: previewImageUrl ?? null,
   };
 }
@@ -409,8 +421,11 @@ router.post("/renders", async (req, res): Promise<void> => {
           const metadataType = (metadataSource.generationType ?? "hero") as GenerationType;
           parentMetadata = {
             generationType: metadataType,
+            // Stored in minor units; ledger metadata is credit-denominated.
             studioCreditsUsed:
-              metadataSource.studioCreditsUsed ?? creditCostForGenerationType(metadataType),
+              metadataSource.studioCreditsUsed != null
+                ? fromCreditMinorUnits(metadataSource.studioCreditsUsed)
+                : creditCostForGenerationType(metadataType),
             refinementCount: foundParent.refinementCount ?? 0,
           };
         }
@@ -450,7 +465,7 @@ router.post("/renders", async (req, res): Promise<void> => {
               sourceAssetVersion: assetLineage.sourceAssetVersion,
               cropPreset: assetLineage.cropPreset,
               generationType: ledgerMetadata.generationType,
-              studioCreditsUsed: ledgerMetadata.studioCreditsUsed,
+              studioCreditsUsed: toCreditMinorUnits(ledgerMetadata.studioCreditsUsed),
               refinementCount: ledgerMetadata.refinementCount,
               generationSessionId,
               outputResolution: isRefinement ? "2K" : outputResolution,
@@ -563,10 +578,12 @@ router.post("/renders", async (req, res): Promise<void> => {
       });
       invalidateBillingCycleActivityStatsCache(ownerUserId);
 
+      // Batch-level by contract: the whole batch charge is written to every
+      // row in the batch, not divided across them. See renders schema.
       if (chargedCredits > 0) {
         await db
           .update(rendersTable)
-          .set({ studioCreditsUsed: chargedCredits })
+          .set({ studioCreditsUsed: toCreditMinorUnits(chargedCredits) })
           .where(inArray(rendersTable.id, insertedRows.map((row) => row.id)));
       }
 

@@ -131,24 +131,24 @@ describe('V1 Create product surface', () => {
     assert.deepEqual(clamped.usedPoses, ['Pose7']);
   });
 
-  it('10. 2K billing remains 1 Studio Credit for Create', () => {
+  it('10. 2K billing is 1.5 Studio Credits for Create', () => {
     assert.equal(
       resolveGenerationCreditCost({
         imageCount: V1_CREATE_IMAGE_COUNT,
         outputResolution: '2K',
       }),
-      1,
+      1.5,
     );
     assert.equal(EMPTY_STUDIO_WORKFLOW.outputResolution, DEFAULT_OUTPUT_RESOLUTION);
   });
 
-  it('11. 4K billing remains 2 Studio Credits for Create', () => {
+  it('11. 4K billing is 3 Studio Credits for Create', () => {
     assert.equal(
       resolveGenerationCreditCost({
         imageCount: V1_CREATE_IMAGE_COUNT,
         outputResolution: '4K',
       }),
-      2,
+      3,
     );
     const request = buildGenerationRequest(
       normalizeStudioWorkflow({ ...generationBase, outputResolution: '4K' }),

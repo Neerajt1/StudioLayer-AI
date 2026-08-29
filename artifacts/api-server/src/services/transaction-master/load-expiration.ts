@@ -1,3 +1,9 @@
+// Studio Credit amounts are stored in minor units. They are converted at this
+// loader boundary so every downstream projection, summary, admin view and
+// export speaks Studio Credits. Do not convert again downstream.
+import {
+  toCreditDenominatedAmount,
+} from "../credit-normalization.js";
 import { and, eq, gte, inArray, isNotNull, lte } from "drizzle-orm";
 import { StudioCreditAllocationStatus } from "@workspace/studio-credit-engine";
 import {
@@ -62,6 +68,7 @@ export async function loadCreditExpirationEvents(
     if (!row.expiresAt) continue;
     const projected = projectCreditExpirationEvent({
       ...row,
+      remainingAmount: toCreditDenominatedAmount(row.remainingAmount),
       expiresAt: row.expiresAt,
       studioPlan: planBySource.get(row.sourceReference) ?? null,
     });

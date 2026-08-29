@@ -345,7 +345,7 @@ export const RenderInputGarmentLengthSelection = {
 } as const;
 
 /**
- * Native output resolution selected before generation. 2K (default) costs 1 Studio Credit per successful image. 4K costs 2 Studio Credits per successful image. Refinements ignore this field and continue to cost 1 credit.
+ * Native output resolution selected before generation. 2K (default) costs 1.5 Studio Credits per successful image. 4K costs 3 Studio Credits per successful image. Refinements ignore this field and continue to cost 1 credit.
  */
 export type RenderInputOutputResolution = typeof RenderInputOutputResolution[keyof typeof RenderInputOutputResolution];
 
@@ -405,7 +405,7 @@ export interface RenderInput {
   imageCount?: number;
   /** When true, generates a Custom Campaign batch at the specified imageCount (4–20). Uses Campaign per-image pricing. Campaign preset (imageCount=4 without this flag) remains unchanged. */
   customCampaign?: boolean;
-  /** Native output resolution selected before generation. 2K (default) costs 1 Studio Credit per successful image. 4K costs 2 Studio Credits per successful image. Refinements ignore this field and continue to cost 1 credit. */
+  /** Native output resolution selected before generation. 2K (default) costs 1.5 Studio Credits per successful image. 4K costs 3 Studio Credits per successful image. Refinements ignore this field and continue to cost 1 credit. */
   outputResolution?: RenderInputOutputResolution;
   /** Deprecated — use refinementType. Legacy button-label mapping still accepted for V1 refinements only. */
   refinementPrompt?: string;

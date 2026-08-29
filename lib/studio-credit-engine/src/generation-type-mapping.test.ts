@@ -21,25 +21,25 @@ describe('shoot type ↔ imageCount mapping', () => {
     assert.equal(imageCountToGenerationType(4), 'campaign');
   });
 
-  it('charges 1 Studio Credit per image at 2K and 2 at 4K', () => {
-    assert.equal(StudioCreditRules.hero, 1);
-    assert.equal(StudioCreditRules.editorial, 2);
-    assert.equal(StudioCreditRules.campaign, 4);
-    assert.equal(campaignCreditCostPerImage(), 1);
+  it('charges 1.5 Studio Credits per image at 2K and 3 at 4K', () => {
+    assert.equal(StudioCreditRules.hero, 1.5);
+    assert.equal(StudioCreditRules.editorial, 3);
+    assert.equal(StudioCreditRules.campaign, 6);
+    assert.equal(campaignCreditCostPerImage(), 1.5);
 
-    assert.equal(creditCostForGenerationType('hero'), 1);
-    assert.equal(creditCostForGenerationType('editorial'), 2);
-    assert.equal(creditCostForGenerationType('campaign'), 4);
+    assert.equal(creditCostForGenerationType('hero'), 1.5);
+    assert.equal(creditCostForGenerationType('editorial'), 3);
+    assert.equal(creditCostForGenerationType('campaign'), 6);
 
-    assert.equal(resolveGenerationCreditCost({ imageCount: 1, outputResolution: '2K' }), 1);
-    assert.equal(resolveGenerationCreditCost({ imageCount: 2, outputResolution: '2K' }), 2);
-    assert.equal(resolveGenerationCreditCost({ imageCount: 4, outputResolution: '2K' }), 4);
-    assert.equal(resolveGenerationCreditCost({ imageCount: 1, outputResolution: '4K' }), 2);
-    assert.equal(resolveGenerationCreditCost({ imageCount: 2, outputResolution: '4K' }), 4);
-    assert.equal(resolveGenerationCreditCost({ imageCount: 4, outputResolution: '4K' }), 8);
+    assert.equal(resolveGenerationCreditCost({ imageCount: 1, outputResolution: '2K' }), 1.5);
+    assert.equal(resolveGenerationCreditCost({ imageCount: 2, outputResolution: '2K' }), 3);
+    assert.equal(resolveGenerationCreditCost({ imageCount: 4, outputResolution: '2K' }), 6);
+    assert.equal(resolveGenerationCreditCost({ imageCount: 1, outputResolution: '4K' }), 3);
+    assert.equal(resolveGenerationCreditCost({ imageCount: 2, outputResolution: '4K' }), 6);
+    assert.equal(resolveGenerationCreditCost({ imageCount: 4, outputResolution: '4K' }), 12);
   });
 
-  it('Custom Campaign 4–20 follows imageCount credits at 2K', () => {
+  it('Custom Campaign 4–20 follows 1.5 x imageCount credits at 2K', () => {
     assert.equal(CUSTOM_CAMPAIGN_MIN, 4);
     assert.equal(CUSTOM_CAMPAIGN_MAX, 20);
     assert.equal(isValidCustomCampaignImageCount(3), false);
@@ -53,7 +53,7 @@ describe('shoot type ↔ imageCount mapping', () => {
         customCampaign: true,
         outputResolution: '2K',
       }),
-      6,
+      9,
     );
     assert.equal(
       resolveGenerationCreditCost({
@@ -61,7 +61,7 @@ describe('shoot type ↔ imageCount mapping', () => {
         customCampaign: true,
         outputResolution: '4K',
       }),
-      12,
+      18,
     );
   });
 

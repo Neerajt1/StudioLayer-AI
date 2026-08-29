@@ -1,5 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
 import {
+  toCreditDenominatedAllocations,
+  toCreditDenominatedDeletionEvents,
+  toCreditDenominatedRenders,
+  toCreditDenominatedTransactions,
+} from "../credit-normalization.js";
+import {
   StudioCreditTransactionStatus,
   isStudioAdmin,
   membershipAllowanceForTier,
@@ -249,8 +255,14 @@ export async function loadAccountStatementContext(
   const allowance = membershipAllowanceForTier(user.subscriptionTier, limit);
   const isAdmin = isStudioAdmin(user);
 
-  const [balance, cycleStats, transactions, renders, deletionEvents, allocations] =
-    await Promise.all([
+  const [
+    balance,
+    cycleStats,
+    rawTransactions,
+    rawRenders,
+    rawDeletionEvents,
+    rawAllocations,
+  ] = await Promise.all([
       getStudioCreditBalance({
         userId,
         tier: user.subscriptionTier,
@@ -290,6 +302,11 @@ export async function loadAccountStatementContext(
         .where(eq(studioCreditAllocationsTable.userId, userId))
         .orderBy(asc(studioCreditAllocationsTable.startsAt)),
     ]);
+
+  const transactions = toCreditDenominatedTransactions(rawTransactions);
+  const renders = toCreditDenominatedRenders(rawRenders);
+  const deletionEvents = toCreditDenominatedDeletionEvents(rawDeletionEvents);
+  const allocations = toCreditDenominatedAllocations(rawAllocations);
 
   const membershipPeriodHints = allocations
     .filter((row) => isMembershipAllocationReasonCode(row.reasonCode))

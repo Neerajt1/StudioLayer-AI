@@ -1,3 +1,9 @@
+// Studio Credit amounts are stored in minor units. They are converted at this
+// loader boundary so every downstream projection, summary, admin view and
+// export speaks Studio Credits. Do not convert again downstream.
+import {
+  toCreditDenominatedAmountOrNull,
+} from "../credit-normalization.js";
 import { and, gte, lte } from "drizzle-orm";
 import { db, studioPromotionsTable } from "@workspace/db";
 import { projectPromotionConfigEvent } from "./project-promotions.js";
@@ -36,5 +42,10 @@ export async function loadPromotionConfigEvents(
     .from(studioPromotionsTable)
     .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-  return rows.map(projectPromotionConfigEvent);
+  return rows.map((row) =>
+    projectPromotionConfigEvent({
+      ...row,
+      bonusCredits: toCreditDenominatedAmountOrNull(row.bonusCredits),
+    }),
+  );
 }

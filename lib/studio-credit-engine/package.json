@@ -13,7 +13,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --import tsx --test src/billing-cycle-stats.test.ts src/billing-cycle.test.ts src/resolution.test.ts src/allocations.test.ts src/membership.test.ts src/generation-type-mapping.test.ts"
+    "test": "node --import tsx --test src/billing-cycle-stats.test.ts src/billing-cycle.test.ts src/resolution.test.ts src/allocations.test.ts src/membership.test.ts src/generation-type-mapping.test.ts src/credit-units.test.ts"
   },
   "devDependencies": {
     "tsx": "catalog:"

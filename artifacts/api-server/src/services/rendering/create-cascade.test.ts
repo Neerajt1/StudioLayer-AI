@@ -202,22 +202,22 @@ describe("Create cascade — evidence", () => {
 });
 
 describe("Create cascade — billing / resolution preserved", () => {
-  it("13/14. Existing 2K=1 and 4K=2 Studio Credits unchanged", () => {
+  it("13/14. Create cascade bills 2K=1.5 and 4K=3 Studio Credits", () => {
     assert.equal(
       resolveGenerationCreditCost({ imageCount: 1, outputResolution: "2K" }),
-      1,
+      1.5,
     );
     assert.equal(
       resolveGenerationCreditCost({ imageCount: 1, outputResolution: "4K" }),
-      2,
+      3,
     );
     assert.equal(
       resolveGenerationCreditCost({ imageCount: 2, outputResolution: "2K" }),
-      2,
+      3,
     );
     assert.equal(
       resolveGenerationCreditCost({ imageCount: 2, outputResolution: "4K" }),
-      4,
+      6,
     );
   });
 

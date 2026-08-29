@@ -28,6 +28,7 @@ import {
   sumPendingStudioCreditsHeld,
   sumStudioCreditsUsed,
 } from "./studio-credit-service.js";
+import { toCreditDenominatedTransactions } from "./credit-normalization.js";
 import { getBillingCycleActivityStats } from "./account-statement/billing-cycle-activity.js";
 import {
   loadAccountStatementContext,
@@ -126,7 +127,8 @@ function pushMismatch(
   mismatches.push(entry);
 }
 
-function numbersEqual(a: number, b: number): boolean {
+/** Credit-denominated equality, tolerant of float noise from 1.5-style values. */
+export function numbersEqual(a: number, b: number): boolean {
   return Math.abs(a - b) < 0.0001;
 }
 
@@ -288,8 +290,8 @@ export async function runCommercialReconciliation(
     pendingHeld,
     cycleStats,
     statementCtx,
-    allCompletedTransactions,
-    allTransactions,
+    rawCompletedTransactions,
+    rawTransactions,
     renders,
     inFlightRenders,
   ] = await Promise.all([
@@ -336,6 +338,14 @@ export async function runCommercialReconciliation(
         ),
       ),
   ]);
+
+  // Ledger rows arrive in minor units; every other value in this report —
+  // balances, usage sums, statement and cycle totals — is credit-denominated.
+  // Normalise once here so the comparisons below are like-for-like.
+  const allCompletedTransactions = toCreditDenominatedTransactions(
+    rawCompletedTransactions,
+  );
+  const allTransactions = toCreditDenominatedTransactions(rawTransactions);
 
   const allowance = membershipAllowanceForTier(user.subscriptionTier, limit);
   const scopedUsageTotal = await sumStudioCreditsUsed(userId, since);

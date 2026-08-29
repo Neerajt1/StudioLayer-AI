@@ -10,7 +10,10 @@ import { AccountStatementDownloadLink } from '@/components/account/account-state
 import { ProfileContactSection } from '@/components/account/profile-contact-section';
 import { StudioDeletionSection } from '@/components/account/studio-deletion';
 import { membershipAllowanceForTier, membershipLabel } from '@/lib/membership';
-import { isStudioCreditLimitBlocked } from '@workspace/studio-credit-engine';
+import {
+  formatCreditAmount,
+  isStudioCreditLimitBlocked,
+} from '@workspace/studio-credit-engine';
 
 export default function AccountPage() {
   const { data: user, isLoading: userLoading, isSuccess: isAuthenticated } =
@@ -34,9 +37,9 @@ export default function AccountPage() {
   const formatCreditUsageLine = (tier: string, used: number) => {
     const limit = displayPlanLimit(tier);
     if (tier === 'free') {
-      return `Complimentary Studio Credit · ${used} of ${limit} used`;
+      return `Complimentary Studio Credits · ${formatCreditAmount(used)} of ${formatCreditAmount(limit)} used`;
     }
-    return `Studio Credits · ${used} of ${limit} used`;
+    return `Studio Credits · ${formatCreditAmount(used)} of ${formatCreditAmount(limit)} used`;
   };
 
   const showAuthenticatedProfile = isAuthenticated && Boolean(user);

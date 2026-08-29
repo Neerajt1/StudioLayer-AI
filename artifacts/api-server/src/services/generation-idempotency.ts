@@ -15,6 +15,7 @@ import {
 import {
   STUDIO_CREDIT_USAGE_REASON_CODES,
   StudioCreditTransactionStatus,
+  fromCreditMinorUnits,
 } from "@workspace/studio-credit-engine";
 import {
   failStudioCreditTransaction,
@@ -220,8 +221,12 @@ export async function reconcilePendingGenerationCreditFinalization(
         ),
       );
 
+    // The stored hold is in minor units; everything downstream from here —
+    // the per-image split and finalizeGenerationCreditTransaction — speaks
+    // credits and re-applies minor units on the ledger write. Convert once,
+    // here, or a 150-unit hold settles as 150 credits.
     const finalization = resolvePendingGenerationFinalization({
-      holdAmount: tx.amount,
+      holdAmount: fromCreditMinorUnits(tx.amount),
       sessionRenders,
     });
 

@@ -73,14 +73,14 @@ describe("V1 Create — Nano Regular only", () => {
     assert.match(model, /preview|flash/);
   });
 
-  it("9. billing remains 2K=1 and 4K=2 Studio Credits", () => {
+  it("9. billing is 2K=1.5 and 4K=3 Studio Credits", () => {
     assert.equal(
       resolveGenerationCreditCost({ imageCount: 1, outputResolution: "2K" }),
-      1,
+      1.5,
     );
     assert.equal(
       resolveGenerationCreditCost({ imageCount: 1, outputResolution: "4K" }),
-      2,
+      3,
     );
   });
 

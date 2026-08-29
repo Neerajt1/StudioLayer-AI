@@ -262,6 +262,26 @@ describe("projectCreditExpirationEvent", () => {
     assert.equal(event!.commercialCreditHead, "studio_pro");
   });
 
+  it("reports a fractional remainder rather than treating it as empty", () => {
+    for (const remainingAmount of [0.5, 1, 1.5]) {
+      const event = projectCreditExpirationEvent({
+        allocationId: 4,
+        expiresAt: new Date("2026-08-20T12:00:00.000Z"),
+        remainingAmount,
+        status: StudioCreditAllocationStatus.ACTIVE,
+        reasonCode: StudioCreditReasonCode.STUDIO_PASS_ALLOCATION,
+        sourceReference: "pass:4",
+        customerId: 13,
+        customerName: "D",
+        customerEmail: "d@example.com",
+        subscriptionTier: "free",
+        studioPlan: null,
+      });
+      assert.ok(event, `${remainingAmount} credits must not be read as empty`);
+      assert.equal(event!.creditsUnused, remainingAmount);
+    }
+  });
+
   it("skips exhausted or zero-remaining lots", () => {
     assert.equal(
       projectCreditExpirationEvent({

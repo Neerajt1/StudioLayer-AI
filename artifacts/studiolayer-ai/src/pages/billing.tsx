@@ -27,6 +27,9 @@ import {
 } from '@/lib/razorpay-checkout';
 import {
   MembershipCreditAllowances,
+  formatCreditAmount,
+  creativeStepCreditCopy,
+  estimateImagesAtResolution,
   finishedImagesOutcomeLabel,
   formatStudioCredits,
   membershipAddOnDisplayPrice,
@@ -64,7 +67,7 @@ const MEMBERSHIP_TIERS = [
     name: 'Studio Basic',
     subtitle: 'For growing fashion brands',
     credits: formatStudioCredits(MembershipCreditAllowances.basic),
-    outcome: `Create up to ${MembershipCreditAllowances.basic} images at 2K`,
+    outcome: `Create up to ${estimateImagesAtResolution(MembershipCreditAllowances.basic, '2K')} images at 2K`,
     features: [
       'Hero',
       'Campaign',
@@ -83,7 +86,7 @@ const MEMBERSHIP_TIERS = [
     name: 'Studio Pro',
     subtitle: 'For creative teams & agencies',
     credits: formatStudioCredits(MembershipCreditAllowances.pro),
-    outcome: `Create up to ${MembershipCreditAllowances.pro} images at 2K`,
+    outcome: `Create up to ${estimateImagesAtResolution(MembershipCreditAllowances.pro, '2K')} images at 2K`,
     features: [
       'Hero',
       'Campaign',
@@ -101,7 +104,7 @@ const MEMBERSHIP_TIERS = [
 const MEMBERSHIP_FAQ = [
   {
     q: 'What are Studio Credits?',
-    a: 'Studio Credits are your allowance for creating finished fashion imagery. Every creative step — generating or refining an image — uses one Studio Credit. Paid memberships include a monthly balance that resets at the start of each billing period.',
+    a: `Studio Credits are your allowance for creating finished fashion imagery. ${creativeStepCreditCopy()} Refining an image uses 1 Studio Credit. Paid memberships include a monthly balance that resets at the start of each billing period.`,
   },
   {
     q: 'Can I see where I spend my Studio Credits?',
@@ -109,7 +112,7 @@ const MEMBERSHIP_FAQ = [
   },
   {
     q: 'When do Studio Credits reset?',
-    a: 'Complimentary Studio includes one one-time Studio Credit. Studio Basic and Studio Pro renew monthly. Studio Credits from a Studio Pass are valid for seven days. Your balance is always visible in your Studio Profile and on this page.',
+    a: 'Complimentary Studio includes a one-time 1.5 Studio Credits — enough for one 2K image. Studio Basic and Studio Pro renew monthly. Studio Credits from a Studio Pass are valid for seven days. Your balance is always visible in your Studio Profile and on this page.',
   },
 ];
 
@@ -305,9 +308,10 @@ function CurrentMembershipSummary({
 
       {isFree ? (
         <>
-          <p className="sl-membership-info-meta">One-Time Studio Credit</p>
+          <p className="sl-membership-info-meta">One-Time Studio Credits</p>
           <p className="sl-membership-info-usage">
-            {usage.used} of {MembershipCreditAllowances.complimentary} used
+            {formatCreditAmount(usage.used)} of{' '}
+            {formatCreditAmount(MembershipCreditAllowances.complimentary)} used
           </p>
           <p className="sl-membership-info-footnote">Never resets.</p>
         </>
@@ -379,7 +383,7 @@ function StudioPassCompact({
           {membershipAddOnDisplayPrice('studioPass', market)}
         </p>
         <p className="sl-membership-pass-compact-line">
-          Create up to {MembershipCreditAllowances.studioPass} images at 2K
+          Create up to {estimateImagesAtResolution(MembershipCreditAllowances.studioPass, '2K')} images at 2K
           <sup>*</sup>
         </p>
         <p className="sl-membership-pass-compact-meta">
@@ -428,7 +432,7 @@ function StudioTopUpCompact({
           {membershipAddOnDisplayPrice('topUp', market)}
         </p>
         <p className="sl-membership-topup-compact-line">
-          Create up to {MembershipCreditAllowances.topUp} images at 2K
+          Create up to {estimateImagesAtResolution(MembershipCreditAllowances.topUp, '2K')} images at 2K
           <sup>*</sup>
         </p>
         <p className="sl-membership-topup-compact-meta">For active Studio Members</p>
@@ -860,7 +864,8 @@ export default function BillingPage() {
         <section className="sl-membership-credits-note">
           <h3 className="sl-membership-credits-note-heading">Understanding Studio Credits</h3>
           <p className="sl-membership-credits-note-body">
-            <sup>*</sup>2K generation uses 1 Studio Credit. 4K uses 2 Studio Credits. Remove Background uses 1 Studio Credit.
+            <sup>*</sup>
+            {creativeStepCreditCopy()}
           </p>
         </section>
 

@@ -1,7 +1,7 @@
 import {
   DEFAULT_OUTPUT_RESOLUTION,
+  creditCostPerImageAtResolution,
   formatStudioCredits,
-  resolutionCreditMultiplier,
   type OutputResolution,
 } from '@workspace/studio-credit-engine';
 import { StudioCompactSelect } from '@/components/studio/studio-compact-select';
@@ -16,12 +16,16 @@ interface ResolutionSelectorProps {
 
 const OPTIONS: ReadonlyArray<OutputResolution> = ['2K', '4K'];
 
+function resolutionCreditPrice(resolution: OutputResolution): string {
+  return formatStudioCredits(creditCostPerImageAtResolution(resolution));
+}
+
 function resolutionCreditDetail(resolution: OutputResolution): string {
-  return `${formatStudioCredits(resolutionCreditMultiplier(resolution))} per image`;
+  return `${resolutionCreditPrice(resolution)} per image`;
 }
 
 function resolutionTriggerLabel(resolution: OutputResolution): string {
-  return `${resolution} · ${formatStudioCredits(resolutionCreditMultiplier(resolution))}`;
+  return `${resolution} · ${resolutionCreditPrice(resolution)}`;
 }
 
 export function ResolutionSelector({

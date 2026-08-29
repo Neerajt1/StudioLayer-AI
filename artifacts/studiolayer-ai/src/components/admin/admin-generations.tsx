@@ -1,3 +1,4 @@
+import { formatCreditAmount } from '@workspace/studio-credit-engine';
 import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,7 @@ function MetricsGrid({ metrics }: { metrics: UsageMetrics }) {
       </div>
       <div>
         <div className="text-sm text-muted-foreground">Studio Credits consumed</div>
-        <div className="text-2xl font-semibold">{metrics.studioCreditsUsed}</div>
+        <div className="text-2xl font-semibold">{formatCreditAmount(metrics.studioCreditsUsed)}</div>
       </div>
     </div>
   );

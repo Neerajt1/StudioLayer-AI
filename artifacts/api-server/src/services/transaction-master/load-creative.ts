@@ -1,3 +1,9 @@
+// Studio Credit amounts are stored in minor units. They are converted at this
+// loader boundary so every downstream projection, summary, admin view and
+// export speaks Studio Credits. Do not convert again downstream.
+import {
+  toCreditDenominatedAmount,
+} from "../credit-normalization.js";
 import { and, eq, gte, lte } from "drizzle-orm";
 import {
   db,
@@ -52,5 +58,10 @@ export async function loadCreativeActivityEvents(
     )
     .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-  return rows.map(projectCreativeActivityEvent);
+  return rows.map((row) =>
+    projectCreativeActivityEvent({
+      ...row,
+      studioCreditsUsed: toCreditDenominatedAmount(row.studioCreditsUsed),
+    }),
+  );
 }
