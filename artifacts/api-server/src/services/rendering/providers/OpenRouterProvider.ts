@@ -54,6 +54,10 @@ import {
 } from "../identity-forensics.js";
 import { buildOpenRouterRequestEvidenceMetadata } from "../openrouter-request-evidence.js";
 import {
+  buildFurnitureReferenceAuthorityLayer,
+  buildFurnitureReferencePrimaryPointer,
+} from "../../../rendering/furniture-reference-appearance-authority.js";
+import {
   emptyOpenRouterResponseTelemetry,
   logOpenRouterShotTiming,
   mergeOpenRouterResponseTelemetry,
@@ -226,6 +230,12 @@ export function buildFreshGenerationImageParts(params: {
   garmentDetailImageUrl?: string;
   /** Extra Talent identity images (same person), after primary modelImageUrl. */
   additionalTalentImageUrls?: string[];
+  /**
+   * Selected furniture appearance reference. Appended AFTER the Pose Master so
+   * existing reference numbering (garment evidence, "Reference Image 3 is the
+   * Pose Master") is never disturbed.
+   */
+  furnitureReferenceImageUrl?: string;
 }): Array<{
   type: "image_url";
   image_url: { url: string; detail: "high" };
@@ -240,6 +250,7 @@ export function buildFreshGenerationImageParts(params: {
     garmentBackImageUrl,
     garmentDetailImageUrl,
     additionalTalentImageUrls,
+    furnitureReferenceImageUrl,
   } = params;
 
   const toPart = (url: string) => ({
@@ -280,9 +291,15 @@ export function buildFreshGenerationImageParts(params: {
     toPart(modelImageUrl),
     ...talentExtras,
     ...(poseReferenceImageUrl ? [toPart(poseReferenceImageUrl)] : []),
+    ...(furnitureReferenceImageUrl ? [toPart(furnitureReferenceImageUrl)] : []),
     ...(previousOutputUrl ? [toPart(previousOutputUrl)] : []),
   ];
 }
+
+export {
+  buildFurnitureReferenceAuthorityLayer,
+  buildFurnitureReferencePrimaryPointer,
+} from "../../../rendering/furniture-reference-appearance-authority.js";
 
 export type AssembleFreshGenerationPrimaryInstructionParams = {
   /** Sheet-mode panel correspondence — omitted in separate mode. */
@@ -361,6 +378,8 @@ async function callOpenRouter(
   stage1ImageUrl?: string,
   /** Stage-1 Nano Pro — pose requires support furniture. */
   furnitureRequired?: boolean,
+  /** Selected furniture appearance reference for THIS shot (per-slot). */
+  furnitureReferenceImageUrl?: string,
 ): Promise<{ urls: string[]; httpStatus: number; fetchDurationMs: number; parseDurationMs: number }> {
   const routingProvider = OPENROUTER_RENDERING_CONFIG.provider;
   const isRefinementEdit =
@@ -399,7 +418,7 @@ async function callOpenRouter(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  const primaryInstruction = isCreateStage2
+  let primaryInstruction = isCreateStage2
     ? assembleCreateStage2FaceIdentityInstruction()
     : isRefinementEdit
       ? `${OPENROUTER_RENDERING_CONFIG.refinementEditInstruction}\n\n${refinementInstruction}`
@@ -416,6 +435,11 @@ async function callOpenRouter(
   const effectivePoseReferenceUrl = isCreateStage2
     ? undefined
     : poseReferenceImageUrl;
+
+  // Furniture appearance evidence belongs to fresh generation only. Refinement
+  // edits and Stage-2 preserve an existing frame and must not be re-litigated.
+  const effectiveFurnitureReferenceUrl =
+    isCreateStage2 || isRefinementEdit ? undefined : furnitureReferenceImageUrl;
 
   const imageContent = isCreateStage2
     ? buildCreateStage2ImageParts({
@@ -449,7 +473,35 @@ async function callOpenRouter(
           garmentBackImageUrl,
           garmentDetailImageUrl,
           additionalTalentImageUrls,
+          furnitureReferenceImageUrl: effectiveFurnitureReferenceUrl,
         });
+
+  // 1-based index of the furniture reference inside the final image array.
+  // Computed from the assembled parts so evidence-set layouts stay correct.
+  const furnitureReferenceImageNumber = effectiveFurnitureReferenceUrl
+    ? imageContent.findIndex(
+        (part) => part.image_url.url === effectiveFurnitureReferenceUrl,
+      ) + 1
+    : 0;
+
+  if (furnitureReferenceImageNumber > 0 && !isCreateStage2 && !isRefinementEdit) {
+    primaryInstruction = [
+      primaryInstruction,
+      buildFurnitureReferencePrimaryPointer(furnitureReferenceImageNumber),
+    ].join("\n\n");
+  }
+
+  // Furniture authority rides with the creative shot prompt so the wording stays
+  // isolated to this layer and never mutates the shared primary instruction.
+  const creativeShotPrompt =
+    furnitureReferenceImageNumber > 0
+      ? [
+          prompt?.trim() ? prompt.trim() : "",
+          buildFurnitureReferenceAuthorityLayer(furnitureReferenceImageNumber),
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      : prompt;
 
   if (!isRefinementEdit) {
     logIdentityForensics({
@@ -493,6 +545,7 @@ async function callOpenRouter(
       garmentDetailImageUrl,
       modelImageUrl,
       poseReferenceImageUrl: effectivePoseReferenceUrl,
+      furnitureReferenceImageUrl: effectiveFurnitureReferenceUrl,
       previousOutputUrl: isCreateStage2 ? undefined : previousOutputUrl,
       additionalTalentImageUrls,
       finalImagePartCount: imageContent.length,
@@ -525,7 +578,9 @@ async function callOpenRouter(
         talentImageCount,
         hasPoseReference: Boolean(effectivePoseReferenceUrl),
         locationEnvironment,
-        creativeShotPrompt: prompt?.trim() ? prompt.trim() : undefined,
+        creativeShotPrompt: creativeShotPrompt?.trim()
+          ? creativeShotPrompt.trim()
+          : undefined,
       });
       const fluxBuilt = buildFluxMaxImagesApiRequestBody({
         model,
@@ -542,7 +597,9 @@ async function callOpenRouter(
           1 + (additionalTalentImageUrls?.filter(Boolean).length ?? 0),
         locationEnvironment: null,
         primaryInstruction,
-        creativeShotPrompt: prompt?.trim() ? prompt.trim() : undefined,
+        creativeShotPrompt: creativeShotPrompt?.trim()
+          ? creativeShotPrompt.trim()
+          : undefined,
         talentReferenceImageNumber:
           garmentEvidenceTalentReferenceImageNumber ?? 2,
         furnitureRequired: Boolean(furnitureRequired),
@@ -570,8 +627,8 @@ async function callOpenRouter(
                 text: primaryInstruction,
               },
               ...imageContent,
-              ...(prompt && !isRefinementEdit && !isCreateStage2
-                ? [{ type: "text" as const, text: prompt }]
+              ...(creativeShotPrompt && !isRefinementEdit && !isCreateStage2
+                ? [{ type: "text" as const, text: creativeShotPrompt }]
                 : []),
             ],
           },
@@ -817,6 +874,8 @@ async function generateSingleShot(
   createStage?: 1 | 2,
   stage1ImageUrl?: string,
   furnitureRequired?: boolean,
+  /** Selected furniture appearance reference for THIS shot (per-slot). */
+  furnitureReferenceImageUrl?: string,
 ): Promise<string | null> {
   const { timeoutMs, retryCount } = OPENROUTER_RENDERING_CONFIG;
   const provider = OPENROUTER_RENDERING_CONFIG.provider;
@@ -861,6 +920,7 @@ async function generateSingleShot(
         createStage,
         stage1ImageUrl,
         furnitureRequired,
+        furnitureReferenceImageUrl,
       );
       const durationMs = Date.now() - t0;
 
@@ -1008,6 +1068,7 @@ export class OpenRouterProvider implements RenderingProvider {
       locationEnvironment,
       additionalTalentImageUrls,
       perShotFurnitureRequired,
+      perShotFurnitureReferenceUrls,
     } = input;
 
     const hasPerShotPrompts =
@@ -1074,6 +1135,8 @@ export class OpenRouterProvider implements RenderingProvider {
           const poseReferenceImageUrl =
             perShotPoseReferenceUrls?.[i] ?? undefined;
           const furnitureRequired = Boolean(perShotFurnitureRequired?.[i]);
+          const furnitureReferenceImageUrl =
+            perShotFurnitureReferenceUrls?.[i] ?? undefined;
 
           return runStaggeredShot(i, () =>
             generateSingleShot(
@@ -1104,6 +1167,7 @@ export class OpenRouterProvider implements RenderingProvider {
               1,
               undefined,
               furnitureRequired,
+              furnitureReferenceImageUrl,
             ),
           );
         }),
@@ -1158,6 +1222,8 @@ export class OpenRouterProvider implements RenderingProvider {
             : prompt;
           const poseReferenceImageUrl =
             perShotPoseReferenceUrls?.[i] ?? undefined;
+          const furnitureReferenceImageUrl =
+            perShotFurnitureReferenceUrls?.[i] ?? undefined;
 
           return runStaggeredShot(i, () =>
             generateSingleShot(
@@ -1184,6 +1250,11 @@ export class OpenRouterProvider implements RenderingProvider {
               input.garmentEvidenceHasBack,
               input.garmentEvidenceHasDetail,
               input.garmentReferenceMode,
+              undefined, // engineOverride — production single-shot default
+              undefined, // createStage
+              undefined, // stage1ImageUrl
+              Boolean(perShotFurnitureRequired?.[i]),
+              furnitureReferenceImageUrl,
             ),
           );
         }),

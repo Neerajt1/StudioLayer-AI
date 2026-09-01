@@ -200,6 +200,22 @@ describe("Pose Master definition audit — 75 poses", () => {
     assert.match(prompt, /POSE 7 GEOMETRIC ANCHORS/);
     assert.match(prompt, /BACKREST/);
     assert.equal(getPoseDefinition("Pose7")!.poseReferenceImage, "/pose-references/Pose7.png");
+    assert.doesNotMatch(prepared, /furniture appearance may be NEW/i);
+    assert.match(prepared, /body↔backrest spatial relationship must match Pose7\.png/i);
+  });
+
+  it("strips catalog-era furniture synthesis language from pose definitions", () => {
+    const pose7 = prepareNormalizedPoseMasterDefinition(
+      "Pose7",
+      getPoseDefinition("Pose7")!.description,
+    );
+    const pose68 = prepareNormalizedPoseMasterDefinition(
+      "Pose68",
+      getPoseDefinition("Pose68")!.description,
+    );
+    assert.doesNotMatch(pose7, /furniture appearance may be NEW/i);
+    assert.doesNotMatch(pose68, /furniture appearance may be new/i);
+    assert.doesNotMatch(pose68, /Furniture catalog supplies NEW dark/i);
   });
 
   it("does not introduce garment-specific pose replacement in authority layer", () => {

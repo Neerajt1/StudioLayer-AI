@@ -314,6 +314,24 @@ export function stripPoseSubjectIdentityLanguage(definition: string): string {
   return text;
 }
 
+/**
+ * Remove catalog-era furniture synthesis language from pose definitions.
+ * Furniture appearance is owned by the furniture-reference authority when attached;
+ * legacy "may be NEW" wording encourages redesign and conflicts with reference fidelity.
+ */
+export function neutralizeFurnitureSynthesisLanguage(definition: string): string {
+  return definition
+    .replace(/furniture appearance may be NEW but /gi, "")
+    .replace(/furniture appearance may be new but /gi, "")
+    .replace(/;\s*furniture appearance may be NEW\b[^.\n]*/gi, "")
+    .replace(/;\s*furniture appearance may be new\b[^.\n]*/gi, "")
+    .replace(
+      /Furniture catalog supplies NEW dark appearance\/finish only[^.\n]*/gi,
+      "",
+    )
+    .replace(/\n{3,}/g, "\n\n");
+}
+
 /** Apply normalization for the generation path (catalog text in → Gemini text out). */
 export function prepareNormalizedPoseMasterDefinition(
   poseId: string,
@@ -323,7 +341,9 @@ export function prepareNormalizedPoseMasterDefinition(
     poseId,
     structuredDefinition,
   ).newDefinition;
-  return stripPoseSubjectIdentityLanguage(normalized);
+  return neutralizeFurnitureSynthesisLanguage(
+    stripPoseSubjectIdentityLanguage(normalized),
+  );
 }
 
 /** Trace every pose normalization for reporting (GREEN included as unchanged). */

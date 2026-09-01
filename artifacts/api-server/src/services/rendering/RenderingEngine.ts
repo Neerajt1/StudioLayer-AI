@@ -128,6 +128,7 @@ export class RenderingEngine {
       garmentEvidenceHasDetail: input.garmentEvidenceHasDetail,
       garmentReferenceMode: input.garmentReferenceMode,
       perShotFurnitureRequired: input.perShotFurnitureRequired,
+      perShotFurnitureReferenceUrls: input.perShotFurnitureReferenceUrls,
     });
 
     const durationMs = Date.now() - t0;

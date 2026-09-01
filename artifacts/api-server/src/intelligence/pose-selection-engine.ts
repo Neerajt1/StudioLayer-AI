@@ -78,7 +78,12 @@ import {
   selectFurnitureAsset,
 } from "./furniture-selector";
 import type { FurnitureUsageRecord } from "./furniture-selector";
-import { deriveSupportContactClass, deriveSupportSpatialRelation } from "./furniture-support";
+import {
+  deriveSupportContactClass,
+  deriveSupportSpatialRelation,
+  type SupportContactClass,
+} from "./furniture-support";
+import { deriveGarmentTone, type GarmentTone } from "./garment-tone";
 
 export type { PoseSelectionContext, RecentPoseSelection };
 
@@ -728,6 +733,19 @@ function toPhotographyOnlyDirection(direction: ShotDirection): ShotDirection {
     camera = direction.camera.replace(/capturing natural movement\.?\s*/gi, "");
   }
 
+  // Centring is a body-placement assertion, not a framing requirement: it pushes
+  // symmetrical catalog composition onto poses whose Pose Master demonstrates an
+  // asymmetric placement. Keep the framing language, defer placement to the pose.
+  camera = camera
+    .replace(
+      /Model centred with ([^.]*)\./gi,
+      "Frame the full figure with $1, positioned as the Pose Master demonstrates.",
+    )
+    .replace(
+      /Model centred in frame\.?/gi,
+      "Frame the full figure as the Pose Master demonstrates.",
+    );
+
   const energy =
     MANUAL_PHOTOGRAPHY_ENERGY[direction.label] ?? direction.energy;
 
@@ -863,6 +881,12 @@ export function resolveFurnitureForPose(input: {
   excludeAssetIdsInBatch?: string[];
   excludeFamiliesInBatch?: string[];
   seed?: number;
+  /**
+   * Optional garment tonal complement signal. Callers without an analysed
+   * garment (including the frozen Nano Pro trial) simply omit it and keep
+   * their existing selection behaviour.
+   */
+  garmentTone?: GarmentTone | null;
 }): FurnitureAsset | null {
   if (!poseRequiresFurnitureSelection(input.prop)) return null;
   const pose =
@@ -872,6 +896,7 @@ export function resolveFurnitureForPose(input: {
   const selected = selectFurnitureAsset({
     prop: input.prop ?? pose?.prop,
     pose,
+    garmentTone: input.garmentTone,
     userHistory: input.userHistory,
     excludeAssetIdsInBatch: input.excludeAssetIdsInBatch,
     excludeFamiliesInBatch: input.excludeFamiliesInBatch,
@@ -882,7 +907,10 @@ export function resolveFurnitureForPose(input: {
         historyLength: input.userHistory?.length ?? 0,
       }),
   });
-  return selected?.asset ?? null;
+  if (!selected) {
+    return null;
+  }
+  return selected.asset;
 }
 
 /**
@@ -964,6 +992,84 @@ function buildPhotographyRefinementLayers(
 ${buildFashionPerformanceLayer(poseIdOrName)}
 
 ${buildIntrinsicPropQualityLayer(prop, description, poseIdOrName, furnitureAsset)}`;
+}
+
+/**
+ * Support classes whose body↔furniture relationship the image model routinely
+ * collapses into an ordinary seat sit. deep_seated is deliberately absent: a
+ * conventional sit is the correct outcome there, so it needs no reinforcement.
+ */
+const SUPPORT_CLASSES_NEEDING_REINFORCEMENT: ReadonlySet<SupportContactClass> =
+  new Set([
+    "half_seated",
+    "edge_seated",
+    "leaning_supported",
+    "stool_seated",
+    "block_seated",
+    "reclined_seated",
+  ]);
+
+/** Classes where an ordinary seat sit is the specific failure mode to forbid. */
+const SUPPORT_CLASSES_FORBIDDING_SEAT_SIT: ReadonlySet<SupportContactClass> =
+  new Set(["half_seated", "edge_seated", "leaning_supported"]);
+
+/**
+ * The derived promptHint closes with a furniture appearance/finish sentence that
+ * predates the furniture catalogue redesign and the furniture reference pipeline.
+ * Furniture appearance belongs to the furniture layer, so drop it here.
+ */
+const SUPPORT_HINT_FURNITURE_FINISH = /\s*Furniture catalog supplies[\s\S]*$/;
+
+function extractSupportSurfaceLine(description: string): string | null {
+  const match = /^SUPPORT \/ SURFACE:\s*(.+)$/m.exec(description);
+  const value = match?.[1]?.trim();
+  return value && value.toLowerCase() !== "none" ? value : null;
+}
+
+/**
+ * Emit the already-derived body↔support relationship as pose authority.
+ *
+ * furniture-support.ts has always computed this relationship, but the resulting
+ * promptHint was never read by any prompt builder — so the one instruction that
+ * says "not a conventional seat sit" never reached the model. This layer carries
+ * it, and nothing else: furniture appearance, camera and framing stay elsewhere.
+ */
+function buildBodySupportRelationshipLayer(
+  pose: PoseDefinition | null | undefined,
+  description: string,
+): string {
+  if (!pose) return "";
+
+  const relation = deriveSupportSpatialRelation(pose);
+  if (!relation) return "";
+  if (!SUPPORT_CLASSES_NEEDING_REINFORCEMENT.has(relation.contactClass)) {
+    return "";
+  }
+
+  const lines = [
+    relation.promptHint.replace(SUPPORT_HINT_FURNITURE_FINISH, "").trim(),
+  ];
+
+  // Read the prepared definition so the surface wording matches the pose block.
+  const supportSurface = extractSupportSurfaceLine(
+    preparePoseMasterStructuredDefinition(pose.poseId ?? "", description),
+  );
+  if (supportSurface) {
+    lines.push(`Support surface: ${supportSurface}`);
+  }
+
+  if (SUPPORT_CLASSES_FORBIDDING_SEAT_SIT.has(relation.contactClass)) {
+    lines.push(
+      "Do not convert this into conventional sitting on the seat, front seat-edge sitting, sitting beside the furniture, or lean-only contact.",
+    );
+  }
+
+  lines.push(
+    "This layer governs the body↔furniture contact relationship only. The Pose Master remains the sole authority for body pose, limb placement, camera, framing, and composition, and this layer does not govern furniture appearance, identity, or garment.",
+  );
+
+  return `BODY ↔ SUPPORT RELATIONSHIP (pose authority — not furniture authority):
+${lines.join("\n")}`;
 }
 
 /**
@@ -1057,9 +1163,13 @@ function buildManualDirectedShotPrompt(
     description,
     hasVisualReference,
   );
+  const supportRelationship = buildBodySupportRelationshipLayer(
+    definition,
+    description,
+  );
 
   return `${poseAuthority}
-
+${supportRelationship ? `\n${supportRelationship}\n` : ""}
 ${neutralBase}
 
 SHOT DIRECTION — ${photoDirection.label} (photography and styling only — not body pose):
@@ -1084,8 +1194,11 @@ function buildDiverseShotPrompt(
     definition?.description ?? getPoseDescription(poseIdOrName);
   const poseId = definition?.poseId ?? poseIdOrName;
   const displayName = definition?.name ?? poseIdOrName;
+  // Same sanitiser the manual-directed path uses: a generic "directly facing the
+  // model / centred" direction contradicts any pose whose Pose Master demonstrates
+  // a three-quarter or asymmetric body relationship.
   const framedDirection = adaptShotDirectionForPoseFraming(
-    direction,
+    toPhotographyOnlyDirection(direction),
     definition?.preferredFraming,
     description,
   );
@@ -1104,14 +1217,20 @@ function buildDiverseShotPrompt(
     description,
     hasVisualReference,
   );
+  const supportRelationship = buildBodySupportRelationshipLayer(
+    definition,
+    description,
+  );
 
-  return `${basePrompt}
+  // Pose authority precedes the generic shot direction, matching the manual path:
+  // the pose contract must not arrive after a competing camera instruction.
+  return `${poseAuthority}
+${supportRelationship ? `\n${supportRelationship}\n` : ""}
+${basePrompt}
 
-SHOT DIRECTION — ${framedDirection.label}:
+SHOT DIRECTION — ${framedDirection.label} (photography and styling only — not body pose):
 ${framedDirection.camera}
 Energy: ${framedDirection.energy}
-
-${poseAuthority}
 
 ${photographyRefinements}
 
@@ -1223,6 +1342,7 @@ export function buildShotPromptAtSlot(
           prop: definition?.prop,
           poseIdOrName: definition?.poseId ?? poseName,
           pose: definition,
+          garmentTone: deriveGarmentTone(profile),
           userHistory: options?.furnitureUserHistory,
           seed: furnitureDiversitySeed({
             poseIdOrName: definition?.poseId ?? poseName,
@@ -1308,6 +1428,7 @@ export function buildShotPromptsWithPlan(
       prop: definition?.prop,
       poseIdOrName: poseId,
       pose: definition,
+      garmentTone: deriveGarmentTone(profile),
       userHistory: furnitureUserHistory,
       excludeAssetIdsInBatch: batchAssetIds,
       excludeFamiliesInBatch: batchFamilies,

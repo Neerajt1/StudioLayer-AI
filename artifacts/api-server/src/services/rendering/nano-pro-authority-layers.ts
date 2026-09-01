@@ -145,17 +145,22 @@ export function buildFurnitureAuthorityLayer(
   furnitureRequired?: boolean,
 ): string {
   // V1: furniture authority is pose/furniture-system only — never Environment-driven.
+  //
+  // The pose illustration stays authoritative for pose, body geometry, composition
+  // and camera relationship. Furniture drawn inside it is incidental scaffolding,
+  // never the requested piece — that distinction has to be explicit, because a
+  // blanket "ignore the reference" would cost pose fidelity.
   if (furnitureRequired) {
     return `FURNITURE AUTHORITY:
 This pose requires a support furniture piece. Follow the creative FURNITURE instruction for the selected studio piece only.
-Do not invent additional furniture, props, or environmental objects beyond that required support.
-Do not copy furniture design from the pose illustration.`;
+The pose reference remains authoritative for pose, body geometry, composition and camera relationship. Any furniture visible in it is incidental and is NOT the requested furniture — do not copy, reproduce or treat it as the selected piece.
+Do not invent additional furniture, props, or environmental objects beyond that required support.`;
   }
 
   return `FURNITURE AUTHORITY:
+The pose reference remains authoritative for pose, body geometry, composition and camera relationship. Any furniture visible in it is incidental and must NOT be copied or reproduced.
 Do not invent chairs, stools, blocks, tables, bags, plants, books, cups, lamps, decorative objects, or lifestyle furniture.
-Include a support object only when the creative FURNITURE instruction requires it.
-Do not copy furniture from the pose illustration.`;
+Include a support object only when the creative FURNITURE instruction requires it.`;
 }
 
 /**

@@ -98,6 +98,12 @@ export interface PhotoshootInput {
    * Used by Nano Pro Stage-1 furniture authority conflict resolution.
    */
   perShotFurnitureRequired?: boolean[];
+  /**
+   * Per-shot: data URI of the selected furniture's appearance reference.
+   * `undefined` for shots without furniture or without a registered reference —
+   * those keep the existing text-only furniture instruction.
+   */
+  perShotFurnitureReferenceUrls?: Array<string | null>;
 }
 
 /** A single generated image returned by the engine. */
@@ -184,6 +190,12 @@ export interface ProviderInput {
    * Used by Nano Pro Stage-1 furniture authority conflict resolution.
    */
   perShotFurnitureRequired?: boolean[];
+  /**
+   * Per-shot: data URI of the selected furniture's appearance reference.
+   * `undefined` for shots without furniture or without a registered reference —
+   * those keep the existing text-only furniture instruction.
+   */
+  perShotFurnitureReferenceUrls?: Array<string | null>;
 }
 
 /** Contract every rendering provider must satisfy. */

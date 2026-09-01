@@ -63,6 +63,7 @@ import {
   type FurnitureUsageRecord,
 } from "../intelligence/furniture-selector";
 import type { GarmentProfile } from "../intelligence/types";
+import { deriveGarmentTone } from "../intelligence/garment-tone";
 import { loadRecentPoseSelections } from "./pose-history-service";
 import { loadRecentFurnitureUsage } from "./furniture-usage-service";
 import {
@@ -78,6 +79,9 @@ import {
   loadStudioTalentImageAsDataUri,
 }                                    from "../rendering/preprocessing";
 import { loadStage1PoseReferenceImageAsDataUri } from "../rendering/pose-face-neutral-backend.js";
+import {
+  resolvePerShotFurnitureReferences,
+} from "../rendering/furniture-reference-contract.js";
 import {
   buildGarmentReferenceCorrespondenceInstruction,
   prepareGarmentReferenceForGeneration,
@@ -144,6 +148,7 @@ function resolveDirectedPoseAtSlot(
             prop: definition.prop,
             poseIdOrName: poseId,
             pose: definition,
+            garmentTone: deriveGarmentTone(profile),
             userHistory: options.furnitureUserHistory,
             seed: furnitureDiversitySeed({
               poseIdOrName: poseId,
@@ -235,6 +240,7 @@ function buildShotPlanWithDirectedPoses(
       prop: definition?.prop,
       poseIdOrName: poseId,
       pose: definition,
+      garmentTone: deriveGarmentTone(profile),
       userHistory: furnitureUserHistory,
       excludeAssetIdsInBatch: batchAssetIds,
       excludeFamiliesInBatch: batchFamilies,
@@ -688,6 +694,21 @@ export async function runAIPipeline(params: {
           })
         : undefined;
 
+    // Furniture reference contract — per slot. Each shot must carry a loadable
+    // product reference for its selected asset. Silent null → text-only is forbidden.
+    let perShotFurnitureReferenceUrls: Array<string | null> | undefined;
+    if (shotPlan && !resolvedRefinementType) {
+      const furnitureResolution = resolvePerShotFurnitureReferences({
+        furnitureSelections: shotPlan.furnitureSelections ?? [],
+        plannedPoses: shotPlan.plannedPoses,
+        garmentTone: deriveGarmentTone(intelligenceResult.profile),
+        furnitureUserHistory,
+        renderId,
+      });
+      perShotFurnitureReferenceUrls = furnitureResolution.referenceUrls;
+      shotPlan.furnitureSelections = furnitureResolution.furnitureSelections;
+    }
+
     const identityForensics =
       !resolvedRefinementType
         ? {
@@ -805,6 +826,7 @@ export async function runAIPipeline(params: {
       perShotFurnitureRequired: shotPlan?.furnitureSelections?.map(
         (asset) => asset != null,
       ),
+      perShotFurnitureReferenceUrls,
     });
 
     if (photoshootResult.images.length === 0) {

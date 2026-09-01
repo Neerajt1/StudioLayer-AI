@@ -53,6 +53,7 @@ export function resolveOpenRouterImagePartRoles(params: {
   garmentBackImageUrl?: string | null;
   garmentDetailImageUrl?: string | null;
   poseReferenceImageUrl?: string | null;
+  furnitureReferenceImageUrl?: string | null;
   previousOutputUrl?: string | null;
   additionalTalentImageUrls?: string[] | null;
   modelImageUrl?: string | null;
@@ -103,6 +104,7 @@ export function resolveOpenRouterImagePartRoles(params: {
     "TALENT",
     ...talentExtras.map(() => "TALENT_EXTRA" as const),
     ...(params.poseReferenceImageUrl ? (["POSE_MASTER"] as const) : []),
+    ...(params.furnitureReferenceImageUrl ? (["FURNITURE"] as const) : []),
     ...(params.previousOutputUrl ? (["PREVIOUS_OUTPUT"] as const) : []),
   ];
 }
@@ -130,6 +132,7 @@ export type BuildOpenRouterRequestEvidenceMetadataInput = {
   garmentDetailImageUrl?: string | null;
   modelImageUrl?: string | null;
   poseReferenceImageUrl?: string | null;
+  furnitureReferenceImageUrl?: string | null;
   previousOutputUrl?: string | null;
   additionalTalentImageUrls?: string[] | null;
   /** Actual image_url part count in the OpenRouter request body. */
@@ -151,6 +154,7 @@ export function buildOpenRouterRequestEvidenceMetadata(
     garmentBackImageUrl: input.garmentBackImageUrl,
     garmentDetailImageUrl: input.garmentDetailImageUrl,
     poseReferenceImageUrl: input.poseReferenceImageUrl,
+    furnitureReferenceImageUrl: input.furnitureReferenceImageUrl,
     previousOutputUrl: input.previousOutputUrl,
     additionalTalentImageUrls: input.additionalTalentImageUrls,
     modelImageUrl: input.modelImageUrl,

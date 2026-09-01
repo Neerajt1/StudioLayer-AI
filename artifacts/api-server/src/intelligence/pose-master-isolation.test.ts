@@ -12,6 +12,7 @@ import {
   preparePoseMasterStructuredDefinition,
 } from "./pose-selection-engine";
 import { getPoseDefinition } from "./pose-library";
+import { FURNITURE_PROMPT_MAX_CHARS } from "./furniture-selector";
 import {
   buildGarmentEvidenceSetLayout,
   remapCreativePromptReferenceNumbers,
@@ -90,11 +91,16 @@ describe("Pose Master authority — isolation without removing visual ref", () =
     const layer = buildIntrinsicPropQualityLayer("chair", "seated on a chair", "Pose7");
     assert.match(layer, /^FURNITURE:\nA chair must be present as required by this pose\./);
     assert.match(layer, /body-to-support relationship/);
-    assert.match(layer, /do not copy Pose Master furniture design/i);
     assert.doesNotMatch(layer, /Selected furniture appearance/);
     assert.doesNotMatch(layer, /furn_chair_/);
     assert.doesNotMatch(layer, /FURNITURE APPEARANCE GUIDANCE/);
-    assert.doesNotMatch(layer, /Prefer:/);
+    assert.match(layer, /FURNITURE REFERENCE AUTHORITY below/);
+    assert.doesNotMatch(layer, /Real furniture, honestly made: solid hardwood/);
+    assert.ok(layer.length <= FURNITURE_PROMPT_MAX_CHARS);
+    assert.doesNotMatch(layer, /INTRINSIC PROP QUALITY/);
+    assert.doesNotMatch(layer, /Key qualities:/);
+    assert.doesNotMatch(layer, /Match furniture to styling/);
+    assert.doesNotMatch(layer, /Do NOT interpret "rich"/);
     assert.doesNotMatch(layer, /Avoid \/ strongly de-prioritize/);
     assert.doesNotMatch(layer, /garment and model remain the visual priority/i);
     assert.doesNotMatch(layer, /Pose Master spatial authority/);
@@ -110,7 +116,12 @@ describe("Pose Master authority — isolation without removing visual ref", () =
     assert.doesNotMatch(layer, /Selected furniture appearance/);
     assert.doesNotMatch(layer, /furn_stool_/);
     assert.doesNotMatch(layer, /MUST-PRESENT SUPPORT/);
-    assert.doesNotMatch(layer, /Prefer:/);
+    assert.match(layer, /FURNITURE REFERENCE AUTHORITY below/);
+    assert.doesNotMatch(layer, /Real furniture, honestly made: solid hardwood/);
+    assert.ok(layer.length <= FURNITURE_PROMPT_MAX_CHARS);
+    assert.doesNotMatch(layer, /INTRINSIC PROP QUALITY/);
+    assert.doesNotMatch(layer, /Key qualities:/);
+    assert.doesNotMatch(layer, /Match furniture to styling/);
     assert.doesNotMatch(layer, /Pose Master spatial authority/);
     assert.doesNotMatch(layer, /FURNITURE APPEARANCE GUIDANCE/);
     assert.doesNotMatch(layer, /GARMENT AUTHORITY REMINDER/);
@@ -138,7 +149,11 @@ describe("Pose Master authority — isolation without removing visual ref", () =
     assert.match(prompt, /\nFURNITURE:\nA chair must be present as required by this pose\./);
     assert.doesNotMatch(prompt, /Selected furniture appearance/);
     assert.doesNotMatch(prompt, /FURNITURE APPEARANCE GUIDANCE/);
-    assert.doesNotMatch(prompt, /Prefer:/);
+    assert.match(prompt, /FURNITURE REFERENCE AUTHORITY below/);
+    assert.doesNotMatch(prompt, /Real furniture, honestly made: solid hardwood/);
+    assert.doesNotMatch(prompt, /INTRINSIC PROP QUALITY/);
+    assert.doesNotMatch(prompt, /Key qualities:/);
+    assert.doesNotMatch(prompt, /Match furniture to styling/);
     assert.match(prompt, /GARMENT AUTHORITY REMINDER/);
     assert.match(prompt, /Reference Image 3 is the Pose Master visual geometry/);
     assert.doesNotMatch(prompt, /TYPE and FEEL of pose/);

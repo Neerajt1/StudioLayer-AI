@@ -1,6 +1,8 @@
 // ---------------------------------------------------------------------------
 // Global furniture selector — appearance source + pose-compatible filtering.
-// Dark frame + light upholstery is NOT dark furniture.
+//
+// Quality is a function of material, craftsmanship and refined proportion.
+// It is NEVER a function of bulk, and dark upholstery is not a prerequisite.
 // Furniture never becomes Pose Master / pose / viewpoint authority.
 // ---------------------------------------------------------------------------
 
@@ -8,7 +10,9 @@ import {
   FURNITURE_CATALOG,
   FURNITURE_USER_COOLDOWN,
   getFurnitureAsset,
-  isFullyDarkFurniture,
+  isDarkOnDark,
+  isFurnitureDeprecated,
+  isSelectableFurniture,
   listFurnitureForCategory,
   propToFurnitureCategory,
   type FurnitureAsset,
@@ -21,11 +25,16 @@ import {
   requiresEdgeCapableSeat,
   seatProfileCompatibilityScore,
   supportClassPromptLabel,
-  textImpliesLightUpholstery,
   type SupportContactClass,
   type SupportSpatialRelation,
 } from "./furniture-support";
+import {
+  isUnknownGarmentTone,
+  type GarmentTone,
+} from "./garment-tone";
 import type { PoseDefinition } from "./pose-vocabulary-types";
+import { hasFurnitureReferenceImage } from "../rendering/furniture-reference-backend.js";
+import { FURNITURE_REFERENCE_DEFERRED_APPEARANCE_LINE } from "../rendering/furniture-reference-appearance-authority.js";
 
 export interface FurnitureUsageRecord {
   furnitureAssetId: string;
@@ -43,6 +52,11 @@ export interface SelectFurnitureInput {
   > | null;
   /** Explicit support class override (tests). */
   supportClass?: SupportContactClass | null;
+  /**
+   * Optional tonal complement signal derived from the analysed garment.
+   * Absent / unknown reproduces pre-garment-aware behaviour exactly.
+   */
+  garmentTone?: GarmentTone | null;
   /** Successful furniture-bearing history for THIS user (most recent first). */
   userHistory?: FurnitureUsageRecord[];
   /** Exact asset IDs already chosen in this batch. */
@@ -68,8 +82,11 @@ export interface FurnitureSelectionResult {
 /** Soft upper bound for furniture prompt layer length (chars). */
 export const FURNITURE_PROMPT_MAX_CHARS = 900;
 
-/** Score band width for controlled editorial variation among top premium assets. */
-export const FURNITURE_TOP_BAND = 18;
+/**
+ * Score band width for controlled editorial variation among top assets.
+ * Sized for the 0–87 earned-score model below.
+ */
+export const FURNITURE_TOP_BAND = 6;
 
 function hashSeed(seed: number | string | undefined): number {
   if (typeof seed === "number" && Number.isFinite(seed)) return seed >>> 0;
@@ -115,7 +132,11 @@ function recentFamilyCounts(
   return counts;
 }
 
-/** Soft-penalize recently used exact assets (within a short window) for rotation. */
+/**
+ * Soft-penalize recently used exact assets (within a short window) for rotation.
+ * Same window and tiering as before, rescaled for the 0–87 quality range so
+ * history can refine the choice without outranking furniture quality.
+ */
 function recentAssetPenalty(
   assetId: string,
   history: FurnitureUsageRecord[],
@@ -123,74 +144,191 @@ function recentAssetPenalty(
   let penalty = 0;
   for (const row of history.slice(0, 8)) {
     if (row.furnitureAssetId !== assetId) continue;
-    // Most recent exact reuse is heavily discouraged when alternatives exist.
-    if (row.index <= 2) penalty += 55;
-    else if (row.index <= 5) penalty += 28;
-    else penalty += 12;
+    if (row.index <= 2) penalty += 20;
+    else if (row.index <= 5) penalty += 12;
+    else penalty += 5;
   }
   return penalty;
 }
 
-/** Asset fails dark aesthetic if metadata or prompt text implies light seat. */
-export function assetViolatesDarkAesthetic(asset: FurnitureAsset): boolean {
-  if (asset.isLightUpholstery || asset.isLightBrown) return true;
-  if (!asset.isDarkPreferred) return true;
-  const blob = `${asset.label} ${asset.materialSummary} ${asset.promptDescription}`;
-  return textImpliesLightUpholstery(blob);
+// ---------------------------------------------------------------------------
+// Quality components. Each returns a bounded, independently readable value.
+// ---------------------------------------------------------------------------
+
+/**
+ * Pose/support suitability (roughly -31..25).
+ *
+ * furniture-support.ts owns the semantics; this only rescales its established
+ * -55..45 range onto the new model. Ordering and relative weight are unchanged.
+ */
+export function supportSuitabilityScore(
+  asset: FurnitureAsset,
+  supportClass: SupportContactClass | null,
+): number {
+  const raw = seatProfileCompatibilityScore(asset.seatProfile, supportClass);
+  let score = Math.round(raw * (25 / 45));
+  if (requiresEdgeCapableSeat(supportClass) && asset.seatProfile === "deep_lounge") {
+    score -= 22;
+  }
+  return score;
+}
+
+/** Material and construction (15..30 for pool-eligible assets). */
+export function materialCraftScore(asset: FurnitureAsset): number {
+  const materialBonus =
+    asset.materialClass === "solid_timber"
+      ? 5
+      : asset.materialClass === "timber_with_leather"
+        ? 3
+        : 2;
+  return asset.craftQuality * 5 + materialBonus;
+}
+
+/** Restraint and proportion of the silhouette (4..20). */
+export function silhouetteRefinementScore(asset: FurnitureAsset): number {
+  return asset.silhouetteRefinement * 4;
+}
+
+/**
+ * Scale (-12..0). Never positive.
+ *
+ * `generous` is only free when the pose genuinely calls for a lounge-scaled
+ * piece. Nothing here rewards bulk.
+ */
+export function scaleScore(
+  asset: FurnitureAsset,
+  supportClass: SupportContactClass | null,
+): number {
+  if (asset.scale !== "generous") return 0;
+  const loungeAppropriate =
+    asset.seatProfile === "deep_lounge" &&
+    (supportClass === "deep_seated" || supportClass === "reclined_seated");
+  return loungeAppropriate ? 0 : -12;
+}
+
+/**
+ * Tonal pairing (2..12), derived from woodTone x seatTreatment.
+ *
+ * Bare timber and light-neutral seats are the preferred house directions.
+ * Dark-on-dark remains allowed and positive — it is simply no longer the
+ * structural precondition for a premium score.
+ */
+export function tonalPairingScore(asset: FurnitureAsset): number {
+  switch (asset.seatTreatment) {
+    case "bare_timber":
+      return 12;
+    case "light_neutral":
+      return 12;
+    case "warm_mid":
+      return asset.woodTone === "dark" ? 5 : 8;
+    case "dark":
+      return asset.woodTone === "dark" ? 2 : 6;
+  }
+}
+
+/** Decoration penalty (-8..0). `decorative` is filtered out before scoring. */
+export function ornamentationScore(asset: FurnitureAsset): number {
+  return asset.ornamentation === "minimal" ? -8 : 0;
+}
+
+/** Hard ceiling on how far garment tone may move a decision. */
+export const MAX_GARMENT_TONE_SCORE = 8;
+
+/**
+ * Tonal COMPLEMENT between the garment and the furniture (0..8).
+ *
+ * This is deliberately not colour matching. Rich warm timber is the strongest
+ * answer to both dark and light garments, because the goal is a balanced
+ * editorial image rather than a furniture piece that agrees with the clothing.
+ * Nothing here is negative: furniture is never punished for failing to match a
+ * colour, only rewarded for complementing it.
+ *
+ * Depth is the primary signal. Temperature refines it, and stands in as a
+ * weaker fallback when depth could not be established.
+ */
+export function garmentToneScore(
+  asset: FurnitureAsset,
+  tone: GarmentTone | null | undefined,
+): number {
+  if (!tone || isUnknownGarmentTone(tone)) return 0;
+
+  const { woodTone: wood, seatTreatment: seat } = asset;
+  let score = 0;
+
+  if (tone.depth === "dark") {
+    // Warm timber and light seats lift a dark garment off the frame.
+    if (wood === "warm_medium") {
+      score = seat === "light_neutral" ? 8 : seat === "bare_timber" ? 7 : seat === "warm_mid" ? 5 : 3;
+    } else if (wood === "light_natural") {
+      score = seat === "dark" ? 3 : seat === "warm_mid" ? 4 : 5;
+    } else {
+      score = seat === "light_neutral" ? 5 : seat === "dark" ? 1 : 3;
+    }
+  } else if (tone.depth === "light") {
+    // Rich timber grounds a light garment; pale-on-pale is not rewarded.
+    if (wood === "warm_medium") {
+      score = seat === "bare_timber" ? 8 : seat === "dark" ? 5 : 6;
+    } else if (wood === "dark") {
+      score = seat === "light_neutral" ? 7 : seat === "dark" ? 2 : 5;
+    } else {
+      score = seat === "dark" ? 3 : 4;
+    }
+  } else if (tone.depth === "mid") {
+    // No aggressive contrast requirement — reward balance.
+    if (wood === "warm_medium") {
+      score = seat === "dark" ? 4 : seat === "warm_mid" ? 6 : 7;
+    } else if (wood === "dark") {
+      score = seat === "light_neutral" ? 6 : seat === "dark" ? 2 : 4;
+    } else {
+      score = seat === "dark" ? 3 : seat === "warm_mid" ? 4 : 5;
+    }
+  } else if (tone.temperature === "warm") {
+    score = wood === "warm_medium" ? 4 : wood === "light_natural" ? 3 : 1;
+  } else if (tone.temperature === "cool") {
+    // Warm timber against a cool garment is a deliberate complement, not a clash.
+    score = wood === "warm_medium" ? 4 : wood === "light_natural" ? 3 : 2;
+  } else if (tone.temperature === "neutral") {
+    score =
+      wood === "dark" ? (seat === "light_neutral" ? 3 : 1) : 3;
+  }
+
+  // Secondary refinement: a cool garment gains a little more from warm timber.
+  if (
+    tone.depth !== "unknown" &&
+    tone.temperature === "cool" &&
+    (wood === "warm_medium" || wood === "light_natural")
+  ) {
+    score += 1;
+  }
+
+  return Math.max(0, Math.min(MAX_GARMENT_TONE_SCORE, score));
 }
 
 function scoreAsset(
   asset: FurnitureAsset,
   input: {
-    cooledOutIds: Set<string>;
-    batchExcludeIds: Set<string>;
     batchExcludeFamilies: Set<string>;
+    garmentTone: GarmentTone | null;
     recentFamilies: Map<string, number>;
     supportClass: SupportContactClass | null;
     userHistory: FurnitureUsageRecord[];
   },
 ): number {
-  if (asset.isLightweightOutdoor) return -1e9;
-  if (input.cooledOutIds.has(asset.id)) return -1e9;
-  if (input.batchExcludeIds.has(asset.id)) return -1e9;
+  // Earned quality — the whole ranking, in the intended priority order.
+  // Garment tone sits BELOW material, refinement and support on purpose: it
+  // resolves close decisions between good pieces, it never promotes a weaker one.
+  let score =
+    supportSuitabilityScore(asset, input.supportClass) +
+    materialCraftScore(asset) +
+    silhouetteRefinementScore(asset) +
+    scaleScore(asset, input.supportClass) +
+    tonalPairingScore(asset) +
+    ornamentationScore(asset) +
+    garmentToneScore(asset, input.garmentTone);
 
-  let score = 100;
-  if (asset.visualWeight === "substantial") score += 40;
-  else if (asset.visualWeight === "medium") score += 10;
-  else score -= 80;
-
-  // Fully dark (frame + seat) preferred; light upholstery hard-penalized.
-  if (isFullyDarkFurniture(asset) && !assetViolatesDarkAesthetic(asset)) {
-    score += 50;
-  } else if (assetViolatesDarkAesthetic(asset)) {
-    score -= 120;
-  } else if (asset.isDarkPreferred) {
-    score += 10;
-  }
-
-  if (asset.isLightBrown) score -= 60;
-  if (asset.isLightUpholstery) score -= 100;
-
-  // Premium editorial furniture should win over mediocre compatible assets.
-  const luxury = asset.editorialLuxuryScore ?? 3;
-  score += luxury * 12;
-  if (luxury <= 2) score -= 20;
-  else if (luxury === 3) score -= 4;
-
-  score += seatProfileCompatibilityScore(asset.seatProfile, input.supportClass);
-
-  if (
-    requiresEdgeCapableSeat(input.supportClass) &&
-    asset.seatProfile === "deep_lounge"
-  ) {
-    score -= 40;
-  }
-
-  const familyRecent = input.recentFamilies.get(asset.family) ?? 0;
-  score -= familyRecent * 18;
-
-  if (input.batchExcludeFamilies.has(asset.family)) score -= 25;
-
+  // History / diversity — subtractive only, and deliberately weaker than quality.
+  score -= (input.recentFamilies.get(asset.family) ?? 0) * 6;
+  if (input.batchExcludeFamilies.has(asset.family)) score -= 10;
   score -= recentAssetPenalty(asset.id, input.userHistory);
 
   return score;
@@ -198,8 +336,8 @@ function scoreAsset(
 
 /**
  * Select furniture for a furniture-bearing shot.
- * Primary: edge-compatible + substantial + dark (frame AND seat) + luxury.
- * Secondary: family diversity + cooldown + controlled rotation.
+ * Primary: pose suitability + material/craftsmanship + refined silhouette.
+ * Secondary: appropriate scale, tonal balance, family diversity, cooldown.
  */
 export function selectFurnitureAsset(
   input: SelectFurnitureInput,
@@ -227,65 +365,46 @@ export function selectFurnitureAsset(
   const batchExcludeFamilies = new Set(input.excludeFamiliesInBatch ?? []);
   const recentFamilies = recentFamilyCounts(history, Math.min(12, cooldown));
 
-  const pool = listFurnitureForCategory(category);
+  // Pool is already free of deprecated / decorative / sub-floor-craft assets.
+  // Reference-backed only: selectable assets without a loadable product reference
+  // are excluded globally — text-only furniture is not an acceptable substitute.
+  const pool = listFurnitureForCategory(category).filter((asset) =>
+    hasFurnitureReferenceImage(asset.id),
+  );
   const scoreOpts = {
-    cooledOutIds,
-    batchExcludeIds,
     batchExcludeFamilies,
+    garmentTone: input.garmentTone ?? null,
     recentFamilies,
     supportClass,
     userHistory: history,
   };
 
-  let scored = pool
-    .map((asset) => ({
-      asset,
-      score: scoreAsset(asset, scoreOpts),
-    }))
-    .filter((row) => row.score > -1e8)
-    .sort((a, b) => b.score - a.score || a.asset.id.localeCompare(b.asset.id));
+  const rank = (assets: FurnitureAsset[]) =>
+    assets
+      .map((asset) => ({ asset, score: scoreAsset(asset, scoreOpts) }))
+      .sort((a, b) => b.score - a.score || a.asset.id.localeCompare(b.asset.id));
 
-  // Prefer edge-capable + dark when required.
+  let scored = rank(
+    pool.filter(
+      (asset) => !cooledOutIds.has(asset.id) && !batchExcludeIds.has(asset.id),
+    ),
+  );
+
+  // Support narrowing only. There is deliberately no tonal narrowing here —
+  // tone is expressed as a score, never as a gate.
   if (requiresEdgeCapableSeat(supportClass)) {
-    const edgeDark = scored.filter(
-      (row) =>
-        row.asset.seatProfile !== "deep_lounge" &&
-        !assetViolatesDarkAesthetic(row.asset),
+    const edgeCapable = scored.filter(
+      (row) => row.asset.seatProfile !== "deep_lounge",
     );
-    if (edgeDark.length > 0) {
-      scored = edgeDark;
-    } else {
-      const edgeAny = scored.filter(
-        (row) => row.asset.seatProfile !== "deep_lounge",
-      );
-      if (edgeAny.length > 0) scored = edgeAny;
-    }
-  } else {
-    const darkPool = scored.filter(
-      (row) => !assetViolatesDarkAesthetic(row.asset),
-    );
-    if (darkPool.length > 0) scored = darkPool;
+    if (edgeCapable.length > 0) scored = edgeCapable;
   }
 
+  // Fallback relaxes the cooldown ONLY. Deprecation, ornamentation and the
+  // craft floor are quality guarantees and are never relaxed.
   const effective =
     scored.length > 0
       ? scored
-      : pool
-          .filter(
-            (asset) =>
-              !asset.isLightweightOutdoor &&
-              !batchExcludeIds.has(asset.id) &&
-              asset.visualWeight !== "lightweight" &&
-              !assetViolatesDarkAesthetic(asset),
-          )
-          .map((asset) => ({
-            asset,
-            score: scoreAsset(asset, {
-              ...scoreOpts,
-              cooledOutIds: new Set(),
-            }),
-          }))
-          .sort((a, b) => b.score - a.score);
+      : rank(pool.filter((asset) => !batchExcludeIds.has(asset.id)));
 
   if (effective.length === 0) return null;
 
@@ -311,7 +430,7 @@ export function selectFurnitureAsset(
     asset: pick.asset,
     supportClass,
     spatialRelation: resolvedSpatial,
-    reason: `category=${category}; support=${supportClass ?? "none"}; zone=${resolvedSpatial?.contactZone ?? "n/a"}; seatProfile=${pick.asset.seatProfile}; upholstery=${pick.asset.upholsteryTone}; luxury=${pick.asset.editorialLuxuryScore}; darkFull=${isFullyDarkFurniture(pick.asset)}; score=${pick.score}`,
+    reason: `category=${category}; support=${supportClass ?? "none"}; zone=${resolvedSpatial?.contactZone ?? "n/a"}; seatProfile=${pick.asset.seatProfile}; scale=${pick.asset.scale}; wood=${pick.asset.woodTone}; seat=${pick.asset.seatTreatment}; craft=${pick.asset.craftQuality}; refinement=${pick.asset.silhouetteRefinement}; ornament=${pick.asset.ornamentation}; garmentTone=${input.garmentTone ? `${input.garmentTone.depth}/${input.garmentTone.temperature}` : "none"}; score=${pick.score}`,
   };
 }
 
@@ -325,24 +444,45 @@ export function poseRequiresFurnitureSelection(
 /**
  * Furniture prompt contract for prop-bearing poses.
  * Selection / scoring / cooldown / diversity stay upstream.
- * Restores the proven premium wood quality floor (HEAD semantics) and exposes
- * the selected asset's existing promptDescription so catalog choice reaches Gemini.
- * Does not restate garment priority or Pose Master geometry essays.
+ *
+ * Describes furniture through material, construction and finish — never
+ * through bulk. The word "Substantial" is deliberately absent.
  */
-const FURNITURE_QUALITY_FLOOR = `Prefer: solid natural wood, premium hardwood, refined dark or warm wood, substantial sculptural editorial furniture with refined proportions and high-quality craftsmanship.
-Strictly avoid: plastic, molded plastic, cheap-looking furniture, cafeteria furniture, office chairs, generic mass-market furniture.
+const FURNITURE_QUALITY_FLOOR = `Real furniture, honestly made: solid hardwood — walnut, natural or dark oak, warm timber — with refined proportions and a matte to low-satin finish showing true grain. No gloss or CGI sheen.
+Restrained and understated. No carving, tufting, baroque or antique styling, no rustic farmhouse, no office or cafeteria furniture, no plastic or moulded forms.
 Do not copy furniture design from the Pose Master — Pose Master controls body pose and the body-to-support relationship only; furniture appearance follows this instruction.`;
 
+/**
+ * `supportClass` and `spatialRelation` are accepted but intentionally NOT
+ * composed into the layer.
+ *
+ * Pose Master isolation: this layer carries furniture appearance only and must
+ * never restate pose geometry, contact zones or body axis — furniture-support's
+ * promptHint is pose authority and belongs to the pose layer. The parameters
+ * remain in the signature because call sites outside this module (including the
+ * frozen identity trial) pass them positionally.
+ */
 export function buildFurniturePromptLayer(
   asset: FurnitureAsset,
   _supportClass?: SupportContactClass | null,
   _spatialRelation?: SupportSpatialRelation | null,
   poseId?: string | null,
 ): string {
+  const typeLabel = asset.category === "block" ? "block/step" : asset.category;
+
+  // Reference-backed production path: appearance lives in the multimodal
+  // furniture reference + FURNITURE REFERENCE AUTHORITY — not catalogue prose.
+  if (hasFurnitureReferenceImage(asset.id)) {
+    return [
+      "FURNITURE:",
+      `A ${typeLabel} must be present as required by this pose.`,
+      FURNITURE_REFERENCE_DEFERRED_APPEARANCE_LINE,
+      "Preserve the pose's body-to-support relationship.",
+    ].join("\n");
+  }
+
   const description = asset.promptDescription.trim();
-  const selectedLine = description
-    ? `Selected piece: ${description}`
-    : null;
+  const selectedLine = description ? `Selected piece: ${description}` : null;
 
   if (poseId === "Pose68") {
     return [
@@ -356,9 +496,6 @@ export function buildFurniturePromptLayer(
       .filter((line): line is string => Boolean(line))
       .join("\n");
   }
-
-  const typeLabel =
-    asset.category === "block" ? "block/step" : asset.category;
 
   return [
     "FURNITURE:",
@@ -380,50 +517,104 @@ export function buildGarmentFidelityCloser(): string {
 Apply GARMENT AUTHORITY — REFERENCE IMAGE 1 from the primary instruction. Ref1 remains binding for construction, as-worn state, material character, and colour. Pose-induced folds are additive only — do not redesign, smooth, or genericize the garment.`;
 }
 
+/**
+ * Decoration-led styling vocabulary.
+ *
+ * AUTHORING GUARD ONLY — this regex is never the runtime selection mechanism.
+ * Runtime behaviour depends solely on the declared `ornamentation` field; the
+ * pattern exists to catch an asset whose text describes carving/tufting while
+ * claiming `ornamentation: "none"`.
+ */
+export const ORNAMENT_LED_PATTERN =
+  /\b(ornate|carved|carving|openwork|baroque|antique|tufted|tufting|nailhead|cabriole|scrolled|rolled arms|wingback|club armchair)\b/i;
+
+export function assetIsOrnamentLed(asset: FurnitureAsset): boolean {
+  return ORNAMENT_LED_PATTERN.test(
+    `${asset.label} ${asset.silhouette} ${asset.materialSummary} ${asset.promptDescription}`,
+  );
+}
+
+/** Maximum share of ACTIVE assets in a category that may be dark-on-dark. */
+export const MAX_DARK_ON_DARK_SHARE = 0.5;
+
 export function assertFurnitureCatalogQualityInvariants(): void {
   for (const asset of FURNITURE_CATALOG) {
-    if (asset.isLightweightOutdoor) {
-      throw new Error(`Catalog must not include lightweight outdoor asset: ${asset.id}`);
-    }
-    if (asset.visualWeight === "lightweight") {
-      throw new Error(`Catalog must not include lightweight visual weight: ${asset.id}`);
-    }
     if (!asset.seatProfile) {
       throw new Error(`Catalog asset missing seatProfile: ${asset.id}`);
     }
-    if (asset.isLightUpholstery) {
-      throw new Error(`Catalog must not include light-upholstery asset: ${asset.id}`);
-    }
-    if (assetViolatesDarkAesthetic(asset)) {
-      throw new Error(
-        `Catalog asset contradicts dark aesthetic (frame/seat/prompt): ${asset.id}`,
-      );
-    }
-    if (!isFullyDarkFurniture(asset)) {
-      throw new Error(`Catalog asset is not fully dark: ${asset.id}`);
+    if (
+      asset.craftQuality == null ||
+      asset.craftQuality < 1 ||
+      asset.craftQuality > 5
+    ) {
+      throw new Error(`Catalog asset missing craftQuality 1–5: ${asset.id}`);
     }
     if (
-      asset.editorialLuxuryScore == null ||
-      asset.editorialLuxuryScore < 1 ||
-      asset.editorialLuxuryScore > 5
+      asset.silhouetteRefinement == null ||
+      asset.silhouetteRefinement < 1 ||
+      asset.silhouetteRefinement > 5
     ) {
-      throw new Error(`Catalog asset missing editorialLuxuryScore 1–5: ${asset.id}`);
+      throw new Error(
+        `Catalog asset missing silhouetteRefinement 1–5: ${asset.id}`,
+      );
+    }
+    // Bulk is never a quality claim, so no description may lead with it.
+    if (/substantial/i.test(asset.promptDescription)) {
+      throw new Error(
+        `Catalog promptDescription must not describe the piece as substantial: ${asset.id}`,
+      );
+    }
+    // Authoring guard — declared ornamentation must match the described piece.
+    if (assetIsOrnamentLed(asset) && asset.ornamentation === "none") {
+      throw new Error(
+        `Asset text describes ornamentation but declares ornamentation "none": ${asset.id}`,
+      );
+    }
+    if (isSelectableFurniture(asset) && asset.ornamentation === "decorative") {
+      throw new Error(`Decorative asset must not be selectable: ${asset.id}`);
     }
   }
+
+  // Historical ids must keep resolving forever, including deprecated ones.
   if (!getFurnitureAsset("furn_chair_wingback_cognac_leather")) {
-    throw new Error("Expected wingback reference-informed asset missing");
+    throw new Error("Expected historical wingback asset missing from catalog");
   }
-  const edgeDark = FURNITURE_CATALOG.filter(
-    (a) =>
-      a.category === "chair" &&
-      a.seatProfile === "edge_capable" &&
-      !assetViolatesDarkAesthetic(a),
+
+  const activeChairs = listFurnitureForCategory("chair");
+  const edgeCapable = activeChairs.filter(
+    (a) => a.seatProfile === "edge_capable",
   );
-  if (edgeDark.length < 3) {
+  if (edgeCapable.length < 3) {
     throw new Error(
-      `Need multiple dark edge_capable chairs (found ${edgeDark.length})`,
+      `Need multiple active edge_capable chairs (found ${edgeCapable.length})`,
     );
+  }
+  // Deep-lounge poses must keep more than one live option so deprecation
+  // passes can never collapse them onto a single fixed asset.
+  const activeDeepLounge = activeChairs.filter(
+    (a) => a.seatProfile === "deep_lounge",
+  );
+  if (activeDeepLounge.length < 2) {
+    throw new Error(
+      `Need at least 2 active deep_lounge chairs (found ${activeDeepLounge.length})`,
+    );
+  }
+
+  // Dark-on-dark is allowed but must never dominate a category. This is a
+  // curation guarantee, not a runtime scoring rule.
+  for (const category of ["chair", "stool", "block"] as const) {
+    const active = listFurnitureForCategory(category);
+    if (active.length === 0) {
+      throw new Error(`Category has no active furniture: ${category}`);
+    }
+    const darkOnDark = active.filter(isDarkOnDark).length;
+    if (darkOnDark > active.length * MAX_DARK_ON_DARK_SHARE) {
+      throw new Error(
+        `Category ${category} is ${darkOnDark}/${active.length} dark-on-dark — exceeds ${MAX_DARK_ON_DARK_SHARE * 100}%`,
+      );
+    }
   }
 }
 
+export { isFurnitureDeprecated };
 export type { FurnitureCategory, SupportContactClass, SupportSpatialRelation };
