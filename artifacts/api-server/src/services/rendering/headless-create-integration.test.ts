@@ -5,10 +5,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assembleHeadlessCreateStage1CreativePrompt,
-  HEADLESS_CREATE_FURNITURE_REFERENCE_IMAGE_NUMBER,
-} from "./headless-create-adapter.js";
+  HEADLESS_STAGE1_FURNITURE_REF,
+  HEADLESS_STAGE1_GARMENT_REF,
+  HEADLESS_STAGE1_POSE_REF,
+} from "./headless-create-stage1-authority.js";
 import {
+  buildHeadlessStage1Request,
   HEADLESS_STAGE1_REFERENCE_ORDER,
+  HEADLESS_STAGE1_REFERENCE_ORDER_WITHOUT_FURNITURE,
   HEADLESS_STAGE2_REFERENCE_ORDER,
 } from "./providers/nano-pro-headless-mannequin-trial.js";
 import {
@@ -18,6 +22,7 @@ import {
 } from "./rendering.config.js";
 import { HEADLESS_TRIAL_TOTAL_GENERATION_CALLS } from "./providers/nano-pro-headless-mannequin-trial.js";
 import { resolveGenerationCreditCost } from "@workspace/studio-credit-engine";
+import { getFurnitureAsset } from "../../intelligence/furniture-catalog.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -101,8 +106,13 @@ describe("Headless Create — frozen two-call contract", () => {
     );
   });
 
-  it("6. Stage 1/2 reference order re-exported unchanged from frozen module", () => {
+  it("6. Stage 1/2 reference order matches approved contract", () => {
     assert.deepEqual(HEADLESS_STAGE1_REFERENCE_ORDER, [
+      "GARMENT",
+      "POSE_MASTER",
+      "FURNITURE",
+    ]);
+    assert.deepEqual(HEADLESS_STAGE1_REFERENCE_ORDER_WITHOUT_FURNITURE, [
       "GARMENT",
       "POSE_MASTER",
     ]);
@@ -113,35 +123,52 @@ describe("Headless Create — frozen two-call contract", () => {
   });
 });
 
-describe("Headless Create — furniture compatibility", () => {
-  it("7. furniture authority is carried in Stage 1 creative brief when URL present", () => {
+describe("Headless Create — furniture contract", () => {
+  const FURNITURE_URL = "data:image/png;base64,FURNITURE_REF";
+
+  it("7. furniture Ref 3 authority only when PNG URL is present", () => {
+    const asset = getFurnitureAsset("furn_chair_solid_walnut_editorial");
+    assert.ok(asset);
     const withFurniture = assembleHeadlessCreateStage1CreativePrompt({
       shotPrompt: "Editorial hero frame.",
-      furnitureReferenceImageUrl: "https://cdn.example/furniture.png",
+      furnitureReferenceImageUrl: FURNITURE_URL,
+      furnitureAsset: asset,
     });
     assert.match(
       withFurniture,
       new RegExp(
-        `REFERENCE IMAGE ${HEADLESS_CREATE_FURNITURE_REFERENCE_IMAGE_NUMBER}`,
+        `FURNITURE REFERENCE AUTHORITY — REFERENCE IMAGE ${HEADLESS_STAGE1_FURNITURE_REF}`,
       ),
     );
-    assert.match(withFurniture, /FURNITURE REFERENCE AUTHORITY/);
+    assert.match(withFurniture, /Exactly three reference images are attached/);
 
     const withoutFurniture = assembleHeadlessCreateStage1CreativePrompt({
       shotPrompt: "Editorial hero frame.",
     });
     assert.doesNotMatch(withoutFurniture, /FURNITURE REFERENCE AUTHORITY/);
+    assert.match(withoutFurniture, /Exactly two reference images are attached/);
   });
 
-  it("8. adapter does not add furniture as a Stage 1 image reference", () => {
-    assert.doesNotMatch(adapterSrc, /input_references/);
-    assert.doesNotMatch(adapterSrc, /FURNITURE.*image_url/);
+  it("8. adapter forwards furniture PNG to frozen orchestrator", () => {
+    assert.match(adapterSrc, /furnitureReferenceImageUrl/);
+    assert.match(adapterSrc, /generateNanoProHeadlessMannequinTrial\(/);
+  });
+
+  it("8b. frozen builder attaches furniture as third image reference", () => {
+    const built = buildHeadlessStage1Request({
+      garmentImageUrl: "data:image/png;base64,G",
+      poseImageUrl: "data:image/png;base64,P",
+      furnitureReferenceImageUrl: FURNITURE_URL,
+    });
+    assert.equal(built.body.input_references.length, 3);
+    assert.equal(built.body.input_references[2]!.image_url.url, FURNITURE_URL);
   });
 });
 
 describe("Headless Create — billing and fail-closed", () => {
   it("9. no separate credit path — Create lifecycle unchanged in ai-pipeline", () => {
     assert.match(aiPipelineSrc, /onComplete/);
+    assert.match(aiPipelineSrc, /perShotFurnitureAssetIds/);
     assert.doesNotMatch(adapterSrc, /studio_credit|deduct|finalizeGeneration/);
     assert.doesNotMatch(
       providerSrc.slice(providerSrc.indexOf("if (useHeadlessCreate)")),
@@ -176,6 +203,7 @@ describe("Headless Create — multi-shot isolation", () => {
     assert.match(headlessBlock, /perShotPoseReferenceUrls\?\.\[i\]/);
     assert.match(headlessBlock, /identityForensics\?\.perShotPoseIds\?\.\[i\]/);
     assert.match(headlessBlock, /perShotFurnitureReferenceUrls\?\.\[i\]/);
+    assert.match(headlessBlock, /perShotFurnitureAssetIds\?\.\[i\]/);
     assert.match(headlessBlock, /shotIndex: i/);
     assert.match(headlessBlock, /talentImageUrl: modelImageUrl/);
     assert.doesNotMatch(headlessBlock, /identityCrop.*\[i - 1\]/i);
@@ -183,16 +211,32 @@ describe("Headless Create — multi-shot isolation", () => {
 
   it("12. adapter passes original talent URL for identity crop (not stage output)", () => {
     assert.match(adapterSrc, /talentImageUrl: input\.talentImageUrl/);
-    assert.doesNotMatch(adapterSrc, /stage1|HEADLESS_BASE/);
+    assert.doesNotMatch(adapterSrc, /headlessBaseImageUrl|HEADLESS_BASE/);
+    assert.doesNotMatch(adapterSrc, /maskedDataUri/);
+  });
+
+  it("13. Stage-1 prompt contract uses Ref 1 garment and Ref 2 pose", () => {
+    const prompt = assembleHeadlessCreateStage1CreativePrompt({
+      shotPrompt: "POSE:\nWalk.",
+    });
+    assert.match(
+      prompt,
+      new RegExp(`Reference Image ${HEADLESS_STAGE1_GARMENT_REF} = GARMENT`),
+    );
+    assert.match(
+      prompt,
+      new RegExp(`Reference Image ${HEADLESS_STAGE1_POSE_REF} = POSE MASTER`),
+    );
   });
 });
 
 describe("Headless Create — frozen baseline untouched", () => {
-  it("13. integration imports frozen module without modifying it", () => {
+  it("14. integration imports frozen module without modifying it", () => {
     for (const rel of FROZEN_HEADLESS_FILES) {
       const abs = join(__dirname, rel);
       const src = readFileSync(abs, "utf8");
       assert.doesNotMatch(src, /headless-create-adapter/);
+      assert.doesNotMatch(src, /headless-create-stage1-authority/);
       assert.doesNotMatch(src, /V1_CREATE_USE_HEADLESS_IDENTITY/);
     }
     assert.doesNotMatch(

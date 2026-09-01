@@ -827,6 +827,9 @@ export async function runAIPipeline(params: {
         (asset) => asset != null,
       ),
       perShotFurnitureReferenceUrls,
+      perShotFurnitureAssetIds: shotPlan?.furnitureSelections?.map(
+        (asset) => asset?.id ?? null,
+      ),
     });
 
     if (photoshootResult.images.length === 0) {

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   HEADLESS_STAGE1_PROMPT_BASE,
   HEADLESS_STAGE1_REFERENCE_ORDER,
+  HEADLESS_STAGE1_REFERENCE_ORDER_WITHOUT_FURNITURE,
   HEADLESS_STAGE2_PROMPT,
   HEADLESS_STAGE2_REFERENCE_ORDER,
   HEADLESS_TRIAL_TOTAL_GENERATION_CALLS,
@@ -27,6 +28,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const TALENT = "data:image/jpeg;base64,TALENT_BYTES_FIXTURE_HM";
 const GARMENT = "data:image/png;base64,GARMENT_BYTES_FIXTURE_HM";
 const POSE = "data:image/png;base64,POSE_FACE_NEUTRAL_FIXTURE_HM";
+const FURNITURE = "data:image/png;base64,FURNITURE_PRODUCT_REF_FIXTURE_HM";
 const HEADLESS_BASE = "data:image/png;base64,HEADLESS_STAGE1_OUTPUT_BYTES";
 const IDENTITY_REF = "data:image/png;base64,IDENTITY_CROP_FIXTURE_BYTES";
 
@@ -102,15 +104,36 @@ describe("nano-pro-headless-mannequin-trial — exactly two provider calls", () 
 });
 
 describe("nano-pro-headless-mannequin-trial — Stage 1 is identity-free", () => {
-  it("6. Stage 1 references are GARMENT → POSE_MASTER only", () => {
+  it("6. Stage 1 without furniture: GARMENT → POSE_MASTER only", () => {
     const built = buildHeadlessStage1Request({
       garmentImageUrl: GARMENT,
       poseImageUrl: POSE,
     });
-    assert.deepEqual([...built.referenceOrder], ["GARMENT", "POSE_MASTER"]);
+    assert.deepEqual(
+      [...built.referenceOrder],
+      [...HEADLESS_STAGE1_REFERENCE_ORDER_WITHOUT_FURNITURE],
+    );
     assert.deepEqual(
       built.body.input_references.map((r) => r.image_url.url),
       [GARMENT, POSE],
+    );
+  });
+
+  it("6b. Stage 1 with furniture: GARMENT → POSE_MASTER → FURNITURE", () => {
+    const built = buildHeadlessStage1Request({
+      garmentImageUrl: GARMENT,
+      poseImageUrl: POSE,
+      furnitureReferenceImageUrl: FURNITURE,
+    });
+    assert.deepEqual([...built.referenceOrder], [...HEADLESS_STAGE1_REFERENCE_ORDER]);
+    assert.deepEqual(
+      built.body.input_references.map((r) => r.image_url.url),
+      [GARMENT, POSE, FURNITURE],
+    );
+    assert.match(built.promptUsed, /Reference Image 3 = FURNITURE/);
+    assert.match(
+      built.promptUsed,
+      /do NOT copy furniture design, material, colour, grain, or styling drawn in Reference Image 2/i,
     );
   });
 
@@ -131,6 +154,7 @@ describe("nano-pro-headless-mannequin-trial — Stage 1 is identity-free", () =>
     assert.equal(signature.includes("talentImageUrl"), false);
     assert.match(signature, /garmentImageUrl/);
     assert.match(signature, /poseImageUrl/);
+    assert.match(signature, /furnitureReferenceImageUrl/);
   });
 
   it("8. Stage 1 issues no identity instruction", () => {

@@ -104,6 +104,11 @@ export interface PhotoshootInput {
    * those keep the existing text-only furniture instruction.
    */
   perShotFurnitureReferenceUrls?: Array<string | null>;
+  /**
+   * Per-shot: selected furniture asset id (Headless adapter text-only contract).
+   * Flash Create ignores this — furniture image refs remain authoritative there.
+   */
+  perShotFurnitureAssetIds?: Array<string | null>;
 }
 
 /** A single generated image returned by the engine. */
@@ -196,6 +201,11 @@ export interface ProviderInput {
    * those keep the existing text-only furniture instruction.
    */
   perShotFurnitureReferenceUrls?: Array<string | null>;
+  /**
+   * Per-shot: selected furniture asset id (Headless adapter text-only contract).
+   * Flash Create ignores this — furniture image refs remain authoritative there.
+   */
+  perShotFurnitureAssetIds?: Array<string | null>;
 }
 
 /** Contract every rendering provider must satisfy. */

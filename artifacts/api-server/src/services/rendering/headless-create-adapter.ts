@@ -1,26 +1,26 @@
 // ---------------------------------------------------------------------------
 // Production Create — Headless Mannequin adapter
 //
-// Maps the existing Create pipeline inputs to the frozen Headless orchestrator
-// without modifying nano-pro-headless-mannequin-trial.ts or image-processing.
-//
-// Stage 1 image refs remain GARMENT + POSE_MASTER (frozen). Furniture appearance
-// authority is appended to the Stage 1 creative brief when a furniture reference
-// URL is present for the shot — matching production furniture semantics in prose.
+// Maps the existing Create pipeline inputs to the Headless orchestrator.
+// Stage 1 image refs: GARMENT + POSE_MASTER [+ FURNITURE when selected].
+// Stage-1 authority is assembled by headless-create-stage1-authority.ts.
 // ---------------------------------------------------------------------------
 
+import { getFurnitureAsset } from "../../intelligence/furniture-catalog.js";
 import {
-  buildFurnitureReferenceAuthorityLayer,
-  buildFurnitureReferencePrimaryPointer,
-} from "../../rendering/furniture-reference-appearance-authority.js";
-import { STUDIO_BACKGROUND_AUTHORITY_SOT } from "./rendering-studio-background-authority.js";
+  assembleHeadlessCreateStage1CreativePrompt,
+} from "./headless-create-stage1-authority.js";
 import {
   generateNanoProHeadlessMannequinTrial,
 } from "./providers/nano-pro-headless-mannequin-trial.js";
 import type { NativeOutputResolution } from "./rendering.config.js";
 
-/** Logical furniture reference index for Headless Stage 1 creative brief. */
-export const HEADLESS_CREATE_FURNITURE_REFERENCE_IMAGE_NUMBER = 3 as const;
+export {
+  HEADLESS_STAGE1_FURNITURE_REF,
+  HEADLESS_STAGE1_GARMENT_REF,
+  HEADLESS_STAGE1_POSE_REF,
+  assembleHeadlessCreateStage1CreativePrompt,
+} from "./headless-create-stage1-authority.js";
 
 export type HeadlessCreateShotInput = {
   shotIndex: number;
@@ -31,42 +31,16 @@ export type HeadlessCreateShotInput = {
   modelIdentityId?: string | null;
   creativeShotPrompt?: string;
   garmentReferenceCorrespondenceInstruction?: string;
+  garmentEvidenceSetMappingInstruction?: string;
+  garmentEvidenceHasBack?: boolean;
+  garmentEvidenceHasDetail?: boolean;
+  garmentReferenceMode?: string;
+  /** Selected furniture product reference PNG (Stage 1 Ref 3 when present). */
   furnitureReferenceImageUrl?: string | null;
+  /** Selected furniture asset id — observability / catalogue context. */
+  furnitureAssetId?: string | null;
   outputResolution?: NativeOutputResolution;
 };
-
-/**
- * Assemble the Stage 1 creative brief for production Create.
- * Does not alter frozen Headless reference order or prompts.
- */
-export function assembleHeadlessCreateStage1CreativePrompt(params: {
-  shotPrompt: string;
-  garmentReferenceCorrespondenceInstruction?: string;
-  furnitureReferenceImageUrl?: string | null;
-}): string {
-  const parts: string[] = [STUDIO_BACKGROUND_AUTHORITY_SOT];
-
-  const shotPrompt = params.shotPrompt.trim();
-  if (shotPrompt) parts.push(shotPrompt);
-
-  const correspondence = params.garmentReferenceCorrespondenceInstruction?.trim();
-  if (correspondence) parts.push(correspondence);
-
-  if (params.furnitureReferenceImageUrl) {
-    parts.push(
-      buildFurnitureReferencePrimaryPointer(
-        HEADLESS_CREATE_FURNITURE_REFERENCE_IMAGE_NUMBER,
-      ),
-    );
-    parts.push(
-      buildFurnitureReferenceAuthorityLayer(
-        HEADLESS_CREATE_FURNITURE_REFERENCE_IMAGE_NUMBER,
-      ),
-    );
-  }
-
-  return parts.join("\n\n");
-}
 
 /**
  * Run the frozen two-stage Headless flow for one production Create shot.
@@ -76,17 +50,34 @@ export function assembleHeadlessCreateStage1CreativePrompt(params: {
 export async function runHeadlessCreateShot(
   input: HeadlessCreateShotInput,
 ): Promise<string> {
+  const furnitureReferenceImageUrl =
+    typeof input.furnitureReferenceImageUrl === "string" &&
+    input.furnitureReferenceImageUrl.trim().length > 0
+      ? input.furnitureReferenceImageUrl.trim()
+      : null;
+
+  const furnitureAsset = input.furnitureAssetId
+    ? getFurnitureAsset(input.furnitureAssetId) ?? null
+    : null;
+
   const creativeShotPrompt = assembleHeadlessCreateStage1CreativePrompt({
     shotPrompt: input.creativeShotPrompt ?? "",
     garmentReferenceCorrespondenceInstruction:
       input.garmentReferenceCorrespondenceInstruction,
-    furnitureReferenceImageUrl: input.furnitureReferenceImageUrl,
+    garmentEvidenceSetMappingInstruction:
+      input.garmentEvidenceSetMappingInstruction,
+    garmentEvidenceHasBack: input.garmentEvidenceHasBack,
+    garmentEvidenceHasDetail: input.garmentEvidenceHasDetail,
+    garmentReferenceMode: input.garmentReferenceMode,
+    furnitureReferenceImageUrl,
+    furnitureAsset,
   });
 
   const result = await generateNanoProHeadlessMannequinTrial({
     talentImageUrl: input.talentImageUrl,
     garmentImageUrl: input.garmentImageUrl,
     poseImageUrl: input.poseImageUrl,
+    furnitureReferenceImageUrl,
     poseId: input.poseId,
     modelIdentityId: input.modelIdentityId ?? null,
     creativeShotPrompt: creativeShotPrompt || undefined,

@@ -67,11 +67,17 @@ export const NANO_PRO_HEADLESS_MANNEQUIN_TRIAL_ENDPOINT_PATH =
   "/images" as const;
 
 /**
- * Stage 1 builds an ordinary photograph. The head it renders is removed
- * mechanically afterwards, so a real, detectable head is required here — the
- * face anchor cross-check depends on it.
+ * Stage 1 reference roles in binding order. When furniture is attached, all
+ * three refs are sent; otherwise only GARMENT and POSE_MASTER are attached.
  */
 export const HEADLESS_STAGE1_REFERENCE_ORDER = [
+  "GARMENT",
+  "POSE_MASTER",
+  "FURNITURE",
+] as const;
+
+/** Stage-1 roles when no furniture reference is attached. */
+export const HEADLESS_STAGE1_REFERENCE_ORDER_WITHOUT_FURNITURE = [
   "GARMENT",
   "POSE_MASTER",
 ] as const;
@@ -119,6 +125,8 @@ export type NanoProHeadlessMannequinTrialInput = {
   garmentImageUrl: string;
   /** Face-neutral Pose Master data URI (caller must use the Stage-1 loader). */
   poseImageUrl: string;
+  /** Optional selected furniture product reference for Stage 1 (Ref 3). */
+  furnitureReferenceImageUrl?: string | null;
   poseId: string;
   modelIdentityId?: string | null;
   garmentId?: string | null;
@@ -207,31 +215,48 @@ export type HeadlessStageBuiltRequest = {
   };
 };
 
+export function buildHeadlessStage1PromptBase(
+  hasFurnitureReference = false,
+): string {
+  const furnitureClause = hasFurnitureReference
+    ? [
+        "Reference Image 3 = FURNITURE — selected StudioLayer furniture product. Sole authority for furniture identity, overall silhouette, geometry, proportions, construction, wood grain, wood tone, upholstery, material, finish, surface texture, and every visible product-specific detail.",
+        "When Reference Image 3 is attached, do NOT copy furniture design, material, colour, grain, or styling drawn in Reference Image 2 (Pose Master).",
+        "Reference Image 2 remains authoritative for body pose, limb placement, weight distribution, and the body-to-furniture contact/support relationship only — not furniture appearance.",
+        "",
+      ].join("\n")
+    : "";
+
+  return [
+    "HEADLESS MANNEQUIN STAGE 1 — BUILD THE COMPLETE PHOTOGRAPH.",
+    "",
+    "REFERENCE IMAGE ROLES — BINDING AUTHORITY:",
+    "Reference Image 1 = GARMENT — clothing construction, colour, texture, print, and product identity ONLY. Not a person.",
+    "Reference Image 2 = POSE MASTER — body pose, limb placement, gesture, and pose-related framing ONLY. Faceless geometry. Not identity.",
+    furnitureClause,
+    "Build a premium photorealistic fashion photograph of a correctly proportioned human body wearing the garment from Reference Image 1, in the body position shown in Reference Image 2.",
+    "Render the body, garment, hands, arms, legs, proportions, environment, composition, and lighting to full editorial quality.",
+    "",
+    "HEAD REGION:",
+    "Render an ordinary, anatomically normal human head with a clearly visible, well-lit, forward-facing or naturally angled face.",
+    "Keep the head fully visible, correctly sized, unobstructed, and naturally attached at the neck.",
+    "Do not crop the head. Do not obscure the face with hands, hair, props, or heavy shadow.",
+    "",
+    "No Studio Talent reference has been provided. Do not attempt to depict any specific real person.",
+    "Do not derive face, facial structure, hair, or identity from Reference Image 1 or Reference Image 2.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 /**
- * STAGE 1 — an ordinary, complete photograph.
+ * STAGE 1 — an ordinary, complete photograph (default: GARMENT + POSE_MASTER).
  *
  * The head is NOT removed here. Head removal happens mechanically after this
  * call, which is why Stage 1 must render a real, correctly placed head: the
  * face-anchor cross-check needs a detectable face to validate the mask against.
  */
-export const HEADLESS_STAGE1_PROMPT_BASE = [
-  "HEADLESS MANNEQUIN STAGE 1 — BUILD THE COMPLETE PHOTOGRAPH.",
-  "",
-  "REFERENCE IMAGE ROLES — BINDING AUTHORITY:",
-  "Reference Image 1 = GARMENT — clothing construction, colour, texture, print, and product identity ONLY. Not a person.",
-  "Reference Image 2 = POSE MASTER — body pose, limb placement, gesture, and pose-related framing ONLY. Faceless geometry. Not identity.",
-  "",
-  "Build a premium photorealistic fashion photograph of a correctly proportioned human body wearing the garment from Reference Image 1, in the body position shown in Reference Image 2.",
-  "Render the body, garment, hands, arms, legs, proportions, environment, composition, and lighting to full editorial quality.",
-  "",
-  "HEAD REGION:",
-  "Render an ordinary, anatomically normal human head with a clearly visible, well-lit, forward-facing or naturally angled face.",
-  "Keep the head fully visible, correctly sized, unobstructed, and naturally attached at the neck.",
-  "Do not crop the head. Do not obscure the face with hands, hair, props, or heavy shadow.",
-  "",
-  "No Studio Talent reference has been provided. Do not attempt to depict any specific real person.",
-  "Do not derive face, facial structure, hair, or identity from Reference Image 1 or Reference Image 2.",
-].join("\n");
+export const HEADLESS_STAGE1_PROMPT_BASE = buildHeadlessStage1PromptBase(false);
 
 /**
  * STAGE 2 — apply identity into the mechanically neutralised head region.
@@ -282,11 +307,11 @@ export const HEADLESS_STAGE2_PROMPT = [
 
 export function assembleHeadlessStage1Prompt(params: {
   creativeShotPrompt?: string;
+  hasFurnitureReference?: boolean;
 }): string {
+  const base = buildHeadlessStage1PromptBase(Boolean(params.hasFurnitureReference));
   const creative = params.creativeShotPrompt?.trim();
-  return creative
-    ? [HEADLESS_STAGE1_PROMPT_BASE, "", creative].join("\n")
-    : HEADLESS_STAGE1_PROMPT_BASE;
+  return creative ? [base, "", creative].join("\n") : base;
 }
 
 function newRunId(): string {
@@ -398,24 +423,39 @@ function buildStageRequest(params: {
   };
 }
 
-/** STAGE 1 — GARMENT → POSE_MASTER. The Studio Talent is never sent. */
+/** STAGE 1 — GARMENT → POSE_MASTER [→ FURNITURE]. The Studio Talent is never sent. */
 export function buildHeadlessStage1Request(
   input: {
     garmentImageUrl: string;
     poseImageUrl: string;
+    furnitureReferenceImageUrl?: string | null;
     creativeShotPrompt?: string;
     outputResolution?: HeadlessMannequinResolution;
     packaging?: NanoProStandaloneTrialPackaging;
   },
   stageRunId: string = newRunId(),
 ): HeadlessStageBuiltRequest {
+  const furnitureUrl =
+    typeof input.furnitureReferenceImageUrl === "string" &&
+    input.furnitureReferenceImageUrl.trim().length > 0
+      ? input.furnitureReferenceImageUrl.trim()
+      : null;
+  const hasFurniture = Boolean(furnitureUrl);
+  const referenceOrder = hasFurniture
+    ? HEADLESS_STAGE1_REFERENCE_ORDER
+    : HEADLESS_STAGE1_REFERENCE_ORDER_WITHOUT_FURNITURE;
+  const refUrls = hasFurniture
+    ? [input.garmentImageUrl, input.poseImageUrl, furnitureUrl!]
+    : [input.garmentImageUrl, input.poseImageUrl];
+
   return buildStageRequest({
     stage: 1,
     prompt: assembleHeadlessStage1Prompt({
       creativeShotPrompt: input.creativeShotPrompt,
+      hasFurnitureReference: hasFurniture,
     }),
-    referenceOrder: HEADLESS_STAGE1_REFERENCE_ORDER,
-    refUrls: [input.garmentImageUrl, input.poseImageUrl],
+    referenceOrder,
+    refUrls,
     outputResolution: input.outputResolution,
     packaging: input.packaging ?? resolveNanoProStandaloneTrialPackaging(),
     stageRunId,
@@ -938,6 +978,7 @@ export async function generateNanoProHeadlessMannequinTrial(
     {
       garmentImageUrl: input.garmentImageUrl,
       poseImageUrl: input.poseImageUrl,
+      furnitureReferenceImageUrl: input.furnitureReferenceImageUrl,
       creativeShotPrompt: input.creativeShotPrompt,
       outputResolution: input.outputResolution,
       packaging,

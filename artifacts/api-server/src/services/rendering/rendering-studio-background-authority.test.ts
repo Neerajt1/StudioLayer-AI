@@ -9,7 +9,7 @@ import {
 } from "./rendering-studio-background-authority.js";
 import { PHOTOGRAPHY_AUTHORITY_SOT } from "./rendering-photography.js";
 import { OPENROUTER_RENDERING_CONFIG } from "./rendering.config.js";
-import { assembleHeadlessCreateStage1CreativePrompt } from "./headless-create-adapter.js";
+import { assembleHeadlessCreateStage1CreativePrompt } from "./headless-create-stage1-authority.js";
 import { composeNanoProAuthorityLayers } from "./nano-pro-authority-layers.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

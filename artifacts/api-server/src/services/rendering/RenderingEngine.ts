@@ -129,6 +129,7 @@ export class RenderingEngine {
       garmentReferenceMode: input.garmentReferenceMode,
       perShotFurnitureRequired: input.perShotFurnitureRequired,
       perShotFurnitureReferenceUrls: input.perShotFurnitureReferenceUrls,
+      perShotFurnitureAssetIds: input.perShotFurnitureAssetIds,
     });
 
     const durationMs = Date.now() - t0;

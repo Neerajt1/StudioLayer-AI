@@ -1076,6 +1076,7 @@ export class OpenRouterProvider implements RenderingProvider {
       additionalTalentImageUrls,
       perShotFurnitureRequired,
       perShotFurnitureReferenceUrls,
+      perShotFurnitureAssetIds,
     } = input;
 
     const hasPerShotPrompts =
@@ -1160,6 +1161,7 @@ export class OpenRouterProvider implements RenderingProvider {
             return Promise.resolve(null);
           }
 
+          const furnitureAssetId = perShotFurnitureAssetIds?.[i] ?? undefined;
           const furnitureReferenceImageUrl =
             perShotFurnitureReferenceUrls?.[i] ?? undefined;
 
@@ -1175,7 +1177,13 @@ export class OpenRouterProvider implements RenderingProvider {
               creativeShotPrompt: shotPrompt,
               garmentReferenceCorrespondenceInstruction:
                 garmentReferenceCorrespondenceInstruction,
+              garmentEvidenceSetMappingInstruction:
+                garmentEvidenceSetMappingInstruction,
+              garmentEvidenceHasBack: input.garmentEvidenceHasBack,
+              garmentEvidenceHasDetail: input.garmentEvidenceHasDetail,
+              garmentReferenceMode: input.garmentReferenceMode,
               furnitureReferenceImageUrl,
+              furnitureAssetId,
               outputResolution,
             }),
             ).catch((error: unknown) => {
