@@ -14,6 +14,7 @@ import testNanoProTalentOnlyIdentityRouter from "./test-nano-pro-talent-only-ide
 import testNanoProTalentOnlyIndexAlignedRouter from "./test-nano-pro-talent-only-index-aligned";
 import testNanoProStandaloneTrialRouter from "./test-nano-pro-standalone-trial";
 import testNanoProIdentityFirstTrialRouter from "./test-nano-pro-identity-first-trial";
+import testNanoProHeadlessMannequinTrialRouter from "./test-nano-pro-headless-mannequin-trial";
 import paymentsRouter from "./payments";
 
 const router: IRouter = Router();
@@ -41,5 +42,6 @@ router.use(testNanoProTalentOnlyIndexAlignedRouter);
 router.use(testNanoProStandaloneTrialRouter);
 // EXPERIMENTAL ONLY — Nano Pro Identity-First / Pose-Second Trial (gated; no credits/Gallery)
 router.use(testNanoProIdentityFirstTrialRouter);
+router.use(testNanoProHeadlessMannequinTrialRouter);
 
 export default router;
