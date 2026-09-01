@@ -57,7 +57,6 @@ import {
   StudioEditorialCanvas,
   StudioEditorialFailedState,
   StudioEditorialImage,
-  StudioEditorialPlaceholder,
   StudioEditorialProgressOverlay,
   StudioResultToolbar,
 } from '@/components/studio/studio-editorial-stage';
@@ -1258,9 +1257,6 @@ export default function StudioPage() {
         )}
       >
         <div className="sl-studio-editorial-cell-inner">
-          {!url && !showGenerationProgress && !showRemoveBackgroundProgress && status !== 'failed' && (
-            <StudioEditorialPlaceholder visible compact />
-          )}
           {status === 'completed' && url && (
             <StudioEditorialImage
               src={url}
@@ -1407,6 +1403,7 @@ export default function StudioPage() {
                       uploadLabel="Upload Back View"
                       previewAlt="Back view garment preview"
                       showIdealReference={false}
+                      emphasis="secondary"
                       compact
                       testId="garment-back-upload"
                     />
@@ -1427,6 +1424,7 @@ export default function StudioPage() {
                       uploadLabel="Upload Detail"
                       previewAlt="Design detail garment preview"
                       showIdealReference={false}
+                      emphasis="secondary"
                       compact
                       testId="garment-detail-upload"
                     />
@@ -1562,11 +1560,12 @@ export default function StudioPage() {
                   <StudioEditorialCanvas className="relative">
                     <StudioEditorialProgressOverlay
                       visible={showGenerationProgress || showRemoveBackgroundProgress}
-                      label={showRemoveBackgroundProgress ? 'Removing background…' : 'Creating your Shoot…'}
+                      label={
+                        showRemoveBackgroundProgress
+                          ? 'Removing background'
+                          : 'Creating your image'
+                      }
                       elapsedSec={elapsedSec}
-                    />
-                    <StudioEditorialPlaceholder
-                      visible={!resolvedOutputUrl && !showGenerationProgress && !showRemoveBackgroundProgress}
                     />
                     {resolvedOutputUrl ? (
                       <StudioEditorialImage
@@ -1855,7 +1854,11 @@ export default function StudioPage() {
                   >
                     <StudioEditorialProgressOverlay
                       visible={showGenerationProgress || showRemoveBackgroundProgress}
-                      label={showRemoveBackgroundProgress ? 'Removing background…' : 'Creating your Shoot…'}
+                      label={
+                        showRemoveBackgroundProgress
+                          ? 'Removing background'
+                          : 'Creating your image'
+                      }
                       elapsedSec={elapsedSec}
                     />
                     {activeRenderIds.length > 0 && (

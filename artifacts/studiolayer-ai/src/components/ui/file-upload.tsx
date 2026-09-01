@@ -25,6 +25,8 @@ interface FileUploadProps {
   showIdealReference?: boolean;
   /** Compact empty/preview layout for optional secondary references */
   compact?: boolean;
+  /** Olive action fill for required uploads; neutral for optional ones */
+  emphasis?: 'primary' | 'secondary';
   /** Optional data-testid prefix for zone + input */
   testId?: string;
 }
@@ -44,8 +46,13 @@ export function FileUpload({
   previewAlt = 'Garment preview',
   showIdealReference = true,
   compact = false,
+  emphasis = 'primary',
   testId = 'file-upload',
 }: FileUploadProps) {
+  const ctaClass =
+    emphasis === 'primary'
+      ? 'sl-action-primary'
+      : 'sl-control rounded-[3px] border border-border bg-white text-foreground';
   const inputRef   = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging]   = useState(false);
   const [fileName,   setFileName]     = useState<string | null>(null);
@@ -207,9 +214,9 @@ export function FileUpload({
             <div className="text-center">
               <div
                 className={cn(
-                  'inline-flex items-center gap-2 px-4 py-2 rounded border border-border bg-background text-sm font-medium text-foreground transition-all duration-150',
-                  !disabled && 'hover:bg-muted hover:border-foreground/30',
-                  isDragging && 'bg-muted border-foreground',
+                  'inline-flex items-center gap-2 px-4 py-2 rounded text-sm font-medium',
+                  ctaClass,
+                  isDragging && 'sl-action-primary--dragging',
                 )}
               >
                 <Upload className="w-4 h-4 shrink-0" />
@@ -227,10 +234,10 @@ export function FileUpload({
           )}>
             <div
               className={cn(
-                'inline-flex items-center gap-2 rounded border border-border bg-background font-medium text-foreground transition-all duration-150',
+                'inline-flex items-center gap-2 rounded font-medium',
+                ctaClass,
                 compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm',
-                !disabled && 'hover:bg-muted hover:border-foreground/30',
-                isDragging && 'bg-muted border-foreground',
+                isDragging && 'sl-action-primary--dragging',
               )}
             >
               <Upload className={cn('shrink-0', compact ? 'w-3.5 h-3.5' : 'w-4 h-4')} />

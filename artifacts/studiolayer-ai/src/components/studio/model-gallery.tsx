@@ -132,7 +132,9 @@ export function ModelGallery({
                 <div
                   className={cn(
                     'w-full px-1.5 py-1.5 text-center transition-colors duration-150',
-                    isSelected ? 'bg-foreground' : 'bg-card group-hover:bg-muted',
+                    isSelected
+                      ? 'bg-foreground'
+                      : 'bg-card group-hover:bg-white group-hover:text-[hsl(var(--olive-text))]',
                   )}
                 >
                   <p

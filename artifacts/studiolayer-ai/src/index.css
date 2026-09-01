@@ -86,8 +86,21 @@
   /* ── Brand Palette ── */
   --brand-primary: #545454;
   --brand-secondary: #737373;
-  --brand-accent: #6E896A;
+  /* Legible olive for accent text/outlines — the pale fill cannot carry these. */
+  --brand-accent: hsl(var(--olive-deep));
   --brand-placeholder: #909090;
+
+  /* ── Olive — signature action colour (single source of truth) ──
+     Every olive surface, border and label derives from this scale.
+     Values are bare HSL triplets so they compose with hsl(… / alpha). */
+  /* Bare HSL triplet (not hex) so it composes with hsl(… / alpha).
+     Decimals are exact: this resolves to #C1CA87. */
+  --olive: 68.06 38.73% 66.08%;  /* #C1CA87 — signature action fill */
+  --olive-deep: 68 30% 40%;      /* borders, focus rings, indicators */
+  --olive-text: 68 33% 34%;      /* olive label on white — clears AA at small sizes */
+  --olive-tint: 68 45% 95%;      /* very pale olive — selected/active surface */
+  --olive-border: 68 32% 74%;    /* refined olive border */
+  --olive-ink: 68 34% 24%;       /* dark olive typography on tint */
 
   /* ── Editorial layout grid ── */
   --sl-editorial-max: 1240px;
@@ -104,7 +117,7 @@
   --foreground: 0 0% 33%;              /* #545454 — primary text */
   --border: 0 0% 92%;                  /* soft pearl — minimal borders */
   --input: 0 0% 97%;
-  --ring: 113 13% 48%;                 /* #6E896A — olive focus ring */
+  --ring: var(--olive-deep);           /* olive focus ring — tracks the olive scale */
 
   /* ── Cards & Panels ── */
   --card: 0 0% 99%;
@@ -139,7 +152,7 @@
   --muted-foreground: 0 0% 40%;        /* #666666 — helper/metadata text (+1 contrast step) */
 
   /* ── Accent ── */
-  --accent: 113 13% 48%;               /* #6E896A — brand accent */
+  --accent: var(--olive-deep);         /* brand accent tracks the olive scale */
   --accent-foreground: 0 0% 100%;
 
   /* ── Destructive ── */
@@ -1579,7 +1592,7 @@
 
   .sl-membership-plans-row .sl-membership-tier-card:hover,
   .sl-membership-plans-row .sl-membership-tier-card:focus-within {
-    border-color: hsl(0 0% 12%);
+    border-color: hsl(var(--olive-deep));
     box-shadow: var(--shadow-lg);
     transform: translateY(-2px);
   }
@@ -1998,19 +2011,20 @@
     min-height: 2.625rem;
     padding: 0.5rem 0.75rem;
     border: 1px solid hsl(var(--border));
-    border-radius: calc(var(--radius) - 2px);
+    border-radius: 3px;
     background: hsl(var(--background));
     color: hsl(var(--foreground));
     text-align: left;
     transition:
-      border-color 150ms ease,
-      background-color 150ms ease,
-      color 150ms ease;
+      border-color 240ms ease-out,
+      background-color 240ms ease-out,
+      color 240ms ease-out;
   }
 
   .sl-compact-select-trigger:hover:not(:disabled) {
-    border-color: hsl(var(--foreground) / 0.28);
-    background: hsl(var(--muted) / 0.35);
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
   }
 
   .sl-compact-select-trigger.is-open {
@@ -2080,29 +2094,32 @@
     min-height: 2.75rem;
     padding: 0.55rem 0.7rem;
     border: 0;
-    border-radius: calc(var(--radius) - 3px);
+    border-radius: 3px;
     background: transparent;
     color: hsl(var(--foreground));
     text-align: left;
     cursor: pointer;
-    transition: background-color 120ms ease;
+    transition:
+      background-color 200ms ease-out,
+      color 200ms ease-out;
   }
 
   /*
-   * Menu options stay visually neutral (Word/Excel-style).
    * Current value is shown only on the closed trigger — never as a
    * persistent dark row inside the open list.
    */
 
-  /* Hover tracks the pointer — light grey, all options equal. */
+  /* Hover tracks the pointer as an olive label, not a grey slab. */
   @media (hover: hover) {
     .sl-compact-select-option:hover {
-      background: hsl(0 0% 88%);
+      background: #fff;
+      color: hsl(var(--olive-text));
     }
   }
 
   .sl-compact-select-option:focus-visible {
-    background: hsl(0 0% 88%);
+    background: hsl(var(--olive-tint));
+    color: hsl(var(--olive-ink));
     outline: none;
   }
 
@@ -2286,9 +2303,9 @@
   }
 
   .sl-direct-shoot-trigger:hover:not(:disabled) {
-    border-color: hsl(var(--foreground) / 0.28);
-    background: hsl(var(--muted) / 0.4);
-    color: hsl(var(--foreground));
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
   }
 
   .sl-direct-shoot-trigger:active:not(:disabled) {
@@ -2376,8 +2393,9 @@
   }
 
   .sl-direct-shoot-layout-toggle-button:hover {
-    background: rgb(238 242 236 / 0.95);
-    border-color: rgb(110 137 106 / 0.5);
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
   }
 
   .sl-direct-shoot-grid-scroll {
@@ -3331,9 +3349,9 @@
   }
 
   .sl-direct-shoot-cta:hover {
-    background: rgb(238 242 236 / 0.95);
-    border-color: rgb(110 137 106 / 0.72);
-    color: #4E664B;
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
   }
 
   .sl-direct-shoot-cta:active {
@@ -3377,7 +3395,9 @@
   }
 
   .sl-custom-campaign-stepper-btn:hover:not(:disabled) {
-    background: hsl(40 20% 97%);
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
   }
 
   .sl-custom-campaign-stepper-btn:disabled {
@@ -3568,25 +3588,26 @@
   }
 
   /* ── Creative Ledger (Studio Gallery v2) ── */
+  /* Contact-sheet rhythm: 2 columns on mobile, 4 from tablet up, tight gaps. */
   .sl-creative-ledger-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(13.5rem, 16rem));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-content: start;
-    gap: 1.25rem;
+    gap: 0.4375rem;
     width: 100%;
   }
 
   @media (min-width: 640px) {
     .sl-creative-ledger-grid {
-      grid-template-columns: repeat(auto-fit, minmax(12.5rem, 15rem));
-      gap: 1.375rem;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.5rem;
     }
   }
 
   @media (min-width: 1024px) {
     .sl-creative-ledger-grid {
-      grid-template-columns: repeat(auto-fit, minmax(13.5rem, 16rem));
-      gap: 1.5rem;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.5625rem;
     }
   }
 
@@ -4029,9 +4050,9 @@
   }
 
   .sl-workspace-refresh:hover:not(:disabled) {
-    border-color: rgb(110 137 106 / 0.62);
-    background: #EEF2EC;
-    color: #4E664B;
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
   }
 
   .sl-workspace-refresh:disabled {
@@ -4359,8 +4380,8 @@
   }
 
   .sl-developer-tools-toggle:hover {
-    color: hsl(var(--foreground));
-    background: hsl(var(--muted) / 0.25);
+    color: hsl(var(--olive-text));
+    background: transparent;
   }
 
   .sl-developer-tools-chevron {
@@ -4460,7 +4481,9 @@
   }
 
   .sl-developer-tools-button:hover {
-    background: hsl(var(--muted) / 0.35);
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
   }
 
   .sl-developer-tools-button--wide {
@@ -4493,24 +4516,25 @@
   }
 
   /* ── Gallery Shoot cards ── */
+  /*
+   * Archive tile: the image is the whole card. A hairline border separates
+   * covers whose source images have white backgrounds — structure, not chrome.
+   */
   .sl-shoot-card {
     display: flex;
     flex-direction: column;
-    border: 1px solid hsl(var(--border));
-    border-radius: calc(var(--radius) + 1px);
-    background: hsl(var(--card));
+    border: 1px solid #e8e8e8;
+    border-radius: 3px;
+    background: #fff;
     overflow: hidden;
     transition:
-      box-shadow 220ms ease-out,
-      border-color 220ms ease-out,
-      transform 220ms ease-out,
+      border-color 400ms ease-out,
       opacity 220ms ease-out;
   }
 
-  .sl-shoot-card:hover {
-    border-color: hsl(0 0% 86%);
-    box-shadow: 0 8px 24px rgb(40 40 40 / 0.05);
-    transform: translateY(-2px);
+  .sl-shoot-card:hover,
+  .sl-shoot-card:focus-within {
+    border-color: hsl(var(--olive-deep));
   }
 
   .sl-shoot-card--enter {
@@ -4563,6 +4587,7 @@
   }
 
   .sl-shoot-card-open {
+    position: relative;
     display: flex;
     flex-direction: column;
     width: 100%;
@@ -4578,7 +4603,69 @@
     width: 100%;
     aspect-ratio: 4 / 5;
     overflow: hidden;
-    background: hsl(40 20% 97%);
+    background: #fff;
+  }
+
+  /*
+   * Monochrome at rest, original colour on hover. Presentation only — the
+   * source file is untouched and the opened viewer renders outside this
+   * subtree, so it is never desaturated.
+   */
+  .sl-shoot-card-cover-image {
+    filter: grayscale(1);
+    transition: filter 480ms ease-out;
+  }
+
+  @media (hover: hover) {
+    .sl-shoot-card:hover .sl-shoot-card-cover-image,
+    .sl-shoot-card:focus-within .sl-shoot-card-cover-image {
+      filter: grayscale(0);
+    }
+  }
+
+  /* Touch devices have no hover to reveal colour, so tiles stay in colour. */
+  @media (hover: none) {
+    .sl-shoot-card-cover-image {
+      filter: none;
+    }
+  }
+
+  /* Quiet caption revealed by interaction — category, date, and an open cue. */
+  .sl-shoot-card-caption {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    background: linear-gradient(to top, rgb(255 255 255 / 0.94), rgb(255 255 255 / 0));
+    opacity: 0;
+    transition: opacity 320ms ease-out;
+    pointer-events: none;
+  }
+
+  @media (hover: hover) {
+    .sl-shoot-card:hover .sl-shoot-card-caption,
+    .sl-shoot-card:focus-within .sl-shoot-card-caption {
+      opacity: 1;
+    }
+  }
+
+  .sl-shoot-card-view {
+    margin-inline-start: auto;
+    font-family: var(--app-font-mono);
+    font-size: 0.5625rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--olive-text));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sl-shoot-card-cover-image,
+    .sl-shoot-card-caption {
+      transition: none !important;
+    }
   }
 
   .sl-shoot-card-cover--single .sl-shoot-card-cover-image {
@@ -4586,26 +4673,6 @@
     height: 100%;
     object-fit: contain;
     object-position: center;
-  }
-
-  .sl-shoot-card-cover--mosaic {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(2, minmax(0, 1fr));
-    gap: 1px;
-    background: hsl(var(--border));
-  }
-
-  .sl-shoot-card-cover--duo {
-    grid-template-rows: minmax(0, 1fr);
-  }
-
-  .sl-shoot-card-cover--mosaic .sl-shoot-card-cover-image {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    object-position: center;
-    background: hsl(40 20% 97%);
   }
 
   .sl-shoot-card-cover-empty,
@@ -4655,142 +4722,22 @@
     justify-content: center;
   }
 
-  .sl-shoot-card-heading {
-    padding: 0.875rem 0.875rem 0.625rem;
-  }
-
   .sl-shoot-card-title {
     margin: 0;
-    font-family: var(--app-font-sans);
-    font-size: 0.875rem;
-    font-weight: 500;
-    letter-spacing: 0.01em;
-    color: hsl(var(--foreground));
-  }
-
-  .sl-shoot-card-date {
-    margin: 0.25rem 0 0;
-    font-family: var(--app-font-mono);
-    font-size: 0.625rem;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    color: hsl(var(--muted-foreground));
-  }
-
-  .sl-shoot-accounting-strip {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0;
-    padding: 0.875rem 1rem 1rem;
-    border-top: 1px solid hsl(var(--border));
-    background: #fff;
-  }
-
-  .sl-shoot-accounting-strip--skeleton {
-    min-height: 4.5rem;
-  }
-
-  .sl-shoot-metric {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.375rem;
-    min-width: 0;
-  }
-
-  .sl-shoot-metric--compact {
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.3125rem;
-    min-width: 0;
-    text-align: center;
-  }
-
-  .sl-shoot-metric-icon-wrap {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.25rem;
-    height: 1.25rem;
-    cursor: default;
-    outline: none;
-  }
-
-  .sl-shoot-metric-icon-wrap:focus-visible {
-    outline: 2px solid var(--brand-accent);
-    outline-offset: 2px;
-    border-radius: 999px;
-  }
-
-  .sl-shoot-metric-icon {
-    width: 1.1875rem;
-    height: 1.1875rem;
-    flex-shrink: 0;
-    object-fit: contain;
-    opacity: 0.88;
-  }
-
-  .sl-shoot-metric-icon--studio-credit {
-    transform: translateY(1px);
-  }
-
-  .sl-shoot-metric-icon--refinement {
-    transform: translateY(-1px);
-  }
-
-  .sl-shoot-metric-tooltip {
-    border: 1px solid hsl(0 0% 88%);
-    background: hsl(var(--background));
-    color: hsl(var(--foreground));
     font-family: var(--app-font-sans);
     font-size: 0.6875rem;
     font-weight: 500;
     letter-spacing: 0.02em;
-    box-shadow: 0 8px 24px rgb(40 40 40 / 0.08);
+    color: hsl(var(--foreground));
   }
 
-  .sl-shoot-metric-placeholder {
-    width: 1.75rem;
-    height: 2.125rem;
-    margin-inline: auto;
-    border-radius: calc(var(--radius) - 2px);
-    background: linear-gradient(
-      90deg,
-      hsl(40 20% 96%) 0%,
-      hsl(40 16% 92%) 50%,
-      hsl(40 20% 96%) 100%
-    );
-    background-size: 200% 100%;
-    animation: sl-ledger-shimmer 1.4s ease-in-out infinite;
-  }
-
-  .sl-shoot-metric-copy {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-    min-width: 0;
-  }
-
-  .sl-shoot-metric-copy--solo {
-    padding-left: 0;
-  }
-
-  .sl-shoot-metric-label {
-    display: block;
-    max-width: 100%;
-    padding-inline: 0.125rem;
+  .sl-shoot-card-date {
+    margin: 0;
     font-family: var(--app-font-mono);
     font-size: 0.5625rem;
-    font-weight: 500;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: hsl(var(--muted-foreground));
-    line-height: 1.2;
-    text-wrap: balance;
-  }
-
-  .sl-shoot-metric--compact .sl-billing-cycle-stat-value {
-    margin-top: 0.125rem;
   }
 
   .sl-shoot-card--skeleton,
@@ -4839,9 +4786,10 @@
   }
 
   .sl-shoot-detail-download-all:hover:not(:disabled) {
-    border-color: hsl(0 0% 74%);
-    background: hsl(0 0% 98%);
-    box-shadow: 0 2px 6px rgb(84 84 84 / 0.07);
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
+    box-shadow: none;
   }
 
   .sl-shoot-detail-download-all.is-pressed:not(:disabled) {
@@ -5335,8 +5283,9 @@
   }
 
   .sl-gallery-post-refine-item:hover:not(:disabled) {
-    border-color: hsl(0 0% 74%);
-    background: hsl(0 0% 98%);
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
   }
 
   .sl-gallery-post-refine-item.is-running {
@@ -5694,6 +5643,79 @@
     width: 0.975rem;
     height: 0.975rem;
     opacity: 0.85;
+  }
+
+  /* ── Studio Gallery pagination ────────────────────────────────────────── */
+
+  .sl-gallery-pagination {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.875rem;
+    margin-top: 2rem;
+  }
+
+  .sl-gallery-pagination-summary {
+    margin: 0;
+    font-family: var(--app-font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .sl-gallery-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .sl-gallery-pagination-page,
+  .sl-gallery-pagination-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.875rem;
+    height: 1.875rem;
+    padding: 0 0.375rem;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: #fff;
+    font-family: var(--app-font-sans);
+    font-size: 0.75rem;
+    color: hsl(var(--muted-foreground));
+    cursor: pointer;
+    transition:
+      border-color 240ms ease-out,
+      color 240ms ease-out;
+  }
+
+  .sl-gallery-pagination-page:hover:not(:disabled),
+  .sl-gallery-pagination-arrow:hover:not(:disabled) {
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+  }
+
+  .sl-gallery-pagination-page.is-current {
+    border-color: hsl(var(--olive-border));
+    background: hsl(var(--olive-tint));
+    color: hsl(var(--olive-ink));
+  }
+
+  .sl-gallery-pagination-arrow:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  .sl-gallery-pagination-arrow svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .sl-gallery-pagination-page:focus-visible,
+  .sl-gallery-pagination-arrow:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
 
   .sl-gallery-faq-section {
@@ -6075,18 +6097,18 @@
     width: 100%;
   }
 
+  /* Editorial canvas: an invisible stage. Geometry only — no card chrome. */
   .sl-studio-editorial-canvas {
     position: relative;
     display: flex;
     width: 100%;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid hsl(0 0% 90%);
-    border-radius: calc(var(--radius) + 2px);
-    background: #fafaf8;
-    box-shadow:
-      0 1px 2px rgb(84 84 84 / 0.04),
-      0 8px 24px rgb(84 84 84 / 0.06);
+    aspect-ratio: 4 / 5;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
   }
 
   .sl-studio-editorial-canvas-inner {
@@ -6103,6 +6125,7 @@
   .sl-studio-editorial-canvas--multi {
     min-height: auto;
     max-height: none;
+    aspect-ratio: auto;
     background: transparent;
     border: 0;
     box-shadow: none;
@@ -6120,12 +6143,10 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    border: 1px solid hsl(0 0% 90%);
-    border-radius: calc(var(--radius) + 2px);
-    background: #fafaf8;
-    box-shadow:
-      0 1px 2px rgb(84 84 84 / 0.04),
-      0 6px 18px rgb(84 84 84 / 0.05);
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
   }
 
   .sl-studio-editorial-failed {
@@ -6175,22 +6196,21 @@
     justify-content: center;
     gap: 0.5rem;
     min-height: 2.5rem;
-    padding: 0 1rem;
+    padding: 0 1.25rem;
     border: 1px solid hsl(0 0% 88%);
-    border-radius: calc(var(--radius) - 1px);
+    border-radius: 3px;
     background: #fff;
     font-family: var(--app-font-sans);
     font-size: 0.8125rem;
     font-weight: 500;
     line-height: 1.2;
     color: hsl(var(--foreground));
-    box-shadow: 0 1px 2px rgb(84 84 84 / 0.04);
+    box-shadow: none;
     transition:
-      border-color 160ms ease-out,
-      background-color 160ms ease-out,
-      box-shadow 160ms ease-out,
-      transform 120ms ease-out,
-      opacity 160ms ease-out;
+      border-color 240ms ease-out,
+      color 240ms ease-out,
+      background-color 240ms ease-out,
+      opacity 240ms ease-out;
     cursor: pointer;
     user-select: none;
   }
@@ -6202,19 +6222,18 @@
       0 0 0 4px hsl(var(--ring));
   }
 
+  /* Olive is discovered through interaction, never worn at rest. */
   .sl-studio-btn:hover:not(:disabled) {
-    border-color: hsl(0 0% 74%);
-    background: hsl(0 0% 98%);
-    box-shadow: 0 2px 6px rgb(84 84 84 / 0.07);
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
+    box-shadow: none;
   }
 
-  .sl-studio-btn.is-pressed:not(:disabled) {
-    transform: scale(0.985);
-    box-shadow: 0 1px 2px rgb(84 84 84 / 0.05);
-  }
-
+  .sl-studio-btn.is-pressed:not(:disabled),
   .sl-studio-btn:active:not(:disabled) {
-    transform: scale(0.985);
+    border-color: hsl(var(--olive-text));
+    color: hsl(var(--olive-text));
   }
 
   .sl-studio-btn:disabled {
@@ -6223,17 +6242,47 @@
     pointer-events: none;
   }
 
-  .sl-studio-btn--primary {
-    border-color: hsl(var(--foreground));
-    background: hsl(var(--foreground));
-    color: hsl(var(--background));
-    box-shadow: 0 1px 3px rgb(45 45 45 / 0.12);
+  /* Primary conversion actions carry weight through typography and border
+     contrast — never a filled background. */
+  .sl-studio-btn--primary,
+  .sl-action-primary {
+    border-color: hsl(0 0% 72%);
+    background: #fff;
+    color: hsl(var(--foreground));
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: none;
   }
 
-  .sl-studio-btn--primary:hover:not(:disabled) {
-    border-color: hsl(0 0% 18%);
-    background: hsl(0 0% 18%);
-    box-shadow: 0 3px 8px rgb(45 45 45 / 0.16);
+  .sl-studio-btn--primary:hover:not(:disabled),
+  .sl-action-primary:hover:not(:disabled) {
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
+  }
+
+  .sl-studio-btn--primary:active:not(:disabled),
+  .sl-action-primary:active:not(:disabled) {
+    border-color: hsl(var(--olive-text));
+    color: hsl(var(--olive-text));
+  }
+
+  /* Shared geometry for primary actions that are not .sl-studio-btn elements. */
+  .sl-action-primary {
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 3px;
+    transition:
+      border-color 240ms ease-out,
+      color 240ms ease-out,
+      background-color 240ms ease-out;
+  }
+
+  /* The upload CTA is a label inside the dropzone — hover follows the zone. */
+  [role='button']:hover:not([aria-disabled='true']) .sl-action-primary,
+  .sl-action-primary--dragging {
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
   }
 
   .sl-studio-btn--ghost {
@@ -6243,7 +6292,8 @@
   }
 
   .sl-studio-btn--ghost:hover:not(:disabled) {
-    border-color: hsl(0 0% 72%);
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
     background: #fff;
   }
 
@@ -6251,6 +6301,62 @@
     min-height: 1.75rem;
     width: 1.75rem;
     padding: 0;
+  }
+
+  /* ═══ Global interaction system ═══════════════════════════════════════════
+     White + grey at rest; olive revealed through interaction. Shared by the
+     ui/ primitives so pages never redefine these colours locally. */
+
+  /* Bordered controls: border + label move to olive, background stays white. */
+  .sl-control {
+    transition:
+      border-color 240ms ease-out,
+      color 240ms ease-out,
+      background-color 240ms ease-out;
+  }
+
+  .sl-control:hover:not(:disabled):not([data-disabled]) {
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background-color: #fff;
+  }
+
+  /* Borderless controls (ghost/link-like): label alone carries the accent. */
+  .sl-control-quiet {
+    transition:
+      color 240ms ease-out,
+      background-color 240ms ease-out;
+  }
+
+  .sl-control-quiet:hover:not(:disabled):not([data-disabled]) {
+    color: hsl(var(--olive-text));
+    background-color: transparent;
+  }
+
+  /* Menu / select options — never a grey slab, never a solid fill. */
+  .sl-menu-item {
+    border-radius: 3px;
+    transition:
+      color 200ms ease-out,
+      background-color 200ms ease-out;
+  }
+
+  .sl-menu-item:hover:not([data-disabled]),
+  .sl-menu-item:focus:not([data-disabled]),
+  .sl-menu-item[data-highlighted]:not([data-disabled]),
+  .sl-menu-item[data-selected='true']:not([data-disabled]) {
+    outline: none;
+    background-color: #fff;
+    color: hsl(var(--olive-text));
+  }
+
+  /* The chosen value keeps a whisper of olive so it reads as current. */
+  .sl-menu-item[data-state='checked'],
+  .sl-menu-item[data-state='open'],
+  .sl-menu-item[data-state='checked']:hover,
+  .sl-menu-item[data-state='checked'][data-highlighted] {
+    background-color: hsl(var(--olive-tint));
+    color: hsl(var(--olive-ink));
   }
 
   .sl-studio-btn-spinner {
@@ -6270,30 +6376,23 @@
     }
   }
 
-  .sl-studio-btn--primary .sl-studio-btn-spinner {
-    border-color: hsl(var(--background) / 0.35);
-    border-top-color: hsl(var(--background));
-  }
-
   .sl-studio-chip {
     position: relative;
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
-    padding: 0.3125rem 0.6875rem;
+    padding: 0.375rem 0.8125rem;
     border: 1px solid hsl(var(--border));
-    border-radius: 9999px;
+    border-radius: 3px;
     background: #fff;
     font-size: 0.6875rem;
     font-weight: 500;
     line-height: 1.2;
     color: hsl(var(--muted-foreground));
     transition:
-      border-color 160ms ease-out,
-      background-color 160ms ease-out,
-      color 160ms ease-out,
-      box-shadow 160ms ease-out,
-      transform 120ms ease-out;
+      border-color 240ms ease-out,
+      background-color 240ms ease-out,
+      color 240ms ease-out;
     cursor: pointer;
     user-select: none;
   }
@@ -6306,20 +6405,16 @@
   }
 
   .sl-studio-chip:hover:not(:disabled) {
-    border-color: hsl(0 0% 72%);
-    color: hsl(var(--foreground));
-    background: hsl(0 0% 98%);
-  }
-
-  .sl-studio-chip.is-pressed:not(:disabled) {
-    transform: scale(0.97);
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
   }
 
   .sl-studio-chip.is-selected {
-    border-color: var(--brand-accent);
-    background: hsl(113 13% 48% / 0.1);
-    color: hsl(var(--foreground));
-    box-shadow: inset 0 0 0 1px hsl(113 13% 48% / 0.2);
+    border-color: hsl(var(--olive-border));
+    background: hsl(var(--olive-tint));
+    color: hsl(var(--olive-ink));
+    box-shadow: none;
   }
 
   .sl-studio-chip:disabled {
@@ -6332,22 +6427,20 @@
     width: 0.3125rem;
     height: 0.3125rem;
     border-radius: 9999px;
-    background: var(--brand-accent);
+    background: hsl(var(--olive));
     flex-shrink: 0;
   }
 
   .sl-studio-toggle {
     border: 1px solid hsl(var(--border));
-    border-radius: calc(var(--radius) - 1px);
-    background: hsl(var(--card));
+    border-radius: 3px;
+    background: #fff;
     color: hsl(var(--foreground));
     text-align: center;
     transition:
-      border-color 160ms ease-out,
-      background-color 160ms ease-out,
-      color 160ms ease-out,
-      box-shadow 160ms ease-out,
-      transform 120ms ease-out;
+      border-color 240ms ease-out,
+      background-color 240ms ease-out,
+      color 240ms ease-out;
     cursor: pointer;
     user-select: none;
   }
@@ -6360,33 +6453,24 @@
   }
 
   .sl-studio-toggle:not(.is-selected):hover:not(:disabled) {
-    border-color: hsl(0 0% 72%);
-    background: hsl(0 0% 96%);
-    color: hsl(var(--foreground));
+    border-color: hsl(var(--olive-deep));
+    background: #fff;
+    color: hsl(var(--olive-text));
   }
 
   .sl-studio-toggle.is-selected:hover:not(:disabled) {
-    border-color: hsl(var(--foreground));
-    background: hsl(var(--foreground));
-    color: hsl(var(--background));
+    border-color: hsl(var(--olive));
+    background: hsl(var(--olive-tint));
+    color: hsl(var(--olive-ink));
   }
 
-  .sl-studio-toggle.is-pressed:not(:disabled) {
-    transform: scale(0.985);
-  }
-
-  .sl-studio-toggle.is-selected {
-    border-color: hsl(var(--foreground));
-    background: hsl(var(--foreground));
-    color: hsl(var(--background));
-    box-shadow: 0 1px 3px rgb(45 45 45 / 0.12);
-  }
-
+  /* Selected controls read as a quiet olive surface, never a solid slab. */
+  .sl-studio-toggle.is-selected,
   .sl-studio-toggle--accent.is-selected {
-    border-color: var(--brand-accent);
-    background: hsl(113 13% 48% / 0.12);
-    color: hsl(var(--foreground));
-    box-shadow: inset 0 0 0 1px hsl(113 13% 48% / 0.24);
+    border-color: hsl(var(--olive-border));
+    background: hsl(var(--olive-tint));
+    color: hsl(var(--olive-ink));
+    box-shadow: none;
   }
 
   .sl-studio-toggle:disabled {
@@ -6403,8 +6487,9 @@
   }
 
   .sl-studio-toolbar-btn:hover {
-    border-color: hsl(0 0% 78%);
-    background: #fafaf8;
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
   }
 
   .sl-studio-secondary-btn {
@@ -6414,68 +6499,113 @@
   }
 
   .sl-studio-secondary-btn:hover {
-    border-color: hsl(var(--accent));
-    color: hsl(var(--accent));
-    background: hsl(var(--accent) / 0.08);
+    border-color: hsl(var(--olive-deep));
+    color: hsl(var(--olive-text));
+    background: #fff;
   }
 
-  .sl-studio-editorial-placeholder-shell {
-    position: absolute;
-    inset: 0;
+  /* ── Studio Workspace — signature processing mark ── */
+  .sl-studio-signature-loader {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: clamp(1.5rem, 4vw, 2.5rem);
-  }
-
-  .sl-studio-editorial-placeholder {
-    display: flex;
-    width: 100%;
-    height: 100%;
-    min-height: inherit;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .sl-studio-editorial-placeholder-frame {
-    display: flex;
-    width: min(100%, 24rem);
     flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
-    border: 1px dashed hsl(0 0% 86%);
-    border-radius: calc(var(--radius) + 4px);
-    background: rgb(255 255 255 / 0.5);
-    padding: clamp(2.25rem, 5vw, 3.25rem) clamp(1.75rem, 4vw, 2.5rem);
+    justify-content: center;
+    gap: clamp(1.25rem, 3vw, 2rem);
+    padding: clamp(1.5rem, 4vw, 2.5rem);
     text-align: center;
   }
 
-  .sl-studio-editorial-placeholder-icon {
-    display: flex;
-    height: 5rem;
-    width: 5rem;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    border: 1px dashed hsl(0 0% 84%);
-    border-radius: 9999px;
-    background: rgb(255 255 255 / 0.72);
-  }
-
-  .sl-studio-editorial-placeholder-copy {
-    max-width: 18rem;
-  }
-
-  .sl-studio-editorial-placeholder--compact {
+  .sl-studio-signature-mark {
+    width: clamp(84px, 14vw, 132px);
     height: auto;
-    min-height: 0;
+    overflow: visible;
+  }
+
+  .sl-studio-signature-mark-body {
+    transform-origin: center;
+    animation: sl-signature-breathe 5.6s ease-in-out infinite;
+  }
+
+  .sl-studio-signature-mark-sweep {
+    animation: sl-signature-sweep 4.4s linear infinite;
+  }
+
+  .sl-studio-signature-loader-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sl-studio-signature-loader-copy {
+    margin: 0;
+    font-size: 0.6875rem;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+    opacity: 0.72;
+  }
+
+  /* Elapsed time only — never a percentage, ETA or progress bar. */
+  .sl-studio-signature-loader-elapsed {
+    margin: 0;
+    font-family: var(--app-font-mono);
+    font-size: 0.6875rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+    color: hsl(var(--olive-ink));
+    opacity: 0.6;
+  }
+
+  .sl-studio-signature-loader--paused .sl-studio-signature-mark-body,
+  .sl-studio-signature-loader--paused .sl-studio-signature-mark-sweep {
+    animation-play-state: paused;
+  }
+
+  .sl-studio-signature-loader--compact {
     gap: 0.75rem;
     padding: 1rem;
   }
 
-  .sl-studio-editorial-placeholder-icon--compact {
-    height: 3rem;
-    width: 3rem;
+  .sl-studio-signature-loader--compact .sl-studio-signature-mark {
+    width: clamp(52px, 9vw, 72px);
+  }
+
+  .sl-studio-signature-loader--compact .sl-studio-signature-loader-meta {
+    gap: 0.3125rem;
+  }
+
+  .sl-studio-signature-loader--compact .sl-studio-signature-loader-copy,
+  .sl-studio-signature-loader--compact .sl-studio-signature-loader-elapsed {
+    font-size: 0.5625rem;
+  }
+
+  /* Sweep starts and ends fully clear of the letterforms, so the loop is seamless. */
+  @keyframes sl-signature-sweep {
+    0% {
+      transform: translateX(-460px);
+    }
+    100% {
+      transform: translateX(460px);
+    }
+  }
+
+  @keyframes sl-signature-breathe {
+    0%,
+    100% {
+      opacity: 0.72;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sl-studio-signature-mark-body,
+    .sl-studio-signature-mark-sweep {
+      animation: none;
+    }
   }
 
   section.sl-gallery-legend {

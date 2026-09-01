@@ -22,15 +22,22 @@ function TalentCtaLink({
   label,
   disabled,
   onChooseTalent,
+  /** Choosing talent is a conversion step; changing it is a secondary action. */
+  primary = false,
 }: {
   href: string;
   label: string;
   disabled?: boolean;
   onChooseTalent?: () => void;
+  primary?: boolean;
 }) {
   if (disabled) {
     return (
-      <StudioWorkspaceButton className="h-9 w-fit px-3.5 text-sm" disabled>
+      <StudioWorkspaceButton
+        className="h-9 w-fit px-3.5 text-sm"
+        variant={primary ? 'primary' : 'outline'}
+        disabled
+      >
         {label}
       </StudioWorkspaceButton>
     );
@@ -41,6 +48,7 @@ function TalentCtaLink({
       <StudioWorkspaceButton
         type="button"
         className="h-9 w-fit px-3.5 text-sm"
+        variant={primary ? 'primary' : 'outline'}
         onClick={onChooseTalent}
         data-testid="button-choose-talent"
       >
@@ -53,7 +61,10 @@ function TalentCtaLink({
     <Link
       href={href}
       onClick={() => markCastingScrollToHeader()}
-      className="sl-studio-btn h-9 w-fit px-3.5 text-sm no-underline"
+      className={cn(
+        'sl-studio-btn h-9 w-fit px-3.5 text-sm no-underline',
+        primary && 'sl-studio-btn--primary',
+      )}
     >
       {label}
     </Link>
@@ -75,6 +86,7 @@ export function SelectedTalentSummary({
           label="Choose Studio Talent"
           disabled={disabled}
           onChooseTalent={onChooseTalent}
+          primary
         />
       </div>
     );

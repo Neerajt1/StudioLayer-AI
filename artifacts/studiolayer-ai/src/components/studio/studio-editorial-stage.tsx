@@ -6,47 +6,9 @@ import type { ReactNode } from 'react';
 import { Camera, Download, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { workspaceGenerationFailedSlotCopy } from '@/lib/generation-failure-copy';
-import { GenerationProgressIndicator } from '@/components/studio/generation-progress-indicator';
+import { StudioSignatureLoader } from '@/components/studio/studio-signature-loader';
 import { StudioWorkspaceButton } from '@/components/studio/studio-workspace-controls';
 import { EditorialDownloadMenu } from '@/components/shared/editorial-download-menu';
-
-interface StudioEditorialEmptyStateProps {
-  compact?: boolean;
-}
-
-export function StudioEditorialEmptyState({ compact = false }: StudioEditorialEmptyStateProps) {
-  if (compact) {
-    return (
-      <div className="sl-studio-editorial-placeholder sl-studio-editorial-placeholder--compact">
-        <div className="sl-studio-editorial-placeholder-icon sl-studio-editorial-placeholder-icon--compact">
-          <Camera className="h-5 w-5 text-muted-foreground/60" aria-hidden />
-        </div>
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-foreground">Your Editorial Image</p>
-          <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Appears here after creation.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="sl-studio-editorial-placeholder">
-      <div className="sl-studio-editorial-placeholder-frame">
-        <div className="sl-studio-editorial-placeholder-icon">
-          <Camera className="h-7 w-7 text-muted-foreground/55" aria-hidden />
-        </div>
-        <div className="sl-studio-editorial-placeholder-copy">
-          <p className="text-base font-medium text-foreground">Your Editorial Image</p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Your generated fashion image will appear here.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface EditorialImageActionsProps {
   renderId: number;
@@ -181,7 +143,8 @@ interface StudioEditorialCanvasProps {
 export function StudioEditorialCanvas({
   children,
   className,
-  minHeightClass = 'min-h-[580px]',
+  // Low floor so the 4:5 aspect ratio governs the stage at every breakpoint.
+  minHeightClass = 'min-h-[320px]',
   maxHeightClass = 'max-h-[min(92vh,1000px)]',
 }: StudioEditorialCanvasProps) {
   return (
@@ -247,40 +210,35 @@ export function StudioEditorialImage({
   );
 }
 
-interface StudioEditorialPlaceholderProps {
-  visible: boolean;
-  compact?: boolean;
-}
-
-export function StudioEditorialPlaceholder({ visible, compact }: StudioEditorialPlaceholderProps) {
-  return (
-    <div
-      className={cn(
-        'sl-studio-editorial-placeholder-shell transition-opacity duration-300 ease-out',
-        visible ? 'opacity-100' : 'pointer-events-none opacity-0',
-      )}
-    >
-      <StudioEditorialEmptyState compact={compact} />
-    </div>
-  );
-}
-
+/**
+ * Processing state. Stays mounted so the mark cross-fades with the result
+ * instead of cutting; animation is paused while hidden.
+ */
 export function StudioEditorialProgressOverlay({
   visible,
   label,
-  hint,
   elapsedSec,
+  compact = false,
 }: {
   visible: boolean;
-  label: string;
-  hint?: string;
-  elapsedSec: number;
+  label?: string;
+  elapsedSec?: number;
+  compact?: boolean;
 }) {
-  if (!visible) return null;
-
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[inherit] bg-[#FAFAF8]/90 backdrop-blur-[1px]">
-      <GenerationProgressIndicator label={label} hint={hint} elapsedSec={elapsedSec} />
+    <div
+      className={cn(
+        'absolute inset-0 z-10 flex items-center justify-center bg-white transition-opacity duration-500 ease-out',
+        visible ? 'opacity-100' : 'pointer-events-none opacity-0',
+      )}
+      aria-hidden={!visible}
+    >
+      <StudioSignatureLoader
+        label={label}
+        compact={compact}
+        paused={!visible}
+        elapsedSec={elapsedSec}
+      />
     </div>
   );
 }
