@@ -5,9 +5,13 @@ import {
   HEAD_PLATE_GRAY,
   MIN_FACE_COVERED_BY_MASK,
   MIN_MASK_INSIDE_ENVELOPE,
-  ENVELOPE_HALF_WIDTHS_OF_FACE,
-  ENVELOPE_ABOVE_FACE,
-  ENVELOPE_BELOW_FACE,
+  HEAD_HAIR_ENVELOPE_HALF_WIDTHS_OF_FACE,
+  HEAD_HAIR_ENVELOPE_ABOVE_FACE,
+  HEAD_HAIR_ENVELOPE_BELOW_FACE,
+  LEGACY_FACE_TIGHT_ENVELOPE,
+  LEGACY_FACE_TIGHT_ENVELOPE_HALF_WIDTHS_OF_FACE,
+  LEGACY_FACE_TIGHT_ENVELOPE_ABOVE_FACE,
+  LEGACY_FACE_TIGHT_ENVELOPE_BELOW_FACE,
   HEAD_MASK_MAX_COVERAGE,
   HEAD_MASK_MAX_BOX_BOTTOM,
   HEAD_MASK_MAX_BOX_WIDTH,
@@ -165,9 +169,12 @@ describe("headless-head-mask — geometric plausibility gate", () => {
     assert.equal(HEAD_MASK_MAX_BOX_WIDTH, 0.45);
     assert.equal(MIN_FACE_COVERED_BY_MASK, 0.95);
     assert.equal(MIN_MASK_INSIDE_ENVELOPE, 0.97);
-    assert.equal(ENVELOPE_HALF_WIDTHS_OF_FACE, 1.5);
-    assert.equal(ENVELOPE_ABOVE_FACE, 1.6);
-    assert.equal(ENVELOPE_BELOW_FACE, 2.0);
+    assert.equal(HEAD_HAIR_ENVELOPE_HALF_WIDTHS_OF_FACE, 2.0);
+    assert.equal(HEAD_HAIR_ENVELOPE_ABOVE_FACE, 2.25);
+    assert.equal(HEAD_HAIR_ENVELOPE_BELOW_FACE, 2.0);
+    assert.equal(LEGACY_FACE_TIGHT_ENVELOPE_HALF_WIDTHS_OF_FACE, 1.5);
+    assert.equal(LEGACY_FACE_TIGHT_ENVELOPE_ABOVE_FACE, 1.6);
+    assert.equal(LEGACY_FACE_TIGHT_ENVELOPE_BELOW_FACE, 2.0);
     assert.equal(HEAD_PLATE_GRAY, 165);
   });
 });
@@ -216,6 +223,35 @@ describe("headless-head-mask — face anchor cross-check", () => {
       FACE,
     );
     assert.deepEqual(result.reasons, []);
+  });
+
+  it("14b. accepts asymmetric hair bulk rejected by the legacy face-tight envelope (Run 1 regression)", () => {
+    // Mirrors production Run 1: face fully covered, ~84% inside legacy envelope.
+    const hairInclusiveHeadMask = rectMask([
+      HEAD_RECT,
+      { x: 130, y: 25, w: 40, h: 95 },
+      { x: 165, y: 15, w: 55, h: 18 },
+    ]);
+
+    const legacy = checkFaceAnchorContainment(
+      hairInclusiveHeadMask,
+      W,
+      H,
+      FACE,
+      LEGACY_FACE_TIGHT_ENVELOPE,
+    );
+    assert.equal(legacy.faceCoveredPct, 100);
+    assert.equal(legacy.maskInsideEnvelopePct >= 82, true);
+    assert.equal(legacy.maskInsideEnvelopePct < MIN_MASK_INSIDE_ENVELOPE * 100, true);
+    assert.equal(
+      legacy.reasons.includes("HEAD_MASK_EXTENDS_BEYOND_FACE_ENVELOPE"),
+      true,
+    );
+
+    const current = checkFaceAnchorContainment(hairInclusiveHeadMask, W, H, FACE);
+    assert.deepEqual(current.reasons, []);
+    assert.equal(current.faceCoveredPct, 100);
+    assert.equal(current.maskInsideEnvelopePct >= MIN_MASK_INSIDE_ENVELOPE * 100, true);
   });
 });
 

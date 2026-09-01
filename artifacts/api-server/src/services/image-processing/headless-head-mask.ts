@@ -56,11 +56,40 @@ export const HEAD_MASK_MAX_ASPECT = 2.4;
 export const HEAD_MASK_MIN_BBOX_FILL = 0.3;
 
 // ── validated face-anchor thresholds ───────────────────────────────────────
-export const ENVELOPE_HALF_WIDTHS_OF_FACE = 1.5;
-export const ENVELOPE_ABOVE_FACE = 1.6;
-export const ENVELOPE_BELOW_FACE = 2.0;
 export const MIN_FACE_COVERED_BY_MASK = 0.95;
 export const MIN_MASK_INSIDE_ENVELOPE = 0.97;
+
+/**
+ * YuNet locates the FACE; EVF-SAM segments the full HEAD including hair.
+ * The containment envelope must bound that hair-inclusive head mask — not
+ * treat the YuNet face box as the outer head boundary.
+ */
+export const HEAD_HAIR_ENVELOPE_HALF_WIDTHS_OF_FACE = 2.0;
+export const HEAD_HAIR_ENVELOPE_ABOVE_FACE = 2.25;
+export const HEAD_HAIR_ENVELOPE_BELOW_FACE = 2.0;
+
+/** Pre–Run-1 face-tight multipliers — regression tests only. */
+export const LEGACY_FACE_TIGHT_ENVELOPE_HALF_WIDTHS_OF_FACE = 1.5;
+export const LEGACY_FACE_TIGHT_ENVELOPE_ABOVE_FACE = 1.6;
+export const LEGACY_FACE_TIGHT_ENVELOPE_BELOW_FACE = 2.0;
+
+export type HeadHairEnvelopeMultipliers = {
+  halfWidthsOfFace: number;
+  aboveFace: number;
+  belowFace: number;
+};
+
+export const HEAD_HAIR_ENVELOPE: HeadHairEnvelopeMultipliers = {
+  halfWidthsOfFace: HEAD_HAIR_ENVELOPE_HALF_WIDTHS_OF_FACE,
+  aboveFace: HEAD_HAIR_ENVELOPE_ABOVE_FACE,
+  belowFace: HEAD_HAIR_ENVELOPE_BELOW_FACE,
+};
+
+export const LEGACY_FACE_TIGHT_ENVELOPE: HeadHairEnvelopeMultipliers = {
+  halfWidthsOfFace: LEGACY_FACE_TIGHT_ENVELOPE_HALF_WIDTHS_OF_FACE,
+  aboveFace: LEGACY_FACE_TIGHT_ENVELOPE_ABOVE_FACE,
+  belowFace: LEGACY_FACE_TIGHT_ENVELOPE_BELOW_FACE,
+};
 
 /** Dilation as a fraction of image height — clears hairline and jaw. */
 export const HEAD_MASK_DILATION_FRACTION = 0.004;
@@ -443,13 +472,15 @@ export function checkHeadMaskGeometry(
 
 /**
  * Face-anchor cross-check. The retained mask must contain the independently
- * detected face and must not sprawl beyond a bounded head envelope around it.
+ * detected face and must not sprawl beyond a hair-inclusive head envelope
+ * centred on the YuNet face box.
  */
 export function checkFaceAnchorContainment(
   mask: Buffer,
   width: number,
   height: number,
   face: FaceBox,
+  envelope: HeadHairEnvelopeMultipliers = HEAD_HAIR_ENVELOPE,
 ): {
   reasons: HeadMaskFailureReason[];
   details: string[];
@@ -472,10 +503,10 @@ export function checkFaceAnchorContainment(
   const faceCovered = faceTotal > 0 ? faceInMask / faceTotal : 0;
 
   const centreX = face.x + face.width / 2;
-  const ex0 = centreX - ENVELOPE_HALF_WIDTHS_OF_FACE * face.width;
-  const ex1 = centreX + ENVELOPE_HALF_WIDTHS_OF_FACE * face.width;
-  const ey0 = face.y - ENVELOPE_ABOVE_FACE * face.height;
-  const ey1 = face.y + face.height + ENVELOPE_BELOW_FACE * face.height;
+  const ex0 = centreX - envelope.halfWidthsOfFace * face.width;
+  const ex1 = centreX + envelope.halfWidthsOfFace * face.width;
+  const ey0 = face.y - envelope.aboveFace * face.height;
+  const ey1 = face.y + face.height + envelope.belowFace * face.height;
 
   let maskTotal = 0;
   let maskInside = 0;
