@@ -1,10 +1,5 @@
 import { cn } from '@/lib/utils';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
   formatShootDate,
   isFailedGalleryRenderWithoutOutput,
   SHOOT_TYPE_LABEL,
@@ -14,7 +9,6 @@ import { galleryFailedRenderCopy } from '@/lib/generation-failure-copy';
 import { resolveGalleryCardImageUrl } from '@/lib/gallery-card-image';
 
 const SL_TOKEN_ICON = '/icons/sl-token.svg';
-const STUDIO_SPARK_ICON = '/icons/studio-spark.svg';
 
 interface ShootCardProps {
   shoot: GalleryShoot;
@@ -38,6 +32,11 @@ function ShootCoverImage({ src, priority }: { src: string; priority?: boolean })
   );
 }
 
+/**
+ * One tile per Shoot: the first resolvable slot image is the representative
+ * cover. No new data is introduced — the remaining images stay reachable
+ * through the existing Shoot detail dialog.
+ */
 function ShootCover({ shoot, priority }: { shoot: GalleryShoot; priority?: boolean }) {
   const urls = shoot.images
     .map((img) => resolveGalleryCardImageUrl(img))
@@ -66,70 +65,9 @@ function ShootCover({ shoot, priority }: { shoot: GalleryShoot; priority?: boole
     );
   }
 
-  if (urls.length === 1) {
-    return (
-      <div className="sl-shoot-card-cover sl-shoot-card-cover--single">
-        <ShootCoverImage src={urls[0]!} priority={priority} />
-      </div>
-    );
-  }
-
   return (
-    <div
-      className={cn(
-        'sl-shoot-card-cover sl-shoot-card-cover--mosaic',
-        urls.length === 2 && 'sl-shoot-card-cover--duo',
-        urls.length >= 4 && 'sl-shoot-card-cover--quad',
-      )}
-    >
-      {urls.slice(0, 4).map((url, index) => (
-        <ShootCoverImage key={`${shoot.id}-${index}`} src={url} priority={priority && index === 0} />
-      ))}
-    </div>
-  );
-}
-
-function ShootMetricColumn({
-  iconSrc,
-  iconClassName,
-  label,
-  tooltip,
-  value,
-}: {
-  iconSrc: string;
-  iconClassName?: string;
-  label: string;
-  tooltip: string;
-  value: number;
-}) {
-  return (
-    <div
-      className="sl-shoot-metric sl-shoot-metric--compact"
-      role="group"
-      aria-label={`${label}: ${value}. ${tooltip}`}
-    >
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="sl-shoot-metric-icon-wrap" tabIndex={0} aria-label={tooltip}>
-            <img
-              src={iconSrc}
-              alt=""
-              aria-hidden
-              className={cn('sl-shoot-metric-icon', iconClassName)}
-              draggable={false}
-            />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="sl-shoot-metric-tooltip">
-          {tooltip}
-        </TooltipContent>
-      </Tooltip>
-      <span className="sl-shoot-metric-label" aria-hidden="true">
-        {label}
-      </span>
-      <span className="sl-billing-cycle-stat-value" aria-hidden="true">
-        {value}
-      </span>
+    <div className="sl-shoot-card-cover sl-shoot-card-cover--single">
+      <ShootCoverImage src={urls[0]!} priority={priority} />
     </div>
   );
 }
@@ -157,30 +95,16 @@ export function ShootCard({
         aria-label={`Open ${SHOOT_TYPE_LABEL[shoot.generationType]}`}
       >
         <ShootCover shoot={shoot} priority={imagePriority} />
-        <div className="sl-shoot-card-heading">
-          <h3 className="sl-shoot-card-title">{SHOOT_TYPE_LABEL[shoot.generationType]}</h3>
-          <p className="sl-shoot-card-date">
-            Generated {formatShootDate(shoot.createdAt)}
-          </p>
+        {/* Revealed on hover/focus; the button's aria-label carries the same
+            information for assistive tech regardless of pointer state. */}
+        <div className="sl-shoot-card-caption" aria-hidden="true">
+          <span className="sl-shoot-card-title">
+            {SHOOT_TYPE_LABEL[shoot.generationType]}
+          </span>
+          <span className="sl-shoot-card-date">{formatShootDate(shoot.createdAt)}</span>
+          <span className="sl-shoot-card-view">View</span>
         </div>
       </button>
-
-      <div className="sl-shoot-accounting-strip" aria-label="Shoot accounting">
-        <ShootMetricColumn
-          iconSrc={SL_TOKEN_ICON}
-          iconClassName="sl-shoot-metric-icon--studio-credit"
-          label="Credits Used"
-          tooltip="Studio Credits used to generate this Shoot."
-          value={shoot.studioCreditsUsed}
-        />
-        <ShootMetricColumn
-          iconSrc={STUDIO_SPARK_ICON}
-          iconClassName="sl-shoot-metric-icon--refinement"
-          label="Edits Made"
-          tooltip="Paid image edits on this Shoot, such as Remove Background. Crop is free and not counted here."
-          value={shoot.refinementCount}
-        />
-      </div>
     </article>
   );
 }
@@ -195,10 +119,6 @@ export function ShootCardSkeleton({ index }: { index: number }) {
       <div className="sl-shoot-card-cover sl-shoot-card-cover--single">
         <div className="sl-ledger-card-skeleton-shimmer sl-shoot-card-cover-skeleton" />
       </div>
-      <div className="sl-shoot-accounting-strip sl-shoot-accounting-strip--skeleton">
-        <div className="sl-shoot-metric-placeholder" />
-        <div className="sl-shoot-metric-placeholder" />
-      </div>
     </article>
   );
 }
@@ -212,22 +132,6 @@ export function ShootCardGhost({ index }: { index: number }) {
     >
       <div className="sl-shoot-card-cover sl-shoot-card-cover--single sl-shoot-card-cover--ghost">
         <img src={SL_TOKEN_ICON} alt="" aria-hidden className="sl-ledger-watermark" draggable={false} />
-      </div>
-      <div className="sl-shoot-accounting-strip">
-        <ShootMetricColumn
-          iconSrc={SL_TOKEN_ICON}
-          iconClassName="sl-shoot-metric-icon--studio-credit"
-          label="Credits Used"
-          tooltip="Studio Credits used to generate this Shoot."
-          value={0}
-        />
-        <ShootMetricColumn
-          iconSrc={STUDIO_SPARK_ICON}
-          iconClassName="sl-shoot-metric-icon--refinement"
-          label="Edits Made"
-          tooltip="Paid image edits on this Shoot, such as Remove Background. Crop is free and not counted here."
-          value={0}
-        />
       </div>
     </article>
   );

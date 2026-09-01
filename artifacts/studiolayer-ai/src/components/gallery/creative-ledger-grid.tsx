@@ -13,6 +13,11 @@ import { ShootCard, ShootCardGhost, ShootCardSkeleton } from '@/components/galle
 
 interface CreativeLedgerGridProps {
   shoots: GalleryShoot[];
+  /**
+   * Ledger size across every page. Onboarding ghosts key off the whole ledger,
+   * not the visible page, so paging never resurrects them.
+   */
+  totalShootCount?: number;
   exitingShootIds?: Set<string>;
   isInitialLoading?: boolean;
   isRefreshing?: boolean;
@@ -21,11 +26,13 @@ interface CreativeLedgerGridProps {
 
 export function CreativeLedgerGrid({
   shoots,
+  totalShootCount,
   exitingShootIds = new Set(),
   isInitialLoading = false,
   isRefreshing = false,
   onOpenShoot,
 }: CreativeLedgerGridProps) {
+  const ledgerSize = totalShootCount ?? shoots.length;
   const [onboardingComplete, setOnboardingComplete] = useState(() =>
     readCreativeLedgerOnboarded(),
   );
@@ -33,11 +40,11 @@ export function CreativeLedgerGrid({
   const [enteringShootIds, setEnteringShootIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    if (shoots.length >= GHOST_LEDGER_SLOT_COUNT) {
+    if (ledgerSize >= GHOST_LEDGER_SLOT_COUNT) {
       markCreativeLedgerOnboarded();
       setOnboardingComplete(true);
     }
-  }, [shoots.length]);
+  }, [ledgerSize]);
 
   useEffect(() => {
     const unseen = shoots.filter(
@@ -69,7 +76,7 @@ export function CreativeLedgerGrid({
   }, [shoots, exitingShootIds, mountedShootIds]);
 
   const skeletons = loadingSkeletonCount(isInitialLoading, shoots.length);
-  const ghosts = isInitialLoading ? 0 : ghostSlotCount(shoots.length, onboardingComplete);
+  const ghosts = isInitialLoading ? 0 : ghostSlotCount(ledgerSize, onboardingComplete);
 
   return (
     <div

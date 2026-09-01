@@ -17,6 +17,7 @@ import { withErrorContactHelper } from '@/lib/studio-contact';
 import { useToast } from '@/hooks/use-toast';
 import { EditorialPageHeader } from '@/components/design-system/editorial-page-header';
 import { CreativeLedgerGrid } from '@/components/gallery/creative-ledger-grid';
+import { GalleryPagination } from '@/components/gallery/gallery-pagination';
 import { GalleryDashboardCard } from '@/components/gallery/gallery-dashboard-card';
 import { GalleryLedgerLegend } from '@/components/gallery/gallery-ledger-legend';
 import { GalleryImageViewer } from '@/components/gallery/gallery-image-viewer';
@@ -55,6 +56,9 @@ import { StudioWorkspaceButton } from '@/components/studio/studio-workspace-cont
 
 /** Stable empty list — avoids re-running shoot grouping on every render while data is undefined. */
 const EMPTY_LEDGER_RENDERS: CreativeLedgerCardRender[] = [];
+
+/** Shoots per Gallery page — two rows of the four-column contact sheet. */
+const GALLERY_PAGE_SIZE = 8;
 
 function makeRefetchInterval(enabled: boolean) {
   return (query: { state: { data: { status?: string } | undefined } }) => {
@@ -192,6 +196,26 @@ export default function GalleryPage() {
     () => new Set(exitingShoots.map((shoot) => shoot.id)),
     [exitingShoots],
   );
+
+  /**
+   * Presentation-only paging over the already-ordered ledger. Sorting,
+   * chronology, grouping and freshness are untouched — this slices the same
+   * array the grid used to render in full.
+   */
+  const [galleryPage, setGalleryPage] = useState(1);
+  const galleryPageCount = Math.max(
+    1,
+    Math.ceil(gridShoots.length / GALLERY_PAGE_SIZE),
+  );
+
+  useEffect(() => {
+    if (galleryPage > galleryPageCount) setGalleryPage(galleryPageCount);
+  }, [galleryPage, galleryPageCount]);
+
+  const pagedShoots = useMemo(() => {
+    const start = (galleryPage - 1) * GALLERY_PAGE_SIZE;
+    return gridShoots.slice(start, start + GALLERY_PAGE_SIZE);
+  }, [gridShoots, galleryPage]);
 
   useEffect(() => {
     if (!editRender?.id || !renders) return;
@@ -455,13 +479,22 @@ export default function GalleryPage() {
           </StudioWorkspaceButton>
         </section>
       ) : (
-        <CreativeLedgerGrid
-          shoots={gridShoots}
-          exitingShootIds={exitingShootIds}
-          isInitialLoading={isGalleryLoading}
-          isRefreshing={isAuthenticated && rendersFetching && hasCachedShoots}
-          onOpenShoot={handleOpenShoot}
-        />
+        <>
+          <CreativeLedgerGrid
+            shoots={pagedShoots}
+            totalShootCount={gridShoots.length}
+            exitingShootIds={exitingShootIds}
+            isInitialLoading={isGalleryLoading}
+            isRefreshing={isAuthenticated && rendersFetching && hasCachedShoots}
+            onOpenShoot={handleOpenShoot}
+          />
+          <GalleryPagination
+            page={galleryPage}
+            pageSize={GALLERY_PAGE_SIZE}
+            totalCount={gridShoots.length}
+            onPageChange={setGalleryPage}
+          />
+        </>
       )}
 
       <section className="sl-gallery-faq-section max-w-3xl mx-auto mt-16">
