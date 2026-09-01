@@ -59,6 +59,7 @@ import {
   buildFurnitureReferencePrimaryPointer,
 } from "../../../rendering/furniture-reference-appearance-authority.js";
 import { appendStudioBackgroundAuthorityToCreativePrompt } from "../rendering-studio-background-authority.js";
+import { HeadlessMaskFailureError } from "./nano-pro-headless-mannequin-trial.js";
 import {
   emptyOpenRouterResponseTelemetry,
   logOpenRouterShotTiming,
@@ -1187,12 +1188,22 @@ export class OpenRouterProvider implements RenderingProvider {
               outputResolution,
             }),
             ).catch((error: unknown) => {
+              const errMessage =
+                error instanceof Error ? error.message : String(error);
               logger.warn(
                 {
                   provider: this.name,
                   shotIndex: i,
-                  err:
-                    error instanceof Error ? error.message : String(error),
+                  err: errMessage,
+                  ...(error instanceof HeadlessMaskFailureError
+                    ? {
+                        trialRunId: error.trialRunId,
+                        stage1RunId: error.stage1.stageRunId,
+                        maskFailureReasons: error.reasons,
+                        maskFailureDetail: error.detail,
+                        maskMetrics: error.metrics,
+                      }
+                    : {}),
                 },
                 "OpenRouterProvider: Headless Create shot failed — no single-pass fallback",
               );
