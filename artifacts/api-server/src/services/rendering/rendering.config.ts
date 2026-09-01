@@ -13,6 +13,9 @@
 //                               if set, Create falls back to flash (Nano Regular).
 //   OR_RENDER_TIMEOUT_MS        Override per-request timeout (ms). Default 90 000.
 //   OR_RENDER_RETRY_COUNT       Override retry count. Default 1.
+//   V1_CREATE_USE_HEADLESS_IDENTITY  When true, fresh Create uses the frozen
+//                               Headless Mannequin two-stage Nano Pro path.
+//                               Default off. Does not enable cascade or trials.
 // ---------------------------------------------------------------------------
 
 import { RENDERING_REALISM_INSTRUCTION } from "./rendering-realism.js";
@@ -204,6 +207,27 @@ export type NativeOutputResolution = "2K" | "4K";
  * generation request. Nano Pro → Nano Regular cascade code is retained for V3.
  */
 export const V1_CREATE_USE_NANO_PRO_CASCADE = false;
+
+export const V1_CREATE_USE_HEADLESS_IDENTITY_ENV =
+  "V1_CREATE_USE_HEADLESS_IDENTITY" as const;
+
+/**
+ * When true, fresh production Create uses the frozen Headless Mannequin
+ * two-stage Nano Pro identity path. Default OFF — no effect while unset.
+ *
+ * Independent of EXPERIMENTAL_NANO_PRO_HEADLESS_MANNEQUIN_TRIAL_ENABLED and
+ * V1_CREATE_USE_NANO_PRO_CASCADE (cascade remains hardcoded false).
+ */
+export function isV1CreateHeadlessIdentityEnabled(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const raw = env[V1_CREATE_USE_HEADLESS_IDENTITY_ENV] ?? "";
+  return (
+    raw === "1" ||
+    raw.toLowerCase() === "true" ||
+    raw.toLowerCase() === "yes"
+  );
+}
 
 /** Active production Create engines only. FLUX.2 Max is intentionally excluded. */
 export type OpenRouterRenderEngine = "flash" | "nano_pro";

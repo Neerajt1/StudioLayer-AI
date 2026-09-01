@@ -85,7 +85,7 @@ describe("V1 white-background-only Create", () => {
     assert.equal(street, grey);
     assert.equal(street, white);
     assert.match(street, /ENVIRONMENT AUTHORITY/);
-    assert.match(street, /seamless white/i);
+    assert.match(street, /pure white|#FFFFFF/i);
     assert.doesNotMatch(street, /urban street/i);
     assert.doesNotMatch(street, /grey gradient/i);
     assert.doesNotMatch(street, /nature/i);
@@ -109,7 +109,7 @@ describe("V1 white-background-only Create", () => {
       locationEnvironment: "urban_street",
     });
     assert.match(text, /ENVIRONMENT AUTHORITY/);
-    assert.match(text, /seamless white/i);
+    assert.match(text, /pure white|#FFFFFF/i);
     assert.match(text, /controlled studio background only/i);
   });
 
@@ -128,7 +128,7 @@ describe("V1 white-background-only Create", () => {
       furnitureRequired: true,
     });
     assert.match(text, /pose requires a support furniture/i);
-    assert.match(text, /seamless white/i);
+    assert.match(text, /pure white|#FFFFFF/i);
     assert.doesNotMatch(text, /urban street/i);
   });
 
@@ -142,7 +142,7 @@ describe("V1 white-background-only Create", () => {
     assert.match(text, /Do not invent chairs, stools/i);
     assert.doesNotMatch(text, /pose requires a support furniture/i);
     assert.equal(buildFurnitureAuthorityLayer(false).includes("selected environment"), false);
-    assert.match(text, /seamless white/i);
+    assert.match(text, /pure white|#FFFFFF/i);
     assert.doesNotMatch(text, /luxury/i);
   });
 

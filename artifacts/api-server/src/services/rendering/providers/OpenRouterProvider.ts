@@ -31,6 +31,7 @@ import {
   type OpenRouterRenderEngine,
   type NativeOutputResolution,
   V1_CREATE_USE_NANO_PRO_CASCADE,
+  isV1CreateHeadlessIdentityEnabled,
 } from "../rendering.config.js";
 import {
   assembleNanoProImagesApiPrompt,
@@ -57,6 +58,7 @@ import {
   buildFurnitureReferenceAuthorityLayer,
   buildFurnitureReferencePrimaryPointer,
 } from "../../../rendering/furniture-reference-appearance-authority.js";
+import { appendStudioBackgroundAuthorityToCreativePrompt } from "../rendering-studio-background-authority.js";
 import {
   emptyOpenRouterResponseTelemetry,
   logOpenRouterShotTiming,
@@ -493,7 +495,7 @@ async function callOpenRouter(
 
   // Furniture authority rides with the creative shot prompt so the wording stays
   // isolated to this layer and never mutates the shared primary instruction.
-  const creativeShotPrompt =
+  const creativeShotPromptBase =
     furnitureReferenceImageNumber > 0
       ? [
           prompt?.trim() ? prompt.trim() : "",
@@ -502,6 +504,11 @@ async function callOpenRouter(
           .filter(Boolean)
           .join("\n\n")
       : prompt;
+
+  const creativeShotPrompt =
+    !isRefinementEdit && !isCreateStage2
+      ? appendStudioBackgroundAuthorityToCreativePrompt(creativeShotPromptBase)
+      : creativeShotPromptBase;
 
   if (!isRefinementEdit) {
     logIdentityForensics({
@@ -1078,6 +1085,10 @@ export class OpenRouterProvider implements RenderingProvider {
     // V1 Create: single Nano Regular when cascade flag is off. Cascade code retained for V3.
     // Refinement / Enhance Face keep the single-shot Flash path unchanged.
     const useCreateCascade = !isRefinement && V1_CREATE_USE_NANO_PRO_CASCADE;
+    const useHeadlessCreate =
+      !isRefinement &&
+      isV1CreateHeadlessIdentityEnabled() &&
+      !V1_CREATE_USE_NANO_PRO_CASCADE;
     const stage1Model = resolveOpenRouterModelForResolution(
       outputResolution,
       "nano_pro",
@@ -1098,6 +1109,7 @@ export class OpenRouterProvider implements RenderingProvider {
           ? "nano_pro→flash"
           : resolveOpenRouterRenderEngine(),
         createCascade: useCreateCascade,
+        headlessCreate: useHeadlessCreate,
         shots,
         isRefinement,
         editorialDiversity: hasPerShotPrompts,
@@ -1125,7 +1137,63 @@ export class OpenRouterProvider implements RenderingProvider {
 
     let results: Array<string | null>;
 
-    if (useCreateCascade) {
+    if (useHeadlessCreate) {
+      // ── FROZEN HEADLESS — two Nano Pro calls per shot (identity Stage 2) ──
+      results = await Promise.all(
+        Array.from({ length: shots }, (_, i) => {
+          const shotPrompt = hasPerShotPrompts
+            ? (perShotPrompts[i] ?? prompt)
+            : prompt;
+          const poseReferenceImageUrl = perShotPoseReferenceUrls?.[i];
+          const poseId = identityForensics?.perShotPoseIds?.[i];
+
+          if (!poseReferenceImageUrl || !poseId) {
+            logger.warn(
+              {
+                provider: this.name,
+                shotIndex: i,
+                hasPoseReference: Boolean(poseReferenceImageUrl),
+                hasPoseId: Boolean(poseId),
+              },
+              "OpenRouterProvider: Headless Create requires pose reference and poseId — shot skipped",
+            );
+            return Promise.resolve(null);
+          }
+
+          const furnitureReferenceImageUrl =
+            perShotFurnitureReferenceUrls?.[i] ?? undefined;
+
+          return runStaggeredShot(i, () =>
+            import("../headless-create-adapter.js").then(({ runHeadlessCreateShot }) =>
+              runHeadlessCreateShot({
+              shotIndex: i,
+              talentImageUrl: modelImageUrl,
+              garmentImageUrl,
+              poseImageUrl: poseReferenceImageUrl,
+              poseId: String(poseId),
+              modelIdentityId: identityForensics?.modelIdentityId,
+              creativeShotPrompt: shotPrompt,
+              garmentReferenceCorrespondenceInstruction:
+                garmentReferenceCorrespondenceInstruction,
+              furnitureReferenceImageUrl,
+              outputResolution,
+            }),
+            ).catch((error: unknown) => {
+              logger.warn(
+                {
+                  provider: this.name,
+                  shotIndex: i,
+                  err:
+                    error instanceof Error ? error.message : String(error),
+                },
+                "OpenRouterProvider: Headless Create shot failed — no single-pass fallback",
+              );
+              return null;
+            }),
+          );
+        }),
+      );
+    } else if (useCreateCascade) {
       // ── STAGE 1 — Nano Pro (pose / furniture / scene / garment / body) ──
       const stage1Results = await Promise.all(
         Array.from({ length: shots }, (_, i) => {
@@ -1274,6 +1342,7 @@ export class OpenRouterProvider implements RenderingProvider {
         shotsGenerated: images.length,
         durationMs,
         createCascade: useCreateCascade,
+        headlessCreate: useHeadlessCreate,
       },
       "OpenRouterProvider: generation complete"
     );

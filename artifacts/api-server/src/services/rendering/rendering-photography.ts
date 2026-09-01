@@ -1,23 +1,25 @@
 // ---------------------------------------------------------------------------
 // StudioLayer AI — Photography Authority (Pass D)
 //
-// Single shared photography source of truth for Hero / Editorial / Campaign.
-// Covers: white studio background, fashion presentation, lighting/finish,
-// framing presentation defaults, and colour-neutral studio presentation.
+// Single shared photography source of truth for fresh Create generation.
+// Background colour is owned by STUDIO_BACKGROUND_AUTHORITY_SOT.
+// Covers: fashion presentation, lighting/finish, framing defaults, colour-neutral studio.
 //
 // Does NOT own garment construction/colour identity (GARMENT_AUTHORITY_SOT),
 // pose geometry (Pass B), furniture (Pass C), or mode-specific shot directions.
 // ---------------------------------------------------------------------------
 
+import { STUDIO_BACKGROUND_AUTHORITY_SOT } from "./rendering-studio-background-authority.js";
+
 /**
  * Shared photography contract appended to every fresh generation.
- * Shot-specific camera/energy remain in HERO / Editorial / Campaign directions.
+ * Shot-specific camera/energy remain in per-shot creative directions.
  */
-export const PHOTOGRAPHY_AUTHORITY_SOT = `PHOTOGRAPHY:
-Pure white (#FFFFFF) seamless studio background — no gradients, vignettes, colour casts, texture, or environmental scenery.
+export const PHOTOGRAPHY_AUTHORITY_SOT = `${STUDIO_BACKGROUND_AUTHORITY_SOT}
+
+PHOTOGRAPHY (lighting and presentation):
 Professional fashion-studio presentation: soft neutral lighting, balanced exposure, natural skin tones, high garment visibility, controlled highlights and shadows.
 Colour-neutral presentation — background and lighting must not tint, warm, cool, or recolour the garment.
-Subtle realistic grounding shadow and natural floor contact; no floating model or garment.
 Follow the shot's camera/framing direction; do not invent lifestyle locations or competing props.
 Across this generation batch, keep background and lighting setup identical — only pose, camera, expression, and composition may vary.`;
 

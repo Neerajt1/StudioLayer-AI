@@ -26,7 +26,7 @@ describe("nano-pro-authority-layers", () => {
     assert.match(text, /POSE AUTHORITY/);
     // V1: fixed white-studio ENVIRONMENT AUTHORITY — not user-selectable.
     assert.match(text, /ENVIRONMENT AUTHORITY/);
-    assert.match(text, /seamless white/i);
+    assert.match(text, /pure white|#FFFFFF/i);
     assert.match(text, /FURNITURE AUTHORITY/);
     assert.match(text, /LOWER WARDROBE AUTHORITY/);
     assert.match(text, /NOT the identity reference/i);
@@ -65,7 +65,7 @@ describe("nano-pro-authority-layers", () => {
     }
     assert.match(
       buildEnvironmentAuthorityLayer("white_studio"),
-      /seamless white/i,
+      /pure white|#FFFFFF/i,
     );
     assert.match(
       buildEnvironmentAuthorityLayer("photo_studio"),

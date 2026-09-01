@@ -11,6 +11,10 @@
 //   Garment image = garment authority
 // ---------------------------------------------------------------------------
 
+import {
+  STUDIO_BACKGROUND_ENVIRONMENT_SUMMARY,
+} from "./rendering-studio-background-authority.js";
+
 export type StudioLocationEnvironment =
   | "white_studio"
   | "grey_gradient_studio"
@@ -54,8 +58,7 @@ const CONTROLLED_STUDIO_BACKGROUNDS = new Set([
 ]);
 
 const ENVIRONMENT_COPY: Record<string, string> = {
-  white_studio:
-    "Clean seamless white studio background. Controlled studio lighting. Minimal or no visible environment — background plane only.",
+  white_studio: STUDIO_BACKGROUND_ENVIRONMENT_SUMMARY,
   grey_gradient_studio:
     "Premium soft grey gradient studio background. Controlled studio lighting. Minimal or no visible environment — background plane only.",
   photo_studio:
@@ -138,7 +141,8 @@ Do not treat this as authority for pose, talent identity, garment identity, garm
   return `ENVIRONMENT AUTHORITY:
 The selected StudioLayer environment is authoritative for the final background/environment: ${description}${controlledBackdrop}
 Do not let the pose reference automatically determine the final environment, room, street, studio backdrop or background.
-Pose-illustration backgrounds are non-authoritative unless StudioLayer explicitly selects them.`;
+Pose-illustration backgrounds are non-authoritative unless StudioLayer explicitly selects them.
+Do not substitute grey, gray, cream, beige, off-white, tinted, or gradient backgrounds for the mandatory white studio.`;
 }
 
 export function buildFurnitureAuthorityLayer(
