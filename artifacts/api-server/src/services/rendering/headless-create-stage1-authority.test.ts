@@ -202,14 +202,15 @@ describe("Headless Stage-1 — frozen reference order", () => {
     );
   });
 
-  it("L. adapter passes original talent URL; furniture and Flash prompt not forwarded (trial parity)", () => {
+  it("L. adapter passes original talent URL; furniture Ref 3 + authority brief when available", () => {
     assert.match(adapterSrc, /talentImageUrl: input\.talentImageUrl/);
     assert.match(adapterSrc, /loadStage1PoseReferenceImageAsDataUri\(input\.poseId\)/);
+    assert.match(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
     const orchestratorCall = adapterSrc.slice(
       adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
     );
-    assert.doesNotMatch(orchestratorCall, /furnitureReferenceImageUrl/);
-    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt/);
+    assert.match(orchestratorCall, /furnitureReferenceImageUrl/);
+    assert.match(orchestratorCall, /creativeShotPrompt/);
   });
 });
 
@@ -254,5 +255,33 @@ describe("Headless Stage-1 reference contract text", () => {
       furnitureReferenceImageUrl: FURNITURE,
     });
     assert.equal(headlessPromptClaimsUnattachedReference(good, true), false);
+  });
+
+  it("O. Stage-1 brief includes garment environment non-authority and length lock", () => {
+    const prompt = assembleHeadlessCreateStage1CreativePrompt({
+      shotPrompt: SAMPLE_FLASH_SHOT,
+      furnitureReferenceImageUrl: FURNITURE,
+    });
+    assert.match(prompt, /GARMENT PHOTO NON-AUTHORITY/);
+    assert.match(prompt, /do not lengthen it to the seat, lap, hip, or thigh/i);
+    assert.match(prompt, /hanger/i);
+    assert.match(prompt, /necklace/i);
+  });
+
+  it("P. Stage-1 brief includes human pose geometry authority and no Talent identity", () => {
+    const prompt = assembleHeadlessCreateStage1CreativePrompt({
+      shotPrompt: SAMPLE_FLASH_SHOT,
+    });
+    assert.match(prompt, /HUMAN POSE GEOMETRY AUTHORITY/);
+    assert.match(prompt, /No Studio Talent identity reference is attached in Stage 1/);
+    assert.match(prompt, /ordinary invented head\/face/i);
+  });
+
+  it("Q. Stage-1 brief starts with pure white background authority", () => {
+    const prompt = assembleHeadlessCreateStage1CreativePrompt({
+      shotPrompt: "Walk.",
+    });
+    assert.equal(prompt.startsWith(STUDIO_BACKGROUND_AUTHORITY_SOT), true);
+    assert.match(prompt, /#FFFFFF/);
   });
 });

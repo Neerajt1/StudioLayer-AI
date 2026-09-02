@@ -166,18 +166,42 @@ function rewriteFlashGarmentEvidenceMappingForHeadless(mapping: string): string 
     .trim();
 }
 
+/**
+ * Binding human-geometry authority for Stage 1.
+ * Pose Master controls body geometry — not furniture, garment, background, or identity.
+ */
+export function buildHeadlessHumanPoseGeometryAuthorityLayer(): string {
+  return `HUMAN POSE GEOMETRY AUTHORITY — REFERENCE IMAGE ${HEADLESS_STAGE1_POSE_REF} (BINDING):
+Reference Image ${HEADLESS_STAGE1_POSE_REF} is the sole Stage-1 authority for HUMAN body geometry: body position, limb placement, hand and arm placement, leg arrangement, torso orientation, weight distribution, gesture, and pose-related framing / camera relationship.
+The human geometry demonstrated in Reference Image ${HEADLESS_STAGE1_POSE_REF} is binding — reproduce that distinctive body geometry and body-to-support contact relationship. Do not substitute a generic standing, walking, sitting, or freestanding catalogue pose.
+Reference Image ${HEADLESS_STAGE1_POSE_REF} is NOT authoritative for: furniture appearance or material; garment appearance, print, colour, or construction; clothing worn by the illustrated figure; background or environment colour; illustration style; face, hair, skin tone, or identity.
+No Studio Talent identity reference is attached in Stage 1 — render an ordinary invented head/face suitable for later identity injection; do not attempt to depict any specific real person.`;
+}
+
 /** Reinforces Pose Master isolation; furniture override when Ref 3 is attached. */
 export function buildHeadlessPoseMasterIsolationLayer(
   hasFurnitureReference: boolean,
 ): string {
   const furnitureLine = hasFurnitureReference
-    ? `Replace any furniture drawn in Reference Image ${HEADLESS_STAGE1_POSE_REF} with Reference Image ${HEADLESS_STAGE1_FURNITURE_REF}. Reference Image ${HEADLESS_STAGE1_FURNITURE_REF} outranks Pose Master furniture appearance.`
-    : `Do not copy furniture design or material from Reference Image ${HEADLESS_STAGE1_POSE_REF}.`;
+    ? `Replace any furniture drawn in Reference Image ${HEADLESS_STAGE1_POSE_REF} with Reference Image ${HEADLESS_STAGE1_FURNITURE_REF}. Reference Image ${HEADLESS_STAGE1_FURNITURE_REF} outranks Pose Master furniture appearance. Pose Master furniture is non-authoritative.`
+    : `Do not copy furniture design or material from Reference Image ${HEADLESS_STAGE1_POSE_REF}. Pose Master furniture is non-authoritative.`;
 
   return `POSE MASTER ISOLATION — REFERENCE IMAGE ${HEADLESS_STAGE1_POSE_REF}:
 Use Reference Image ${HEADLESS_STAGE1_POSE_REF} for body pose, limb placement, gesture, weight distribution, torso orientation, and pose-related framing only.
-Do not derive garment construction, colour, print, background tone, model identity, face, hair, or illustration styling from Reference Image ${HEADLESS_STAGE1_POSE_REF}.
+Do not derive garment construction, colour, print, clothing worn by the illustrated figure, background tone, model identity, face, hair, or illustration styling from Reference Image ${HEADLESS_STAGE1_POSE_REF}.
 ${furnitureLine}`;
+}
+
+/**
+ * Garment-photo scenery and accessories are non-authoritative; proportions/length are locked.
+ * Prevents lifestyle environment leakage and crop-top → long-shirt drift.
+ */
+export function buildHeadlessGarmentPhotoNonAuthorityLayer(): string {
+  return `GARMENT PHOTO NON-AUTHORITY / PROPORTION LOCK — REFERENCE IMAGE ${HEADLESS_STAGE1_GARMENT_REF}:
+Reference Image ${HEADLESS_STAGE1_GARMENT_REF} is authoritative for garment identity, silhouette, fabric, print/pattern, border, construction, proportions, and length ONLY.
+NON-AUTHORITATIVE in Reference Image ${HEADLESS_STAGE1_GARMENT_REF}: background, walls, floor, furniture, flowers, plants, props, hangers, pedestals, lifestyle scenery, room environment, and any necklace, jewellery, or accessory draped on hangers that is not part of the garment construction itself.
+Do not copy the garment-photo environment into the studio scene — BACKGROUND AUTHORITY (pure white #FFFFFF) outranks Reference Image ${HEADLESS_STAGE1_GARMENT_REF} scenery.
+Preserve exact garment proportions and length from Reference Image ${HEADLESS_STAGE1_GARMENT_REF}. If an upper garment is cropped or short relative to a companion lower garment, keep it cropped/short — do not lengthen it to the seat, lap, hip, or thigh. Do not convert a cropped top into a tunic, long shirt, or dress. Do not invent additional garment layers absent from Reference Image ${HEADLESS_STAGE1_GARMENT_REF}.`;
 }
 
 const FLASH_FURNITURE_PRIMARY_POINTER_RE =
@@ -294,6 +318,7 @@ export function assembleHeadlessCreateStage1CreativePrompt(
     STUDIO_BACKGROUND_AUTHORITY_SOT,
     buildHeadlessStage1ReferenceContract(hasFurnitureReference),
     buildHeadlessGarmentAuthorityBlock(),
+    buildHeadlessGarmentPhotoNonAuthorityLayer(),
   ];
 
   const supplemental = buildHeadlessGarmentSupplementalEvidenceLayer({
@@ -307,8 +332,11 @@ export function assembleHeadlessCreateStage1CreativePrompt(
   });
   if (supplemental) parts.push(supplemental);
 
+  parts.push(buildHeadlessHumanPoseGeometryAuthorityLayer());
   parts.push(buildHeadlessPoseMasterIsolationLayer(hasFurnitureReference));
 
+  // Adapted shot brief carries pose structured definition / photography layers
+  // remapped to Headless Ref 2 — not a wholesale Flash Create prompt.
   const adaptedShot = adaptFlashShotPromptForHeadlessStage1(params.shotPrompt);
   if (adaptedShot) parts.push(adaptedShot);
 
