@@ -17,7 +17,7 @@ import {
   GARMENT_AUTHORITY_SOT,
   OPENROUTER_RENDERING_CONFIG,
 } from "./rendering.config.js";
-import { STUDIO_BACKGROUND_AUTHORITY_SOT } from "./rendering-studio-background-authority.js";
+import { STUDIO_BACKGROUND_AUTHORITY_SOT, STUDIO_BACKGROUND_PIXEL_PRECISION_CLOSER } from "./rendering-studio-background-authority.js";
 
 /** Headless Stage-1 garment reference index. */
 export const HEADLESS_STAGE1_GARMENT_REF = 1 as const;
@@ -345,6 +345,9 @@ export function assembleHeadlessCreateStage1CreativePrompt(
   if (hasFurnitureReference) {
     parts.push(buildHeadlessFurnitureReferenceAuthorityLayers());
   }
+
+  // Last-word reinforcement — models often weight the end of long Stage-1 briefs.
+  parts.push(STUDIO_BACKGROUND_PIXEL_PRECISION_CLOSER);
 
   return parts.join("\n\n");
 }

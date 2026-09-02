@@ -284,4 +284,16 @@ describe("Headless Stage-1 reference contract text", () => {
     assert.equal(prompt.startsWith(STUDIO_BACKGROUND_AUTHORITY_SOT), true);
     assert.match(prompt, /#FFFFFF/);
   });
+
+  it("R. Stage-1 brief ends with background pixel-precision closer", () => {
+    const prompt = assembleHeadlessCreateStage1CreativePrompt({
+      shotPrompt: "Walk.",
+      furnitureReferenceImageUrl: FURNITURE,
+    });
+    assert.match(prompt, /BACKGROUND PIXEL PRECISION — FINAL/);
+    assert.match(prompt, /RGB 255,255,255/);
+    assert.ok(prompt.trimEnd().endsWith(
+      "Do not alter subject, garment, or furniture brightness or colour to force a white look.",
+    ) || /BACKGROUND PIXEL PRECISION — FINAL[\s\S]*force a white look\./.test(prompt));
+  });
 });

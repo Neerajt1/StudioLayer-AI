@@ -37,9 +37,15 @@ describe("Studio background authority — global SoT", () => {
     assert.match(STUDIO_BACKGROUND_AUTHORITY_SOT, /Do NOT substitute/i);
   });
 
-  it("3. realism — contact shadows and grounding permitted", () => {
+  it("3. realism — contact shadows and grounding permitted; soft plane grey forbidden", () => {
     assert.match(STUDIO_BACKGROUND_AUTHORITY_SOT, /contact shadow/i);
     assert.match(STUDIO_BACKGROUND_AUTHORITY_SOT, /grounding/i);
+    assert.match(STUDIO_BACKGROUND_AUTHORITY_SOT, /RGB 255,255,255|#FFFFFF/);
+    assert.match(STUDIO_BACKGROUND_AUTHORITY_SOT, /near-white|light-grey|soft studio-wall/i);
+    assert.doesNotMatch(
+      STUDIO_BACKGROUND_AUTHORITY_SOT,
+      /soft tonal variation from professional studio lighting/i,
+    );
     assert.doesNotMatch(
       STUDIO_BACKGROUND_AUTHORITY_SOT,
       /flat white entire image|remove all shadow/i,
@@ -61,6 +67,9 @@ describe("Studio background authority — global SoT", () => {
     assert.match(prompt, /BACKGROUND AUTHORITY/);
     assert.match(prompt, /#FFFFFF/);
     assert.match(prompt, /Do NOT substitute grey/i);
+    assert.match(prompt, /BACKGROUND PIXEL PRECISION — FINAL/);
+    assert.ok(prompt.indexOf("BACKGROUND PIXEL PRECISION — FINAL") >
+      prompt.indexOf("BACKGROUND AUTHORITY — PURE WHITE"));
   });
 
   it("6. authority reaches OpenRouter creative shot path after image refs", () => {
