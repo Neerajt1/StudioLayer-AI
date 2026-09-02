@@ -6,8 +6,6 @@ import { fileURLToPath } from "node:url";
 import {
   assembleHeadlessCreateStage1CreativePrompt,
   HEADLESS_STAGE1_FURNITURE_REF,
-  HEADLESS_STAGE1_GARMENT_REF,
-  HEADLESS_STAGE1_POSE_REF,
 } from "./headless-create-stage1-authority.js";
 import {
   buildHeadlessStage1Request,
@@ -123,10 +121,33 @@ describe("Headless Create — frozen two-call contract", () => {
   });
 });
 
-describe("Headless Create — furniture contract", () => {
+describe("Headless Create — trial parity contract", () => {
   const FURNITURE_URL = "data:image/png;base64,FURNITURE_REF";
 
-  it("7. furniture Ref 3 authority only when PNG URL is present", () => {
+  it("7. production adapter does not use authority prompt stack", () => {
+    assert.doesNotMatch(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
+    assert.doesNotMatch(adapterSrc, /headless-create-stage1-authority/);
+  });
+
+  it("8. production adapter does not forward furniture to frozen orchestrator", () => {
+    assert.match(adapterSrc, /generateNanoProHeadlessMannequinTrial\(/);
+    const orchestratorCall = adapterSrc.slice(
+      adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
+    );
+    assert.doesNotMatch(orchestratorCall, /furnitureReferenceImageUrl/);
+  });
+
+  it("8b. frozen builder still supports furniture when caller passes it directly", () => {
+    const built = buildHeadlessStage1Request({
+      garmentImageUrl: "data:image/png;base64,G",
+      poseImageUrl: "data:image/png;base64,P",
+      furnitureReferenceImageUrl: FURNITURE_URL,
+    });
+    assert.equal(built.body.input_references.length, 3);
+    assert.equal(built.body.input_references[2]!.image_url.url, FURNITURE_URL);
+  });
+
+  it("8c. authority module remains available but unused by production adapter", () => {
     const asset = getFurnitureAsset("furn_chair_solid_walnut_editorial");
     assert.ok(asset);
     const withFurniture = assembleHeadlessCreateStage1CreativePrompt({
@@ -140,28 +161,6 @@ describe("Headless Create — furniture contract", () => {
         `FURNITURE REFERENCE AUTHORITY — REFERENCE IMAGE ${HEADLESS_STAGE1_FURNITURE_REF}`,
       ),
     );
-    assert.match(withFurniture, /Exactly three reference images are attached/);
-
-    const withoutFurniture = assembleHeadlessCreateStage1CreativePrompt({
-      shotPrompt: "Editorial hero frame.",
-    });
-    assert.doesNotMatch(withoutFurniture, /FURNITURE REFERENCE AUTHORITY/);
-    assert.match(withoutFurniture, /Exactly two reference images are attached/);
-  });
-
-  it("8. adapter forwards furniture PNG to frozen orchestrator", () => {
-    assert.match(adapterSrc, /furnitureReferenceImageUrl/);
-    assert.match(adapterSrc, /generateNanoProHeadlessMannequinTrial\(/);
-  });
-
-  it("8b. frozen builder attaches furniture as third image reference", () => {
-    const built = buildHeadlessStage1Request({
-      garmentImageUrl: "data:image/png;base64,G",
-      poseImageUrl: "data:image/png;base64,P",
-      furnitureReferenceImageUrl: FURNITURE_URL,
-    });
-    assert.equal(built.body.input_references.length, 3);
-    assert.equal(built.body.input_references[2]!.image_url.url, FURNITURE_URL);
   });
 });
 
@@ -215,18 +214,20 @@ describe("Headless Create — multi-shot isolation", () => {
     assert.doesNotMatch(adapterSrc, /maskedDataUri/);
   });
 
-  it("13. Stage-1 prompt contract uses Ref 1 garment and Ref 2 pose", () => {
-    const prompt = assembleHeadlessCreateStage1CreativePrompt({
-      shotPrompt: "POSE:\nWalk.",
-    });
-    assert.match(
-      prompt,
-      new RegExp(`Reference Image ${HEADLESS_STAGE1_GARMENT_REF} = GARMENT`),
+  it("13. adapter does not forward production Flash shot prompt (trial parity)", () => {
+    const orchestratorCall = adapterSrc.slice(
+      adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
     );
-    assert.match(
-      prompt,
-      new RegExp(`Reference Image ${HEADLESS_STAGE1_POSE_REF} = POSE MASTER`),
+    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt/);
+    assert.doesNotMatch(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
+  });
+
+  it("13b. adapter resolves face-neutral Pose Master from poseId (trial parity)", () => {
+    assert.match(adapterSrc, /loadStage1PoseReferenceImageAsDataUri\(input\.poseId\)/);
+    const orchestratorCall = adapterSrc.slice(
+      adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
     );
+    assert.doesNotMatch(orchestratorCall, /poseImageUrl: input\.poseImageUrl/);
   });
 });
 

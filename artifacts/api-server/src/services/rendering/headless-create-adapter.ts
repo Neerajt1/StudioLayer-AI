@@ -1,43 +1,37 @@
 // ---------------------------------------------------------------------------
 // Production Create — Headless Mannequin adapter
 //
-// Maps the existing Create pipeline inputs to the Headless orchestrator.
-// Stage 1 image refs: GARMENT + POSE_MASTER [+ FURNITURE when selected].
-// Stage-1 authority is assembled by headless-create-stage1-authority.ts.
+// Thin translation layer: production Create inputs → frozen trial contract.
+// Delegates to generateNanoProHeadlessMannequinTrial with the same Stage-1
+// inputs as POST /api/test/nano-pro-headless-mannequin-trial:
+//   GARMENT + POSE_MASTER (no Furniture Ref 3), frozen Stage-1 prompt only.
 // ---------------------------------------------------------------------------
 
-import { getFurnitureAsset } from "../../intelligence/furniture-catalog.js";
-import {
-  assembleHeadlessCreateStage1CreativePrompt,
-} from "./headless-create-stage1-authority.js";
+import { loadStage1PoseReferenceImageAsDataUri } from "../../rendering/pose-face-neutral-backend.js";
 import {
   generateNanoProHeadlessMannequinTrial,
 } from "./providers/nano-pro-headless-mannequin-trial.js";
 import type { NativeOutputResolution } from "./rendering.config.js";
 
-export {
-  HEADLESS_STAGE1_FURNITURE_REF,
-  HEADLESS_STAGE1_GARMENT_REF,
-  HEADLESS_STAGE1_POSE_REF,
-  assembleHeadlessCreateStage1CreativePrompt,
-} from "./headless-create-stage1-authority.js";
-
 export type HeadlessCreateShotInput = {
   shotIndex: number;
   talentImageUrl: string;
   garmentImageUrl: string;
+  /** Ignored for trial parity — pose resolved from poseId via face-neutral loader. */
   poseImageUrl: string;
   poseId: string;
   modelIdentityId?: string | null;
+  /** Ignored for trial parity — production Flash shot prompts are not forwarded. */
   creativeShotPrompt?: string;
+  /** Ignored for trial parity — not passed to frozen orchestrator. */
   garmentReferenceCorrespondenceInstruction?: string;
   garmentEvidenceSetMappingInstruction?: string;
   garmentEvidenceHasBack?: boolean;
   garmentEvidenceHasDetail?: boolean;
   garmentReferenceMode?: string;
-  /** Selected furniture product reference PNG (Stage 1 Ref 3 when present). */
+  /** Ignored for trial parity — Stage 1 uses GARMENT + POSE_MASTER only. */
   furnitureReferenceImageUrl?: string | null;
-  /** Selected furniture asset id — observability / catalogue context. */
+  /** Ignored for trial parity — observability only at provider layer. */
   furnitureAssetId?: string | null;
   outputResolution?: NativeOutputResolution;
 };
@@ -50,37 +44,15 @@ export type HeadlessCreateShotInput = {
 export async function runHeadlessCreateShot(
   input: HeadlessCreateShotInput,
 ): Promise<string> {
-  const furnitureReferenceImageUrl =
-    typeof input.furnitureReferenceImageUrl === "string" &&
-    input.furnitureReferenceImageUrl.trim().length > 0
-      ? input.furnitureReferenceImageUrl.trim()
-      : null;
-
-  const furnitureAsset = input.furnitureAssetId
-    ? getFurnitureAsset(input.furnitureAssetId) ?? null
-    : null;
-
-  const creativeShotPrompt = assembleHeadlessCreateStage1CreativePrompt({
-    shotPrompt: input.creativeShotPrompt ?? "",
-    garmentReferenceCorrespondenceInstruction:
-      input.garmentReferenceCorrespondenceInstruction,
-    garmentEvidenceSetMappingInstruction:
-      input.garmentEvidenceSetMappingInstruction,
-    garmentEvidenceHasBack: input.garmentEvidenceHasBack,
-    garmentEvidenceHasDetail: input.garmentEvidenceHasDetail,
-    garmentReferenceMode: input.garmentReferenceMode,
-    furnitureReferenceImageUrl,
-    furnitureAsset,
-  });
+  // Trial parity: always load face-neutral Stage-1 Pose Master from poseId.
+  const poseImageUrl = loadStage1PoseReferenceImageAsDataUri(input.poseId);
 
   const result = await generateNanoProHeadlessMannequinTrial({
     talentImageUrl: input.talentImageUrl,
     garmentImageUrl: input.garmentImageUrl,
-    poseImageUrl: input.poseImageUrl,
-    furnitureReferenceImageUrl,
+    poseImageUrl,
     poseId: input.poseId,
     modelIdentityId: input.modelIdentityId ?? null,
-    creativeShotPrompt: creativeShotPrompt || undefined,
     outputResolution: input.outputResolution,
   });
 

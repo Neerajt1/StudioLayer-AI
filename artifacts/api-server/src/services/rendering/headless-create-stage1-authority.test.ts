@@ -202,9 +202,14 @@ describe("Headless Stage-1 — frozen reference order", () => {
     );
   });
 
-  it("L. original Talent wiring unchanged in adapter", () => {
+  it("L. adapter passes original talent URL; furniture and Flash prompt not forwarded (trial parity)", () => {
     assert.match(adapterSrc, /talentImageUrl: input\.talentImageUrl/);
-    assert.match(adapterSrc, /furnitureReferenceImageUrl/);
+    assert.match(adapterSrc, /loadStage1PoseReferenceImageAsDataUri\(input\.poseId\)/);
+    const orchestratorCall = adapterSrc.slice(
+      adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
+    );
+    assert.doesNotMatch(orchestratorCall, /furnitureReferenceImageUrl/);
+    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt/);
   });
 });
 
