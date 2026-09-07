@@ -10,6 +10,7 @@ import {
 import { PHOTOGRAPHY_AUTHORITY_SOT } from "./rendering-photography.js";
 import { OPENROUTER_RENDERING_CONFIG } from "./rendering.config.js";
 import { assembleHeadlessCreateStage1CreativePrompt } from "./headless-create-stage1-authority.js";
+import { HEADLESS_STAGE1_PROMPT_BASE } from "./providers/nano-pro-headless-mannequin-trial.js";
 import { composeNanoProAuthorityLayers } from "./nano-pro-authority-layers.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -60,16 +61,22 @@ describe("Studio background authority — global SoT", () => {
     );
   });
 
-  it("5. authority reaches Headless production Stage 1 creative brief", () => {
-    const prompt = assembleHeadlessCreateStage1CreativePrompt({
+  it("5. production Headless Stage 1 uses minimal white on HEADLESS_STAGE1_PROMPT_BASE (not Flash authority stack)", () => {
+    const adapterSrc = readFileSync(
+      join(__dirname, "headless-create-adapter.ts"),
+      "utf8",
+    );
+    assert.doesNotMatch(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
+    assert.doesNotMatch(adapterSrc, /STUDIO_BACKGROUND_AUTHORITY/);
+    assert.match(HEADLESS_STAGE1_PROMPT_BASE, /Neutral pure white studio background/);
+    assert.match(HEADLESS_STAGE1_PROMPT_BASE, /grey, cream, beige, or tinted/);
+    assert.doesNotMatch(HEADLESS_STAGE1_PROMPT_BASE, /BACKGROUND AUTHORITY — PURE WHITE/);
+    assert.doesNotMatch(HEADLESS_STAGE1_PROMPT_BASE, /BACKGROUND PIXEL PRECISION/);
+    // Authority assembler remains available for future experiments — unused by adapter.
+    const dormant = assembleHeadlessCreateStage1CreativePrompt({
       shotPrompt: "POSE:\nEditorial walk.",
     });
-    assert.match(prompt, /BACKGROUND AUTHORITY/);
-    assert.match(prompt, /#FFFFFF/);
-    assert.match(prompt, /Do NOT substitute grey/i);
-    assert.match(prompt, /BACKGROUND PIXEL PRECISION — FINAL/);
-    assert.ok(prompt.indexOf("BACKGROUND PIXEL PRECISION — FINAL") >
-      prompt.indexOf("BACKGROUND AUTHORITY — PURE WHITE"));
+    assert.match(dormant, /BACKGROUND AUTHORITY/);
   });
 
   it("6. authority reaches OpenRouter creative shot path after image refs", () => {
