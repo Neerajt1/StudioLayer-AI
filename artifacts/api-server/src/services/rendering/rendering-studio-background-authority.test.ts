@@ -68,8 +68,12 @@ describe("Studio background authority — global SoT", () => {
     );
     assert.doesNotMatch(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
     assert.doesNotMatch(adapterSrc, /STUDIO_BACKGROUND_AUTHORITY/);
-    assert.match(HEADLESS_STAGE1_PROMPT_BASE, /Neutral pure white studio background/);
-    assert.match(HEADLESS_STAGE1_PROMPT_BASE, /grey, cream, beige, or tinted/);
+    assert.match(
+      HEADLESS_STAGE1_PROMPT_BASE,
+      /clean, neutral pure-white professional studio background/,
+    );
+    assert.match(HEADLESS_STAGE1_PROMPT_BASE, /not grey, cream, beige/);
+    assert.match(HEADLESS_STAGE1_PROMPT_BASE, /window-shaped light patterns/);
     assert.doesNotMatch(HEADLESS_STAGE1_PROMPT_BASE, /BACKGROUND AUTHORITY — PURE WHITE/);
     assert.doesNotMatch(HEADLESS_STAGE1_PROMPT_BASE, /BACKGROUND PIXEL PRECISION/);
     // Authority assembler remains available for future experiments — unused by adapter.

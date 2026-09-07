@@ -161,8 +161,13 @@ describe("Headless Create — proven Stage-1 trial parity", () => {
     assert.doesNotMatch(p, /SUPPLEMENTAL GARMENT EVIDENCE/);
     assert.doesNotMatch(p, /HUMAN POSE GEOMETRY AUTHORITY/);
     assert.doesNotMatch(p, /FURNITURE REFERENCE AUTHORITY/);
-    assert.match(p, /Neutral pure white studio background/);
-    assert.match(p, /Do not use grey, cream, beige, or tinted backgrounds/);
+    assert.doesNotMatch(p, /proportions, environment, composition, and lighting/);
+    assert.match(p, /Ignore the garment photograph's background/);
+    assert.match(p, /do not reproduce or transfer them/);
+    assert.match(p, /clean, neutral pure-white professional studio background/);
+    assert.match(p, /window-shaped light patterns/);
+    assert.match(p, /Do not invent a room, lifestyle setting/);
+    assert.match(p, /Do not create directional environmental light patterns/);
     assert.ok(p.length < 2500, `expected short Stage-1 base, got ${p.length}`);
   });
 

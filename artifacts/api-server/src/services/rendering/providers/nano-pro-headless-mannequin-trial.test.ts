@@ -173,7 +173,10 @@ describe("nano-pro-headless-mannequin-trial — Stage 1 is identity-free", () =>
     const p = HEADLESS_STAGE1_PROMPT_BASE;
     assert.match(p, /Reference Image 1 = GARMENT/);
     assert.match(p, /Reference Image 2 = POSE MASTER/);
-    assert.match(p, /body, garment, hands, arms, legs, proportions/);
+    assert.match(p, /body, garment, hands, arms, legs, and proportions/);
+    assert.match(p, /Do not invent a room, lifestyle setting/);
+    assert.match(p, /Ignore the garment photograph's background/);
+    assert.match(p, /Do not import its background, lighting/);
     // A detectable face is REQUIRED: the face-anchor cross-check validates the
     // mask against it. Prompt-based head removal is explicitly not the mechanism.
     assert.match(p, /anatomically normal human head with a clearly visible/);
