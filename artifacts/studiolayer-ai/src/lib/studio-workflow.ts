@@ -82,7 +82,7 @@ export const GARMENT_LENGTH_OPTIONS: ReadonlyArray<{
   { value: 'mini', label: 'Mini' },
   { value: 'above_knee', label: 'Above Knee' },
   { value: 'knee', label: 'Knee Length' },
-  { value: 'midi', label: 'Midi' },
+  { value: 'midi', label: 'Below Knee' },
   { value: 'mid_calf', label: 'Mid-Calf' },
   { value: 'maxi', label: 'Maxi' },
   { value: 'floor', label: 'Floor Length' },
