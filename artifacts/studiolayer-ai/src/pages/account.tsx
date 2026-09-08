@@ -4,7 +4,6 @@ import { AppShell } from '@/components/layout/app-shell';
 import { useGetMe, useGetRenderUsage } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { EditorialPageHeader } from '@/components/design-system/editorial-page-header';
 import { AccountStatementDownloadLink } from '@/components/account/account-statement-download-link';
 import { ProfileContactSection } from '@/components/account/profile-contact-section';
@@ -22,9 +21,6 @@ export default function AccountPage() {
     query: { enabled: isAuthenticated },
   } as never);
   const [showPasswordMsg, setShowPasswordMsg] = useState(false);
-  const [showBillingDetails, setShowBillingDetails] = useState(false);
-  const [taxId, setTaxId] = useState('');
-  const [billingAddress, setBillingAddress] = useState('');
 
   const planLabel = (tier: string) => membershipLabel(tier);
 
@@ -155,47 +151,6 @@ export default function AccountPage() {
             className="hidden"
             aria-hidden="true"
           />
-
-          <section id="studio-billing" className="mb-6 border border-border rounded bg-card p-6">
-            <button
-              type="button"
-              onClick={() => setShowBillingDetails((v) => !v)}
-              className="flex items-center justify-between w-full text-left group"
-            >
-              <h3 className="sl-section-label">
-                Studio Billing
-              </h3>
-              <span className="text-muted-foreground text-sm font-mono transition-transform duration-200" style={{ transform: showBillingDetails ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                ▾
-              </span>
-            </button>
-
-            {showBillingDetails && (
-              <div className="mt-5 space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Company Tax ID / GSTIN</Label>
-                  <Input
-                    type="text"
-                    value={taxId}
-                    onChange={(e) => setTaxId(e.target.value)}
-                    placeholder="e.g. 27AAPFU0939F1ZV"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Official Billing Address</Label>
-                  <Input
-                    type="text"
-                    value={billingAddress}
-                    onChange={(e) => setBillingAddress(e.target.value)}
-                    placeholder="123 Commerce St, Suite 400, City, State, ZIP"
-                  />
-                </div>
-                <p className="text-muted-foreground font-mono" style={{ fontSize: '11px', lineHeight: '1.5' }}>
-                  These details are voluntary and will be automatically appended to your downloadable monthly subscription invoices for accounting compliance.
-                </p>
-              </div>
-            )}
-          </section>
 
           <section className="mb-6 border border-border rounded bg-card p-6">
             <h3 className="sl-section-label mb-4">
