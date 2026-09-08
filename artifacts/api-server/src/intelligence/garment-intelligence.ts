@@ -43,22 +43,6 @@ const LENGTH_SELECTION_TO_PROFILE: Record<
   floor: "full-length",
 };
 
-/**
- * Authoritative hem-position landmarks for Garment Intelligence length locks.
- * Keyed by profile / internal length tokens (not UI selection keys).
- * Single source of truth — do not duplicate elsewhere.
- */
-const LENGTH_PROFILE_LANDMARK_DEFINITION: Record<string, string> = {
-  mini: "high thigh",
-  "above-knee": "above the knee, lower than mini",
-  knee: "at the knee",
-  midi: "below the knee, ending above mid-calf",
-  "mid-calf": "hem at the middle of the calf",
-  maxi: "ankle length, above the floor",
-  "full-length": "hem reaches/touches the floor",
-  floor: "hem reaches/touches the floor",
-};
-
 /** Map UI / GPT length tokens to a human label for prompts. */
 export function formatGarmentLengthLabel(length?: string): string | undefined {
   if (!length) return undefined;
@@ -75,14 +59,6 @@ export function formatGarmentLengthLabel(length?: string): string | undefined {
     hip: "hip length",
   };
   return map[length.toLowerCase()] ?? length;
-}
-
-/** Landmark hem-position definition for a profile / internal length token. */
-export function garmentLengthLandmarkDefinition(
-  length?: string,
-): string | undefined {
-  if (!length) return undefined;
-  return LENGTH_PROFILE_LANDMARK_DEFINITION[length.toLowerCase()];
 }
 
 function inferSilhouette(profile: GarmentProfile): string {
@@ -297,15 +273,10 @@ function buildFabricBehaviourRules(profile: GarmentProfile): string {
  * Generic garment fidelity is owned by GARMENT_AUTHORITY_SOT. */
 export function buildGarmentPreservationPrompt(profile: GarmentProfile): string {
   const lengthLabel = formatGarmentLengthLabel(profile.garmentLength);
-  const lengthLandmark = garmentLengthLandmarkDefinition(profile.garmentLength);
   const locks: string[] = [];
 
   if (lengthLabel) {
-    locks.push(
-      lengthLandmark
-        ? `Maintain exact garment length: ${lengthLabel} — ${lengthLandmark}.`
-        : `Maintain exact garment length: ${lengthLabel}.`,
-    );
+    locks.push(`Maintain exact garment length: ${lengthLabel}.`);
   }
   if (profile.silhouette) {
     locks.push(`Preserve silhouette: ${profile.silhouette}.`);
