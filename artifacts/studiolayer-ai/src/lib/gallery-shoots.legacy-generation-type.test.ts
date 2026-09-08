@@ -59,7 +59,7 @@ describe('historical Gallery shoot-type labels', () => {
     const shoots = buildGalleryShoots(renders);
     assert.equal(shoots.length, 1);
     assert.equal(shoots[0]!.generationType, 'editorial');
-    assert.equal(SHOOT_TYPE_LABEL[shoots[0]!.generationType], 'Editorial');
+    assert.equal(SHOOT_TYPE_LABEL[shoots[0]!.generationType], 'Create');
     assert.equal(shoots[0]!.imageCount, 2);
     assert.equal(shoots[0]!.studioCreditsUsed, 2);
     assert.deepEqual(
@@ -86,7 +86,7 @@ describe('historical Gallery shoot-type labels', () => {
     const shoots = buildGalleryShoots(renders);
     assert.equal(shoots.length, 1);
     assert.equal(shoots[0]!.generationType, 'campaign');
-    assert.equal(SHOOT_TYPE_LABEL[shoots[0]!.generationType], 'Campaign');
+    assert.equal(SHOOT_TYPE_LABEL[shoots[0]!.generationType], 'Create');
     assert.equal(shoots[0]!.imageCount, 4);
     assert.equal(shoots[0]!.studioCreditsUsed, 4);
     assert.deepEqual(

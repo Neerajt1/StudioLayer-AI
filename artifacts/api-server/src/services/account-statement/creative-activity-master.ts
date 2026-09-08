@@ -144,11 +144,11 @@ function renderResult(render: Render): ActivityResult {
 function generationTypeLabel(type: string): string {
   switch (type) {
     case "hero":
-      return "Hero";
+      return "Create";
     case "campaign":
-      return "Campaign";
+      return "Create";
     case "editorial":
-      return "Editorial";
+      return "Create";
     default:
       return type;
   }

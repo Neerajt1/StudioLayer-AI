@@ -69,9 +69,7 @@ const MEMBERSHIP_TIERS = [
     credits: formatStudioCredits(MembershipCreditAllowances.basic),
     outcome: `Create up to ${estimateImagesAtResolution(MembershipCreditAllowances.basic, '2K')} images at 2K`,
     features: [
-      'Hero',
-      'Campaign',
-      'Editorial',
+      'Create',
       'Studio Gallery',
       'Studio Talent',
       'Priority Rendering',
@@ -88,9 +86,7 @@ const MEMBERSHIP_TIERS = [
     credits: formatStudioCredits(MembershipCreditAllowances.pro),
     outcome: `Create up to ${estimateImagesAtResolution(MembershipCreditAllowances.pro, '2K')} images at 2K`,
     features: [
-      'Hero',
-      'Campaign',
-      'Editorial',
+      'Create',
       'Studio Gallery',
       'Studio Talent',
       'Faster Priority Rendering',

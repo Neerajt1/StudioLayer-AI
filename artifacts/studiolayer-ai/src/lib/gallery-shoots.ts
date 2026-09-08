@@ -24,9 +24,9 @@ export const SHOOT_BATCH_SIZE: Record<GenerationType, number> = {
 };
 
 export const SHOOT_TYPE_LABEL: Record<GenerationType, string> = {
-  hero: 'Hero',
-  campaign: 'Campaign',
-  editorial: 'Editorial',
+  hero: 'Create',
+  campaign: 'Create',
+  editorial: 'Create',
 };
 
 export interface GalleryShoot {

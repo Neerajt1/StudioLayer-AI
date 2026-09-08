@@ -117,11 +117,11 @@ export function transactionDescription(
 export function generationTypeLabel(reasonCode: string): string {
   switch (reasonCode) {
     case StudioCreditReasonCode.HERO_GENERATION:
-      return "Hero";
+      return "Create";
     case StudioCreditReasonCode.CAMPAIGN_GENERATION:
-      return "Campaign";
+      return "Create";
     case StudioCreditReasonCode.EDITORIAL_GENERATION:
-      return "Editorial";
+      return "Create";
     case StudioCreditReasonCode.REFINE:
       return "Refinement";
     case StudioCreditReasonCode.REGENERATE:
@@ -136,11 +136,11 @@ export function generationTypeLabel(reasonCode: string): string {
 export function generationTypeFromRenderType(type: string): string {
   switch (type) {
     case "hero":
-      return "Hero";
+      return "Create";
     case "campaign":
-      return "Campaign";
+      return "Create";
     case "editorial":
-      return "Editorial";
+      return "Create";
     default:
       return type;
   }
