@@ -95,6 +95,7 @@ export {
   buildGarmentPreservationPrompt,
   buildGarmentConsistencyRules,
   formatGarmentLengthLabel,
+  garmentLengthLandmarkDefinition,
   resolveFabricBehaviourClass,
 } from "./garment-intelligence";
 export type { GarmentLengthSelection, FabricBehaviourClass } from "./garment-intelligence";
