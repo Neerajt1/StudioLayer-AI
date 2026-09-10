@@ -23,7 +23,6 @@ import { fal } from "@fal-ai/client";
 import sharp from "sharp";
 import { logger } from "../../lib/logger.js";
 import {
-  detectFaceAnchor,
   detectFaceAnchorWithMaskHint,
   type FaceAnchorDetection,
   type FaceBox,
@@ -559,7 +558,6 @@ export async function neutralizeHeadRegion(params: {
 }): Promise<HeadMaskResult> {
   const { imageBuffer } = params;
   const segment = params.segmentationProvider ?? evfSamHeadSegmentationProvider;
-  const detectFace = params.faceAnchorDetector ?? detectFaceAnchor;
 
   const meta = await sharp(imageBuffer).metadata();
   const width = meta.width ?? 0;
@@ -596,33 +594,44 @@ export async function neutralizeHeadRegion(params: {
 
   const geometry = checkHeadMaskGeometry(mask, width, height);
 
-  // Primary: injectable detector or stock YuNet full-frame sweep.
-  // Secondary (NO_FACE_DETECTED only): mask-guided YuNet crop at the same
-  // score threshold — never used when a custom faceAnchorDetector is injected
-  // (tests / alternate detectors own their full contract).
-  let detection: FaceAnchorDetection = await detectFace(imageBuffer);
+  // Stock path: full-frame YuNet, then mask-guided secondary on NO_FACE_DETECTED.
+  // Injected detectors own their full contract (tests) — secondary is not applied.
+  let detection: FaceAnchorDetection;
   let usedMaskHint = false;
-  if (
-    !detection.ok &&
-    detection.reason === "NO_FACE_DETECTED" &&
-    !params.faceAnchorDetector
-  ) {
+  let secondaryAttempted = false;
+  if (params.faceAnchorDetector) {
+    detection = await params.faceAnchorDetector(imageBuffer);
+  } else {
     const hinted = await detectFaceAnchorWithMaskHint({
       imageBuffer,
       mask,
       width,
       height,
     });
-    if (hinted.ok) {
-      detection = hinted;
-      usedMaskHint = Boolean(hinted.usedMaskHint);
+    detection = hinted;
+    usedMaskHint = Boolean(hinted.usedMaskHint);
+    secondaryAttempted = Boolean(hinted.secondaryAttempted);
+    if (usedMaskHint) {
       logger.info(
         {
           trialRunId: params.trialRunId,
           usedMaskHint: true,
-          faceScore: hinted.face.score,
+          secondaryAttempted: true,
+          secondaryCrop: hinted.secondaryCrop,
+          faceScore: hinted.ok ? hinted.face.score : null,
         },
         "headless-head-mask: YuNet recovered face via mask-guided secondary view",
+      );
+    } else if (secondaryAttempted && !hinted.ok) {
+      logger.warn(
+        {
+          trialRunId: params.trialRunId,
+          usedMaskHint: false,
+          secondaryAttempted: true,
+          secondaryCrop: hinted.secondaryCrop,
+          reason: hinted.reason,
+        },
+        "headless-head-mask: mask-guided YuNet secondary view still found no face",
       );
     }
   }

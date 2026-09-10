@@ -157,11 +157,17 @@ function nonMaximumSuppression(candidates: Candidate[], iouThreshold: number): C
  */
 export async function detectFaceAnchor(
   imageBuffer: Buffer,
-  options: { viewHeightFractions?: readonly number[]; scoreThreshold?: number } = {},
+  options: {
+    viewHeightFractions?: readonly number[];
+    scoreThreshold?: number;
+    /** Letterbox fill behind the content. Default black (primary path). */
+    letterboxBackground?: { r: number; g: number; b: number };
+  } = {},
 ): Promise<FaceAnchorDetection> {
   const viewFractions =
     options.viewHeightFractions ?? FACE_DETECTION_VIEW_HEIGHT_FRACTIONS;
   const scoreThreshold = options.scoreThreshold ?? FACE_DETECTION_SCORE_THRESHOLD;
+  const letterbox = options.letterboxBackground ?? { r: 0, g: 0, b: 0 };
 
   let session: InferenceSession;
   let ort: typeof import("onnxruntime-node");
@@ -208,7 +214,7 @@ export async function detectFaceAnchor(
         width: size,
         height: size,
         channels: 3,
-        background: { r: 0, g: 0, b: 0 },
+        background: letterbox,
       },
     })
       .composite([
@@ -298,14 +304,39 @@ export function maskForegroundBoundingBox(
 
 /**
  * Padding around an EVF-SAM head mask when building a YuNet secondary view.
- * Keeps hair/face context without expanding into torso. Does not change score threshold.
+ * Asymmetric on purpose: hair-inclusive masks put the facial box in the lower
+ * portion of the bbox, so we pad more below than above. Does not change score threshold.
  */
 export const MASK_HINT_PAD_FRACTION = 0.35 as const;
+export const MASK_HINT_PAD_FRACTION_X = 0.4 as const;
+export const MASK_HINT_PAD_FRACTION_ABOVE = 0.25 as const;
+export const MASK_HINT_PAD_FRACTION_BELOW = 0.55 as const;
+
+/** Mid-grey letterbox for mask-guided YuNet — avoids dark-hair/black-pad collapse. */
+export const MASK_HINT_LETTERBOX = { r: 114, g: 114, b: 114 } as const;
+
+/**
+ * Views inside the mask crop. Full crop only — primary's top-anchored fractions
+ * would clip faces that sit mid/lower in a hair-inclusive EVF-SAM bbox.
+ */
+export const MASK_HINT_VIEW_HEIGHT_FRACTIONS = [1] as const;
 
 export type FaceAnchorDetectionWithHint = FaceAnchorDetection & {
   /** True when the successful detection came from the mask-guided secondary crop. */
   usedMaskHint?: boolean;
+  /** True when the secondary crop path was attempted after primary NO_FACE_DETECTED. */
+  secondaryAttempted?: boolean;
+  secondaryCrop?: { left: number; top: number; width: number; height: number };
 };
+
+export type DetectFaceAnchorFn = (
+  imageBuffer: Buffer,
+  options?: {
+    viewHeightFractions?: readonly number[];
+    scoreThreshold?: number;
+    letterboxBackground?: { r: number; g: number; b: number };
+  },
+) => Promise<FaceAnchorDetection>;
 
 /**
  * Primary YuNet sweep on the full frame. Only when that returns NO_FACE_DETECTED
@@ -321,49 +352,76 @@ export async function detectFaceAnchorWithMaskHint(params: {
   width: number;
   height: number;
   scoreThreshold?: number;
+  /**
+   * When the caller already ran full-frame YuNet, pass that result to avoid a
+   * redundant primary sweep. Secondary still runs on NO_FACE_DETECTED.
+   */
+  primaryResult?: FaceAnchorDetection;
+  /** Injectable for tests — production uses stock YuNet. */
+  detectFn?: DetectFaceAnchorFn;
 }): Promise<FaceAnchorDetectionWithHint> {
-  const primary = await detectFaceAnchor(params.imageBuffer, {
-    scoreThreshold: params.scoreThreshold,
-  });
+  const detect = params.detectFn ?? detectFaceAnchor;
+  const primary =
+    params.primaryResult ??
+    (await detect(params.imageBuffer, {
+      scoreThreshold: params.scoreThreshold,
+    }));
   if (primary.ok) return primary;
   if (primary.reason !== "NO_FACE_DETECTED") return primary;
 
   const bbox = maskForegroundBoundingBox(params.mask, params.width, params.height);
-  if (!bbox) return primary;
+  if (!bbox) {
+    return { ...primary, secondaryAttempted: false };
+  }
 
-  const padX = Math.max(8, Math.round(bbox.width * MASK_HINT_PAD_FRACTION));
-  const padY = Math.max(8, Math.round(bbox.height * MASK_HINT_PAD_FRACTION));
+  const padX = Math.max(8, Math.round(bbox.width * MASK_HINT_PAD_FRACTION_X));
+  const padAbove = Math.max(8, Math.round(bbox.height * MASK_HINT_PAD_FRACTION_ABOVE));
+  const padBelow = Math.max(8, Math.round(bbox.height * MASK_HINT_PAD_FRACTION_BELOW));
   const left = Math.max(0, bbox.x - padX);
-  const top = Math.max(0, bbox.y - padY);
+  const top = Math.max(0, bbox.y - padAbove);
   const right = Math.min(params.width, bbox.x + bbox.width + padX);
-  const bottom = Math.min(params.height, bbox.y + bbox.height + padY);
+  const bottom = Math.min(params.height, bbox.y + bbox.height + padBelow);
   const cropWidth = Math.max(1, right - left);
   const cropHeight = Math.max(1, bottom - top);
+  const secondaryCrop = { left, top, width: cropWidth, height: cropHeight };
 
-  // Degenerate crop — fall through to primary NO_FACE_DETECTED.
-  if (cropWidth < 16 || cropHeight < 16) return primary;
+  if (cropWidth < 16 || cropHeight < 16) {
+    return { ...primary, secondaryAttempted: false, secondaryCrop };
+  }
 
   let cropBuffer: Buffer;
   try {
+    // Force a deterministic sRGB PNG crop — Stage-1 bytes may be JPEG/WebP/PNG.
+    // Do not auto-rotate: mask geometry is in the same pixel space as imageBuffer.
     cropBuffer = await sharp(params.imageBuffer)
       .extract({ left, top, width: cropWidth, height: cropHeight })
+      .toColorspace("srgb")
+      .removeAlpha()
+      .png()
       .toBuffer();
   } catch {
-    return primary;
+    return { ...primary, secondaryAttempted: false, secondaryCrop };
   }
 
-  const secondary = await detectFaceAnchor(cropBuffer, {
-    // Crop is already head-scale — full-frame view fractions on a tiny crop
-    // would over-fragment. Use the whole crop only.
-    viewHeightFractions: [1],
+  const secondary = await detect(cropBuffer, {
+    viewHeightFractions: MASK_HINT_VIEW_HEIGHT_FRACTIONS,
     scoreThreshold: params.scoreThreshold,
+    letterboxBackground: MASK_HINT_LETTERBOX,
   });
 
-  if (!secondary.ok) return primary;
+  if (!secondary.ok) {
+    return {
+      ...primary,
+      secondaryAttempted: true,
+      secondaryCrop,
+    };
+  }
 
   return {
     ok: true,
     usedMaskHint: true,
+    secondaryAttempted: true,
+    secondaryCrop,
     face: {
       ...secondary.face,
       x: secondary.face.x + left,
