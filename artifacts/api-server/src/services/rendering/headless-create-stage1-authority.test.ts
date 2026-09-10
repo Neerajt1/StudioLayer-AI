@@ -202,15 +202,15 @@ describe("Headless Stage-1 — frozen reference order", () => {
     );
   });
 
-  it("L. adapter uses trial-parity Stage-1 contract (no furniture / no authority brief)", () => {
+  it("L. adapter forwards catalogue furniture Ref 3 without Flash authority brief", () => {
     assert.match(adapterSrc, /talentImageUrl: input\.talentImageUrl/);
     assert.match(adapterSrc, /loadStage1PoseReferenceImageAsDataUri\(input\.poseId\)/);
     assert.doesNotMatch(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
     const orchestratorCall = adapterSrc.slice(
       adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
     );
-    assert.doesNotMatch(orchestratorCall, /furnitureReferenceImageUrl/);
-    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt/);
+    assert.match(orchestratorCall, /furnitureReferenceImageUrl/);
+    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt:/);
   });
 });
 

@@ -132,10 +132,11 @@ describe("Headless Create — proven Stage-1 trial parity", () => {
       adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
     );
     assert.doesNotMatch(orchestratorCall, /creativeShotPrompt/);
-    assert.doesNotMatch(orchestratorCall, /furnitureReferenceImageUrl/);
+    // Catalogue furniture PNG is forwarded as Stage-1 Ref 3 when selected.
+    assert.match(orchestratorCall, /furnitureReferenceImageUrl/);
   });
 
-  it("8. production Stage-1 runtime payload is exactly GARMENT + POSE_MASTER", () => {
+  it("8. production Stage-1 without furniture is exactly GARMENT + POSE_MASTER", () => {
     const built = buildHeadlessStage1Request({
       garmentImageUrl: GARMENT,
       poseImageUrl: POSE,
@@ -149,6 +150,34 @@ describe("Headless Create — proven Stage-1 trial parity", () => {
     assert.equal(built.body.input_references[1]!.image_url.url, POSE);
     assert.equal(built.promptUsed, HEADLESS_STAGE1_PROMPT_BASE);
     assert.equal(assembleHeadlessStage1Prompt({}), HEADLESS_STAGE1_PROMPT_BASE);
+  });
+
+  it("8a. production Stage-1 with selected furniture attaches Ref 3 as catalogue authority", () => {
+    const furnitureUrl = "data:image/png;base64,FURNITURE_CATALOGUE";
+    const built = buildHeadlessStage1Request({
+      garmentImageUrl: GARMENT,
+      poseImageUrl: POSE,
+      furnitureReferenceImageUrl: furnitureUrl,
+    });
+    assert.equal(built.body.input_references.length, 3);
+    assert.deepEqual([...built.referenceOrder], [
+      "GARMENT",
+      "POSE_MASTER",
+      "FURNITURE",
+    ]);
+    assert.equal(built.body.input_references[2]!.image_url.url, furnitureUrl);
+    assert.match(
+      built.promptUsed,
+      /Reference Image 3 = FURNITURE — selected StudioLayer furniture product/,
+    );
+    assert.match(
+      built.promptUsed,
+      /do NOT copy furniture design, material, colour, grain, or styling drawn in Reference Image 2/,
+    );
+    assert.match(
+      built.promptUsed,
+      /body pose, limb placement, weight distribution, and the body-to-furniture contact\/support relationship only/,
+    );
   });
 
   it("8b. Stage-1 prompt excludes Flash garmentInstruction conflict language", () => {
@@ -171,7 +200,7 @@ describe("Headless Create — proven Stage-1 trial parity", () => {
     assert.ok(p.length < 2500, `expected short Stage-1 base, got ${p.length}`);
   });
 
-  it("8c. orchestrator still capable of furniture when explicitly requested (not used by adapter)", () => {
+  it("8c. orchestrator attaches furniture when explicitly requested", () => {
     const furnitureUrl = "data:image/png;base64,FURNITURE_REF";
     const built = buildHeadlessStage1Request({
       garmentImageUrl: GARMENT,
@@ -180,6 +209,16 @@ describe("Headless Create — proven Stage-1 trial parity", () => {
     });
     assert.equal(built.body.input_references.length, 3);
     assert.equal(built.body.input_references[2]!.image_url.url, furnitureUrl);
+  });
+
+  it("8d. adapter forwards selected furnitureReferenceImageUrl into the orchestrator", () => {
+    const orchestratorCall = adapterSrc.slice(
+      adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
+      adapterSrc.indexOf("});", adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial(")) + 3,
+    );
+    assert.match(orchestratorCall, /furnitureReferenceImageUrl/);
+    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt:/);
+    assert.doesNotMatch(orchestratorCall, /Ignored for trial parity — Stage 1 uses GARMENT \+ POSE_MASTER only/);
   });
 });
 
@@ -203,12 +242,21 @@ describe("Headless Create — billing and fail-closed", () => {
       providerSrc.indexOf("if (useHeadlessCreate)"),
       providerSrc.indexOf("} else if (useCreateCascade)"),
     );
-    assert.match(
-      headlessBlock,
-      /Headless Create shot failed — no single-pass fallback/,
-    );
+    assert.match(headlessBlock, /logHeadlessCreateShotFailure/);
+    assert.match(headlessBlock, /classifyHeadlessCreateFailure/);
     assert.doesNotMatch(headlessBlock, /generateSingleShot\(/);
     assert.match(adapterSrc, /Throws on any Headless contract failure/);
+    // Message preserved on the structured failure logger (not a silent swallow).
+    assert.match(
+      readFileSync(
+        join(
+          __dirname,
+          "headless-create-failure-log.ts",
+        ),
+        "utf8",
+      ),
+      /Headless Create shot failed — no single-pass fallback/,
+    );
   });
 });
 
@@ -231,13 +279,13 @@ describe("Headless Create — multi-shot isolation", () => {
     assert.doesNotMatch(adapterSrc, /maskedDataUri/);
   });
 
-  it("13. adapter ignores Flash creative / furniture inputs for Stage-1 generation", () => {
-    assert.match(adapterSrc, /Ignored for trial parity/);
+  it("13. adapter ignores Flash creative inputs; forwards catalogue furniture only", () => {
+    assert.match(adapterSrc, /Ignored — production Flash shot prompts are not forwarded/);
     const orchestratorCall = adapterSrc.slice(
       adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
     );
-    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt/);
-    assert.doesNotMatch(orchestratorCall, /furnitureReferenceImageUrl/);
+    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt:/);
+    assert.match(orchestratorCall, /furnitureReferenceImageUrl/);
   });
 
   it("13b. adapter resolves face-neutral Pose Master from poseId", () => {

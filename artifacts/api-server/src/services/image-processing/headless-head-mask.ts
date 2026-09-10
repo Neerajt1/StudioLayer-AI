@@ -24,6 +24,7 @@ import sharp from "sharp";
 import { logger } from "../../lib/logger.js";
 import {
   detectFaceAnchor,
+  detectFaceAnchorWithMaskHint,
   type FaceAnchorDetection,
   type FaceBox,
 } from "./face-anchor-detector.js";
@@ -595,7 +596,36 @@ export async function neutralizeHeadRegion(params: {
 
   const geometry = checkHeadMaskGeometry(mask, width, height);
 
-  const detection = await detectFace(imageBuffer);
+  // Primary: injectable detector or stock YuNet full-frame sweep.
+  // Secondary (NO_FACE_DETECTED only): mask-guided YuNet crop at the same
+  // score threshold — never used when a custom faceAnchorDetector is injected
+  // (tests / alternate detectors own their full contract).
+  let detection: FaceAnchorDetection = await detectFace(imageBuffer);
+  let usedMaskHint = false;
+  if (
+    !detection.ok &&
+    detection.reason === "NO_FACE_DETECTED" &&
+    !params.faceAnchorDetector
+  ) {
+    const hinted = await detectFaceAnchorWithMaskHint({
+      imageBuffer,
+      mask,
+      width,
+      height,
+    });
+    if (hinted.ok) {
+      detection = hinted;
+      usedMaskHint = Boolean(hinted.usedMaskHint);
+      logger.info(
+        {
+          trialRunId: params.trialRunId,
+          usedMaskHint: true,
+          faceScore: hinted.face.score,
+        },
+        "headless-head-mask: YuNet recovered face via mask-guided secondary view",
+      );
+    }
+  }
   if (!detection.ok) {
     return {
       ok: false,
@@ -633,6 +663,7 @@ export async function neutralizeHeadRegion(params: {
         trialRunId: params.trialRunId,
         reasons,
         metrics,
+        usedMaskHint,
       },
       "headless-head-mask: rejected mask — Stage 2 must not run",
     );
@@ -642,6 +673,18 @@ export async function neutralizeHeadRegion(params: {
       detail: [...geometry.details, ...anchor.details].join("; "),
       metrics,
     };
+  }
+
+  if (usedMaskHint) {
+    logger.info(
+      {
+        trialRunId: params.trialRunId,
+        usedMaskHint: true,
+        faceScore: metrics.faceScore,
+        faceCoveredPct: metrics.faceCoveredPct,
+      },
+      "headless-head-mask: mask-guided YuNet face passed containment gates",
+    );
   }
 
   // Composite the neutral plate inside the mask only.

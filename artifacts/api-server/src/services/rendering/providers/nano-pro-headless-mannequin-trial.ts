@@ -853,6 +853,7 @@ export class HeadlessMaskFailureError extends Error {
   readonly metrics: Partial<HeadMaskMetrics>;
   readonly httpStatus = 422;
   readonly generationCalls = 1 as const;
+  readonly elapsedMs: { stage1Ms: number; maskMs: number; totalMs: number };
 
   constructor(params: {
     message: string;
@@ -861,6 +862,7 @@ export class HeadlessMaskFailureError extends Error {
     reasons: HeadMaskFailureReason[];
     detail: string;
     metrics: Partial<HeadMaskMetrics>;
+    elapsedMs?: { stage1Ms: number; maskMs: number; totalMs: number };
   }) {
     super(params.message);
     this.name = "HeadlessMaskFailureError";
@@ -869,6 +871,7 @@ export class HeadlessMaskFailureError extends Error {
     this.reasons = params.reasons;
     this.detail = params.detail;
     this.metrics = params.metrics;
+    this.elapsedMs = params.elapsedMs ?? { stage1Ms: 0, maskMs: 0, totalMs: 0 };
   }
 }
 
@@ -881,6 +884,12 @@ export class HeadlessIdentityReferenceFailureError extends Error {
   readonly detail: string;
   readonly httpStatus = 422;
   readonly generationCalls = 1 as const;
+  readonly elapsedMs: {
+    stage1Ms: number;
+    maskMs: number;
+    identityMs: number;
+    totalMs: number;
+  };
 
   constructor(params: {
     message: string;
@@ -889,6 +898,12 @@ export class HeadlessIdentityReferenceFailureError extends Error {
     headMask: HeadlessMaskPayload;
     reason: IdentityReferenceFailureReason;
     detail: string;
+    elapsedMs?: {
+      stage1Ms: number;
+      maskMs: number;
+      identityMs: number;
+      totalMs: number;
+    };
   }) {
     super(params.message);
     this.name = "HeadlessIdentityReferenceFailureError";
@@ -897,6 +912,12 @@ export class HeadlessIdentityReferenceFailureError extends Error {
     this.headMask = params.headMask;
     this.reason = params.reason;
     this.detail = params.detail;
+    this.elapsedMs = params.elapsedMs ?? {
+      stage1Ms: 0,
+      maskMs: 0,
+      identityMs: 0,
+      totalMs: 0,
+    };
   }
 }
 
@@ -905,6 +926,13 @@ export class HeadlessStage2FailureError extends Error {
   readonly stage1: HeadlessStagePayload;
   readonly stage2RunId: string | null;
   readonly httpStatus: number;
+  readonly elapsedMs: {
+    stage1Ms: number;
+    maskMs: number;
+    identityMs: number;
+    stage2Ms: number;
+    totalMs: number;
+  };
 
   constructor(params: {
     message: string;
@@ -912,6 +940,13 @@ export class HeadlessStage2FailureError extends Error {
     stage1: HeadlessStagePayload;
     stage2RunId?: string | null;
     httpStatus?: number;
+    elapsedMs?: {
+      stage1Ms: number;
+      maskMs: number;
+      identityMs: number;
+      stage2Ms: number;
+      totalMs: number;
+    };
   }) {
     super(params.message);
     this.name = "HeadlessStage2FailureError";
@@ -919,6 +954,13 @@ export class HeadlessStage2FailureError extends Error {
     this.stage1 = params.stage1;
     this.stage2RunId = params.stage2RunId ?? null;
     this.httpStatus = params.httpStatus ?? 500;
+    this.elapsedMs = params.elapsedMs ?? {
+      stage1Ms: 0,
+      maskMs: 0,
+      identityMs: 0,
+      stage2Ms: 0,
+      totalMs: 0,
+    };
   }
 }
 
@@ -974,6 +1016,7 @@ function toStagePayload(call: StageCallResult): HeadlessStagePayload {
 export async function generateNanoProHeadlessMannequinTrial(
   input: NanoProHeadlessMannequinTrialInput,
 ): Promise<NanoProHeadlessMannequinTrialResult> {
+  const trialStartedAt = Date.now();
   const trialRunId = newRunId();
   const timeoutMs =
     input.timeoutMs ?? Number(process.env["OR_RENDER_TIMEOUT_MS"] ?? 180_000);
@@ -992,11 +1035,13 @@ export async function generateNanoProHeadlessMannequinTrial(
     newRunId(),
   );
 
+  const stage1StartedAt = Date.now();
   const stage1Call = await callNanoProImagesOnce(
     stage1Built,
     timeoutMs,
     trialRunId,
   );
+  const stage1Ms = Date.now() - stage1StartedAt;
 
   if (!stage1Call.imageDataUri) {
     throw new Error(
@@ -1009,12 +1054,14 @@ export async function generateNanoProHeadlessMannequinTrial(
   // ── LOCAL MECHANICAL HEAD MASK — between the two generation calls ────────
   // This is segmentation + compositing, not generation. If it cannot produce a
   // confidently correct headless image, Stage 2 must never run.
+  const maskStartedAt = Date.now();
   const stage1Buffer = dataUriToBuffer(stage1Call.imageDataUri);
   const maskResult = await neutralizeHeadRegion({
     imageBuffer: stage1Buffer,
     segmentationProvider: input.segmentationProvider,
     trialRunId,
   });
+  const maskMs = Date.now() - maskStartedAt;
 
   if (!maskResult.ok) {
     throw new HeadlessMaskFailureError({
@@ -1024,6 +1071,11 @@ export async function generateNanoProHeadlessMannequinTrial(
       reasons: maskResult.reasons,
       detail: maskResult.detail,
       metrics: maskResult.metrics,
+      elapsedMs: {
+        stage1Ms,
+        maskMs,
+        totalMs: Date.now() - trialStartedAt,
+      },
     });
   }
 
@@ -1043,12 +1095,14 @@ export async function generateNanoProHeadlessMannequinTrial(
   // ── LOCAL MECHANICAL IDENTITY CROP — between the two generation calls ────
   // Detect + crop + resample of the ORIGINAL Talent bytes. No generation.
   // The full-body Talent plate is never sent to Stage 2.
+  const identityStartedAt = Date.now();
   const talentBuffer = await loadImageBuffer(input.talentImageUrl);
   const identityResult = await buildTalentIdentityReference({
     talentImageBuffer: talentBuffer,
     faceAnchorDetector: input.identityFaceAnchorDetector,
     trialRunId,
   });
+  const identityMs = Date.now() - identityStartedAt;
 
   if (!identityResult.ok) {
     throw new HeadlessIdentityReferenceFailureError({
@@ -1058,6 +1112,12 @@ export async function generateNanoProHeadlessMannequinTrial(
       headMask,
       reason: identityResult.reason,
       detail: identityResult.detail,
+      elapsedMs: {
+        stage1Ms,
+        maskMs,
+        identityMs,
+        totalMs: Date.now() - trialStartedAt,
+      },
     });
   }
 
@@ -1119,6 +1179,7 @@ export async function generateNanoProHeadlessMannequinTrial(
   }
 
   let stage2Call: StageCallResult;
+  const stage2StartedAt = Date.now();
   try {
     stage2Call = await callNanoProImagesOnce(stage2Built, timeoutMs, trialRunId);
   } catch (error) {
@@ -1133,6 +1194,13 @@ export async function generateNanoProHeadlessMannequinTrial(
       stage1: stage1Payload,
       stage2RunId: stage2Built.stageRunId,
       httpStatus,
+      elapsedMs: {
+        stage1Ms,
+        maskMs,
+        identityMs,
+        stage2Ms: Date.now() - stage2StartedAt,
+        totalMs: Date.now() - trialStartedAt,
+      },
     });
   }
 

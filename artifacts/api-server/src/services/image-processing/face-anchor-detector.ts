@@ -267,3 +267,108 @@ export async function detectFaceAnchor(
 
   return best ? { ok: true, face: best } : { ok: false, reason: "NO_FACE_DETECTED" };
 }
+
+/** Axis-aligned foreground bounding box for a greyscale mask (>127 = foreground). */
+export function maskForegroundBoundingBox(
+  mask: Buffer,
+  width: number,
+  height: number,
+): { x: number; y: number; width: number; height: number } | null {
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (mask[y * width + x]! <= 127) continue;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  if (maxX < minX || maxY < minY) return null;
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX + 1,
+    height: maxY - minY + 1,
+  };
+}
+
+/**
+ * Padding around an EVF-SAM head mask when building a YuNet secondary view.
+ * Keeps hair/face context without expanding into torso. Does not change score threshold.
+ */
+export const MASK_HINT_PAD_FRACTION = 0.35 as const;
+
+export type FaceAnchorDetectionWithHint = FaceAnchorDetection & {
+  /** True when the successful detection came from the mask-guided secondary crop. */
+  usedMaskHint?: boolean;
+};
+
+/**
+ * Primary YuNet sweep on the full frame. Only when that returns NO_FACE_DETECTED
+ * and a non-empty head-mask bbox is available, retry YuNet on a padded mask crop
+ * at the SAME score threshold, then map coordinates back to the source frame.
+ *
+ * Does not loosen FACE_DETECTION_SCORE_THRESHOLD. Does not bypass downstream
+ * containment / geometry gates — callers must still validate the face box.
+ */
+export async function detectFaceAnchorWithMaskHint(params: {
+  imageBuffer: Buffer;
+  mask: Buffer;
+  width: number;
+  height: number;
+  scoreThreshold?: number;
+}): Promise<FaceAnchorDetectionWithHint> {
+  const primary = await detectFaceAnchor(params.imageBuffer, {
+    scoreThreshold: params.scoreThreshold,
+  });
+  if (primary.ok) return primary;
+  if (primary.reason !== "NO_FACE_DETECTED") return primary;
+
+  const bbox = maskForegroundBoundingBox(params.mask, params.width, params.height);
+  if (!bbox) return primary;
+
+  const padX = Math.max(8, Math.round(bbox.width * MASK_HINT_PAD_FRACTION));
+  const padY = Math.max(8, Math.round(bbox.height * MASK_HINT_PAD_FRACTION));
+  const left = Math.max(0, bbox.x - padX);
+  const top = Math.max(0, bbox.y - padY);
+  const right = Math.min(params.width, bbox.x + bbox.width + padX);
+  const bottom = Math.min(params.height, bbox.y + bbox.height + padY);
+  const cropWidth = Math.max(1, right - left);
+  const cropHeight = Math.max(1, bottom - top);
+
+  // Degenerate crop — fall through to primary NO_FACE_DETECTED.
+  if (cropWidth < 16 || cropHeight < 16) return primary;
+
+  let cropBuffer: Buffer;
+  try {
+    cropBuffer = await sharp(params.imageBuffer)
+      .extract({ left, top, width: cropWidth, height: cropHeight })
+      .toBuffer();
+  } catch {
+    return primary;
+  }
+
+  const secondary = await detectFaceAnchor(cropBuffer, {
+    // Crop is already head-scale — full-frame view fractions on a tiny crop
+    // would over-fragment. Use the whole crop only.
+    viewHeightFractions: [1],
+    scoreThreshold: params.scoreThreshold,
+  });
+
+  if (!secondary.ok) return primary;
+
+  return {
+    ok: true,
+    usedMaskHint: true,
+    face: {
+      ...secondary.face,
+      x: secondary.face.x + left,
+      y: secondary.face.y + top,
+      detectedAtViewFraction: secondary.face.detectedAtViewFraction,
+    },
+  };
+}

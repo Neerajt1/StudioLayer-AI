@@ -59,7 +59,15 @@ import {
   buildFurnitureReferencePrimaryPointer,
 } from "../../../rendering/furniture-reference-appearance-authority.js";
 import { appendStudioBackgroundAuthorityToCreativePrompt } from "../rendering-studio-background-authority.js";
-import { HeadlessMaskFailureError } from "./nano-pro-headless-mannequin-trial.js";
+import {
+  HeadlessIdentityReferenceFailureError,
+  HeadlessMaskFailureError,
+  HeadlessStage2FailureError,
+} from "./nano-pro-headless-mannequin-trial.js";
+import {
+  classifyHeadlessCreateFailure,
+  logHeadlessCreateShotFailure,
+} from "../headless-create-failure-log.js";
 import {
   emptyOpenRouterResponseTelemetry,
   logOpenRouterShotTiming,
@@ -1188,25 +1196,42 @@ export class OpenRouterProvider implements RenderingProvider {
               outputResolution,
             }),
             ).catch((error: unknown) => {
-              const errMessage =
-                error instanceof Error ? error.message : String(error);
-              logger.warn(
-                {
-                  provider: this.name,
-                  shotIndex: i,
-                  err: errMessage,
-                  ...(error instanceof HeadlessMaskFailureError
-                    ? {
-                        trialRunId: error.trialRunId,
-                        stage1RunId: error.stage1.stageRunId,
-                        maskFailureReasons: error.reasons,
-                        maskFailureDetail: error.detail,
-                        maskMetrics: error.metrics,
-                      }
-                    : {}),
-                },
-                "OpenRouterProvider: Headless Create shot failed — no single-pass fallback",
+              const classified = classifyHeadlessCreateFailure(error);
+              const timeoutMs = Number(
+                process.env["OR_RENDER_TIMEOUT_MS"] ??
+                  OPENROUTER_RENDERING_CONFIG.timeoutMs,
               );
+              logHeadlessCreateShotFailure({
+                ...classified,
+                provider: this.name,
+                shotIndex: i,
+                renderId: pipelineTrace?.primaryRenderId ?? null,
+                sessionId: pipelineTrace?.generationSessionId ?? null,
+                timeoutMs,
+                elapsedMs:
+                  error instanceof HeadlessMaskFailureError
+                    ? {
+                        stage1: error.elapsedMs.stage1Ms,
+                        mask: error.elapsedMs.maskMs,
+                        total: error.elapsedMs.totalMs,
+                      }
+                    : error instanceof HeadlessIdentityReferenceFailureError
+                      ? {
+                          stage1: error.elapsedMs.stage1Ms,
+                          mask: error.elapsedMs.maskMs,
+                          identity: error.elapsedMs.identityMs,
+                          total: error.elapsedMs.totalMs,
+                        }
+                      : error instanceof HeadlessStage2FailureError
+                        ? {
+                            stage1: error.elapsedMs.stage1Ms,
+                            mask: error.elapsedMs.maskMs,
+                            identity: error.elapsedMs.identityMs,
+                            stage2: error.elapsedMs.stage2Ms,
+                            total: error.elapsedMs.totalMs,
+                          }
+                        : classified.elapsedMs,
+              });
               return null;
             }),
           );
