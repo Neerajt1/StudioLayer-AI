@@ -68,6 +68,7 @@ import {
   classifyHeadlessCreateFailure,
   logHeadlessCreateShotFailure,
 } from "../headless-create-failure-log.js";
+import { maybePersistHeadlessMaskForensics } from "../headless-forensics.js";
 import {
   emptyOpenRouterResponseTelemetry,
   logOpenRouterShotTiming,
@@ -1195,7 +1196,7 @@ export class OpenRouterProvider implements RenderingProvider {
               furnitureAssetId,
               outputResolution,
             }),
-            ).catch((error: unknown) => {
+            ).catch(async (error: unknown) => {
               const classified = classifyHeadlessCreateFailure(error);
               const timeoutMs = Number(
                 process.env["OR_RENDER_TIMEOUT_MS"] ??
@@ -1232,6 +1233,17 @@ export class OpenRouterProvider implements RenderingProvider {
                           }
                         : classified.elapsedMs,
               });
+
+              // TEMPORARY DIAGNOSTIC — never changes fail-closed outcome (still null).
+              if (error instanceof HeadlessMaskFailureError) {
+                await maybePersistHeadlessMaskForensics({
+                  renderId: pipelineTrace?.primaryRenderId ?? null,
+                  trialRunId: error.trialRunId,
+                  stage1RunId: error.stage1.stageRunId,
+                  bundle: error.forensics,
+                });
+              }
+
               return null;
             }),
           );

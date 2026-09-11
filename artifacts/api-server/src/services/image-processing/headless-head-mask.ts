@@ -27,6 +27,23 @@ import {
   type FaceAnchorDetection,
   type FaceBox,
 } from "./face-anchor-detector.js";
+import {
+  isHeadlessForensicsEnabled,
+  type HeadHairEnvelopeCoords,
+  type HeadlessMaskForensicsBundle,
+  type HeadlessMaskPipelineTimings,
+} from "../rendering/headless-forensics.js";
+
+function computeHeadHairEnvelopeCoords(face: FaceBox): HeadHairEnvelopeCoords {
+  const centreX = face.x + face.width / 2;
+  return {
+    ex0: centreX - HEAD_HAIR_ENVELOPE.halfWidthsOfFace * face.width,
+    ex1: centreX + HEAD_HAIR_ENVELOPE.halfWidthsOfFace * face.width,
+    ey0: face.y - HEAD_HAIR_ENVELOPE.aboveFace * face.height,
+    ey1: face.y + face.height + HEAD_HAIR_ENVELOPE.belowFace * face.height,
+    multipliers: { ...HEAD_HAIR_ENVELOPE },
+  };
+}
 
 /** Neutral plate grey, matching the shipped face-neutral convention. */
 export const HEAD_PLATE_GRAY = 165;
@@ -143,14 +160,26 @@ export type HeadMaskFailure = {
   reasons: HeadMaskFailureReason[];
   detail: string;
   metrics: Partial<HeadMaskMetrics>;
+  forensics?: HeadlessMaskForensicsBundle;
 };
 
 export type HeadMaskResult = HeadMaskSuccess | HeadMaskFailure;
 
 /** Segmentation is injectable so tests never make live provider calls. */
+export type HeadSegmentationResult = {
+  maskPng: Buffer;
+  /** Optional timings from the stock EVF-SAM provider. */
+  timings?: {
+    falUploadMs: number;
+    falSubscribeMs: number;
+    falSubscribeSdkTimings: Record<string, unknown> | null;
+    maskFetchMs: number;
+  };
+};
+
 export type HeadSegmentationProvider = (
   imageBuffer: Buffer,
-) => Promise<{ maskPng: Buffer }>;
+) => Promise<HeadSegmentationResult>;
 
 /** Face detection is injectable for the same reason. */
 export type FaceAnchorDetector = (
@@ -195,10 +224,13 @@ export const evfSamHeadSegmentationProvider: HeadSegmentationProvider = async (
 ) => {
   fal.config({ credentials: process.env["FAL_KEY"] });
 
+  const uploadStarted = Date.now();
   const uploadedUrl = await fal.storage.upload(
     new Blob([new Uint8Array(imageBuffer)], { type: "image/png" }),
   );
+  const falUploadMs = Date.now() - uploadStarted;
 
+  const subscribeStarted = Date.now();
   const result = await withAsyncTimeout(
     fal.subscribe(HEAD_SEGMENTATION_MODEL, {
       input: {
@@ -215,6 +247,10 @@ export const evfSamHeadSegmentationProvider: HeadSegmentationProvider = async (
     HEAD_SEGMENTATION_TIMEOUT_MS,
     `headless-head-mask: EVF-SAM timed out after ${HEAD_SEGMENTATION_TIMEOUT_MS}ms`,
   );
+  const falSubscribeMs = Date.now() - subscribeStarted;
+
+  // Capture SDK timing fields when present — do not invent values.
+  const falSubscribeSdkTimings = extractFalSubscribeSdkTimings(result);
 
   const data = (result as { data?: Record<string, unknown> }).data;
   const maskUrl = (data?.["image"] as { url?: string } | undefined)?.url;
@@ -222,14 +258,51 @@ export const evfSamHeadSegmentationProvider: HeadSegmentationProvider = async (
     throw new Error("headless-head-mask: EVF-SAM returned no mask URL");
   }
 
+  const fetchStarted = Date.now();
   const response = await fetch(maskUrl);
   if (!response.ok) {
     throw new Error(
       `headless-head-mask: failed to fetch EVF-SAM mask HTTP ${response.status}`,
     );
   }
-  return { maskPng: Buffer.from(await response.arrayBuffer()) };
+  const maskPng = Buffer.from(await response.arrayBuffer());
+  const maskFetchMs = Date.now() - fetchStarted;
+
+  return {
+    maskPng,
+    timings: {
+      falUploadMs,
+      falSubscribeMs,
+      falSubscribeSdkTimings,
+      maskFetchMs,
+    },
+  };
 };
+
+/** Pull known timing-like fields from fal.subscribe results without assuming a schema. */
+function extractFalSubscribeSdkTimings(result: unknown): Record<string, unknown> | null {
+  if (!result || typeof result !== "object") return null;
+  const root = result as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of [
+    "timings",
+    "timing",
+    "metrics",
+    "queue_time",
+    "inference_time",
+    "request_id",
+  ] as const) {
+    if (key in root && root[key] != null) out[key] = root[key];
+  }
+  const data = root["data"];
+  if (data && typeof data === "object") {
+    const d = data as Record<string, unknown>;
+    for (const key of ["timings", "timing", "metrics"] as const) {
+      if (key in d && d[key] != null) out[`data.${key}`] = d[key];
+    }
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
 
 /**
  * Deterministic mask cleanup — no model involved.
@@ -556,51 +629,126 @@ export async function neutralizeHeadRegion(params: {
   /** Forensic correlation only. */
   trialRunId?: string;
 }): Promise<HeadMaskResult> {
+  const pipelineStarted = Date.now();
   const { imageBuffer } = params;
   const segment = params.segmentationProvider ?? evfSamHeadSegmentationProvider;
+  const captureForensics = isHeadlessForensicsEnabled();
+
+  const timings: HeadlessMaskPipelineTimings = {
+    falUploadMs: null,
+    falSubscribeMs: null,
+    falSubscribeSdkTimings: null,
+    maskFetchMs: null,
+    sharpResizeMs: null,
+    cleanHeadMaskMs: null,
+    geometryValidationMs: null,
+    primaryYunetMs: null,
+    secondaryYunetMs: null,
+    cropExtractMs: null,
+    containmentMs: null,
+    totalMaskPipelineMs: null,
+  };
 
   const meta = await sharp(imageBuffer).metadata();
   const width = meta.width ?? 0;
   const height = meta.height ?? 0;
   if (width <= 0 || height <= 0) {
-    return {
-      ok: false,
+    return failMask({
       reasons: ["SEGMENTATION_FAILED"],
       detail: "source image dimensions could not be read",
       metrics: {},
-    };
+      captureForensics,
+      imageBuffer,
+      timings: { ...timings, totalMaskPipelineMs: Date.now() - pipelineStarted },
+      rawEvfSamMaskPng: null,
+      rawMaskResizedPng: null,
+      cleanedMaskPng: null,
+      rawMaskNativeWidth: null,
+      rawMaskNativeHeight: null,
+      primaryYunet: null,
+      secondaryYunetCropSpace: null,
+      secondaryAttempted: false,
+      secondaryCrop: null,
+      remappedFaceAabb: null,
+      headHairEnvelope: null,
+      usedMaskHint: false,
+      geometryMetrics: {},
+    });
   }
 
   let rawMaskPng: Buffer;
+  let segmentTimings: HeadSegmentationResult["timings"];
   try {
-    ({ maskPng: rawMaskPng } = await segment(imageBuffer));
+    const segmented = await segment(imageBuffer);
+    rawMaskPng = segmented.maskPng;
+    segmentTimings = segmented.timings;
   } catch (error) {
-    return {
-      ok: false,
+    return failMask({
       reasons: ["SEGMENTATION_FAILED"],
       detail: error instanceof Error ? error.message : String(error),
       metrics: { width, height },
-    };
+      captureForensics,
+      imageBuffer,
+      timings: { ...timings, totalMaskPipelineMs: Date.now() - pipelineStarted },
+      rawEvfSamMaskPng: null,
+      rawMaskResizedPng: null,
+      cleanedMaskPng: null,
+      rawMaskNativeWidth: null,
+      rawMaskNativeHeight: null,
+      primaryYunet: null,
+      secondaryYunetCropSpace: null,
+      secondaryAttempted: false,
+      secondaryCrop: null,
+      remappedFaceAabb: null,
+      headHairEnvelope: null,
+      usedMaskHint: false,
+      geometryMetrics: {},
+    });
   }
 
+  if (segmentTimings) {
+    timings.falUploadMs = segmentTimings.falUploadMs;
+    timings.falSubscribeMs = segmentTimings.falSubscribeMs;
+    timings.falSubscribeSdkTimings = segmentTimings.falSubscribeSdkTimings;
+    timings.maskFetchMs = segmentTimings.maskFetchMs;
+  }
+
+  const rawMeta = await sharp(rawMaskPng).metadata();
+  const rawMaskNativeWidth = rawMeta.width ?? null;
+  const rawMaskNativeHeight = rawMeta.height ?? null;
+
+  const resizeStarted = Date.now();
   const rawMask = await sharp(rawMaskPng)
     .resize(width, height, { fit: "fill", kernel: sharp.kernel.lanczos3 })
     .greyscale()
     .raw()
     .toBuffer();
+  timings.sharpResizeMs = Date.now() - resizeStarted;
 
   const dilation = Math.round(height * HEAD_MASK_DILATION_FRACTION);
+  const cleanStarted = Date.now();
   const mask = cleanHeadMask(rawMask, width, height, dilation);
+  timings.cleanHeadMaskMs = Date.now() - cleanStarted;
 
+  const geometryStarted = Date.now();
   const geometry = checkHeadMaskGeometry(mask, width, height);
+  timings.geometryValidationMs = Date.now() - geometryStarted;
 
   // Stock path: full-frame YuNet, then mask-guided secondary on NO_FACE_DETECTED.
   // Injected detectors own their full contract (tests) — secondary is not applied.
   let detection: FaceAnchorDetection;
   let usedMaskHint = false;
   let secondaryAttempted = false;
+  let secondaryCrop: { left: number; top: number; width: number; height: number } | null =
+    null;
+  let primaryYunet: FaceAnchorDetection | null = null;
+  let secondaryYunetCropSpace: FaceAnchorDetection | null = null;
+
   if (params.faceAnchorDetector) {
+    const yunetStarted = Date.now();
     detection = await params.faceAnchorDetector(imageBuffer);
+    timings.primaryYunetMs = Date.now() - yunetStarted;
+    primaryYunet = detection;
   } else {
     const hinted = await detectFaceAnchorWithMaskHint({
       imageBuffer,
@@ -611,6 +759,12 @@ export async function neutralizeHeadRegion(params: {
     detection = hinted;
     usedMaskHint = Boolean(hinted.usedMaskHint);
     secondaryAttempted = Boolean(hinted.secondaryAttempted);
+    secondaryCrop = hinted.secondaryCrop ?? null;
+    primaryYunet = hinted.primary ?? null;
+    secondaryYunetCropSpace = hinted.secondaryCropSpace ?? null;
+    timings.primaryYunetMs = hinted.timings?.primaryDetectMs ?? null;
+    timings.secondaryYunetMs = hinted.timings?.secondaryDetectMs ?? null;
+    timings.cropExtractMs = hinted.timings?.cropExtractMs ?? null;
     if (usedMaskHint) {
       logger.info(
         {
@@ -635,9 +789,19 @@ export async function neutralizeHeadRegion(params: {
       );
     }
   }
+
+  const encodeGreyPng = async (raw: Buffer): Promise<Buffer> =>
+    sharp(raw, { raw: { width, height, channels: 1 } }).png().toBuffer();
+
   if (!detection.ok) {
-    return {
-      ok: false,
+    timings.totalMaskPipelineMs = Date.now() - pipelineStarted;
+    let rawMaskResizedPng: Buffer | null = null;
+    let cleanedMaskPng: Buffer | null = null;
+    if (captureForensics) {
+      rawMaskResizedPng = await encodeGreyPng(rawMask);
+      cleanedMaskPng = await encodeGreyPng(mask);
+    }
+    return failMask({
       reasons: [...geometry.reasons, "FACE_ANCHOR_INVALID"],
       detail: [...geometry.details, `face anchor unavailable: ${detection.reason}`].join(
         "; ",
@@ -650,10 +814,28 @@ export async function neutralizeHeadRegion(params: {
         faceCoveredPct: null,
         maskInsideEnvelopePct: null,
       },
-    };
+      captureForensics,
+      imageBuffer,
+      timings,
+      rawEvfSamMaskPng: captureForensics ? rawMaskPng : null,
+      rawMaskResizedPng,
+      cleanedMaskPng,
+      rawMaskNativeWidth,
+      rawMaskNativeHeight,
+      primaryYunet,
+      secondaryYunetCropSpace,
+      secondaryAttempted,
+      secondaryCrop,
+      remappedFaceAabb: null,
+      headHairEnvelope: null,
+      usedMaskHint,
+      geometryMetrics: geometry.metrics,
+    });
   }
 
+  const containmentStarted = Date.now();
   const anchor = checkFaceAnchorContainment(mask, width, height, detection.face);
+  timings.containmentMs = Date.now() - containmentStarted;
 
   const metrics: HeadMaskMetrics = {
     width,
@@ -666,6 +848,7 @@ export async function neutralizeHeadRegion(params: {
 
   const reasons = [...geometry.reasons, ...anchor.reasons];
   if (reasons.length > 0) {
+    timings.totalMaskPipelineMs = Date.now() - pipelineStarted;
     logger.warn(
       {
         experimental: true,
@@ -673,15 +856,37 @@ export async function neutralizeHeadRegion(params: {
         reasons,
         metrics,
         usedMaskHint,
+        timings,
       },
       "headless-head-mask: rejected mask — Stage 2 must not run",
     );
-    return {
-      ok: false,
+    let rawMaskResizedPng: Buffer | null = null;
+    let cleanedMaskPng: Buffer | null = null;
+    if (captureForensics) {
+      rawMaskResizedPng = await encodeGreyPng(rawMask);
+      cleanedMaskPng = await encodeGreyPng(mask);
+    }
+    return failMask({
       reasons,
       detail: [...geometry.details, ...anchor.details].join("; "),
       metrics,
-    };
+      captureForensics,
+      imageBuffer,
+      timings,
+      rawEvfSamMaskPng: captureForensics ? rawMaskPng : null,
+      rawMaskResizedPng,
+      cleanedMaskPng,
+      rawMaskNativeWidth,
+      rawMaskNativeHeight,
+      primaryYunet,
+      secondaryYunetCropSpace,
+      secondaryAttempted,
+      secondaryCrop,
+      remappedFaceAabb: detection.face,
+      headHairEnvelope: computeHeadHairEnvelopeCoords(detection.face),
+      usedMaskHint,
+      geometryMetrics: geometry.metrics,
+    });
   }
 
   if (usedMaskHint) {
@@ -697,6 +902,7 @@ export async function neutralizeHeadRegion(params: {
   }
 
   // Composite the neutral plate inside the mask only.
+  // Success path: never attach forensics (requirement: failure only).
   const source = await sharp(imageBuffer).removeAlpha().raw().toBuffer();
   const composited = Buffer.from(source);
   for (let i = 0; i < width * height; i++) {
@@ -739,4 +945,71 @@ export async function neutralizeHeadRegion(params: {
     metrics,
     face: detection.face,
   };
+}
+
+function failMask(params: {
+  reasons: HeadMaskFailureReason[];
+  detail: string;
+  metrics: Partial<HeadMaskMetrics>;
+  captureForensics: boolean;
+  imageBuffer: Buffer;
+  timings: HeadlessMaskPipelineTimings;
+  rawEvfSamMaskPng: Buffer | null;
+  rawMaskResizedPng: Buffer | null;
+  cleanedMaskPng: Buffer | null;
+  rawMaskNativeWidth: number | null;
+  rawMaskNativeHeight: number | null;
+  primaryYunet: FaceAnchorDetection | null;
+  secondaryYunetCropSpace: FaceAnchorDetection | null;
+  secondaryAttempted: boolean;
+  secondaryCrop: { left: number; top: number; width: number; height: number } | null;
+  remappedFaceAabb: FaceBox | null;
+  headHairEnvelope: ReturnType<typeof computeHeadHairEnvelopeCoords> | null;
+  usedMaskHint: boolean;
+  geometryMetrics: Partial<HeadMaskMetrics>;
+}): HeadMaskFailure {
+  const failure: HeadMaskFailure = {
+    ok: false,
+    reasons: params.reasons,
+    detail: params.detail,
+    metrics: params.metrics,
+  };
+
+  if (!params.captureForensics) {
+    return failure;
+  }
+
+  const forensics: HeadlessMaskForensicsBundle = {
+    temporaryDiagnostic: true,
+    capturedAtIso: new Date().toISOString(),
+    stage1ImageBuffer: params.imageBuffer,
+    rawEvfSamMaskPng: params.rawEvfSamMaskPng,
+    rawMaskResizedPng: params.rawMaskResizedPng,
+    cleanedMaskPng: params.cleanedMaskPng,
+    renderWidth: params.metrics.width ?? 0,
+    renderHeight: params.metrics.height ?? 0,
+    rawMaskNativeWidth: params.rawMaskNativeWidth,
+    rawMaskNativeHeight: params.rawMaskNativeHeight,
+    cleanedMaskWidth: params.cleanedMaskPng ? (params.metrics.width ?? null) : null,
+    cleanedMaskHeight: params.cleanedMaskPng ? (params.metrics.height ?? null) : null,
+    primaryYunet: params.primaryYunet,
+    secondaryYunetCropSpace: params.secondaryYunetCropSpace,
+    secondaryAttempted: params.secondaryAttempted,
+    secondaryCrop: params.secondaryCrop,
+    remappedFaceAabb: params.remappedFaceAabb,
+    headHairEnvelope: params.headHairEnvelope,
+    geometryMetrics: params.geometryMetrics,
+    containmentMetrics: {
+      faceScore: params.metrics.faceScore ?? null,
+      faceCoveredPct: params.metrics.faceCoveredPct ?? null,
+      maskInsideEnvelopePct: params.metrics.maskInsideEnvelopePct ?? null,
+    },
+    failureReasons: params.reasons,
+    failureDetail: params.detail,
+    timings: params.timings,
+    usedMaskHint: params.usedMaskHint,
+  };
+
+  failure.forensics = forensics;
+  return failure;
 }

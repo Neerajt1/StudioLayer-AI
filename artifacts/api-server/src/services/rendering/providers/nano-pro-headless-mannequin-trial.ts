@@ -851,6 +851,8 @@ export class HeadlessMaskFailureError extends Error {
   readonly reasons: HeadMaskFailureReason[];
   readonly detail: string;
   readonly metrics: Partial<HeadMaskMetrics>;
+  /** TEMPORARY DIAGNOSTIC — in-memory only; uploaded when forensics flag is on. */
+  readonly forensics: import("../headless-forensics.js").HeadlessMaskForensicsBundle | null;
   readonly httpStatus = 422;
   readonly generationCalls = 1 as const;
   readonly elapsedMs: { stage1Ms: number; maskMs: number; totalMs: number };
@@ -862,6 +864,7 @@ export class HeadlessMaskFailureError extends Error {
     reasons: HeadMaskFailureReason[];
     detail: string;
     metrics: Partial<HeadMaskMetrics>;
+    forensics?: import("../headless-forensics.js").HeadlessMaskForensicsBundle | null;
     elapsedMs?: { stage1Ms: number; maskMs: number; totalMs: number };
   }) {
     super(params.message);
@@ -871,6 +874,7 @@ export class HeadlessMaskFailureError extends Error {
     this.reasons = params.reasons;
     this.detail = params.detail;
     this.metrics = params.metrics;
+    this.forensics = params.forensics ?? null;
     this.elapsedMs = params.elapsedMs ?? { stage1Ms: 0, maskMs: 0, totalMs: 0 };
   }
 }
@@ -1071,6 +1075,7 @@ export async function generateNanoProHeadlessMannequinTrial(
       reasons: maskResult.reasons,
       detail: maskResult.detail,
       metrics: maskResult.metrics,
+      forensics: maskResult.forensics ?? null,
       elapsedMs: {
         stage1Ms,
         maskMs,

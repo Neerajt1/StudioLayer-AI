@@ -327,6 +327,16 @@ export type FaceAnchorDetectionWithHint = FaceAnchorDetection & {
   /** True when the secondary crop path was attempted after primary NO_FACE_DETECTED. */
   secondaryAttempted?: boolean;
   secondaryCrop?: { left: number; top: number; width: number; height: number };
+  /** Full-frame primary result (always set by detectFaceAnchorWithMaskHint). */
+  primary?: FaceAnchorDetection;
+  /** Secondary detection in crop coordinates (before remap), when secondary ran. */
+  secondaryCropSpace?: FaceAnchorDetection;
+  /** Lightweight timings — no extra inference. */
+  timings?: {
+    primaryDetectMs: number;
+    cropExtractMs?: number;
+    secondaryDetectMs?: number;
+  };
 };
 
 export type DetectFaceAnchorFn = (
@@ -361,17 +371,30 @@ export async function detectFaceAnchorWithMaskHint(params: {
   detectFn?: DetectFaceAnchorFn;
 }): Promise<FaceAnchorDetectionWithHint> {
   const detect = params.detectFn ?? detectFaceAnchor;
+  const primaryStarted = Date.now();
   const primary =
     params.primaryResult ??
     (await detect(params.imageBuffer, {
       scoreThreshold: params.scoreThreshold,
     }));
-  if (primary.ok) return primary;
-  if (primary.reason !== "NO_FACE_DETECTED") return primary;
+  const primaryDetectMs =
+    params.primaryResult != null ? 0 : Date.now() - primaryStarted;
+
+  if (primary.ok) {
+    return { ...primary, primary, timings: { primaryDetectMs } };
+  }
+  if (primary.reason !== "NO_FACE_DETECTED") {
+    return { ...primary, primary, timings: { primaryDetectMs } };
+  }
 
   const bbox = maskForegroundBoundingBox(params.mask, params.width, params.height);
   if (!bbox) {
-    return { ...primary, secondaryAttempted: false };
+    return {
+      ...primary,
+      primary,
+      secondaryAttempted: false,
+      timings: { primaryDetectMs },
+    };
   }
 
   const padX = Math.max(8, Math.round(bbox.width * MASK_HINT_PAD_FRACTION_X));
@@ -386,10 +409,17 @@ export async function detectFaceAnchorWithMaskHint(params: {
   const secondaryCrop = { left, top, width: cropWidth, height: cropHeight };
 
   if (cropWidth < 16 || cropHeight < 16) {
-    return { ...primary, secondaryAttempted: false, secondaryCrop };
+    return {
+      ...primary,
+      primary,
+      secondaryAttempted: false,
+      secondaryCrop,
+      timings: { primaryDetectMs },
+    };
   }
 
   let cropBuffer: Buffer;
+  const cropStarted = Date.now();
   try {
     // Force a deterministic sRGB PNG crop — Stage-1 bytes may be JPEG/WebP/PNG.
     // Do not auto-rotate: mask geometry is in the same pixel space as imageBuffer.
@@ -400,20 +430,32 @@ export async function detectFaceAnchorWithMaskHint(params: {
       .png()
       .toBuffer();
   } catch {
-    return { ...primary, secondaryAttempted: false, secondaryCrop };
+    return {
+      ...primary,
+      primary,
+      secondaryAttempted: false,
+      secondaryCrop,
+      timings: { primaryDetectMs, cropExtractMs: Date.now() - cropStarted },
+    };
   }
+  const cropExtractMs = Date.now() - cropStarted;
 
+  const secondaryStarted = Date.now();
   const secondary = await detect(cropBuffer, {
     viewHeightFractions: MASK_HINT_VIEW_HEIGHT_FRACTIONS,
     scoreThreshold: params.scoreThreshold,
     letterboxBackground: MASK_HINT_LETTERBOX,
   });
+  const secondaryDetectMs = Date.now() - secondaryStarted;
 
   if (!secondary.ok) {
     return {
       ...primary,
+      primary,
       secondaryAttempted: true,
       secondaryCrop,
+      secondaryCropSpace: secondary,
+      timings: { primaryDetectMs, cropExtractMs, secondaryDetectMs },
     };
   }
 
@@ -422,6 +464,9 @@ export async function detectFaceAnchorWithMaskHint(params: {
     usedMaskHint: true,
     secondaryAttempted: true,
     secondaryCrop,
+    primary,
+    secondaryCropSpace: secondary,
+    timings: { primaryDetectMs, cropExtractMs, secondaryDetectMs },
     face: {
       ...secondary.face,
       x: secondary.face.x + left,
