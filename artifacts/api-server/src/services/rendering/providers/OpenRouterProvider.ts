@@ -32,6 +32,7 @@ import {
   type NativeOutputResolution,
   V1_CREATE_USE_NANO_PRO_CASCADE,
   isV1CreateHeadlessIdentityEnabled,
+  isNano2SinglePassEnabled,
 } from "../rendering.config.js";
 import {
   assembleNanoProImagesApiPrompt,
@@ -1096,8 +1097,11 @@ export class OpenRouterProvider implements RenderingProvider {
     // V1 Create: single Nano Regular when cascade flag is off. Cascade code retained for V3.
     // Refinement / Enhance Face keep the single-shot Flash path unchanged.
     const useCreateCascade = !isRefinement && V1_CREATE_USE_NANO_PRO_CASCADE;
+    const useNano2SinglePass =
+      !isRefinement && isNano2SinglePassEnabled();
     const useHeadlessCreate =
       !isRefinement &&
+      !useNano2SinglePass &&
       isV1CreateHeadlessIdentityEnabled() &&
       !V1_CREATE_USE_NANO_PRO_CASCADE;
     const stage1Model = resolveOpenRouterModelForResolution(
@@ -1116,10 +1120,13 @@ export class OpenRouterProvider implements RenderingProvider {
         stage1Model: useCreateCascade ? stage1Model : null,
         stage2Model: useCreateCascade ? stage2Model : null,
         outputResolution,
-        engine: useCreateCascade
-          ? "nano_pro→flash"
-          : resolveOpenRouterRenderEngine(),
+        engine: useNano2SinglePass
+          ? "nano_banana_2_single_pass"
+          : useCreateCascade
+            ? "nano_pro→flash"
+            : resolveOpenRouterRenderEngine(),
         createCascade: useCreateCascade,
+        nano2SinglePass: useNano2SinglePass,
         headlessCreate: useHeadlessCreate,
         shots,
         isRefinement,
@@ -1148,7 +1155,65 @@ export class OpenRouterProvider implements RenderingProvider {
 
     let results: Array<string | null>;
 
-    if (useHeadlessCreate) {
+    if (useNano2SinglePass) {
+      // ── EXPERIMENTAL — Nano Banana 2 single-pass (exactly one generation) ──
+      results = await Promise.all(
+        Array.from({ length: shots }, (_, i) => {
+          const shotPrompt = hasPerShotPrompts
+            ? (perShotPrompts[i] ?? prompt)
+            : prompt;
+          const poseReferenceImageUrl = perShotPoseReferenceUrls?.[i];
+          const poseId = identityForensics?.perShotPoseIds?.[i];
+
+          if (!poseReferenceImageUrl || !poseId) {
+            logger.warn(
+              {
+                provider: this.name,
+                shotIndex: i,
+                hasPoseReference: Boolean(poseReferenceImageUrl),
+                hasPoseId: Boolean(poseId),
+              },
+              "OpenRouterProvider: Nano2 single-pass requires pose reference and poseId — shot skipped",
+            );
+            return Promise.resolve(null);
+          }
+
+          const furnitureAssetId = perShotFurnitureAssetIds?.[i] ?? undefined;
+          const furnitureReferenceImageUrl =
+            perShotFurnitureReferenceUrls?.[i] ?? undefined;
+
+          return runStaggeredShot(i, () =>
+            import("./nano-banana-2-single-pass.js").then(
+              ({ generateNanoBanana2SinglePass }) =>
+                generateNanoBanana2SinglePass({
+                  shotIndex: i,
+                  talentImageUrl: modelImageUrl,
+                  garmentImageUrl,
+                  poseImageUrl: poseReferenceImageUrl,
+                  poseId: String(poseId),
+                  furnitureReferenceImageUrl,
+                  furnitureAssetId,
+                  creativeShotPrompt: shotPrompt,
+                  outputResolution,
+                  renderId: pipelineTrace?.primaryRenderId ?? null,
+                  sessionId: pipelineTrace?.generationSessionId ?? null,
+                }),
+            ).catch((error: unknown) => {
+              logger.error(
+                {
+                  provider: this.name,
+                  shotIndex: i,
+                  renderId: pipelineTrace?.primaryRenderId ?? null,
+                  err: error instanceof Error ? error.message : String(error),
+                },
+                "OpenRouterProvider: Nano2 single-pass shot failed — no Headless/Flash fallback",
+              );
+              return null;
+            }),
+          );
+        }),
+      );
+    } else if (useHeadlessCreate) {
       // ── FROZEN HEADLESS — two Nano Pro calls per shot (identity Stage 2) ──
       results = await Promise.all(
         Array.from({ length: shots }, (_, i) => {

@@ -67,13 +67,14 @@ describe("Headless Create production flag", () => {
   });
 
   it("2. production Create remains single-pass Flash when Headless flag is OFF", () => {
+    assert.match(providerSrc, /const useNano2SinglePass =/);
     assert.match(
       providerSrc,
-      /const useHeadlessCreate =\s*\n\s*!isRefinement &&\s*\n\s*isV1CreateHeadlessIdentityEnabled\(\) &&\s*\n\s*!V1_CREATE_USE_NANO_PRO_CASCADE/,
+      /const useHeadlessCreate =\s*\n\s*!isRefinement &&\s*\n\s*!useNano2SinglePass &&\s*\n\s*isV1CreateHeadlessIdentityEnabled\(\) &&\s*\n\s*!V1_CREATE_USE_NANO_PRO_CASCADE/,
     );
-    assert.match(providerSrc, /if \(useHeadlessCreate\)/);
+    assert.match(providerSrc, /} else if \(useHeadlessCreate\)/);
     assert.match(providerSrc, /} else if \(useCreateCascade\)/);
-    const elseBranch = providerSrc.slice(providerSrc.indexOf("} else {"));
+    const elseBranch = providerSrc.slice(providerSrc.lastIndexOf("} else {"));
     assert.match(elseBranch, /generateSingleShot\(/);
   });
 
@@ -83,7 +84,7 @@ describe("Headless Create production flag", () => {
     assert.match(providerSrc, /headlessCreate: useHeadlessCreate/);
     assert.doesNotMatch(
       providerSrc.slice(
-        providerSrc.indexOf("if (useHeadlessCreate)"),
+        providerSrc.indexOf("} else if (useHeadlessCreate)"),
         providerSrc.indexOf("} else if (useCreateCascade)"),
       ),
       /generateSingleShot\(/,
@@ -226,7 +227,7 @@ describe("Headless Create — billing and fail-closed", () => {
     assert.match(aiPipelineSrc, /perShotFurnitureAssetIds/);
     assert.doesNotMatch(adapterSrc, /studio_credit|deduct|finalizeGeneration/);
     assert.doesNotMatch(
-      providerSrc.slice(providerSrc.indexOf("if (useHeadlessCreate)")),
+      providerSrc.slice(providerSrc.indexOf("} else if (useHeadlessCreate)")),
       /resolveGenerationCreditCost/,
     );
     assert.equal(
@@ -237,7 +238,7 @@ describe("Headless Create — billing and fail-closed", () => {
 
   it("10. Headless failure does not fall back to single-pass generation", () => {
     const headlessBlock = providerSrc.slice(
-      providerSrc.indexOf("if (useHeadlessCreate)"),
+      providerSrc.indexOf("} else if (useHeadlessCreate)"),
       providerSrc.indexOf("} else if (useCreateCascade)"),
     );
     assert.match(headlessBlock, /logHeadlessCreateShotFailure/);
@@ -261,7 +262,7 @@ describe("Headless Create — billing and fail-closed", () => {
 describe("Headless Create — multi-shot isolation", () => {
   it("11. each shot receives its own pose reference and calls runHeadlessCreateShot independently", () => {
     const headlessBlock = providerSrc.slice(
-      providerSrc.indexOf("if (useHeadlessCreate)"),
+      providerSrc.indexOf("} else if (useHeadlessCreate)"),
       providerSrc.indexOf("} else if (useCreateCascade)"),
     );
     assert.match(headlessBlock, /perShotPoseReferenceUrls\?\.\[i\]/);

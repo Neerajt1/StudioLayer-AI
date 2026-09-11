@@ -16,6 +16,10 @@
 //   V1_CREATE_USE_HEADLESS_IDENTITY  When true, fresh Create uses the frozen
 //                               Headless Mannequin two-stage Nano Pro path.
 //                               Default off. Does not enable cascade or trials.
+//   STUDIOLAYER_NANO2_SINGLE_PASS_ENABLED
+//                               When true, fresh Create uses one Nano Banana 2
+//                               (gemini-3.1-flash-image-preview) generation and
+//                               bypasses Headless. Default off. Reversible.
 // ---------------------------------------------------------------------------
 
 import { RENDERING_REALISM_INSTRUCTION } from "./rendering-realism.js";
@@ -222,6 +226,25 @@ export function isV1CreateHeadlessIdentityEnabled(
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
   const raw = env[V1_CREATE_USE_HEADLESS_IDENTITY_ENV] ?? "";
+  return (
+    raw === "1" ||
+    raw.toLowerCase() === "true" ||
+    raw.toLowerCase() === "yes"
+  );
+}
+
+export const STUDIOLAYER_NANO2_SINGLE_PASS_ENV =
+  "STUDIOLAYER_NANO2_SINGLE_PASS_ENABLED" as const;
+
+/**
+ * Experimental Create path: one Nano Banana 2 (Flash Image Preview) generation
+ * instead of Headless Stage 1 + Stage 2. Default OFF — reversible.
+ * Independent of V1_CREATE_USE_HEADLESS_IDENTITY; when both are on, Nano2 wins.
+ */
+export function isNano2SinglePassEnabled(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const raw = env[STUDIOLAYER_NANO2_SINGLE_PASS_ENV] ?? "";
   return (
     raw === "1" ||
     raw.toLowerCase() === "true" ||

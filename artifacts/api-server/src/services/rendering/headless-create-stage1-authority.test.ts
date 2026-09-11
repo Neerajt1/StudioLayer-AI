@@ -217,7 +217,7 @@ describe("Headless Stage-1 — frozen reference order", () => {
 describe("Headless Create — provider wiring", () => {
   it("M. Headless branch passes furniture PNG URL and asset id", () => {
     const headlessBlock = providerSrc.slice(
-      providerSrc.indexOf("if (useHeadlessCreate)"),
+      providerSrc.indexOf("} else if (useHeadlessCreate)"),
       providerSrc.indexOf("} else if (useCreateCascade)"),
     );
     assert.match(headlessBlock, /furnitureReferenceImageUrl/);
