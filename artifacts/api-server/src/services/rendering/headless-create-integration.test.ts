@@ -123,15 +123,13 @@ describe("Headless Create — frozen two-call contract", () => {
 });
 
 describe("Headless Create — proven Stage-1 trial parity", () => {
-  it("7. production adapter does not assemble or forward Flash/authority creative stack", () => {
-    assert.doesNotMatch(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
-    assert.doesNotMatch(adapterSrc, /headless-create-stage1-authority/);
-    assert.doesNotMatch(adapterSrc, /STUDIO_BACKGROUND_AUTHORITY/);
-    assert.doesNotMatch(adapterSrc, /GARMENT_AUTHORITY_SOT/);
+  it("7. production adapter assembles Stage-1 authority and forwards creative + furniture", () => {
+    assert.match(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
+    assert.match(adapterSrc, /headless-create-stage1-authority/);
     const orchestratorCall = adapterSrc.slice(
       adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
     );
-    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt/);
+    assert.match(orchestratorCall, /creativeShotPrompt/);
     // Catalogue furniture PNG is forwarded as Stage-1 Ref 3 when selected.
     assert.match(orchestratorCall, /furnitureReferenceImageUrl/);
   });
@@ -211,14 +209,14 @@ describe("Headless Create — proven Stage-1 trial parity", () => {
     assert.equal(built.body.input_references[2]!.image_url.url, furnitureUrl);
   });
 
-  it("8d. adapter forwards selected furnitureReferenceImageUrl into the orchestrator", () => {
+  it("8d. adapter forwards assembled creativeShotPrompt and furnitureReferenceImageUrl into the orchestrator", () => {
     const orchestratorCall = adapterSrc.slice(
       adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
       adapterSrc.indexOf("});", adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial(")) + 3,
     );
+    assert.match(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
     assert.match(orchestratorCall, /furnitureReferenceImageUrl/);
-    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt:/);
-    assert.doesNotMatch(orchestratorCall, /Ignored for trial parity — Stage 1 uses GARMENT \+ POSE_MASTER only/);
+    assert.match(orchestratorCall, /creativeShotPrompt:/);
   });
 });
 
@@ -279,12 +277,16 @@ describe("Headless Create — multi-shot isolation", () => {
     assert.doesNotMatch(adapterSrc, /maskedDataUri/);
   });
 
-  it("13. adapter ignores Flash creative inputs; forwards catalogue furniture only", () => {
-    assert.match(adapterSrc, /Ignored — production Flash shot prompts are not forwarded/);
+  it("13. adapter assembles Stage-1 creative brief and forwards catalogue furniture Ref 3", () => {
+    assert.match(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
+    assert.match(
+      adapterSrc,
+      /Adapted into Headless Ref layout — not forwarded wholesale as Flash Create/,
+    );
     const orchestratorCall = adapterSrc.slice(
       adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
     );
-    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt:/);
+    assert.match(orchestratorCall, /creativeShotPrompt:/);
     assert.match(orchestratorCall, /furnitureReferenceImageUrl/);
   });
 

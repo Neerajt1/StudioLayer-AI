@@ -202,15 +202,15 @@ describe("Headless Stage-1 — frozen reference order", () => {
     );
   });
 
-  it("L. adapter forwards catalogue furniture Ref 3 without Flash authority brief", () => {
+  it("L. adapter passes original talent URL; furniture Ref 3 + authority brief when available", () => {
     assert.match(adapterSrc, /talentImageUrl: input\.talentImageUrl/);
     assert.match(adapterSrc, /loadStage1PoseReferenceImageAsDataUri\(input\.poseId\)/);
-    assert.doesNotMatch(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
+    assert.match(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
     const orchestratorCall = adapterSrc.slice(
       adapterSrc.indexOf("generateNanoProHeadlessMannequinTrial("),
     );
     assert.match(orchestratorCall, /furnitureReferenceImageUrl/);
-    assert.doesNotMatch(orchestratorCall, /creativeShotPrompt:/);
+    assert.match(orchestratorCall, /creativeShotPrompt:/);
   });
 });
 

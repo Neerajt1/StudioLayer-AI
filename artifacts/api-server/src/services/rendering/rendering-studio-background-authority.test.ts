@@ -61,13 +61,12 @@ describe("Studio background authority — global SoT", () => {
     );
   });
 
-  it("5. production Headless Stage 1 uses minimal white on HEADLESS_STAGE1_PROMPT_BASE (not Flash authority stack)", () => {
+  it("5. production Headless Stage 1 keeps minimal white base and assembles Stage-1 authority brief", () => {
     const adapterSrc = readFileSync(
       join(__dirname, "headless-create-adapter.ts"),
       "utf8",
     );
-    assert.doesNotMatch(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
-    assert.doesNotMatch(adapterSrc, /STUDIO_BACKGROUND_AUTHORITY/);
+    assert.match(adapterSrc, /assembleHeadlessCreateStage1CreativePrompt/);
     assert.match(
       HEADLESS_STAGE1_PROMPT_BASE,
       /clean, neutral pure-white professional studio background/,
@@ -76,11 +75,11 @@ describe("Studio background authority — global SoT", () => {
     assert.match(HEADLESS_STAGE1_PROMPT_BASE, /window-shaped light patterns/);
     assert.doesNotMatch(HEADLESS_STAGE1_PROMPT_BASE, /BACKGROUND AUTHORITY — PURE WHITE/);
     assert.doesNotMatch(HEADLESS_STAGE1_PROMPT_BASE, /BACKGROUND PIXEL PRECISION/);
-    // Authority assembler remains available for future experiments — unused by adapter.
-    const dormant = assembleHeadlessCreateStage1CreativePrompt({
+    // Assembled creative brief (appended after base) carries the full background SoT.
+    const assembled = assembleHeadlessCreateStage1CreativePrompt({
       shotPrompt: "POSE:\nEditorial walk.",
     });
-    assert.match(dormant, /BACKGROUND AUTHORITY/);
+    assert.match(assembled, /BACKGROUND AUTHORITY/);
   });
 
   it("6. authority reaches OpenRouter creative shot path after image refs", () => {
