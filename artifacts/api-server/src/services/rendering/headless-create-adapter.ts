@@ -1,18 +1,16 @@
 // ---------------------------------------------------------------------------
 // Production Create — Headless Mannequin adapter
 //
-// Thin translation layer: production Create inputs → Headless trial orchestrator.
-//
-// Stage 1 generation contract:
+// Thin translation layer: production Create inputs → proven Headless trial
+// Stage-1 generation contract (fidelity baseline):
 //   Ref 1 = GARMENT (front only)
 //   Ref 2 = face-neutral POSE_MASTER from poseId
-//   Ref 3 = selected StudioLayer furniture product PNG when the selector
-//           provides one (optional — standing / no-support poses stay 2-ref)
-//   Prompt = HEADLESS_STAGE1_PROMPT_BASE (+ built-in furniture clause when Ref 3)
-//   No Flash / creative authority stack, no Talent in Stage 1
+//   Prompt = HEADLESS_STAGE1_PROMPT_BASE only (no Flash / authority stack)
+//   No Furniture Ref 3, no Talent in Stage 1
+// Mechanical Stage-2 identity path remains frozen and untouched.
 //
-// Mechanical Stage-2 identity path remains frozen and untouched:
-//   exactly two Nano Pro generation calls; identity applied only in Stage 2.
+// TEMPORARY CONTROLLED REGRESSION TEST: furniture URL is intentionally not
+// forwarded (9bab189 parity). Revert after furniture Ref3 A/B is complete.
 // ---------------------------------------------------------------------------
 
 import { loadStage1PoseReferenceImageAsDataUri } from "../../rendering/pose-face-neutral-backend.js";
@@ -25,25 +23,21 @@ export type HeadlessCreateShotInput = {
   shotIndex: number;
   talentImageUrl: string;
   garmentImageUrl: string;
-  /** Ignored — pose resolved from poseId via face-neutral loader. */
+  /** Ignored for trial parity — pose resolved from poseId via face-neutral loader. */
   poseImageUrl: string;
   poseId: string;
   modelIdentityId?: string | null;
-  /** Ignored — production Flash shot prompts are not forwarded. */
+  /** Ignored for trial parity — production Flash shot prompts are not forwarded. */
   creativeShotPrompt?: string;
-  /** Ignored — not passed to frozen orchestrator. */
+  /** Ignored for trial parity — not passed to frozen orchestrator. */
   garmentReferenceCorrespondenceInstruction?: string;
   garmentEvidenceSetMappingInstruction?: string;
   garmentEvidenceHasBack?: boolean;
   garmentEvidenceHasDetail?: boolean;
   garmentReferenceMode?: string;
-  /**
-   * Selected StudioLayer furniture product reference (catalogue/selector PNG).
-   * When present, forwarded as Stage-1 Ref 3 — sole furniture appearance authority.
-   * When absent/null, Stage 1 remains GARMENT + POSE_MASTER only.
-   */
+  /** Ignored for trial parity — Stage 1 uses GARMENT + POSE_MASTER only. */
   furnitureReferenceImageUrl?: string | null;
-  /** Observability / usage accounting at the provider layer. */
+  /** Ignored for trial parity — observability only at provider layer. */
   furnitureAssetId?: string | null;
   outputResolution?: NativeOutputResolution;
 };
@@ -56,14 +50,8 @@ export type HeadlessCreateShotInput = {
 export async function runHeadlessCreateShot(
   input: HeadlessCreateShotInput,
 ): Promise<string> {
-  // Always load face-neutral Stage-1 Pose Master from poseId.
+  // Trial parity: always load face-neutral Stage-1 Pose Master from poseId.
   const poseImageUrl = loadStage1PoseReferenceImageAsDataUri(input.poseId);
-
-  const furnitureReferenceImageUrl =
-    typeof input.furnitureReferenceImageUrl === "string" &&
-    input.furnitureReferenceImageUrl.trim().length > 0
-      ? input.furnitureReferenceImageUrl.trim()
-      : null;
 
   const result = await generateNanoProHeadlessMannequinTrial({
     talentImageUrl: input.talentImageUrl,
@@ -71,7 +59,6 @@ export async function runHeadlessCreateShot(
     poseImageUrl,
     poseId: input.poseId,
     modelIdentityId: input.modelIdentityId ?? null,
-    furnitureReferenceImageUrl,
     outputResolution: input.outputResolution,
   });
 
