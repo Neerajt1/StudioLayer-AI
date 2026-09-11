@@ -29,9 +29,12 @@ import {
 } from "./face-anchor-detector.js";
 import {
   isHeadlessForensicsEnabled,
+  buildHeadlessMaskDiagnosticOverlays,
   type HeadHairEnvelopeCoords,
   type HeadlessMaskForensicsBundle,
+  type HeadlessMaskPipelineDiagnostics,
   type HeadlessMaskPipelineTimings,
+  type HeadlessMaskDiagnosticOverlays,
 } from "../rendering/headless-forensics.js";
 
 function computeHeadHairEnvelopeCoords(face: FaceBox): HeadHairEnvelopeCoords {
@@ -426,6 +429,97 @@ export function cleanHeadMask(
   return out;
 }
 
+/** Forensic-only — binary mask coverage. Does not alter production masks. */
+export function measureBinaryMaskCoverage(
+  mask: Buffer,
+  width: number,
+  height: number,
+): { maskedPixels: number; coveragePct: number } {
+  const total = width * height;
+  let maskedPixels = 0;
+  for (let i = 0; i < total; i++) {
+    if (mask[i]! > 127) maskedPixels++;
+  }
+  return {
+    maskedPixels,
+    coveragePct: total > 0 ? +((maskedPixels / total) * 100).toFixed(4) : 0,
+  };
+}
+
+/**
+ * Forensic-only — connected-component stats on a greyscale mask.
+ * Mirrors cleanHeadMask's 4-connected labelling without mutating the mask.
+ */
+export function measureMaskConnectedComponents(
+  mask: Buffer,
+  width: number,
+  height: number,
+): { connectedComponentCount: number; largestComponentPixels: number } {
+  const total = width * height;
+  const bin = new Uint8Array(total);
+  for (let i = 0; i < total; i++) bin[i] = mask[i]! > 127 ? 1 : 0;
+
+  const comp = new Int32Array(total).fill(-1);
+  const queue = new Int32Array(total);
+  let bestSize = 0;
+  let id = 0;
+
+  for (let seed = 0; seed < total; seed++) {
+    if (bin[seed] !== 1 || comp[seed] !== -1) continue;
+    let head = 0;
+    let tail = 0;
+    let size = 0;
+    queue[tail++] = seed;
+    comp[seed] = id;
+    while (head < tail) {
+      const p = queue[head++]!;
+      size++;
+      const x = p % width;
+      const y = (p / width) | 0;
+      if (x > 0 && bin[p - 1] === 1 && comp[p - 1] === -1) {
+        comp[p - 1] = id;
+        queue[tail++] = p - 1;
+      }
+      if (x < width - 1 && bin[p + 1] === 1 && comp[p + 1] === -1) {
+        comp[p + 1] = id;
+        queue[tail++] = p + 1;
+      }
+      if (y > 0 && bin[p - width] === 1 && comp[p - width] === -1) {
+        comp[p - width] = id;
+        queue[tail++] = p - width;
+      }
+      if (y < height - 1 && bin[p + width] === 1 && comp[p + width] === -1) {
+        comp[p + width] = id;
+        queue[tail++] = p + width;
+      }
+    }
+    if (size > bestSize) bestSize = size;
+    id++;
+  }
+
+  return {
+    connectedComponentCount: id,
+    largestComponentPixels: bestSize,
+  };
+}
+
+/** Forensic-only — pixel delta between pre-clean and post-clean masks. */
+export function measureMaskCleanDelta(
+  before: Buffer,
+  after: Buffer,
+): { pixelsRemovedByClean: number; pixelsAddedByClean: number } {
+  const n = Math.min(before.length, after.length);
+  let pixelsRemovedByClean = 0;
+  let pixelsAddedByClean = 0;
+  for (let i = 0; i < n; i++) {
+    const b = before[i]! > 127;
+    const a = after[i]! > 127;
+    if (b && !a) pixelsRemovedByClean++;
+    if (!b && a) pixelsAddedByClean++;
+  }
+  return { pixelsRemovedByClean, pixelsAddedByClean };
+}
+
 type GeometryCheck = {
   reasons: HeadMaskFailureReason[];
   details: string[];
@@ -652,6 +746,9 @@ export async function neutralizeHeadRegion(params: {
   const meta = await sharp(imageBuffer).metadata();
   const width = meta.width ?? 0;
   const height = meta.height ?? 0;
+  const stage1Format = meta.format ?? null;
+  const stage1Channels = meta.channels ?? null;
+  const stage1Space = meta.space ?? null;
   if (width <= 0 || height <= 0) {
     return failMask({
       reasons: ["SEGMENTATION_FAILED"],
@@ -673,6 +770,8 @@ export async function neutralizeHeadRegion(params: {
       headHairEnvelope: null,
       usedMaskHint: false,
       geometryMetrics: {},
+      pipelineDiagnostics: null,
+      diagnosticOverlays: null,
     });
   }
 
@@ -703,6 +802,8 @@ export async function neutralizeHeadRegion(params: {
       headHairEnvelope: null,
       usedMaskHint: false,
       geometryMetrics: {},
+      pipelineDiagnostics: null,
+      diagnosticOverlays: null,
     });
   }
 
@@ -729,6 +830,46 @@ export async function neutralizeHeadRegion(params: {
   const cleanStarted = Date.now();
   const mask = cleanHeadMask(rawMask, width, height, dilation);
   timings.cleanHeadMaskMs = Date.now() - cleanStarted;
+
+  // Forensic-only measurements — never feed back into the production mask.
+  let forensicMaskStats: {
+    rawNativeCoveragePct: number | null;
+    rawNativeMaskedPixels: number | null;
+    resizedCoverage: ReturnType<typeof measureBinaryMaskCoverage>;
+    cleanedCoverage: ReturnType<typeof measureBinaryMaskCoverage>;
+    components: ReturnType<typeof measureMaskConnectedComponents>;
+    cleanDelta: ReturnType<typeof measureMaskCleanDelta>;
+  } | null = null;
+  if (captureForensics) {
+    let rawNativeCoveragePct: number | null = null;
+    let rawNativeMaskedPixels: number | null = null;
+    try {
+      if (rawMaskNativeWidth && rawMaskNativeHeight) {
+        const nativeRaw = await sharp(rawMaskPng)
+          .greyscale()
+          .raw()
+          .toBuffer();
+        const nativeCov = measureBinaryMaskCoverage(
+          nativeRaw,
+          rawMaskNativeWidth,
+          rawMaskNativeHeight,
+        );
+        rawNativeCoveragePct = nativeCov.coveragePct;
+        rawNativeMaskedPixels = nativeCov.maskedPixels;
+      }
+    } catch {
+      rawNativeCoveragePct = null;
+      rawNativeMaskedPixels = null;
+    }
+    forensicMaskStats = {
+      rawNativeCoveragePct,
+      rawNativeMaskedPixels,
+      resizedCoverage: measureBinaryMaskCoverage(rawMask, width, height),
+      cleanedCoverage: measureBinaryMaskCoverage(mask, width, height),
+      components: measureMaskConnectedComponents(rawMask, width, height),
+      cleanDelta: measureMaskCleanDelta(rawMask, mask),
+    };
+  }
 
   const geometryStarted = Date.now();
   const geometry = checkHeadMaskGeometry(mask, width, height);
@@ -793,6 +934,100 @@ export async function neutralizeHeadRegion(params: {
   const encodeGreyPng = async (raw: Buffer): Promise<Buffer> =>
     sharp(raw, { raw: { width, height, channels: 1 } }).png().toBuffer();
 
+  const buildFailureDiagnostics = async (params: {
+    reasons: HeadMaskFailureReason[];
+    face: FaceBox | null;
+    faceScore: number | null;
+    faceCoveredPct: number | null;
+    maskInsideEnvelopePct: number | null;
+    envelope: ReturnType<typeof computeHeadHairEnvelopeCoords> | null;
+  }): Promise<{
+    pipelineDiagnostics: HeadlessMaskPipelineDiagnostics | null;
+    diagnosticOverlays: HeadlessMaskDiagnosticOverlays | null;
+  }> => {
+    if (!captureForensics || !forensicMaskStats) {
+      return { pipelineDiagnostics: null, diagnosticOverlays: null };
+    }
+    const sourceAspect =
+      rawMaskNativeWidth && rawMaskNativeHeight && rawMaskNativeHeight > 0
+        ? rawMaskNativeWidth / rawMaskNativeHeight
+        : null;
+    const destinationAspect = height > 0 ? width / height : null;
+    const aspectDeltaPct =
+      sourceAspect != null && destinationAspect != null && destinationAspect > 0
+        ? +((Math.abs(sourceAspect - destinationAspect) / destinationAspect) *
+            100).toFixed(4)
+        : null;
+    const spatialAlignmentPreserved =
+      aspectDeltaPct == null ? null : aspectDeltaPct <= 1;
+
+    const pipelineDiagnostics: HeadlessMaskPipelineDiagnostics = {
+      stage1: {
+        width,
+        height,
+        format: stage1Format,
+        channels: stage1Channels,
+        space: stage1Space,
+      },
+      rawEvfSamMask: {
+        nativeWidth: rawMaskNativeWidth,
+        nativeHeight: rawMaskNativeHeight,
+        format: rawMeta.format ?? null,
+        coveragePct: forensicMaskStats.rawNativeCoveragePct,
+        maskedPixels: forensicMaskStats.rawNativeMaskedPixels,
+      },
+      resizedMask: {
+        sourceWidth: rawMaskNativeWidth,
+        sourceHeight: rawMaskNativeHeight,
+        destinationWidth: width,
+        destinationHeight: height,
+        operation: { fit: "fill", kernel: "lanczos3" },
+        coveragePct: forensicMaskStats.resizedCoverage.coveragePct,
+        maskedPixels: forensicMaskStats.resizedCoverage.maskedPixels,
+        sourceAspect,
+        destinationAspect,
+        aspectDeltaPct,
+        spatialAlignmentPreserved,
+      },
+      cleanHeadMask: {
+        coveragePctBefore: forensicMaskStats.resizedCoverage.coveragePct,
+        coveragePctAfter: forensicMaskStats.cleanedCoverage.coveragePct,
+        maskedPixelsBefore: forensicMaskStats.resizedCoverage.maskedPixels,
+        maskedPixelsAfter: forensicMaskStats.cleanedCoverage.maskedPixels,
+        connectedComponentCount:
+          forensicMaskStats.components.connectedComponentCount,
+        largestComponentPixels:
+          forensicMaskStats.components.largestComponentPixels,
+        pixelsRemovedByClean: forensicMaskStats.cleanDelta.pixelsRemovedByClean,
+        pixelsAddedByClean: forensicMaskStats.cleanDelta.pixelsAddedByClean,
+        dilationPx: dilation,
+      },
+      yunet: {
+        faceBox: params.face,
+        faceScore: params.faceScore,
+        coordinateSpace: "stage1_full_frame",
+      },
+      containment: {
+        faceCoveredPct: params.faceCoveredPct,
+        maskInsideEnvelopePct: params.maskInsideEnvelopePct,
+        faceEnvelope: params.envelope,
+        failureReasons: params.reasons,
+      },
+    };
+
+    const diagnosticOverlays = await buildHeadlessMaskDiagnosticOverlays({
+      stage1ImageBuffer: imageBuffer,
+      width,
+      height,
+      rawMaskResized: rawMask,
+      cleanedMask: mask,
+      face: params.face,
+      envelope: params.envelope,
+    });
+
+    return { pipelineDiagnostics, diagnosticOverlays };
+  };
+
   if (!detection.ok) {
     timings.totalMaskPipelineMs = Date.now() - pipelineStarted;
     let rawMaskResizedPng: Buffer | null = null;
@@ -801,8 +1036,21 @@ export async function neutralizeHeadRegion(params: {
       rawMaskResizedPng = await encodeGreyPng(rawMask);
       cleanedMaskPng = await encodeGreyPng(mask);
     }
+    const reasons: HeadMaskFailureReason[] = [
+      ...geometry.reasons,
+      "FACE_ANCHOR_INVALID",
+    ];
+    const { pipelineDiagnostics, diagnosticOverlays } =
+      await buildFailureDiagnostics({
+        reasons,
+        face: null,
+        faceScore: null,
+        faceCoveredPct: null,
+        maskInsideEnvelopePct: null,
+        envelope: null,
+      });
     return failMask({
-      reasons: [...geometry.reasons, "FACE_ANCHOR_INVALID"],
+      reasons,
       detail: [...geometry.details, `face anchor unavailable: ${detection.reason}`].join(
         "; ",
       ),
@@ -830,6 +1078,8 @@ export async function neutralizeHeadRegion(params: {
       headHairEnvelope: null,
       usedMaskHint,
       geometryMetrics: geometry.metrics,
+      pipelineDiagnostics,
+      diagnosticOverlays,
     });
   }
 
@@ -866,6 +1116,16 @@ export async function neutralizeHeadRegion(params: {
       rawMaskResizedPng = await encodeGreyPng(rawMask);
       cleanedMaskPng = await encodeGreyPng(mask);
     }
+    const envelope = computeHeadHairEnvelopeCoords(detection.face);
+    const { pipelineDiagnostics, diagnosticOverlays } =
+      await buildFailureDiagnostics({
+        reasons,
+        face: detection.face,
+        faceScore: metrics.faceScore,
+        faceCoveredPct: metrics.faceCoveredPct,
+        maskInsideEnvelopePct: metrics.maskInsideEnvelopePct,
+        envelope,
+      });
     return failMask({
       reasons,
       detail: [...geometry.details, ...anchor.details].join("; "),
@@ -883,9 +1143,11 @@ export async function neutralizeHeadRegion(params: {
       secondaryAttempted,
       secondaryCrop,
       remappedFaceAabb: detection.face,
-      headHairEnvelope: computeHeadHairEnvelopeCoords(detection.face),
+      headHairEnvelope: envelope,
       usedMaskHint,
       geometryMetrics: geometry.metrics,
+      pipelineDiagnostics,
+      diagnosticOverlays,
     });
   }
 
@@ -967,6 +1229,8 @@ function failMask(params: {
   headHairEnvelope: ReturnType<typeof computeHeadHairEnvelopeCoords> | null;
   usedMaskHint: boolean;
   geometryMetrics: Partial<HeadMaskMetrics>;
+  pipelineDiagnostics: HeadlessMaskPipelineDiagnostics | null;
+  diagnosticOverlays: HeadlessMaskDiagnosticOverlays | null;
 }): HeadMaskFailure {
   const failure: HeadMaskFailure = {
     ok: false,
@@ -1008,6 +1272,8 @@ function failMask(params: {
     failureDetail: params.detail,
     timings: params.timings,
     usedMaskHint: params.usedMaskHint,
+    pipelineDiagnostics: params.pipelineDiagnostics,
+    diagnosticOverlays: params.diagnosticOverlays,
   };
 
   failure.forensics = forensics;

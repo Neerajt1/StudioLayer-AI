@@ -231,6 +231,61 @@ describe("headless-forensics — neutralizeHeadRegion capture gates", () => {
       assert.equal(result.forensics!.timings.falSubscribeMs, 22);
       assert.equal(segmentCalls, 1, "must not re-call EVF-SAM for forensics");
       assert.equal(faceCalls, 1, "must not re-call YuNet for forensics");
+      assert.ok(result.forensics!.pipelineDiagnostics);
+      assert.equal(result.forensics!.pipelineDiagnostics!.stage1.width, W);
+      assert.equal(result.forensics!.pipelineDiagnostics!.stage1.height, H);
+      assert.ok(result.forensics!.diagnosticOverlays);
+    } finally {
+      if (prev === undefined) delete process.env[HEADLESS_FORENSICS_ENV];
+      else process.env[HEADLESS_FORENSICS_ENV] = prev;
+    }
+  });
+
+  it("flag ON + FACE_NOT_CONTAINED → diagnostics distinguish resize/clean/containment", async () => {
+    const prev = process.env[HEADLESS_FORENSICS_ENV];
+    process.env[HEADLESS_FORENSICS_ENV] = "true";
+    try {
+      const imageBuffer = await solidPhoto();
+      // Small mask that will not cover the injected face AABB (≥95%).
+      const maskPng = await rectMaskPng([{ x: 22, y: 6, w: 12, h: 10 }]);
+      const segment: HeadSegmentationProvider = async () => ({ maskPng });
+      const facePartial: FaceAnchorDetector = async () => ({
+        ok: true,
+        face: {
+          x: 20,
+          y: 5,
+          width: 40,
+          height: 35,
+          score: 0.925,
+          detectedAtViewFraction: 1,
+        },
+      });
+      const result = await neutralizeHeadRegion({
+        imageBuffer,
+        segmentationProvider: segment,
+        faceAnchorDetector: facePartial,
+      });
+      assert.equal(result.ok, false);
+      if (result.ok) return;
+      assert.ok(result.reasons.includes("FACE_NOT_CONTAINED"));
+      assert.ok(result.forensics);
+      const diag = result.forensics!.pipelineDiagnostics;
+      assert.ok(diag);
+      assert.equal(diag!.stage1.width, W);
+      assert.equal(diag!.stage1.height, H);
+      assert.equal(diag!.stage1.format, "png");
+      assert.equal(diag!.resizedMask.operation.fit, "fill");
+      assert.equal(diag!.resizedMask.spatialAlignmentPreserved, true);
+      assert.ok(diag!.cleanHeadMask.maskedPixelsBefore != null);
+      assert.ok(diag!.cleanHeadMask.maskedPixelsAfter != null);
+      assert.ok(diag!.cleanHeadMask.connectedComponentCount != null);
+      assert.equal(diag!.yunet.faceScore, 0.925);
+      assert.equal(diag!.yunet.coordinateSpace, "stage1_full_frame");
+      assert.ok((diag!.containment.faceCoveredPct ?? 100) < 95);
+      assert.ok(diag!.containment.failureReasons.includes("FACE_NOT_CONTAINED"));
+      assert.ok(result.forensics!.diagnosticOverlays?.overlayCleanedMaskPng);
+      assert.ok(result.forensics!.diagnosticOverlays?.overlayYunetFacePng);
+      assert.ok(result.forensics!.diagnosticOverlays?.overlayFaceEnvelopePng);
     } finally {
       if (prev === undefined) delete process.env[HEADLESS_FORENSICS_ENV];
       else process.env[HEADLESS_FORENSICS_ENV] = prev;
@@ -278,6 +333,8 @@ describe("headless-forensics — persist behaviour", () => {
         totalMaskPipelineMs: 20,
       },
       usedMaskHint: false,
+      pipelineDiagnostics: null,
+      diagnosticOverlays: null,
     };
   }
 
@@ -345,6 +402,87 @@ describe("headless-forensics — persist behaviour", () => {
     assert.ok(puts.some((k) => k.endsWith("raw-evf-sam-mask.png")));
     assert.ok(puts.some((k) => k.endsWith("cleaned-mask.png")));
     assert.ok(!puts.some((k) => k.startsWith("renders/")));
+  });
+
+  it("flag ON + overlays present → uploads diagnostic overlay PNGs under forensics prefix", async () => {
+    const puts: string[] = [];
+    const bundle = sampleBundle();
+    bundle.diagnosticOverlays = {
+      overlayRawMaskPng: Buffer.from("ov-raw"),
+      overlayCleanedMaskPng: Buffer.from("ov-clean"),
+      overlayYunetFacePng: Buffer.from("ov-face"),
+      overlayFaceEnvelopePng: Buffer.from("ov-env"),
+    };
+    bundle.pipelineDiagnostics = {
+      stage1: { width: W, height: H, format: "png", channels: 3, space: "srgb" },
+      rawEvfSamMask: {
+        nativeWidth: W,
+        nativeHeight: H,
+        format: "png",
+        coveragePct: 2.2,
+        maskedPixels: 100,
+      },
+      resizedMask: {
+        sourceWidth: W,
+        sourceHeight: H,
+        destinationWidth: W,
+        destinationHeight: H,
+        operation: { fit: "fill", kernel: "lanczos3" },
+        coveragePct: 2.2,
+        maskedPixels: 100,
+        sourceAspect: W / H,
+        destinationAspect: W / H,
+        aspectDeltaPct: 0,
+        spatialAlignmentPreserved: true,
+      },
+      cleanHeadMask: {
+        coveragePctBefore: 2.2,
+        coveragePctAfter: 2.3,
+        maskedPixelsBefore: 100,
+        maskedPixelsAfter: 105,
+        connectedComponentCount: 1,
+        largestComponentPixels: 100,
+        pixelsRemovedByClean: 0,
+        pixelsAddedByClean: 5,
+        dilationPx: 1,
+      },
+      yunet: {
+        faceBox: {
+          x: 1,
+          y: 2,
+          width: 3,
+          height: 4,
+          score: 0.9,
+          detectedAtViewFraction: 1,
+        },
+        faceScore: 0.9,
+        coordinateSpace: "stage1_full_frame",
+      },
+      containment: {
+        faceCoveredPct: 56.1,
+        maskInsideEnvelopePct: 100,
+        faceEnvelope: null,
+        failureReasons: ["FACE_NOT_CONTAINED"],
+      },
+    };
+    const result = await maybePersistHeadlessMaskForensics({
+      enabled: true,
+      renderId: 174,
+      trialRunId: "t174",
+      stage1RunId: "s174",
+      bundle,
+      putObject: async ({ objectKey }) => {
+        puts.push(objectKey);
+      },
+    });
+    assert.equal(result.attempted, true);
+    if (!result.attempted) return;
+    assert.equal(result.ok, true);
+    assert.ok(puts.some((k) => k.endsWith("overlay-stage1-raw-mask.png")));
+    assert.ok(puts.some((k) => k.endsWith("overlay-stage1-cleaned-mask.png")));
+    assert.ok(puts.some((k) => k.endsWith("overlay-stage1-yunet-face.png")));
+    assert.ok(puts.some((k) => k.endsWith("overlay-stage1-face-envelope.png")));
+    assert.ok(puts.every((k) => k.startsWith(`${HEADLESS_FORENSICS_STORAGE_PREFIX}174/`)));
   });
 
   it("forensic upload failure does not throw and reports ok:false", async () => {
