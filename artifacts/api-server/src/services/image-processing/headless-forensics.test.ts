@@ -11,6 +11,7 @@ import {
   assertHeadlessForensicsObjectKeySafe,
   buildHeadlessForensicsObjectKey,
   isHeadlessForensicsEnabled,
+  logHeadlessForensicsStartupConfig,
   maybePersistHeadlessMaskForensics,
   persistHeadlessMaskForensics,
   type HeadlessMaskForensicsBundle,
@@ -56,7 +57,44 @@ describe("headless-forensics — env flag", () => {
     assert.equal(isHeadlessForensicsEnabled({}), false);
     assert.equal(isHeadlessForensicsEnabled({ [HEADLESS_FORENSICS_ENV]: "false" }), false);
     assert.equal(isHeadlessForensicsEnabled({ [HEADLESS_FORENSICS_ENV]: "1" }), false);
+    assert.equal(isHeadlessForensicsEnabled({ [HEADLESS_FORENSICS_ENV]: "TRUE" }), false);
+    assert.equal(isHeadlessForensicsEnabled({ [HEADLESS_FORENSICS_ENV]: "true " }), false);
     assert.equal(isHeadlessForensicsEnabled({ [HEADLESS_FORENSICS_ENV]: "true" }), true);
+  });
+
+  it("startup config log reports enabled=true when flag is exactly true", () => {
+    const messages: string[] = [];
+    const enabled = logHeadlessForensicsStartupConfig(
+      { [HEADLESS_FORENSICS_ENV]: "true" },
+      (_obj, msg) => {
+        messages.push(msg);
+      },
+    );
+    assert.equal(enabled, true);
+    assert.deepEqual(messages, ["headless-forensics: enabled=true"]);
+  });
+
+  it("startup config log reports enabled=false when unset or not exact true", () => {
+    const messages: string[] = [];
+    assert.equal(
+      logHeadlessForensicsStartupConfig({}, (_obj, msg) => {
+        messages.push(msg);
+      }),
+      false,
+    );
+    assert.equal(
+      logHeadlessForensicsStartupConfig(
+        { [HEADLESS_FORENSICS_ENV]: "1" },
+        (_obj, msg) => {
+          messages.push(msg);
+        },
+      ),
+      false,
+    );
+    assert.deepEqual(messages, [
+      "headless-forensics: enabled=false",
+      "headless-forensics: enabled=false",
+    ]);
   });
 
   it("refuses production renders/ keys", () => {
@@ -257,6 +295,33 @@ describe("headless-forensics — persist behaviour", () => {
     });
     assert.deepEqual(result, { attempted: false });
     assert.equal(puts.length, 0);
+  });
+
+  it("flag ON + null bundle → explicit diagnostic log and no upload", async () => {
+    const puts: string[] = [];
+    const warns: Array<{ obj: Record<string, unknown>; msg: string }> = [];
+    const result = await maybePersistHeadlessMaskForensics({
+      enabled: true,
+      renderId: 172,
+      trialRunId: "t172",
+      stage1RunId: "s172",
+      bundle: null,
+      putObject: async ({ objectKey }) => {
+        puts.push(objectKey);
+      },
+      logWarn: (obj, msg) => {
+        warns.push({ obj, msg });
+      },
+    });
+    assert.deepEqual(result, { attempted: false });
+    assert.equal(puts.length, 0);
+    assert.equal(warns.length, 1);
+    assert.equal(warns[0]!.msg, "headless-forensics: skipped — no forensic bundle");
+    assert.equal(warns[0]!.obj["reason"], "no_forensic_bundle");
+    assert.equal(warns[0]!.obj["renderId"], 172);
+    assert.equal(warns[0]!.obj["temporaryDiagnostic"], true);
+    assert.equal("stage1ImageBuffer" in warns[0]!.obj, false);
+    assert.equal("rawEvfSamMaskPng" in warns[0]!.obj, false);
   });
 
   it("flag ON + failure bundle → upload under headless-forensics/{renderId}/", async () => {

@@ -30,6 +30,28 @@ export function isHeadlessForensicsEnabled(
   return env[HEADLESS_FORENSICS_ENV] === "true";
 }
 
+type DiagnosticLogFn = (
+  obj: Record<string, unknown>,
+  msg: string,
+) => void;
+
+/**
+ * SAFE startup diagnostic — logs only the boolean recognition of the forensics
+ * flag. Never logs secrets, raw env dumps, image bytes, or credentials.
+ * Evaluates process.env at call time (not module load).
+ */
+export function logHeadlessForensicsStartupConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  logInfo: DiagnosticLogFn = (obj, msg) => logger.info(obj, msg),
+): boolean {
+  const enabled = isHeadlessForensicsEnabled(env);
+  logInfo(
+    { temporaryDiagnostic: true, enabled },
+    `headless-forensics: enabled=${enabled}`,
+  );
+  return enabled;
+}
+
 export type HeadlessMaskPipelineTimings = {
   falUploadMs: number | null;
   falSubscribeMs: number | null;
@@ -313,11 +335,27 @@ export async function maybePersistHeadlessMaskForensics(params: {
   stage1RunId?: string | null;
   bundle?: HeadlessMaskForensicsBundle | null;
   putObject?: HeadlessForensicsPersistInput["putObject"];
+  /** Injectable for tests — production uses logger.warn. */
+  logWarn?: DiagnosticLogFn;
 }): Promise<HeadlessForensicsPersistResult | { attempted: false }> {
   if (!(params.enabled ?? isHeadlessForensicsEnabled())) {
     return { attempted: false };
   }
   if (!params.bundle) {
+    // Flag is on but neutralizeHeadRegion did not attach a bundle (typically
+    // the process saw the flag as off during mask capture). Explicit so ops
+    // can see the skip — never log image/mask bytes or secrets.
+    const warn = params.logWarn ?? ((obj, msg) => logger.warn(obj, msg));
+    warn(
+      {
+        temporaryDiagnostic: true,
+        renderId: params.renderId ?? null,
+        trialRunId: params.trialRunId ?? null,
+        stage1RunId: params.stage1RunId ?? null,
+        reason: "no_forensic_bundle",
+      },
+      "headless-forensics: skipped — no forensic bundle",
+    );
     return { attempted: false };
   }
   return persistHeadlessMaskForensics({

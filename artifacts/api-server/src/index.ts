@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { validateR2Storage } from "./lib/r2-config.js";
+import { logHeadlessForensicsStartupConfig } from "./services/rendering/headless-forensics.js";
 
 const rawPort = process.env["PORT"];
 
@@ -17,6 +18,9 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 await validateR2Storage();
+
+// TEMPORARY DIAGNOSTIC — confirms whether this process recognizes the flag.
+logHeadlessForensicsStartupConfig();
 
 app.listen(port, (err) => {
   if (err) {
